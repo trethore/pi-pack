@@ -5,6 +5,7 @@ export interface PiCodexifyConfig {
   enabled: boolean;
   codex: CodexControlsConfig;
   usage: CodexUsageConfig;
+  webSearch: WebSearchConfig;
 }
 
 export interface CodexControlsConfig {
@@ -17,6 +18,10 @@ export interface CodexUsageConfig {
   enabled: boolean;
 }
 
+export interface WebSearchConfig {
+  enabled: boolean;
+}
+
 export type PartialPiCodexifyConfig = Partial<{
   enabled: unknown;
   codex: Partial<{
@@ -25,6 +30,9 @@ export type PartialPiCodexifyConfig = Partial<{
     reasoningSummary: unknown;
   }>;
   usage: Partial<{
+    enabled: unknown;
+  }>;
+  webSearch: Partial<{
     enabled: unknown;
   }>;
 }>;
@@ -40,6 +48,9 @@ export const defaultConfig: PiCodexifyConfig = {
     enabled: true,
   },
   usage: {
+    enabled: true,
+  },
+  webSearch: {
     enabled: true,
   },
 };

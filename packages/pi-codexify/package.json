@@ -18,7 +18,8 @@
     "#pi-codexify/*": "./src/*"
   },
   "dependencies": {
-    "jsonc-parser": "^3.3.1"
+    "jsonc-parser": "^3.3.1",
+    "typebox": "^1.1.24"
   },
   "pi": {
     "extensions": [

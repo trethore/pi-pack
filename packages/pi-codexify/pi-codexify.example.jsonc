@@ -20,5 +20,10 @@
   "usage": {
     // Enables /codexify usage.
     "enabled": true
+  },
+
+  "webSearch": {
+    // Enables the native OpenAI Codex web_search tool.
+    "enabled": true
   }
 }

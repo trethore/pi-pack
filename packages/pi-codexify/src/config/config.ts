@@ -30,6 +30,7 @@ function cloneDefaultConfig(): PiCodexifyConfig {
     ...defaultConfig,
     codex: { ...defaultConfig.codex },
     usage: { ...defaultConfig.usage },
+    webSearch: { ...defaultConfig.webSearch },
   };
 }
 
@@ -69,6 +70,7 @@ function mergeConfig(
 
   mergeCodexConfig(target, source, configPath, errors);
   mergeUsageConfig(target, source, configPath, errors);
+  mergeWebSearchConfig(target, source, configPath, errors);
 }
 
 function mergeCodexConfig(
@@ -147,6 +149,32 @@ function mergeUsageConfig(
   if (source.usage.enabled !== undefined) {
     const enabled = readBooleanField(source.usage.enabled, 'usage.enabled', configPath, errors);
     if (enabled !== undefined) target.usage.enabled = enabled;
+  }
+}
+
+function mergeWebSearchConfig(
+  target: PiCodexifyConfig,
+  source: PartialPiCodexifyConfig,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.webSearch === undefined) return;
+
+  if (!isRecord(source.webSearch)) {
+    errors.push(
+      `pi-codexify config ignored invalid webSearch value in ${configPath}; expected object.`
+    );
+    return;
+  }
+
+  if (source.webSearch.enabled !== undefined) {
+    const enabled = readBooleanField(
+      source.webSearch.enabled,
+      'webSearch.enabled',
+      configPath,
+      errors
+    );
+    if (enabled !== undefined) target.webSearch.enabled = enabled;
   }
 }
 

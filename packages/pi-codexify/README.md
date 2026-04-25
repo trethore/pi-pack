@@ -8,6 +8,7 @@ Codex-focused controls for pi.
   - `text.verbosity`
   - `reasoning.summary`
 - Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
+- Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
 
 ## Commands
 

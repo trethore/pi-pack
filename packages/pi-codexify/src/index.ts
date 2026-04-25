@@ -18,6 +18,7 @@ import {
   registerCodexControls,
 } from '#src/features/codex-controls/index.js';
 import { notifyCodexUsage } from '#src/features/usage/index.js';
+import { registerWebSearch } from '#src/features/web-search/index.js';
 
 export default function piCodexify(pi: ExtensionAPI) {
   const loadedConfig = loadConfig(process.cwd());
@@ -27,6 +28,7 @@ export default function piCodexify(pi: ExtensionAPI) {
   if (!loadedConfig.config.enabled) return;
 
   const codexControls = registerCodexControls(pi, loadedConfig.config.codex);
+  registerWebSearch(pi, loadedConfig.config.webSearch);
   registerCodexifyCommand(pi, loadedConfig.config, codexControls);
 }
 
@@ -175,6 +177,7 @@ function buildStatusMessage(
     'pi-codexify',
     `codex controls enabled: ${config.codex.enabled ? 'yes' : 'no'}`,
     `usage command enabled: ${config.usage.enabled ? 'yes' : 'no'}`,
+    `web_search tool enabled: ${config.webSearch.enabled ? 'yes' : 'no'}`,
   ];
 
   if (config.codex.enabled) {
