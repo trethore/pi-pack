@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
+    "importpi": "node scripts/importpi.ts",
     "dev": "pi -e .",
     "dev:pi-cut": "pi -e ./packages/pi-cut",
     "install:global": "pi install .",
