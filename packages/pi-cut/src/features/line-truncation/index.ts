@@ -11,7 +11,9 @@ export function registerLineTruncation(
   pi.on('tool_result', (event) => {
     if (!piCutEnabled || !config.enabled) return;
 
-    const content = transformTextContent(event.content, (text) => truncateLines(text, config.maxChars));
+    const content = transformTextContent(event.content, (text) =>
+      truncateLines(text, config.maxChars)
+    );
     if (content === event.content) return;
 
     return { content };

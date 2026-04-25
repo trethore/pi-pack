@@ -9,15 +9,8 @@ Here is the structure of the project:
 ```text
 pi-pack/                         # You are here!
 ├── packages/                    # Workspace packages for Pi extensions.
-│   └── pi-cut/                  # pi-cut extension package.
-│       ├── src/
-│       │   ├── config/          # Configuration schema, loading, and path helpers.
-│       │   ├── features/        # User-facing behavior, organized by feature area.
-│       │   ├── shared/          # Shared helpers used across features.
-│       │   └── index.ts         # Thin extension entrypoint.
-│       ├── package.json
-│       ├── pi-cut.example.jsonc
-│       └── README.md            # Package overview and user-facing documentation.
+│   ├── pi-cut/
+│   └── pi-codexify/
 ├── references/                  # References for source browsing and docs, not to modify.
 │   └── pi-mono/
 ├── scripts/                     # Dev and maintenance scripts.

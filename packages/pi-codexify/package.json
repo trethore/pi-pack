@@ -1,0 +1,28 @@
+{
+  "name": "@trethore/pi-codexify",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Codex controls for pi.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "codex"
+  ],
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-codexify/*": "./src/*"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

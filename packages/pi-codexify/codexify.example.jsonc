@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+
+  "codex": {
+    "enabled": true,
+
+    // Controls OpenAI Responses / Codex-style payload text verbosity.
+    // Supported values: "low", "medium", "high".
+    // Omit this key in both global and project config to avoid overriding the provider payload.
+    // Set it to null in project config to disable an inherited global override.
+    "verbosity": "medium",
+
+    // Controls reasoning.summary for reasoning-capable OpenAI Responses / Codex models.
+    // Supported values: "auto", "concise", "detailed", "none".
+    // Omit this key in both global and project config to avoid overriding the provider payload.
+    // Set it to null in project config to disable an inherited global override.
+    "reasoningSummary": "auto"
+  },
+
+  "usage": {
+    // Enables /codexify usage.
+    "enabled": true
+  }
+}
