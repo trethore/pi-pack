@@ -11,7 +11,7 @@ pi-pack/                         # You are here!
 ├── packages/                    # Workspace packages for Pi extensions.
 │   ├── pi-cut/
 │   └── pi-codexify/
-├── references/                  # References for source browsing and docs, not to modify.
+├── references/                  # References for source browsing and docs, DO NOT modify.
 │   └── pi-mono/
 ├── scripts/                     # Dev and maintenance scripts.
 ├── eslint.config.js
