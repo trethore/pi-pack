@@ -28,6 +28,9 @@
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*"
   },
+  "imports": {
+    "#pi-cut/*": "./packages/pi-cut/src/*"
+  },
   "devDependencies": {
     "@eslint/js": "9.39.4",
     "@mariozechner/pi-coding-agent": "latest",

@@ -1,0 +1,10 @@
+{
+  // Master switch for all pi-cut features.
+  "enabled": true,
+
+  // Truncate individual text tool-output lines after maxChars characters.
+  "lineTruncation": {
+    "enabled": true,
+    "maxChars": 2000
+  }
+}
