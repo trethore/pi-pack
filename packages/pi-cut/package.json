@@ -1,0 +1,21 @@
+{
+  "name": "@trethore/pi-cut",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Cost-cutting strategies for pi.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "cost-control"
+  ],
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

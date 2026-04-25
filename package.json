@@ -1,20 +1,28 @@
 {
   "name": "pi-pack",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Monorepo for pi extensions.",
   "keywords": [
     "pi-package"
   ],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "dev": "pi -e .",
+    "dev:pi-cut": "pi -e ./packages/pi-cut",
     "install:global": "pi install .",
-    "install:local": "pi install -l ."
+    "install:local": "pi install -l .",
+    "install:global:pi-cut": "pi install ./packages/pi-cut",
+    "install:local:pi-cut": "pi install -l ./packages/pi-cut"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*"
