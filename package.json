@@ -23,7 +23,9 @@
     "install:global": "pi install .",
     "install:local": "pi install -l .",
     "install:global:pi-cut": "pi install ./packages/pi-cut",
-    "install:local:pi-cut": "pi install -l ./packages/pi-cut"
+    "install:local:pi-cut": "pi install -l ./packages/pi-cut",
+    "install:global:pi-codexify": "pi install ./packages/pi-codexify",
+    "install:local:pi-codexify": "pi install -l ./packages/pi-codexify"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*"

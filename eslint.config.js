@@ -28,7 +28,7 @@ export default defineConfig([
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/filename-case': 'off',
       'unicorn/no-null': 'off',
-      'complexity': ['error', 10],
+      complexity: ['error', 10],
       'max-depth': ['error', 3],
     },
   },
