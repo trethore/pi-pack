@@ -19,14 +19,14 @@ Codex-focused controls for pi.
 /codexify reasoning-summary auto|concise|detailed|none|off
 ```
 
-Command changes are session-local. Persist defaults in `codexify.jsonc`.
+Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.
 
 ## Configuration
 
 Supported config locations:
 
-- Global: `~/.pi/agent/codexify.jsonc`
-- Project: `.pi/codexify.jsonc`
+- Global: `~/.pi/agent/pi-codexify.jsonc`
+- Project: `.pi/pi-codexify.jsonc`
 
 Project config overrides global config.
 
