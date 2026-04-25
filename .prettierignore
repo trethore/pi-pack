@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/**
+*.tgz
+.pi/**
+.env
+.DS_Store
+package-lock.json

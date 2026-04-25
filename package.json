@@ -1,0 +1,36 @@
+{
+  "name": "pi-pack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Monorepo for pi extensions.",
+  "keywords": [
+    "pi-package"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "dev": "pi -e .",
+    "install:global": "pi install .",
+    "install:local": "pi install -l ."
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@mariozechner/pi-coding-agent": "latest",
+    "eslint": "9.39.4",
+    "eslint-plugin-unicorn": "64.0.0",
+    "prettier": "3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0"
+  },
+  "pi": {
+    "extensions": [
+      "packages/*/src/index.ts"
+    ]
+  }
+}
