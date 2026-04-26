@@ -35,6 +35,14 @@ export function registerWebSearch(pi: ExtensionAPI, config: WebSearchConfig): vo
 
   pi.registerTool(createWebSearchTool());
 
+  pi.on('session_start', (_event, ctx) => {
+    syncWebSearchActiveTool(pi, ctx.model);
+  });
+
+  pi.on('model_select', (event) => {
+    syncWebSearchActiveTool(pi, event.model);
+  });
+
   pi.on('before_provider_request', (event, ctx) => {
     if (!supportsNativeWebSearch(ctx.model)) return;
     return rewriteNativeWebSearchTool(event.payload, ctx.model);
@@ -92,6 +100,21 @@ function rewriteNativeWebSearchTool(
     ...payload,
     tools,
   };
+}
+
+function syncWebSearchActiveTool(
+  pi: Pick<ExtensionAPI, 'getActiveTools' | 'setActiveTools'>,
+  model: Pick<Model<Api>, 'provider' | 'id'> | null | undefined
+): void {
+  const activeTools = new Set(pi.getActiveTools());
+
+  if (supportsNativeWebSearch(model)) {
+    activeTools.add('web_search');
+  } else {
+    activeTools.delete('web_search');
+  }
+
+  pi.setActiveTools([...activeTools]);
 }
 
 function isWebSearchFunctionTool(tool: unknown): tool is FunctionToolPayload {

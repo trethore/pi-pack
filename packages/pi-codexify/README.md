@@ -17,7 +17,7 @@ Codex-focused controls for pi.
 /codexify status
 /codexify usage
 /codexify verbosity low|medium|high|off
-/codexify reasoning-summary auto|concise|detailed|none|off
+/codexify reasoning-summary auto|concise|detailed|off
 ```
 
 Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.

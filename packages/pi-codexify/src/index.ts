@@ -154,7 +154,7 @@ async function handleReasoningSummaryCommand(
 
   const parsedValue = parseCodexReasoningSummary(value);
   if (parsedValue === undefined) {
-    ctx.ui.notify('Usage: /codexify reasoning-summary auto|concise|detailed|none|off', 'warning');
+    ctx.ui.notify('Usage: /codexify reasoning-summary auto|concise|detailed|off', 'warning');
     return;
   }
 
@@ -197,7 +197,7 @@ function buildUsageMessage(config: PiCodexifyConfig): string {
   if (config.codex.enabled) {
     lines.push(
       '/codexify verbosity low|medium|high|off',
-      '/codexify reasoning-summary auto|concise|detailed|none|off'
+      '/codexify reasoning-summary auto|concise|detailed|off'
     );
   }
 
@@ -268,7 +268,7 @@ function getCodexifyArgumentCompletions(
   }
 
   if (state.path.length === 1 && isReasoningSummaryCommand(state.path[0]) && config.codex.enabled) {
-    return buildCompletionItems(state, ['auto', 'concise', 'detailed', 'none', 'off']);
+    return buildCompletionItems(state, ['auto', 'concise', 'detailed', 'off']);
   }
 
   return null;

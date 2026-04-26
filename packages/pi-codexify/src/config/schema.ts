@@ -1,5 +1,5 @@
 export type CodexVerbosity = 'low' | 'medium' | 'high';
-export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed' | 'none';
+export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed';
 
 export interface PiCodexifyConfig {
   enabled: boolean;
@@ -56,4 +56,4 @@ export const defaultConfig: PiCodexifyConfig = {
 };
 
 export const codexVerbosityValues = ['low', 'medium', 'high'] as const;
-export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed', 'none'] as const;
+export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed'] as const;

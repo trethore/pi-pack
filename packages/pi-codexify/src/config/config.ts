@@ -127,7 +127,7 @@ function mergeReasoningSummaryConfig(
   }
 
   errors.push(
-    `pi-codexify config ignored invalid codex.reasoningSummary value in ${configPath}; expected auto, concise, detailed, none, or null.`
+    `pi-codexify config ignored invalid codex.reasoningSummary value in ${configPath}; expected auto, concise, detailed, or null.`
   );
 }
 
