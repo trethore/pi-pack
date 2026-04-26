@@ -67,7 +67,7 @@ When enabled, consecutive identical non-empty text tool result lines are folded 
 
 ```text
 Repeated line
-[pi-cut: previous line repeated 2 more times]
+[previous line repeated x2]
 ```
 
 ### Line truncation
@@ -75,5 +75,5 @@ Repeated line
 When enabled, all text tool result lines longer than `maxChars` are truncated and annotated:
 
 ```text
-first N chars... (truncated at N, X chars left...)
+first N chars [... truncated, +X chars]
 ```
