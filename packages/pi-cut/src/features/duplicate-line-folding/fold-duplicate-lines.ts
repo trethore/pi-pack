@@ -11,10 +11,7 @@ export function foldDuplicateLines(text: string, minRepeats: number): string {
     const runLength = countDuplicateRun(lines, index);
 
     if (shouldFoldRun(current.body, runLength, minRepeats)) {
-      foldedLines.push(
-        current.raw,
-        `[pi-cut: previous line repeated ${runLength - 1} more times]${current.ending}`
-      );
+      foldedLines.push(current.raw, `[previous line repeated x${runLength - 1}]${current.ending}`);
       changed = true;
       index += runLength;
       continue;

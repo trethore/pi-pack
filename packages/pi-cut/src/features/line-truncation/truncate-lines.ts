@@ -11,6 +11,6 @@ export function truncateLines(text: string, maxChars: number): string {
     if (chars.length <= maxChars) return lineWithEnding;
 
     const charsLeft = chars.length - maxChars;
-    return `${chars.slice(0, maxChars).join('')} (truncated at ${maxChars}, ${charsLeft} chars left...)${ending}`;
+    return `${chars.slice(0, maxChars).join('')} [... truncated, +${charsLeft} chars]${ending}`;
   });
 }
