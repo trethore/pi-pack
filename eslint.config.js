@@ -3,7 +3,14 @@ import { defineConfig } from 'eslint/config';
 import unicorn from 'eslint-plugin-unicorn';
 import tseslint from 'typescript-eslint';
 
-const ignoredFolders = ['node_modules/**', 'dist/**', 'coverage/**', '*.tgz', '.pi/**'];
+const ignoredFolders = [
+  'node_modules/**',
+  'dist/**',
+  'coverage/**',
+  'references/**',
+  '*.tgz',
+  '.pi/**',
+];
 
 export default defineConfig([
   {
@@ -21,6 +28,8 @@ export default defineConfig([
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/filename-case': 'off',
       'unicorn/no-null': 'off',
+      complexity: ['error', 10],
+      'max-depth': ['error', 3],
     },
   },
   {
