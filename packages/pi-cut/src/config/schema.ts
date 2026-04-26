@@ -6,6 +6,22 @@ export interface PiCutConfig {
   terminalCleanup: TerminalCleanupConfig;
   duplicateLineFolding: DuplicateLineFoldingConfig;
   lineTruncation: LineTruncationConfig;
+  tools: ToolOverrideConfig[];
+}
+
+export interface ResolvedToolConfig {
+  enabled: boolean;
+  terminalCleanup: TerminalCleanupConfig;
+  duplicateLineFolding: DuplicateLineFoldingConfig;
+  lineTruncation: LineTruncationConfig;
+}
+
+export interface ToolOverrideConfig {
+  selector: RegExp;
+  enabled?: boolean;
+  terminalCleanup?: Partial<TerminalCleanupConfig>;
+  duplicateLineFolding?: Partial<DuplicateLineFoldingConfig>;
+  lineTruncation?: Partial<LineTruncationConfig>;
 }
 
 export interface TerminalCleanupConfig {
@@ -24,21 +40,28 @@ export interface LineTruncationConfig {
   maxChars: number;
 }
 
+export type PartialTerminalCleanupConfig = Partial<{
+  enabled: unknown;
+  stripAnsi: unknown;
+  collapseCarriageReturns: unknown;
+}>;
+
+export type PartialDuplicateLineFoldingConfig = Partial<{
+  enabled: unknown;
+  minRepeats: unknown;
+}>;
+
+export type PartialLineTruncationConfig = Partial<{
+  enabled: unknown;
+  maxChars: unknown;
+}>;
+
 export type PartialPiCutConfig = Partial<{
   enabled: unknown;
-  terminalCleanup: Partial<{
-    enabled: unknown;
-    stripAnsi: unknown;
-    collapseCarriageReturns: unknown;
-  }>;
-  duplicateLineFolding: Partial<{
-    enabled: unknown;
-    minRepeats: unknown;
-  }>;
-  lineTruncation: Partial<{
-    enabled: unknown;
-    maxChars: unknown;
-  }>;
+  terminalCleanup: PartialTerminalCleanupConfig;
+  duplicateLineFolding: PartialDuplicateLineFoldingConfig;
+  lineTruncation: PartialLineTruncationConfig;
+  tools: unknown;
 }>;
 
 export interface LoadedConfig {
@@ -61,4 +84,5 @@ export const defaultConfig: PiCutConfig = {
     enabled: true,
     maxChars: DEFAULT_MAX_CHARS,
   },
+  tools: [],
 };

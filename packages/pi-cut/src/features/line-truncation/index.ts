@@ -1,18 +1,16 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
-import type { LineTruncationConfig } from '#src/config/schema.js';
+import type { PiCutConfig } from '#src/config/schema.js';
+import { resolveToolConfig } from '#src/config/tool-config.js';
 import { transformTextContent } from '#src/shared/content.js';
 import { truncateLines } from '#src/features/line-truncation/truncate-lines.js';
 
-export function registerLineTruncation(
-  pi: ExtensionAPI,
-  piCutEnabled: boolean,
-  config: LineTruncationConfig
-) {
+export function registerLineTruncation(pi: ExtensionAPI, config: PiCutConfig) {
   pi.on('tool_result', (event) => {
-    if (!piCutEnabled || !config.enabled) return;
+    const toolConfig = resolveToolConfig(config, event.toolName);
+    if (!toolConfig.enabled || !toolConfig.lineTruncation.enabled) return;
 
     const content = transformTextContent(event.content, (text) =>
-      truncateLines(text, config.maxChars)
+      truncateLines(text, toolConfig.lineTruncation.maxChars)
     );
     if (content === event.content) return;
 

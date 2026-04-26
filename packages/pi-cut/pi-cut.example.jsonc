@@ -20,5 +20,24 @@
   "lineTruncation": {
     "enabled": true,
     "maxChars": 2000
-  }
+  },
+
+  // Optional per-tool overrides. Selectors are JavaScript regex strings; "*" means all tools.
+  // Defaults before overrides: terminalCleanup only runs on bash; duplicateLineFolding and
+  // lineTruncation do not run on edit/write. Tools rules can override those defaults.
+  // Overrides are applied in order after the global config, so the last matching entry wins.
+  "tools": [
+    {
+      "selector": "*",
+      "lineTruncation": {
+        "maxChars": 1000
+      }
+    },
+    {
+      "selector": "read",
+      "lineTruncation": {
+        "maxChars": 4000
+      }
+    }
+  ]
 }

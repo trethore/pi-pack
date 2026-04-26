@@ -5,7 +5,11 @@ import {
   defaultConfig,
   type LoadedConfig,
   type PartialPiCutConfig,
+  type DuplicateLineFoldingConfig,
+  type LineTruncationConfig,
   type PiCutConfig,
+  type TerminalCleanupConfig,
+  type ToolOverrideConfig,
 } from '#src/config/schema.js';
 
 export function loadConfig(cwd: string): LoadedConfig {
@@ -15,6 +19,7 @@ export function loadConfig(cwd: string): LoadedConfig {
     terminalCleanup: { ...defaultConfig.terminalCleanup },
     duplicateLineFolding: { ...defaultConfig.duplicateLineFolding },
     lineTruncation: { ...defaultConfig.lineTruncation },
+    tools: [],
   };
 
   for (const configPath of getConfigPaths(cwd)) {
@@ -58,6 +63,7 @@ function mergeConfig(
   mergeTerminalCleanup(target, source, configPath, errors);
   mergeDuplicateLineFolding(target, source, configPath, errors);
   mergeLineTruncation(target, source, configPath, errors);
+  mergeToolOverrides(target, source, configPath, errors);
 }
 
 function mergeEnabled(
@@ -91,35 +97,12 @@ function mergeTerminalCleanup(
     return;
   }
 
-  mergeBooleanField(
+  mergeTerminalCleanupFields(
+    target.terminalCleanup,
     source.terminalCleanup,
-    'enabled',
-    'terminalCleanup.enabled',
+    'terminalCleanup',
     configPath,
-    errors,
-    (value) => {
-      target.terminalCleanup.enabled = value;
-    }
-  );
-  mergeBooleanField(
-    source.terminalCleanup,
-    'stripAnsi',
-    'terminalCleanup.stripAnsi',
-    configPath,
-    errors,
-    (value) => {
-      target.terminalCleanup.stripAnsi = value;
-    }
-  );
-  mergeBooleanField(
-    source.terminalCleanup,
-    'collapseCarriageReturns',
-    'terminalCleanup.collapseCarriageReturns',
-    configPath,
-    errors,
-    (value) => {
-      target.terminalCleanup.collapseCarriageReturns = value;
-    }
+    errors
   );
 }
 
@@ -138,26 +121,13 @@ function mergeDuplicateLineFolding(
     return;
   }
 
-  mergeBooleanField(
+  mergeDuplicateLineFoldingFields(
+    target.duplicateLineFolding,
     source.duplicateLineFolding,
-    'enabled',
-    'duplicateLineFolding.enabled',
+    'duplicateLineFolding',
     configPath,
-    errors,
-    (value) => {
-      target.duplicateLineFolding.enabled = value;
-    }
+    errors
   );
-
-  if (source.duplicateLineFolding.minRepeats !== undefined) {
-    if (isIntegerAtLeast(source.duplicateLineFolding.minRepeats, 2)) {
-      target.duplicateLineFolding.minRepeats = source.duplicateLineFolding.minRepeats;
-    } else {
-      errors.push(
-        `pi-cut config ignored invalid duplicateLineFolding.minRepeats value in ${configPath}; expected integer >= 2.`
-      );
-    }
-  }
 }
 
 function mergeLineTruncation(
@@ -175,23 +145,254 @@ function mergeLineTruncation(
     return;
   }
 
-  mergeBooleanField(
+  mergeLineTruncationFields(
+    target.lineTruncation,
     source.lineTruncation,
+    'lineTruncation',
+    configPath,
+    errors
+  );
+}
+
+function mergeToolOverrides(
+  target: PiCutConfig,
+  source: PartialPiCutConfig,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.tools === undefined) return;
+
+  if (!Array.isArray(source.tools)) {
+    errors.push(`pi-cut config ignored invalid tools value in ${configPath}; expected array.`);
+    return;
+  }
+
+  for (const [index, toolOverride] of source.tools.entries()) {
+    const configName = `tools[${index}]`;
+    if (!isRecord(toolOverride)) {
+      errors.push(
+        `pi-cut config ignored invalid ${configName} value in ${configPath}; expected object.`
+      );
+      continue;
+    }
+
+    const override = parseToolOverride(toolOverride, configName, configPath, errors);
+    if (override) target.tools.push(override);
+  }
+}
+
+function parseToolOverride(
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+): ToolOverrideConfig | undefined {
+  const selector = parseToolSelector(source.selector, configName, configPath, errors);
+  if (!selector) return undefined;
+
+  const override: ToolOverrideConfig = { selector };
+  mergeOptionalBooleanField(
+    source,
     'enabled',
-    'lineTruncation.enabled',
+    `${configName}.enabled`,
     configPath,
     errors,
     (value) => {
-      target.lineTruncation.enabled = value;
+      override.enabled = value;
     }
   );
 
-  if (source.lineTruncation.maxChars !== undefined) {
-    if (isPositiveInteger(source.lineTruncation.maxChars)) {
-      target.lineTruncation.maxChars = source.lineTruncation.maxChars;
+  const terminalCleanup = parseStrategyOverride<TerminalCleanupConfig>(
+    source,
+    'terminalCleanup',
+    configName,
+    configPath,
+    errors,
+    mergeTerminalCleanupFields
+  );
+  if (terminalCleanup) override.terminalCleanup = terminalCleanup;
+
+  const duplicateLineFolding = parseStrategyOverride<DuplicateLineFoldingConfig>(
+    source,
+    'duplicateLineFolding',
+    configName,
+    configPath,
+    errors,
+    mergeDuplicateLineFoldingFields
+  );
+  if (duplicateLineFolding) override.duplicateLineFolding = duplicateLineFolding;
+
+  const lineTruncation = parseStrategyOverride<LineTruncationConfig>(
+    source,
+    'lineTruncation',
+    configName,
+    configPath,
+    errors,
+    mergeLineTruncationFields
+  );
+  if (lineTruncation) override.lineTruncation = lineTruncation;
+
+  return hasToolOverrideFields(override) ? override : undefined;
+}
+
+function parseStrategyOverride<T extends object>(
+  source: Record<string, unknown>,
+  field: string,
+  configName: string,
+  configPath: string,
+  errors: string[],
+  mergeFields: (
+    target: Partial<T>,
+    source: Record<string, unknown>,
+    configName: string,
+    configPath: string,
+    errors: string[]
+  ) => void
+): Partial<T> | undefined {
+  const value = source[field];
+  if (value === undefined) return undefined;
+
+  const strategyConfigName = `${configName}.${field}`;
+  if (!isRecord(value)) {
+    errors.push(
+      `pi-cut config ignored invalid ${strategyConfigName} value in ${configPath}; expected object.`
+    );
+    return undefined;
+  }
+
+  const target: Partial<T> = {};
+  mergeFields(target, value, strategyConfigName, configPath, errors);
+  return hasFields(target) ? target : undefined;
+}
+
+function hasToolOverrideFields(override: ToolOverrideConfig): boolean {
+  return (
+    override.enabled !== undefined ||
+    override.terminalCleanup !== undefined ||
+    override.duplicateLineFolding !== undefined ||
+    override.lineTruncation !== undefined
+  );
+}
+
+function hasFields(value: object): boolean {
+  return Object.keys(value).length > 0;
+}
+
+function parseToolSelector(
+  selector: unknown,
+  configName: string,
+  configPath: string,
+  errors: string[]
+): RegExp | undefined {
+  if (typeof selector !== 'string') {
+    errors.push(
+      `pi-cut config ignored invalid ${configName}.selector value in ${configPath}; expected string.`
+    );
+    return undefined;
+  }
+
+  try {
+    return new RegExp(selector === '*' ? '.*' : selector);
+  } catch (error) {
+    errors.push(
+      `pi-cut config ignored invalid ${configName}.selector regex in ${configPath}: ${String(error)}.`
+    );
+    return undefined;
+  }
+}
+
+function mergeTerminalCleanupFields(
+  target: Partial<TerminalCleanupConfig>,
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeOptionalBooleanField(
+    source,
+    'enabled',
+    `${configName}.enabled`,
+    configPath,
+    errors,
+    (value) => {
+      target.enabled = value;
+    }
+  );
+  mergeOptionalBooleanField(
+    source,
+    'stripAnsi',
+    `${configName}.stripAnsi`,
+    configPath,
+    errors,
+    (value) => {
+      target.stripAnsi = value;
+    }
+  );
+  mergeOptionalBooleanField(
+    source,
+    'collapseCarriageReturns',
+    `${configName}.collapseCarriageReturns`,
+    configPath,
+    errors,
+    (value) => {
+      target.collapseCarriageReturns = value;
+    }
+  );
+}
+
+function mergeDuplicateLineFoldingFields(
+  target: Partial<DuplicateLineFoldingConfig>,
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeOptionalBooleanField(
+    source,
+    'enabled',
+    `${configName}.enabled`,
+    configPath,
+    errors,
+    (value) => {
+      target.enabled = value;
+    }
+  );
+
+  if (source.minRepeats !== undefined) {
+    if (isIntegerAtLeast(source.minRepeats, 2)) {
+      target.minRepeats = source.minRepeats;
     } else {
       errors.push(
-        `pi-cut config ignored invalid lineTruncation.maxChars value in ${configPath}; expected positive integer.`
+        `pi-cut config ignored invalid ${configName}.minRepeats value in ${configPath}; expected integer >= 2.`
+      );
+    }
+  }
+}
+
+function mergeLineTruncationFields(
+  target: Partial<LineTruncationConfig>,
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeOptionalBooleanField(
+    source,
+    'enabled',
+    `${configName}.enabled`,
+    configPath,
+    errors,
+    (value) => {
+      target.enabled = value;
+    }
+  );
+
+  if (source.maxChars !== undefined) {
+    if (isPositiveInteger(source.maxChars)) {
+      target.maxChars = source.maxChars;
+    } else {
+      errors.push(
+        `pi-cut config ignored invalid ${configName}.maxChars value in ${configPath}; expected positive integer.`
       );
     }
   }
@@ -208,7 +409,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function mergeBooleanField(
+function mergeOptionalBooleanField(
   source: Record<string, unknown>,
   field: string,
   configName: string,
