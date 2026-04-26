@@ -8,13 +8,9 @@ export default function piCut(pi: ExtensionAPI) {
   const loadedConfig = loadConfig(process.cwd());
 
   registerConfigDiagnostics(pi, loadedConfig.errors);
-  registerTerminalCleanup(pi, loadedConfig.config.enabled, loadedConfig.config.terminalCleanup);
-  registerDuplicateLineFolding(
-    pi,
-    loadedConfig.config.enabled,
-    loadedConfig.config.duplicateLineFolding
-  );
-  registerLineTruncation(pi, loadedConfig.config.enabled, loadedConfig.config.lineTruncation);
+  registerTerminalCleanup(pi, loadedConfig.config);
+  registerDuplicateLineFolding(pi, loadedConfig.config);
+  registerLineTruncation(pi, loadedConfig.config);
 }
 
 function registerConfigDiagnostics(pi: ExtensionAPI, errors: string[]) {

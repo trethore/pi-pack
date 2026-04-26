@@ -1,20 +1,18 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
-import type { TerminalCleanupConfig } from '#src/config/schema.js';
+import type { PiCutConfig } from '#src/config/schema.js';
+import { resolveToolConfig } from '#src/config/tool-config.js';
 import { cleanTerminalOutput } from '#src/features/terminal-cleanup/clean-terminal-output.js';
 import { transformTextContent } from '#src/shared/content.js';
 
-export function registerTerminalCleanup(
-  pi: ExtensionAPI,
-  piCutEnabled: boolean,
-  config: TerminalCleanupConfig
-) {
+export function registerTerminalCleanup(pi: ExtensionAPI, config: PiCutConfig) {
   pi.on('tool_result', (event) => {
-    if (!piCutEnabled || !config.enabled || event.toolName !== 'bash') return;
+    const toolConfig = resolveToolConfig(config, event.toolName);
+    if (!toolConfig.enabled || !toolConfig.terminalCleanup.enabled) return;
 
     const content = transformTextContent(event.content, (text) =>
       cleanTerminalOutput(text, {
-        stripAnsi: config.stripAnsi,
-        collapseCarriageReturns: config.collapseCarriageReturns,
+        stripAnsi: toolConfig.terminalCleanup.stripAnsi,
+        collapseCarriageReturns: toolConfig.terminalCleanup.collapseCarriageReturns,
       })
     );
     if (content === event.content) return;

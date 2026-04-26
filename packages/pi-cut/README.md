@@ -27,14 +27,39 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "enabled": true,
     "maxChars": 2000,
   },
+  "tools": [
+    {
+      "selector": "*",
+      "lineTruncation": { "maxChars": 1000 },
+    },
+    {
+      "selector": "read",
+      "lineTruncation": { "maxChars": 4000 },
+    },
+  ],
 }
 ```
+
+Tool override rules:
+
+- Top-level settings are the global defaults.
+- Add optional per-tool overrides in `tools`.
+- `selector` is a JavaScript regex string.
+- Use `"*"` to match every tool.
+- Default tool behavior is applied before `tools` rules:
+  - `terminalCleanup` runs on `bash` only.
+  - `duplicateLineFolding` does not run on `edit` or `write`.
+  - `lineTruncation` does not run on `edit` or `write`.
+- `tools` rules can override these defaults.
+- Rules are applied from top to bottom.
+- If multiple rules match, the last one wins.
+- Project config loads after global config, so project rules win.
 
 ## Features
 
 ### Terminal cleanup
 
-When enabled, bash tool results are cleaned by stripping ANSI escape sequences and collapsing carriage-return progress redraws to the visible final text.
+By default, bash tool results are cleaned by stripping ANSI escape sequences and collapsing carriage-return progress redraws to the visible final text. Other tools can opt in with `tools` overrides.
 
 ### Duplicate line folding
 
