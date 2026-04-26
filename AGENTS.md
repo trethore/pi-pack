@@ -12,7 +12,7 @@ pi-pack/                         # You are here!
 │   ├── pi-cut/
 │   └── pi-codexify/
 ├── references/                  # References for source browsing and docs, DO NOT modify.
-│   └── pi-mono/
+│   └── pi-mono/                 # Pi-mono source code and docs.
 ├── scripts/                     # Dev and maintenance scripts.
 ├── eslint.config.js
 ├── LICENSE
