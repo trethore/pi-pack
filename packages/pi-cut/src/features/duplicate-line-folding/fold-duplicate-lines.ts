@@ -53,7 +53,7 @@ function countDuplicateRun(lines: LineParts[], startIndex: number): number {
   const first = lines[startIndex];
   let length = 1;
 
-  while (startIndex + length < lines.length && lines[startIndex + length].body === first.body) {
+  while (startIndex + length < lines.length && lines[startIndex + length].raw === first.raw) {
     length += 1;
   }
 

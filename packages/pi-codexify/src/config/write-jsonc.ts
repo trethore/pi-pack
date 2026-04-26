@@ -35,10 +35,11 @@ export async function updateJsoncFile(
     text = nextText;
   }
 
-  if (!fileExists && !changed) return;
+  const textWithTrailingNewline = ensureTrailingNewline(text, detectEol(text));
+  if (!changed && textWithTrailingNewline === text) return;
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, ensureTrailingNewline(text), 'utf8');
+  await writeFile(filePath, textWithTrailingNewline, 'utf8');
 }
 
 function applyJsoncUpdate(text: string, updatePath: readonly string[], value: unknown): string {
@@ -55,7 +56,7 @@ function getFormattingOptions(text: string): FormattingOptions {
   return {
     insertSpaces: indentation.insertSpaces,
     tabSize: indentation.tabSize,
-    eol: text.includes('\r\n') ? '\r\n' : '\n',
+    eol: detectEol(text),
     insertFinalNewline: true,
   };
 }
@@ -98,6 +99,10 @@ function getValueAtPath(value: unknown, objectPath: readonly string[]): unknown 
   return current;
 }
 
-function ensureTrailingNewline(text: string): string {
-  return text.endsWith('\n') ? text : `${text}\n`;
+function detectEol(text: string): '\r\n' | '\n' {
+  return text.includes('\r\n') ? '\r\n' : '\n';
+}
+
+function ensureTrailingNewline(text: string, eol: string): string {
+  return text.endsWith('\n') ? text : `${text}${eol}`;
 }

@@ -11,7 +11,7 @@
     "verbosity": "medium",
 
     // Controls reasoning.summary for reasoning-capable OpenAI Responses / Codex models.
-    // Supported values: "auto", "concise", "detailed", "none".
+    // Supported values: "auto", "concise", "detailed".
     // Omit this key in both global and project config to avoid overriding the provider payload.
     // Set it to null in project config to disable an inherited global override.
     "reasoningSummary": "auto"

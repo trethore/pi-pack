@@ -31,4 +31,4 @@ Supported config locations:
 
 Project config overrides global config.
 
-See [`codexify.example.jsonc`](./codexify.example.jsonc).
+See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc).
