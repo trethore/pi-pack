@@ -2,6 +2,20 @@
   // Master switch for all pi-cut features.
   "enabled": true,
 
+  // Strip terminal-only formatting and progress redraw noise from bash tool outputs.
+  "terminalCleanup": {
+    "enabled": true,
+    "stripAnsi": true,
+    "collapseCarriageReturns": true
+  },
+
+  // Fold consecutive identical text tool-output lines.
+  // minRepeats must be an integer >= 2.
+  "duplicateLineFolding": {
+    "enabled": true,
+    "minRepeats": 3
+  },
+
   // Truncate individual text tool-output lines after maxChars characters.
   "lineTruncation": {
     "enabled": true,

@@ -10,7 +10,12 @@ import {
 
 export function loadConfig(cwd: string): LoadedConfig {
   const errors: string[] = [];
-  const mergedConfig = { ...defaultConfig, lineTruncation: { ...defaultConfig.lineTruncation } };
+  const mergedConfig = {
+    ...defaultConfig,
+    terminalCleanup: { ...defaultConfig.terminalCleanup },
+    duplicateLineFolding: { ...defaultConfig.duplicateLineFolding },
+    lineTruncation: { ...defaultConfig.lineTruncation },
+  };
 
   for (const configPath of getConfigPaths(cwd)) {
     const parsedConfig = readConfigFile(configPath, errors);
@@ -50,6 +55,8 @@ function mergeConfig(
   errors: string[]
 ) {
   mergeEnabled(target, source, configPath, errors);
+  mergeTerminalCleanup(target, source, configPath, errors);
+  mergeDuplicateLineFolding(target, source, configPath, errors);
   mergeLineTruncation(target, source, configPath, errors);
 }
 
@@ -69,6 +76,90 @@ function mergeEnabled(
   errors.push(`pi-cut config ignored invalid enabled value in ${configPath}; expected boolean.`);
 }
 
+function mergeTerminalCleanup(
+  target: PiCutConfig,
+  source: PartialPiCutConfig,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.terminalCleanup === undefined) return;
+
+  if (!isRecord(source.terminalCleanup)) {
+    errors.push(
+      `pi-cut config ignored invalid terminalCleanup value in ${configPath}; expected object.`
+    );
+    return;
+  }
+
+  mergeBooleanField(
+    source.terminalCleanup,
+    'enabled',
+    'terminalCleanup.enabled',
+    configPath,
+    errors,
+    (value) => {
+      target.terminalCleanup.enabled = value;
+    }
+  );
+  mergeBooleanField(
+    source.terminalCleanup,
+    'stripAnsi',
+    'terminalCleanup.stripAnsi',
+    configPath,
+    errors,
+    (value) => {
+      target.terminalCleanup.stripAnsi = value;
+    }
+  );
+  mergeBooleanField(
+    source.terminalCleanup,
+    'collapseCarriageReturns',
+    'terminalCleanup.collapseCarriageReturns',
+    configPath,
+    errors,
+    (value) => {
+      target.terminalCleanup.collapseCarriageReturns = value;
+    }
+  );
+}
+
+function mergeDuplicateLineFolding(
+  target: PiCutConfig,
+  source: PartialPiCutConfig,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.duplicateLineFolding === undefined) return;
+
+  if (!isRecord(source.duplicateLineFolding)) {
+    errors.push(
+      `pi-cut config ignored invalid duplicateLineFolding value in ${configPath}; expected object.`
+    );
+    return;
+  }
+
+  mergeBooleanField(
+    source.duplicateLineFolding,
+    'enabled',
+    'duplicateLineFolding.enabled',
+    configPath,
+    errors,
+    (value) => {
+      target.duplicateLineFolding.enabled = value;
+    }
+  );
+
+  if (source.duplicateLineFolding.minRepeats !== undefined) {
+    if (isIntegerAtLeast(source.duplicateLineFolding.minRepeats, 2)) {
+      target.duplicateLineFolding.minRepeats = source.duplicateLineFolding.minRepeats;
+    } else {
+      errors.push(
+        `pi-cut config ignored invalid duplicateLineFolding.minRepeats value in ${configPath}; expected integer >= 2.`
+      );
+    }
+  }
+}
+
 function mergeLineTruncation(
   target: PiCutConfig,
   source: PartialPiCutConfig,
@@ -84,15 +175,16 @@ function mergeLineTruncation(
     return;
   }
 
-  if (source.lineTruncation.enabled !== undefined) {
-    if (typeof source.lineTruncation.enabled === 'boolean') {
-      target.lineTruncation.enabled = source.lineTruncation.enabled;
-    } else {
-      errors.push(
-        `pi-cut config ignored invalid lineTruncation.enabled value in ${configPath}; expected boolean.`
-      );
+  mergeBooleanField(
+    source.lineTruncation,
+    'enabled',
+    'lineTruncation.enabled',
+    configPath,
+    errors,
+    (value) => {
+      target.lineTruncation.enabled = value;
     }
-  }
+  );
 
   if (source.lineTruncation.maxChars !== undefined) {
     if (isPositiveInteger(source.lineTruncation.maxChars)) {
@@ -116,6 +208,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function mergeBooleanField(
+  source: Record<string, unknown>,
+  field: string,
+  configName: string,
+  configPath: string,
+  errors: string[],
+  apply: (value: boolean) => void
+) {
+  const value = source[field];
+  if (value === undefined) return;
+
+  if (typeof value === 'boolean') {
+    apply(value);
+    return;
+  }
+
+  errors.push(
+    `pi-cut config ignored invalid ${configName} value in ${configPath}; expected boolean.`
+  );
+}
+
 function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+  return isIntegerAtLeast(value, 1);
+}
+
+function isIntegerAtLeast(value: unknown, minimum: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= minimum;
 }
