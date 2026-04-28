@@ -1,13 +1,13 @@
 import { splitLineEnding } from '#src/shared/line.js';
 
-export function foldRepeatedBlocks(text: string, minLines: number): string {
+export function foldRepeatedBlocks(text: string, minLines: number, minRepeats: number): string {
   const lines = splitLines(text);
   const foldedLines: string[] = [];
   let changed = false;
   let index = 0;
 
   while (index < lines.length) {
-    const repeatedBlock = findRepeatedBlock(lines, index, minLines);
+    const repeatedBlock = findRepeatedBlock(lines, index, minLines, minRepeats);
 
     if (repeatedBlock) {
       const repeatedLineCount = repeatedBlock.lineCount * repeatedBlock.repeatCount;
@@ -60,15 +60,16 @@ function splitLines(text: string): LineParts[] {
 function findRepeatedBlock(
   lines: LineParts[],
   startIndex: number,
-  minLines: number
+  minLines: number,
+  minRepeats: number
 ): RepeatedBlock | undefined {
-  const maxLineCount = Math.floor((lines.length - startIndex) / 2);
+  const maxLineCount = Math.floor((lines.length - startIndex) / minRepeats);
 
   for (let lineCount = minLines; lineCount <= maxLineCount; lineCount += 1) {
     if (!isFoldableBlock(lines, startIndex, lineCount)) continue;
 
     const repeatCount = countBlockRepeats(lines, startIndex, lineCount);
-    if (repeatCount >= 2) return { lineCount, repeatCount };
+    if (repeatCount >= minRepeats) return { lineCount, repeatCount };
   }
 
   return undefined;

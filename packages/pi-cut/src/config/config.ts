@@ -4,6 +4,7 @@ import { getConfigPaths } from '#src/config/locations.js';
 import {
   defaultConfig,
   MIN_BLOCK_LINES,
+  MIN_REPEATS,
   type LoadedConfig,
   type PartialPiCutConfig,
   type DuplicateLineFoldingConfig,
@@ -396,16 +397,7 @@ function mergeDuplicateLineFoldingFields(
       target.enabled = value;
     }
   );
-
-  if (source.minRepeats !== undefined) {
-    if (isIntegerAtLeast(source.minRepeats, 2)) {
-      target.minRepeats = source.minRepeats;
-    } else {
-      errors.push(
-        `pi-cut config ignored invalid ${configName}.minRepeats value in ${configPath}; expected integer >= 2.`
-      );
-    }
-  }
+  mergeMinRepeatsField(target, source, configName, configPath, errors);
 }
 
 function mergeRepeatedBlockFoldingFields(
@@ -435,6 +427,27 @@ function mergeRepeatedBlockFoldingFields(
       );
     }
   }
+
+  mergeMinRepeatsField(target, source, configName, configPath, errors);
+}
+
+function mergeMinRepeatsField(
+  target: { minRepeats?: number },
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.minRepeats === undefined) return;
+
+  if (isIntegerAtLeast(source.minRepeats, MIN_REPEATS)) {
+    target.minRepeats = source.minRepeats;
+    return;
+  }
+
+  errors.push(
+    `pi-cut config ignored invalid ${configName}.minRepeats value in ${configPath}; expected integer >= ${MIN_REPEATS}.`
+  );
 }
 
 function mergeLineTruncationFields(
@@ -460,7 +473,7 @@ function mergeLineTruncationFields(
       target.maxChars = source.maxChars;
     } else {
       errors.push(
-        `pi-cut config ignored invalid ${configName}.maxChars value in ${configPath}; expected positive integer.`
+        `pi-cut config ignored invalid ${configName}.maxChars value in ${configPath}; expected integer >= 1.`
       );
     }
   }
