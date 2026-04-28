@@ -3,9 +3,11 @@ import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
 import { getConfigPaths } from '#src/config/locations.js';
 import {
   defaultConfig,
+  MIN_BLOCK_LINES,
   type LoadedConfig,
   type PartialPiCutConfig,
   type DuplicateLineFoldingConfig,
+  type RepeatedBlockFoldingConfig,
   type LineTruncationConfig,
   type PiCutConfig,
   type TerminalCleanupConfig,
@@ -18,6 +20,7 @@ export function loadConfig(cwd: string): LoadedConfig {
     ...defaultConfig,
     terminalCleanup: { ...defaultConfig.terminalCleanup },
     duplicateLineFolding: { ...defaultConfig.duplicateLineFolding },
+    repeatedBlockFolding: { ...defaultConfig.repeatedBlockFolding },
     lineTruncation: { ...defaultConfig.lineTruncation },
     tools: [],
   };
@@ -62,6 +65,7 @@ function mergeConfig(
   mergeEnabled(target, source, configPath, errors);
   mergeTerminalCleanup(target, source, configPath, errors);
   mergeDuplicateLineFolding(target, source, configPath, errors);
+  mergeRepeatedBlockFolding(target, source, configPath, errors);
   mergeLineTruncation(target, source, configPath, errors);
   mergeToolOverrides(target, source, configPath, errors);
 }
@@ -125,6 +129,30 @@ function mergeDuplicateLineFolding(
     target.duplicateLineFolding,
     source.duplicateLineFolding,
     'duplicateLineFolding',
+    configPath,
+    errors
+  );
+}
+
+function mergeRepeatedBlockFolding(
+  target: PiCutConfig,
+  source: PartialPiCutConfig,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.repeatedBlockFolding === undefined) return;
+
+  if (!isRecord(source.repeatedBlockFolding)) {
+    errors.push(
+      `pi-cut config ignored invalid repeatedBlockFolding value in ${configPath}; expected object.`
+    );
+    return;
+  }
+
+  mergeRepeatedBlockFoldingFields(
+    target.repeatedBlockFolding,
+    source.repeatedBlockFolding,
+    'repeatedBlockFolding',
     configPath,
     errors
   );
@@ -222,6 +250,16 @@ function parseToolOverride(
   );
   if (duplicateLineFolding) override.duplicateLineFolding = duplicateLineFolding;
 
+  const repeatedBlockFolding = parseStrategyOverride<RepeatedBlockFoldingConfig>(
+    source,
+    'repeatedBlockFolding',
+    configName,
+    configPath,
+    errors,
+    mergeRepeatedBlockFoldingFields
+  );
+  if (repeatedBlockFolding) override.repeatedBlockFolding = repeatedBlockFolding;
+
   const lineTruncation = parseStrategyOverride<LineTruncationConfig>(
     source,
     'lineTruncation',
@@ -270,6 +308,7 @@ function hasToolOverrideFields(override: ToolOverrideConfig): boolean {
     override.enabled !== undefined ||
     override.terminalCleanup !== undefined ||
     override.duplicateLineFolding !== undefined ||
+    override.repeatedBlockFolding !== undefined ||
     override.lineTruncation !== undefined
   );
 }
@@ -364,6 +403,35 @@ function mergeDuplicateLineFoldingFields(
     } else {
       errors.push(
         `pi-cut config ignored invalid ${configName}.minRepeats value in ${configPath}; expected integer >= 2.`
+      );
+    }
+  }
+}
+
+function mergeRepeatedBlockFoldingFields(
+  target: Partial<RepeatedBlockFoldingConfig>,
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeOptionalBooleanField(
+    source,
+    'enabled',
+    `${configName}.enabled`,
+    configPath,
+    errors,
+    (value) => {
+      target.enabled = value;
+    }
+  );
+
+  if (source.minLines !== undefined) {
+    if (isIntegerAtLeast(source.minLines, MIN_BLOCK_LINES)) {
+      target.minLines = source.minLines;
+    } else {
+      errors.push(
+        `pi-cut config ignored invalid ${configName}.minLines value in ${configPath}; expected integer >= ${MIN_BLOCK_LINES}.`
       );
     }
   }

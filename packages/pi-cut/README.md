@@ -23,6 +23,10 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "enabled": true,
     "minRepeats": 3,
   },
+  "repeatedBlockFolding": {
+    "enabled": true,
+    "minLines": 4,
+  },
   "lineTruncation": {
     "enabled": true,
     "maxChars": 2000,
@@ -49,6 +53,7 @@ Tool override rules:
 - Default tool behavior is applied before `tools` rules:
   - `terminalCleanup` runs on `bash` only.
   - `duplicateLineFolding` does not run on `edit` or `write`.
+  - `repeatedBlockFolding` does not run on `edit` or `write`.
   - `lineTruncation` does not run on `edit` or `write`.
 - `tools` rules can override these defaults.
 - Rules are applied from top to bottom.
@@ -68,6 +73,28 @@ When enabled, consecutive identical non-empty text tool result lines are folded 
 ```text
 Repeated line
 [previous line repeated x2]
+```
+
+### Repeated block folding
+
+When enabled, consecutive repeated non-empty blocks of text tool result lines are folded once the block has at least `minLines` lines. `minLines` defaults to 4 and must be an integer greater than or equal to 3.
+
+```text
+line A
+line B
+line C
+line A
+line B
+line C
+```
+
+becomes:
+
+```text
+line A
+line B
+line C
+[previous block of 3 lines repeated x1]
 ```
 
 ### Line truncation

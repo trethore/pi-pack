@@ -16,6 +16,13 @@
     "minRepeats": 3
   },
 
+  // Fold consecutive repeated non-empty blocks of lines.
+  // minLines must be an integer >= 3. Default is 4.
+  "repeatedBlockFolding": {
+    "enabled": true,
+    "minLines": 4
+  },
+
   // Truncate individual text tool-output lines after maxChars characters.
   "lineTruncation": {
     "enabled": true,
@@ -23,8 +30,9 @@
   },
 
   // Optional per-tool overrides. Selectors are JavaScript regex strings; "*" means all tools.
-  // Defaults before overrides: terminalCleanup only runs on bash; duplicateLineFolding and
-  // lineTruncation do not run on edit/write. Tools rules can override those defaults.
+  // Defaults before overrides: terminalCleanup only runs on bash; duplicateLineFolding,
+  // repeatedBlockFolding, and lineTruncation do not run on edit/write.
+  // Tools rules can override those defaults.
   // Overrides are applied in order after the global config, so the last matching entry wins.
   "tools": [
     {
