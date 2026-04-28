@@ -4,8 +4,13 @@ import { resolveToolConfig } from '../../src/config/tool-config.js';
 
 describe('resolveToolConfig', () => {
   it('enables all default strategies for regular tools except terminal cleanup', () => {
-    const config = resolveToolConfig(defaultConfig, 'read');
+    // Arrange
+    const toolName = 'read';
 
+    // Act
+    const config = resolveToolConfig(defaultConfig, toolName);
+
+    // Assert
     expect(config.enabled).toBe(true);
     expect(config.terminalCleanup.enabled).toBe(false);
     expect(config.duplicateLineFolding.enabled).toBe(true);
@@ -14,13 +19,25 @@ describe('resolveToolConfig', () => {
   });
 
   it('keeps terminal cleanup enabled for bash', () => {
-    expect(resolveToolConfig(defaultConfig, 'bash').terminalCleanup.enabled).toBe(true);
+    // Arrange
+    const toolName = 'bash';
+
+    // Act
+    const config = resolveToolConfig(defaultConfig, toolName);
+
+    // Assert
+    expect(config.terminalCleanup.enabled).toBe(true);
   });
 
   it('disables folding and truncation strategies for edit and write', () => {
-    for (const toolName of ['edit', 'write']) {
-      const config = resolveToolConfig(defaultConfig, toolName);
+    // Arrange
+    const toolNames = ['edit', 'write'];
 
+    // Act
+    const configs = toolNames.map((toolName) => resolveToolConfig(defaultConfig, toolName));
+
+    // Assert
+    for (const config of configs) {
       expect(config.duplicateLineFolding.enabled).toBe(false);
       expect(config.repeatedBlockFolding.enabled).toBe(false);
       expect(config.lineTruncation.enabled).toBe(false);
@@ -28,21 +45,24 @@ describe('resolveToolConfig', () => {
   });
 
   it('applies matching tool overrides after default tool behavior', () => {
-    const config = resolveToolConfig(
-      {
-        ...defaultConfig,
-        tools: [
-          {
-            selector: /^write$/,
-            repeatedBlockFolding: { enabled: true, minLines: 3 },
-            lineTruncation: { enabled: true, maxChars: 10 },
-          },
-        ],
-      },
-      'write'
-    );
+    // Arrange
+    const configWithOverride = {
+      ...defaultConfig,
+      tools: [
+        {
+          selector: /^write$/,
+          repeatedBlockFolding: { enabled: true, minLines: 3, minRepeats: 5 },
+          lineTruncation: { enabled: true, maxChars: 10 },
+        },
+      ],
+    };
+    const toolName = 'write';
 
-    expect(config.repeatedBlockFolding).toEqual({ enabled: true, minLines: 3 });
+    // Act
+    const config = resolveToolConfig(configWithOverride, toolName);
+
+    // Assert
+    expect(config.repeatedBlockFolding).toEqual({ enabled: true, minLines: 3, minRepeats: 5 });
     expect(config.lineTruncation).toEqual({ enabled: true, maxChars: 10 });
   });
 });

@@ -18,12 +18,15 @@
 
   // Fold consecutive repeated non-empty blocks of lines.
   // minLines must be an integer >= 3. Default is 4.
+  // minRepeats must be an integer >= 2. Default is 2.
   "repeatedBlockFolding": {
     "enabled": true,
-    "minLines": 4
+    "minLines": 4,
+    "minRepeats": 2
   },
 
   // Truncate individual text tool-output lines after maxChars characters.
+  // maxChars must be an integer >= 1.
   "lineTruncation": {
     "enabled": true,
     "maxChars": 2000

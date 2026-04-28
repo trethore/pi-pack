@@ -26,6 +26,7 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
   "repeatedBlockFolding": {
     "enabled": true,
     "minLines": 4,
+    "minRepeats": 2,
   },
   "lineTruncation": {
     "enabled": true,
@@ -77,7 +78,7 @@ Repeated line
 
 ### Repeated block folding
 
-When enabled, consecutive repeated non-empty blocks of text tool result lines are folded once the block has at least `minLines` lines. `minLines` defaults to 4 and must be an integer greater than or equal to 3.
+When enabled, consecutive repeated non-empty blocks of text tool result lines are folded once the block has at least `minLines` lines and reaches `minRepeats` total occurrences. `minLines` defaults to 4 and must be an integer greater than or equal to 3. `minRepeats` defaults to 2 and must be an integer greater than or equal to 2.
 
 ```text
 line A
@@ -99,7 +100,7 @@ line C
 
 ### Line truncation
 
-When enabled, all text tool result lines longer than `maxChars` are truncated and annotated:
+When enabled, all text tool result lines longer than `maxChars` are truncated and annotated. `maxChars` must be an integer greater than or equal to 1:
 
 ```text
 first N chars [... truncated, +X chars]

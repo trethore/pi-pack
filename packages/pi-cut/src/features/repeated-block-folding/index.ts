@@ -10,7 +10,11 @@ export function registerRepeatedBlockFolding(pi: ExtensionAPI, config: PiCutConf
     if (!toolConfig.enabled || !toolConfig.repeatedBlockFolding.enabled) return;
 
     const content = transformTextContent(event.content, (text) =>
-      foldRepeatedBlocks(text, toolConfig.repeatedBlockFolding.minLines)
+      foldRepeatedBlocks(
+        text,
+        toolConfig.repeatedBlockFolding.minLines,
+        toolConfig.repeatedBlockFolding.minRepeats
+      )
     );
     if (content === event.content) return;
 

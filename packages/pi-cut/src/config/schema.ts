@@ -1,6 +1,8 @@
 export const DEFAULT_MAX_CHARS = 2000;
+export const MIN_REPEATS = 2;
 export const DEFAULT_MIN_REPEATS = 3;
 export const DEFAULT_MIN_BLOCK_LINES = 4;
+export const DEFAULT_MIN_BLOCK_REPEATS = MIN_REPEATS;
 export const MIN_BLOCK_LINES = 3;
 
 export interface PiCutConfig {
@@ -43,6 +45,7 @@ export interface DuplicateLineFoldingConfig {
 export interface RepeatedBlockFoldingConfig {
   enabled: boolean;
   minLines: number;
+  minRepeats: number;
 }
 
 export interface LineTruncationConfig {
@@ -64,6 +67,7 @@ export type PartialDuplicateLineFoldingConfig = Partial<{
 export type PartialRepeatedBlockFoldingConfig = Partial<{
   enabled: unknown;
   minLines: unknown;
+  minRepeats: unknown;
 }>;
 
 export type PartialLineTruncationConfig = Partial<{
@@ -99,6 +103,7 @@ export const defaultConfig: PiCutConfig = {
   repeatedBlockFolding: {
     enabled: true,
     minLines: DEFAULT_MIN_BLOCK_LINES,
+    minRepeats: DEFAULT_MIN_BLOCK_REPEATS,
   },
   lineTruncation: {
     enabled: true,
