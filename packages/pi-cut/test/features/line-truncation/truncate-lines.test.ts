@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { truncateLines } from '../../../src/features/line-truncation/truncate-lines.js';
+import { truncateLines } from '#pi-cut/features/line-truncation/truncate-lines.js';
 
 describe('truncateLines', () => {
   it('truncates lines longer than maxChars', () => {

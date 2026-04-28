@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldRepeatedBlocks } from '../../../src/features/repeated-block-folding/fold-repeated-blocks.js';
+import { foldRepeatedBlocks } from '#pi-cut/features/repeated-block-folding/fold-repeated-blocks.js';
 
 describe('foldRepeatedBlocks', () => {
   it('folds consecutive repeated blocks at the minimum block size', () => {

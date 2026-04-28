@@ -145,7 +145,7 @@ async function importConfigWithEmptyHome() {
     homedir: () => homeDir,
   }));
 
-  return import('../../src/config/config.js');
+  return import('#pi-cut/config/config.js');
 }
 
 function makeTempDir(): string {

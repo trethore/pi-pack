@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defaultConfig } from '../../src/config/schema.js';
-import { resolveToolConfig } from '../../src/config/tool-config.js';
+import { defaultConfig } from '#pi-cut/config/schema.js';
+import { resolveToolConfig } from '#pi-cut/config/tool-config.js';
 
 describe('resolveToolConfig', () => {
   it('enables all default strategies for regular tools except terminal cleanup', () => {
