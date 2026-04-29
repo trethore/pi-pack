@@ -13,8 +13,9 @@ describe('resolveToolConfig', () => {
     // Assert
     expect(config.enabled).toBe(true);
     expect(config.terminalCleanup.enabled).toBe(false);
-    expect(config.duplicateLineFolding.enabled).toBe(true);
-    expect(config.repeatedBlockFolding.enabled).toBe(true);
+    expect(config.repetitionFolding.enabled).toBe(true);
+    expect(config.repetitionFolding.line.enabled).toBe(true);
+    expect(config.repetitionFolding.block.enabled).toBe(true);
     expect(config.lineTruncation.enabled).toBe(true);
   });
 
@@ -38,8 +39,7 @@ describe('resolveToolConfig', () => {
 
     // Assert
     for (const config of configs) {
-      expect(config.duplicateLineFolding.enabled).toBe(false);
-      expect(config.repeatedBlockFolding.enabled).toBe(false);
+      expect(config.repetitionFolding.enabled).toBe(false);
       expect(config.lineTruncation.enabled).toBe(false);
     }
   });
@@ -51,7 +51,10 @@ describe('resolveToolConfig', () => {
       tools: [
         {
           selector: /^write$/,
-          repeatedBlockFolding: { enabled: true, minLines: 3, minRepeats: 5 },
+          repetitionFolding: {
+            enabled: true,
+            block: { enabled: true, minLines: 3, minRepeats: 5 },
+          },
           lineTruncation: { enabled: true, maxChars: 10 },
         },
       ],
@@ -62,7 +65,8 @@ describe('resolveToolConfig', () => {
     const config = resolveToolConfig(configWithOverride, toolName);
 
     // Assert
-    expect(config.repeatedBlockFolding).toEqual({ enabled: true, minLines: 3, minRepeats: 5 });
+    expect(config.repetitionFolding.enabled).toBe(true);
+    expect(config.repetitionFolding.block).toEqual({ enabled: true, minLines: 3, minRepeats: 5 });
     expect(config.lineTruncation).toEqual({ enabled: true, maxChars: 10 });
   });
 });

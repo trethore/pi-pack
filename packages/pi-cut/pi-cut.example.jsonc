@@ -9,20 +9,23 @@
     "collapseCarriageReturns": true
   },
 
-  // Fold consecutive identical text tool-output lines.
-  // minRepeats must be an integer >= 2.
-  "duplicateLineFolding": {
+  // Fold repeated text tool-output lines and blocks.
+  "repetitionFolding": {
     "enabled": true,
-    "minRepeats": 3
-  },
-
-  // Fold consecutive repeated non-empty blocks of lines.
-  // minLines must be an integer >= 3. Default is 4.
-  // minRepeats must be an integer >= 2. Default is 2.
-  "repeatedBlockFolding": {
-    "enabled": true,
-    "minLines": 4,
-    "minRepeats": 2
+    "line": {
+      // Fold consecutive identical text tool-output lines.
+      // minRepeats must be an integer >= 2.
+      "enabled": true,
+      "minRepeats": 3
+    },
+    "block": {
+      // Fold consecutive repeated non-empty blocks of lines.
+      // minLines must be an integer >= 3. Default is 4.
+      // minRepeats must be an integer >= 2. Default is 2.
+      "enabled": true,
+      "minLines": 4,
+      "minRepeats": 2
+    }
   },
 
   // Truncate individual text tool-output lines after maxChars characters.
@@ -33,8 +36,8 @@
   },
 
   // Optional per-tool overrides. Selectors are JavaScript regex strings; "*" means all tools.
-  // Defaults before overrides: terminalCleanup only runs on bash; duplicateLineFolding,
-  // repeatedBlockFolding, and lineTruncation do not run on edit/write.
+  // Defaults before overrides: terminalCleanup only runs on bash; repetitionFolding and
+  // lineTruncation do not run on edit/write.
   // Tools rules can override those defaults.
   // Overrides are applied in order after the global config, so the last matching entry wins.
   "tools": [

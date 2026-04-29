@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldDuplicateLines } from '#pi-cut/features/duplicate-line-folding/fold-duplicate-lines.js';
+import { foldDuplicateLines } from '#pi-cut/features/repetition-folding/line/fold-duplicate-lines.js';
 
 describe('foldDuplicateLines', () => {
   it('folds consecutive identical non-empty lines at the minimum repeat count', () => {

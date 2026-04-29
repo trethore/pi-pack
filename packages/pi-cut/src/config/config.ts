@@ -5,23 +5,28 @@ import {
   defaultConfig,
   MIN_BLOCK_LINES,
   MIN_REPEATS,
+  type BlockRepetitionFoldingConfig,
+  type LineRepetitionFoldingConfig,
+  type LineTruncationConfig,
   type LoadedConfig,
   type PartialPiCutConfig,
-  type DuplicateLineFoldingConfig,
-  type RepeatedBlockFoldingConfig,
-  type LineTruncationConfig,
+  type PartialRepetitionFoldingConfig,
   type PiCutConfig,
+  type RepetitionFoldingConfig,
   type TerminalCleanupConfig,
   type ToolOverrideConfig,
 } from '#src/config/schema.js';
 
 export function loadConfig(cwd: string): LoadedConfig {
   const errors: string[] = [];
-  const mergedConfig = {
+  const mergedConfig: PiCutConfig = {
     ...defaultConfig,
     terminalCleanup: { ...defaultConfig.terminalCleanup },
-    duplicateLineFolding: { ...defaultConfig.duplicateLineFolding },
-    repeatedBlockFolding: { ...defaultConfig.repeatedBlockFolding },
+    repetitionFolding: {
+      ...defaultConfig.repetitionFolding,
+      line: { ...defaultConfig.repetitionFolding.line },
+      block: { ...defaultConfig.repetitionFolding.block },
+    },
     lineTruncation: { ...defaultConfig.lineTruncation },
     tools: [],
   };
@@ -65,8 +70,7 @@ function mergeConfig(
 ) {
   mergeEnabled(target, source, configPath, errors);
   mergeTerminalCleanup(target, source, configPath, errors);
-  mergeDuplicateLineFolding(target, source, configPath, errors);
-  mergeRepeatedBlockFolding(target, source, configPath, errors);
+  mergeRepetitionFolding(target, source, configPath, errors);
   mergeLineTruncation(target, source, configPath, errors);
   mergeToolOverrides(target, source, configPath, errors);
 }
@@ -111,49 +115,25 @@ function mergeTerminalCleanup(
   );
 }
 
-function mergeDuplicateLineFolding(
+function mergeRepetitionFolding(
   target: PiCutConfig,
   source: PartialPiCutConfig,
   configPath: string,
   errors: string[]
 ) {
-  if (source.duplicateLineFolding === undefined) return;
+  if (source.repetitionFolding === undefined) return;
 
-  if (!isRecord(source.duplicateLineFolding)) {
+  if (!isRecord(source.repetitionFolding)) {
     errors.push(
-      `pi-cut config ignored invalid duplicateLineFolding value in ${configPath}; expected object.`
+      `pi-cut config ignored invalid repetitionFolding value in ${configPath}; expected object.`
     );
     return;
   }
 
-  mergeDuplicateLineFoldingFields(
-    target.duplicateLineFolding,
-    source.duplicateLineFolding,
-    'duplicateLineFolding',
-    configPath,
-    errors
-  );
-}
-
-function mergeRepeatedBlockFolding(
-  target: PiCutConfig,
-  source: PartialPiCutConfig,
-  configPath: string,
-  errors: string[]
-) {
-  if (source.repeatedBlockFolding === undefined) return;
-
-  if (!isRecord(source.repeatedBlockFolding)) {
-    errors.push(
-      `pi-cut config ignored invalid repeatedBlockFolding value in ${configPath}; expected object.`
-    );
-    return;
-  }
-
-  mergeRepeatedBlockFoldingFields(
-    target.repeatedBlockFolding,
-    source.repeatedBlockFolding,
-    'repeatedBlockFolding',
+  mergeRepetitionFoldingFields(
+    target.repetitionFolding,
+    source.repetitionFolding,
+    'repetitionFolding',
     configPath,
     errors
   );
@@ -241,25 +221,15 @@ function parseToolOverride(
   );
   if (terminalCleanup) override.terminalCleanup = terminalCleanup;
 
-  const duplicateLineFolding = parseStrategyOverride<DuplicateLineFoldingConfig>(
+  const repetitionFolding = parseStrategyOverride<PartialRepetitionFoldingConfig>(
     source,
-    'duplicateLineFolding',
+    'repetitionFolding',
     configName,
     configPath,
     errors,
-    mergeDuplicateLineFoldingFields
+    mergeRepetitionFoldingFields
   );
-  if (duplicateLineFolding) override.duplicateLineFolding = duplicateLineFolding;
-
-  const repeatedBlockFolding = parseStrategyOverride<RepeatedBlockFoldingConfig>(
-    source,
-    'repeatedBlockFolding',
-    configName,
-    configPath,
-    errors,
-    mergeRepeatedBlockFoldingFields
-  );
-  if (repeatedBlockFolding) override.repeatedBlockFolding = repeatedBlockFolding;
+  if (repetitionFolding) override.repetitionFolding = repetitionFolding;
 
   const lineTruncation = parseStrategyOverride<LineTruncationConfig>(
     source,
@@ -308,8 +278,7 @@ function hasToolOverrideFields(override: ToolOverrideConfig): boolean {
   return (
     override.enabled !== undefined ||
     override.terminalCleanup !== undefined ||
-    override.duplicateLineFolding !== undefined ||
-    override.repeatedBlockFolding !== undefined ||
+    override.repetitionFolding !== undefined ||
     override.lineTruncation !== undefined
   );
 }
@@ -380,8 +349,77 @@ function mergeTerminalCleanupFields(
   );
 }
 
-function mergeDuplicateLineFoldingFields(
-  target: Partial<DuplicateLineFoldingConfig>,
+function mergeRepetitionFoldingFields(
+  target: Partial<RepetitionFoldingConfig> | PartialRepetitionFoldingConfig,
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeOptionalBooleanField(
+    source,
+    'enabled',
+    `${configName}.enabled`,
+    configPath,
+    errors,
+    (value) => {
+      target.enabled = value;
+    }
+  );
+
+  mergeNestedConfig(
+    target,
+    source,
+    'line',
+    configName,
+    configPath,
+    errors,
+    mergeLineRepetitionFoldingFields
+  );
+  mergeNestedConfig(
+    target,
+    source,
+    'block',
+    configName,
+    configPath,
+    errors,
+    mergeBlockRepetitionFoldingFields
+  );
+}
+
+function mergeNestedConfig<T extends object>(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+  field: string,
+  configName: string,
+  configPath: string,
+  errors: string[],
+  mergeFields: (
+    target: Partial<T>,
+    source: Record<string, unknown>,
+    configName: string,
+    configPath: string,
+    errors: string[]
+  ) => void
+) {
+  const value = source[field];
+  if (value === undefined) return;
+
+  const nestedConfigName = `${configName}.${field}`;
+  if (!isRecord(value)) {
+    errors.push(
+      `pi-cut config ignored invalid ${nestedConfigName} value in ${configPath}; expected object.`
+    );
+    return;
+  }
+
+  const nestedTarget = (target[field] ?? {}) as Partial<T>;
+  mergeFields(nestedTarget, value, nestedConfigName, configPath, errors);
+  if (hasFields(nestedTarget)) target[field] = nestedTarget;
+}
+
+function mergeLineRepetitionFoldingFields(
+  target: Partial<LineRepetitionFoldingConfig>,
   source: Record<string, unknown>,
   configName: string,
   configPath: string,
@@ -400,8 +438,8 @@ function mergeDuplicateLineFoldingFields(
   mergeMinRepeatsField(target, source, configName, configPath, errors);
 }
 
-function mergeRepeatedBlockFoldingFields(
-  target: Partial<RepeatedBlockFoldingConfig>,
+function mergeBlockRepetitionFoldingFields(
+  target: Partial<BlockRepetitionFoldingConfig>,
   source: Record<string, unknown>,
   configName: string,
   configPath: string,

@@ -9,19 +9,19 @@ describe('loadConfig', () => {
     vi.resetModules();
   });
 
-  it('rejects duplicate line folding minRepeats below 2', async () => {
+  it('rejects repetition folding line minRepeats below 2', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
     const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ duplicateLineFolding: { minRepeats: 1 } }));
+    writeProjectConfig(cwd, JSON.stringify({ repetitionFolding: { line: { minRepeats: 1 } } }));
 
     // Act
     const loaded = loadConfig(cwd);
 
     // Assert
-    expect(loaded.config.duplicateLineFolding.minRepeats).toBe(3);
+    expect(loaded.config.repetitionFolding.line.minRepeats).toBe(3);
     expect(loaded.errors).toEqual([
-      expect.stringContaining('duplicateLineFolding.minRepeats value'),
+      expect.stringContaining('repetitionFolding.line.minRepeats value'),
     ]);
   });
 
@@ -39,7 +39,7 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([expect.stringContaining('lineTruncation.maxChars value')]);
   });
 
-  it('loads repeated block folding defaults', async () => {
+  it('loads repetition folding defaults', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
     const cwd = makeTempDir();
@@ -49,20 +49,26 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.config.repeatedBlockFolding).toEqual({
+    expect(loaded.config.repetitionFolding).toEqual({
       enabled: true,
-      minLines: 4,
-      minRepeats: 2,
+      line: { enabled: true, minRepeats: 3 },
+      block: { enabled: true, minLines: 4, minRepeats: 2 },
     });
   });
 
-  it('merges project repeated block folding config', async () => {
+  it('merges project repetition folding config', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
     const cwd = makeTempDir();
     writeProjectConfig(
       cwd,
-      JSON.stringify({ repeatedBlockFolding: { enabled: false, minLines: 3, minRepeats: 4 } })
+      JSON.stringify({
+        repetitionFolding: {
+          enabled: false,
+          line: { enabled: false, minRepeats: 4 },
+          block: { enabled: true, minLines: 3, minRepeats: 4 },
+        },
+      })
     );
 
     // Act
@@ -70,44 +76,46 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.config.repeatedBlockFolding).toEqual({
+    expect(loaded.config.repetitionFolding).toEqual({
       enabled: false,
-      minLines: 3,
-      minRepeats: 4,
+      line: { enabled: false, minRepeats: 4 },
+      block: { enabled: true, minLines: 3, minRepeats: 4 },
     });
   });
 
-  it('rejects repeated block folding minLines below 3', async () => {
+  it('rejects repetition folding block minLines below 3', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
     const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ repeatedBlockFolding: { minLines: 2 } }));
+    writeProjectConfig(cwd, JSON.stringify({ repetitionFolding: { block: { minLines: 2 } } }));
 
     // Act
     const loaded = loadConfig(cwd);
 
     // Assert
-    expect(loaded.config.repeatedBlockFolding.minLines).toBe(4);
-    expect(loaded.errors).toEqual([expect.stringContaining('repeatedBlockFolding.minLines value')]);
-  });
-
-  it('rejects repeated block folding minRepeats below 2', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ repeatedBlockFolding: { minRepeats: 1 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
-    expect(loaded.config.repeatedBlockFolding.minRepeats).toBe(2);
+    expect(loaded.config.repetitionFolding.block.minLines).toBe(4);
     expect(loaded.errors).toEqual([
-      expect.stringContaining('repeatedBlockFolding.minRepeats value'),
+      expect.stringContaining('repetitionFolding.block.minLines value'),
     ]);
   });
 
-  it('loads repeated block folding tool overrides', async () => {
+  it('rejects repetition folding block minRepeats below 2', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ repetitionFolding: { block: { minRepeats: 1 } } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.repetitionFolding.block.minRepeats).toBe(2);
+    expect(loaded.errors).toEqual([
+      expect.stringContaining('repetitionFolding.block.minRepeats value'),
+    ]);
+  });
+
+  it('loads repetition folding tool overrides', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
     const cwd = makeTempDir();
@@ -117,7 +125,11 @@ describe('loadConfig', () => {
         tools: [
           {
             selector: 'write',
-            repeatedBlockFolding: { enabled: true, minLines: 3, minRepeats: 5 },
+            repetitionFolding: {
+              enabled: true,
+              line: { enabled: false },
+              block: { enabled: true, minLines: 3, minRepeats: 5 },
+            },
           },
         ],
       })
@@ -129,10 +141,10 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.tools).toHaveLength(1);
-    expect(loaded.config.tools[0].repeatedBlockFolding).toEqual({
+    expect(loaded.config.tools[0].repetitionFolding).toEqual({
       enabled: true,
-      minLines: 3,
-      minRepeats: 5,
+      line: { enabled: false },
+      block: { enabled: true, minLines: 3, minRepeats: 5 },
     });
   });
 });

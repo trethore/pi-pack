@@ -1,8 +1,7 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import { loadConfig } from '#src/config/config.js';
-import { registerDuplicateLineFolding } from '#src/features/duplicate-line-folding/index.js';
 import { registerLineTruncation } from '#src/features/line-truncation/index.js';
-import { registerRepeatedBlockFolding } from '#src/features/repeated-block-folding/index.js';
+import { registerRepetitionFolding } from '#src/features/repetition-folding/index.js';
 import { registerTerminalCleanup } from '#src/features/terminal-cleanup/index.js';
 
 export default function piCut(pi: ExtensionAPI) {
@@ -10,8 +9,7 @@ export default function piCut(pi: ExtensionAPI) {
 
   registerConfigDiagnostics(pi, loadedConfig.errors);
   registerTerminalCleanup(pi, loadedConfig.config);
-  registerRepeatedBlockFolding(pi, loadedConfig.config);
-  registerDuplicateLineFolding(pi, loadedConfig.config);
+  registerRepetitionFolding(pi, loadedConfig.config);
   registerLineTruncation(pi, loadedConfig.config);
 }
 

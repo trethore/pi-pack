@@ -4,8 +4,11 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
   const resolvedConfig: ResolvedToolConfig = {
     enabled: config.enabled,
     terminalCleanup: { ...config.terminalCleanup },
-    duplicateLineFolding: { ...config.duplicateLineFolding },
-    repeatedBlockFolding: { ...config.repeatedBlockFolding },
+    repetitionFolding: {
+      ...config.repetitionFolding,
+      line: { ...config.repetitionFolding.line },
+      block: { ...config.repetitionFolding.block },
+    },
     lineTruncation: { ...config.lineTruncation },
   };
 
@@ -18,8 +21,7 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
       resolvedConfig.enabled = value;
     });
     applyStrategyOverride(resolvedConfig.terminalCleanup, override.terminalCleanup);
-    applyStrategyOverride(resolvedConfig.duplicateLineFolding, override.duplicateLineFolding);
-    applyStrategyOverride(resolvedConfig.repeatedBlockFolding, override.repeatedBlockFolding);
+    applyRepetitionFoldingOverride(resolvedConfig.repetitionFolding, override.repetitionFolding);
     applyStrategyOverride(resolvedConfig.lineTruncation, override.lineTruncation);
   }
 
@@ -32,8 +34,7 @@ function applyDefaultToolBehavior(config: ResolvedToolConfig, toolName: string) 
   }
 
   if (toolName === 'edit' || toolName === 'write') {
-    config.duplicateLineFolding.enabled = false;
-    config.repeatedBlockFolding.enabled = false;
+    config.repetitionFolding.enabled = false;
     config.lineTruncation.enabled = false;
   }
 }
@@ -45,6 +46,19 @@ function matchesToolSelector(selector: RegExp, toolName: string): boolean {
 
 function applyBooleanOverride(value: boolean | undefined, apply: (value: boolean) => void) {
   if (value !== undefined) apply(value);
+}
+
+function applyRepetitionFoldingOverride(
+  target: ResolvedToolConfig['repetitionFolding'],
+  source: PiCutConfig['tools'][number]['repetitionFolding']
+) {
+  if (!source) return;
+
+  applyBooleanOverride(source.enabled, (value) => {
+    target.enabled = value;
+  });
+  applyStrategyOverride(target.line, source.line);
+  applyStrategyOverride(target.block, source.block);
 }
 
 function applyStrategyOverride<T extends object>(target: T, source: Partial<T> | undefined) {

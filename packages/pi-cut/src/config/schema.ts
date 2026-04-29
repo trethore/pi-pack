@@ -1,6 +1,6 @@
 export const DEFAULT_MAX_CHARS = 2000;
 export const MIN_REPEATS = 2;
-export const DEFAULT_MIN_REPEATS = 3;
+export const DEFAULT_MIN_LINE_REPEATS = 3;
 export const DEFAULT_MIN_BLOCK_LINES = 4;
 export const DEFAULT_MIN_BLOCK_REPEATS = MIN_REPEATS;
 export const MIN_BLOCK_LINES = 3;
@@ -8,8 +8,7 @@ export const MIN_BLOCK_LINES = 3;
 export interface PiCutConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
-  duplicateLineFolding: DuplicateLineFoldingConfig;
-  repeatedBlockFolding: RepeatedBlockFoldingConfig;
+  repetitionFolding: RepetitionFoldingConfig;
   lineTruncation: LineTruncationConfig;
   tools: ToolOverrideConfig[];
 }
@@ -17,8 +16,7 @@ export interface PiCutConfig {
 export interface ResolvedToolConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
-  duplicateLineFolding: DuplicateLineFoldingConfig;
-  repeatedBlockFolding: RepeatedBlockFoldingConfig;
+  repetitionFolding: RepetitionFoldingConfig;
   lineTruncation: LineTruncationConfig;
 }
 
@@ -26,8 +24,7 @@ export interface ToolOverrideConfig {
   selector: RegExp;
   enabled?: boolean;
   terminalCleanup?: Partial<TerminalCleanupConfig>;
-  duplicateLineFolding?: Partial<DuplicateLineFoldingConfig>;
-  repeatedBlockFolding?: Partial<RepeatedBlockFoldingConfig>;
+  repetitionFolding?: PartialRepetitionFoldingConfig;
   lineTruncation?: Partial<LineTruncationConfig>;
 }
 
@@ -37,12 +34,18 @@ export interface TerminalCleanupConfig {
   collapseCarriageReturns: boolean;
 }
 
-export interface DuplicateLineFoldingConfig {
+export interface RepetitionFoldingConfig {
+  enabled: boolean;
+  line: LineRepetitionFoldingConfig;
+  block: BlockRepetitionFoldingConfig;
+}
+
+export interface LineRepetitionFoldingConfig {
   enabled: boolean;
   minRepeats: number;
 }
 
-export interface RepeatedBlockFoldingConfig {
+export interface BlockRepetitionFoldingConfig {
   enabled: boolean;
   minLines: number;
   minRepeats: number;
@@ -59,15 +62,10 @@ export type PartialTerminalCleanupConfig = Partial<{
   collapseCarriageReturns: unknown;
 }>;
 
-export type PartialDuplicateLineFoldingConfig = Partial<{
-  enabled: unknown;
-  minRepeats: unknown;
-}>;
-
-export type PartialRepeatedBlockFoldingConfig = Partial<{
-  enabled: unknown;
-  minLines: unknown;
-  minRepeats: unknown;
+export type PartialRepetitionFoldingConfig = Partial<{
+  enabled: boolean;
+  line: Partial<LineRepetitionFoldingConfig>;
+  block: Partial<BlockRepetitionFoldingConfig>;
 }>;
 
 export type PartialLineTruncationConfig = Partial<{
@@ -78,8 +76,7 @@ export type PartialLineTruncationConfig = Partial<{
 export type PartialPiCutConfig = Partial<{
   enabled: unknown;
   terminalCleanup: PartialTerminalCleanupConfig;
-  duplicateLineFolding: PartialDuplicateLineFoldingConfig;
-  repeatedBlockFolding: PartialRepeatedBlockFoldingConfig;
+  repetitionFolding: unknown;
   lineTruncation: PartialLineTruncationConfig;
   tools: unknown;
 }>;
@@ -96,14 +93,17 @@ export const defaultConfig: PiCutConfig = {
     stripAnsi: true,
     collapseCarriageReturns: true,
   },
-  duplicateLineFolding: {
+  repetitionFolding: {
     enabled: true,
-    minRepeats: DEFAULT_MIN_REPEATS,
-  },
-  repeatedBlockFolding: {
-    enabled: true,
-    minLines: DEFAULT_MIN_BLOCK_LINES,
-    minRepeats: DEFAULT_MIN_BLOCK_REPEATS,
+    line: {
+      enabled: true,
+      minRepeats: DEFAULT_MIN_LINE_REPEATS,
+    },
+    block: {
+      enabled: true,
+      minLines: DEFAULT_MIN_BLOCK_LINES,
+      minRepeats: DEFAULT_MIN_BLOCK_REPEATS,
+    },
   },
   lineTruncation: {
     enabled: true,

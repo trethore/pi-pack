@@ -19,14 +19,17 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "stripAnsi": true,
     "collapseCarriageReturns": true,
   },
-  "duplicateLineFolding": {
+  "repetitionFolding": {
     "enabled": true,
-    "minRepeats": 3,
-  },
-  "repeatedBlockFolding": {
-    "enabled": true,
-    "minLines": 4,
-    "minRepeats": 2,
+    "line": {
+      "enabled": true,
+      "minRepeats": 3,
+    },
+    "block": {
+      "enabled": true,
+      "minLines": 4,
+      "minRepeats": 2,
+    },
   },
   "lineTruncation": {
     "enabled": true,
@@ -53,8 +56,7 @@ Tool override rules:
 - Use `"*"` to match every tool.
 - Default tool behavior is applied before `tools` rules:
   - `terminalCleanup` runs on `bash` only.
-  - `duplicateLineFolding` does not run on `edit` or `write`.
-  - `repeatedBlockFolding` does not run on `edit` or `write`.
+  - `repetitionFolding` does not run on `edit` or `write`.
   - `lineTruncation` does not run on `edit` or `write`.
 - `tools` rules can override these defaults.
 - Rules are applied from top to bottom.
@@ -67,7 +69,11 @@ Tool override rules:
 
 By default, bash tool results are cleaned by stripping ANSI escape sequences and collapsing carriage-return progress redraws to the visible final text. Other tools can opt in with `tools` overrides.
 
-### Duplicate line folding
+### Repetition folding
+
+When enabled, repeated blocks are folded first, then repeated lines are folded.
+
+#### Line repetition folding
 
 When enabled, consecutive identical non-empty text tool result lines are folded once they reach `minRepeats` total occurrences. `minRepeats` must be an integer greater than or equal to 2.
 
@@ -76,7 +82,7 @@ Repeated line
 [previous line repeated x2]
 ```
 
-### Repeated block folding
+#### Block repetition folding
 
 When enabled, consecutive repeated non-empty blocks of text tool result lines are folded once the block has at least `minLines` lines and reaches `minRepeats` total occurrences. `minLines` defaults to 4 and must be an integer greater than or equal to 3. `minRepeats` defaults to 2 and must be an integer greater than or equal to 2.
 
