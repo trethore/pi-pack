@@ -36,6 +36,11 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "enabled": true,
     "maxChars": 2000,
   },
+  "efficiencyReminder": {
+    "enabled": true,
+    "onEvery": 1,
+    "text": "<system_reminder>\nMinimize tool output, file reads, and irrelevant context, retaining only the data necessary to complete the current task.\n</system_reminder>",
+  },
   "tools": [
     {
       "selector": "*",
@@ -112,3 +117,7 @@ When enabled, all text tool result lines longer than `maxChars` are truncated an
 ```text
 first N chars [... truncated, +X chars]
 ```
+
+### Efficiency reminder
+
+When enabled, the latest user prompt sent to the LLM gets an appended reminder to minimize tool output and irrelevant context. The saved session history is not modified. `onEvery` must be an integer greater than or equal to 1 and controls how often the reminder is appended. If `text` is omitted, the default reminder is used.

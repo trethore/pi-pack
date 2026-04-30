@@ -6,6 +6,7 @@ import {
   MIN_BLOCK_LINES,
   MIN_REPEATS,
   type BlockRepetitionFoldingConfig,
+  type EfficiencyReminderConfig,
   type LineRepetitionFoldingConfig,
   type LineTruncationConfig,
   type LoadedConfig,
@@ -28,6 +29,7 @@ export function loadConfig(cwd: string): LoadedConfig {
       block: { ...defaultConfig.repetitionFolding.block },
     },
     lineTruncation: { ...defaultConfig.lineTruncation },
+    efficiencyReminder: { ...defaultConfig.efficiencyReminder },
     tools: [],
   };
 
@@ -72,6 +74,7 @@ function mergeConfig(
   mergeTerminalCleanup(target, source, configPath, errors);
   mergeRepetitionFolding(target, source, configPath, errors);
   mergeLineTruncation(target, source, configPath, errors);
+  mergeEfficiencyReminder(target, source, configPath, errors);
   mergeToolOverrides(target, source, configPath, errors);
 }
 
@@ -158,6 +161,30 @@ function mergeLineTruncation(
     target.lineTruncation,
     source.lineTruncation,
     'lineTruncation',
+    configPath,
+    errors
+  );
+}
+
+function mergeEfficiencyReminder(
+  target: PiCutConfig,
+  source: PartialPiCutConfig,
+  configPath: string,
+  errors: string[]
+) {
+  if (source.efficiencyReminder === undefined) return;
+
+  if (!isRecord(source.efficiencyReminder)) {
+    errors.push(
+      `pi-cut config ignored invalid efficiencyReminder value in ${configPath}; expected object.`
+    );
+    return;
+  }
+
+  mergeEfficiencyReminderFields(
+    target.efficiencyReminder,
+    source.efficiencyReminder,
+    'efficiencyReminder',
     configPath,
     errors
   );
@@ -522,6 +549,45 @@ function mergeLineTruncationFields(
     } else {
       errors.push(
         `pi-cut config ignored invalid ${configName}.maxChars value in ${configPath}; expected integer >= 1.`
+      );
+    }
+  }
+}
+
+function mergeEfficiencyReminderFields(
+  target: Partial<EfficiencyReminderConfig>,
+  source: Record<string, unknown>,
+  configName: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeOptionalBooleanField(
+    source,
+    'enabled',
+    `${configName}.enabled`,
+    configPath,
+    errors,
+    (value) => {
+      target.enabled = value;
+    }
+  );
+
+  if (source.onEvery !== undefined) {
+    if (isPositiveInteger(source.onEvery)) {
+      target.onEvery = source.onEvery;
+    } else {
+      errors.push(
+        `pi-cut config ignored invalid ${configName}.onEvery value in ${configPath}; expected integer >= 1.`
+      );
+    }
+  }
+
+  if (source.text !== undefined) {
+    if (typeof source.text === 'string' && source.text.trim().length > 0) {
+      target.text = source.text;
+    } else {
+      errors.push(
+        `pi-cut config ignored invalid ${configName}.text value in ${configPath}; expected non-empty string.`
       );
     }
   }

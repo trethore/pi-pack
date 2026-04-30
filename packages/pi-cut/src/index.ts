@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import { loadConfig } from '#src/config/config.js';
+import { registerEfficiencyReminder } from '#src/features/efficiency-reminder/index.js';
 import { registerLineTruncation } from '#src/features/line-truncation/index.js';
 import { registerRepetitionFolding } from '#src/features/repetition-folding/index.js';
 import { registerTerminalCleanup } from '#src/features/terminal-cleanup/index.js';
@@ -8,6 +9,7 @@ export default function piCut(pi: ExtensionAPI) {
   const loadedConfig = loadConfig(process.cwd());
 
   registerConfigDiagnostics(pi, loadedConfig.errors);
+  registerEfficiencyReminder(pi, loadedConfig.config);
   registerTerminalCleanup(pi, loadedConfig.config);
   registerRepetitionFolding(pi, loadedConfig.config);
   registerLineTruncation(pi, loadedConfig.config);

@@ -4,12 +4,18 @@ export const DEFAULT_MIN_LINE_REPEATS = 3;
 export const DEFAULT_MIN_BLOCK_LINES = 4;
 export const DEFAULT_MIN_BLOCK_REPEATS = MIN_REPEATS;
 export const MIN_BLOCK_LINES = 3;
+export const DEFAULT_EFFICIENCY_REMINDER_TEXT = [
+  '<system_reminder>',
+  'Minimize tool output, file reads, and irrelevant context, retaining only the data necessary to complete the current task.',
+  '</system_reminder>',
+].join('\n');
 
 export interface PiCutConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
   repetitionFolding: RepetitionFoldingConfig;
   lineTruncation: LineTruncationConfig;
+  efficiencyReminder: EfficiencyReminderConfig;
   tools: ToolOverrideConfig[];
 }
 
@@ -57,6 +63,12 @@ export interface LineTruncationConfig {
   maxChars: number;
 }
 
+export interface EfficiencyReminderConfig {
+  enabled: boolean;
+  onEvery: number;
+  text: string;
+}
+
 export type PartialTerminalCleanupConfig = Partial<{
   enabled: unknown;
   stripAnsi: unknown;
@@ -75,11 +87,18 @@ export type PartialLineTruncationConfig = Partial<{
   maxChars: unknown;
 }>;
 
+export type PartialEfficiencyReminderConfig = Partial<{
+  enabled: unknown;
+  onEvery: unknown;
+  text: unknown;
+}>;
+
 export type PartialPiCutConfig = Partial<{
   enabled: unknown;
   terminalCleanup: PartialTerminalCleanupConfig;
   repetitionFolding: unknown;
   lineTruncation: PartialLineTruncationConfig;
+  efficiencyReminder: PartialEfficiencyReminderConfig;
   tools: unknown;
 }>;
 
@@ -111,6 +130,11 @@ export const defaultConfig: PiCutConfig = {
   lineTruncation: {
     enabled: true,
     maxChars: DEFAULT_MAX_CHARS,
+  },
+  efficiencyReminder: {
+    enabled: true,
+    onEvery: 1,
+    text: DEFAULT_EFFICIENCY_REMINDER_TEXT,
   },
   tools: [],
 };
