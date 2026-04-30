@@ -23,4 +23,4 @@ pi-pack/                         # You are here!
 
 ## Testing and Verification
 
-To verify changes run `npm run typecheck && npm run lint && npm run test && npm run format` to run all checks at once.
+To verify changes run `set -o pipefail; { npm run typecheck && npm run lint && npm run test && npm run format; } 2>&1 | tail -n 50` to run all checks at once.
