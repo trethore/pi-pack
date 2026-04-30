@@ -56,6 +56,54 @@ describe('loadConfig', () => {
     });
   });
 
+  it('loads terminal cleanup defaults', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.terminalCleanup).toEqual({
+      enabled: true,
+      stripAnsi: true,
+      collapseCarriageReturns: true,
+      trimTrailingWhitespace: true,
+    });
+  });
+
+  it('merges terminal cleanup trimTrailingWhitespace config', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ terminalCleanup: { trimTrailingWhitespace: false } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.terminalCleanup.trimTrailingWhitespace).toBe(false);
+  });
+
+  it('rejects invalid terminal cleanup trimTrailingWhitespace values', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ terminalCleanup: { trimTrailingWhitespace: 'no' } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.terminalCleanup.trimTrailingWhitespace).toBe(true);
+    expect(loaded.errors).toEqual([
+      expect.stringContaining('terminalCleanup.trimTrailingWhitespace value'),
+    ]);
+  });
+
   it('merges project repetition folding config', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();

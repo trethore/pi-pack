@@ -13,6 +13,7 @@ export function registerTerminalCleanup(pi: ExtensionAPI, config: PiCutConfig) {
       cleanTerminalOutput(text, {
         stripAnsi: toolConfig.terminalCleanup.stripAnsi,
         collapseCarriageReturns: toolConfig.terminalCleanup.collapseCarriageReturns,
+        trimTrailingWhitespace: toolConfig.terminalCleanup.trimTrailingWhitespace,
       })
     );
     if (content === event.content) return;

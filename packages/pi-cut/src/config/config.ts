@@ -347,6 +347,16 @@ function mergeTerminalCleanupFields(
       target.collapseCarriageReturns = value;
     }
   );
+  mergeOptionalBooleanField(
+    source,
+    'trimTrailingWhitespace',
+    `${configName}.trimTrailingWhitespace`,
+    configPath,
+    errors,
+    (value) => {
+      target.trimTrailingWhitespace = value;
+    }
+  );
 }
 
 function mergeRepetitionFoldingFields(

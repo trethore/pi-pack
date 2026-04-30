@@ -28,6 +28,7 @@ describe('resolveToolConfig', () => {
 
     // Assert
     expect(config.terminalCleanup.enabled).toBe(true);
+    expect(config.terminalCleanup.trimTrailingWhitespace).toBe(true);
   });
 
   it('disables folding and truncation strategies for edit and write', () => {
@@ -51,6 +52,7 @@ describe('resolveToolConfig', () => {
       tools: [
         {
           selector: /^write$/,
+          terminalCleanup: { enabled: true, trimTrailingWhitespace: false },
           repetitionFolding: {
             enabled: true,
             block: { enabled: true, minLines: 3, minRepeats: 5 },
@@ -65,6 +67,8 @@ describe('resolveToolConfig', () => {
     const config = resolveToolConfig(configWithOverride, toolName);
 
     // Assert
+    expect(config.terminalCleanup.enabled).toBe(true);
+    expect(config.terminalCleanup.trimTrailingWhitespace).toBe(false);
     expect(config.repetitionFolding.enabled).toBe(true);
     expect(config.repetitionFolding.block).toEqual({ enabled: true, minLines: 3, minRepeats: 5 });
     expect(config.lineTruncation).toEqual({ enabled: true, maxChars: 10 });

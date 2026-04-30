@@ -18,6 +18,7 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "enabled": true,
     "stripAnsi": true,
     "collapseCarriageReturns": true,
+    "trimTrailingWhitespace": true,
   },
   "repetitionFolding": {
     "enabled": true,
@@ -67,7 +68,7 @@ Tool override rules:
 
 ### Terminal cleanup
 
-By default, bash tool results are cleaned by stripping ANSI escape sequences and collapsing carriage-return progress redraws to the visible final text. Other tools can opt in with `tools` overrides.
+By default, bash tool results are cleaned by stripping ANSI escape sequences, collapsing carriage-return progress redraws to the visible final text, and trimming trailing spaces and tabs from each line. Other tools can opt in with `tools` overrides.
 
 ### Repetition folding
 

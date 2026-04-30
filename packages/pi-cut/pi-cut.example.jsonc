@@ -2,11 +2,12 @@
   // Master switch for all pi-cut features.
   "enabled": true,
 
-  // Strip terminal-only formatting and progress redraw noise from bash tool outputs.
+  // Strip terminal-only formatting, progress redraw noise, and trailing whitespace from bash tool outputs.
   "terminalCleanup": {
     "enabled": true,
     "stripAnsi": true,
-    "collapseCarriageReturns": true
+    "collapseCarriageReturns": true,
+    "trimTrailingWhitespace": true
   },
 
   // Fold repeated text tool-output lines and blocks.

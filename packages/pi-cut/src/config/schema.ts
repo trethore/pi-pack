@@ -32,6 +32,7 @@ export interface TerminalCleanupConfig {
   enabled: boolean;
   stripAnsi: boolean;
   collapseCarriageReturns: boolean;
+  trimTrailingWhitespace: boolean;
 }
 
 export interface RepetitionFoldingConfig {
@@ -60,6 +61,7 @@ export type PartialTerminalCleanupConfig = Partial<{
   enabled: unknown;
   stripAnsi: unknown;
   collapseCarriageReturns: unknown;
+  trimTrailingWhitespace: unknown;
 }>;
 
 export type PartialRepetitionFoldingConfig = Partial<{
@@ -92,6 +94,7 @@ export const defaultConfig: PiCutConfig = {
     enabled: true,
     stripAnsi: true,
     collapseCarriageReturns: true,
+    trimTrailingWhitespace: true,
   },
   repetitionFolding: {
     enabled: true,
