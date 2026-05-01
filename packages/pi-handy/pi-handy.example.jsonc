@@ -5,5 +5,10 @@
   // /thinkinglevel <level>
   "thinkingLevel": {
     "enabled": true
+  },
+
+  // /switchworkspace <path>
+  "switchWorkspace": {
+    "enabled": true
   }
 }

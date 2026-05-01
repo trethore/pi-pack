@@ -17,6 +17,9 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "thinkingLevel": {
     "enabled": true,
   },
+  "switchWorkspace": {
+    "enabled": true,
+  },
 }
 ```
 
@@ -31,4 +34,16 @@ Examples:
 ```text
 /thinkinglevel medium
 /thinkinglevel off
+```
+
+### Switch workspace command
+
+Registers `/switchworkspace <path>` to switch Pi to a different workspace directory.
+The full argument is treated as the path, so spaces do not require quotes.
+
+Examples:
+
+```text
+/switchworkspace C:\Users\titou\.pi\agent
+/switchworkspace /Users/titou/my project
 ```

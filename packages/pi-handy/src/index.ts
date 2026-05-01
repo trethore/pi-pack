@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import { loadConfig } from '#src/config/config.js';
+import { registerSwitchWorkspaceCommand } from '#src/features/switch-workspace/index.js';
 import { registerThinkingLevelCommand } from '#src/features/thinking-level/index.js';
 
 export default function piHandy(pi: ExtensionAPI) {
@@ -9,6 +10,7 @@ export default function piHandy(pi: ExtensionAPI) {
 
   if (!loadedConfig.config.enabled) return;
   if (loadedConfig.config.thinkingLevel.enabled) registerThinkingLevelCommand(pi);
+  if (loadedConfig.config.switchWorkspace.enabled) registerSwitchWorkspaceCommand(pi);
 }
 
 function registerConfigDiagnostics(pi: ExtensionAPI, errors: string[]) {

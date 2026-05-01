@@ -24,6 +24,7 @@ function cloneDefaultConfig(): PiHandyConfig {
   return {
     ...defaultConfig,
     thinkingLevel: { ...defaultConfig.thinkingLevel },
+    switchWorkspace: { ...defaultConfig.switchWorkspace },
   };
 }
 
@@ -61,23 +62,41 @@ function mergeConfig(
     if (enabled !== undefined) target.enabled = enabled;
   }
 
-  if (source.thinkingLevel === undefined) return;
+  mergeFeatureConfig(
+    target.thinkingLevel,
+    source.thinkingLevel,
+    'thinkingLevel',
+    configPath,
+    errors
+  );
+  mergeFeatureConfig(
+    target.switchWorkspace,
+    source.switchWorkspace,
+    'switchWorkspace',
+    configPath,
+    errors
+  );
+}
 
-  if (!isRecord(source.thinkingLevel)) {
+function mergeFeatureConfig(
+  target: { enabled: boolean },
+  source: unknown,
+  label: string,
+  configPath: string,
+  errors: string[]
+) {
+  if (source === undefined) return;
+
+  if (!isRecord(source)) {
     errors.push(
-      `pi-handy config ignored invalid thinkingLevel value in ${configPath}; expected object.`
+      `pi-handy config ignored invalid ${label} value in ${configPath}; expected object.`
     );
     return;
   }
 
-  if (source.thinkingLevel.enabled !== undefined) {
-    const enabled = readBooleanField(
-      source.thinkingLevel.enabled,
-      'thinkingLevel.enabled',
-      configPath,
-      errors
-    );
-    if (enabled !== undefined) target.thinkingLevel.enabled = enabled;
+  if (source.enabled !== undefined) {
+    const enabled = readBooleanField(source.enabled, `${label}.enabled`, configPath, errors);
+    if (enabled !== undefined) target.enabled = enabled;
   }
 }
 

@@ -26,6 +26,7 @@ describe('pi-handy config', () => {
       config: {
         enabled: true,
         thinkingLevel: { enabled: true },
+        switchWorkspace: { enabled: true },
       },
       errors: [],
     });
@@ -33,28 +34,37 @@ describe('pi-handy config', () => {
 
   it('lets project config override global config', () => {
     const cwd = makeTempProject();
-    writeFileSync(globalConfigPath, '{ "enabled": false, "thinkingLevel": { "enabled": false } }');
-    writeProjectConfig(cwd, '{ "enabled": true }');
+    writeFileSync(
+      globalConfigPath,
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false } }'
+    );
+    writeProjectConfig(cwd, '{ "enabled": true, "switchWorkspace": { "enabled": true } }');
 
     expect(loadConfig(cwd).config).toEqual({
       enabled: true,
       thinkingLevel: { enabled: false },
+      switchWorkspace: { enabled: true },
     });
   });
 
   it('reports invalid fields and keeps previous values', () => {
     const cwd = makeTempProject();
-    writeProjectConfig(cwd, '{ "enabled": "yes", "thinkingLevel": false }');
+    writeProjectConfig(
+      cwd,
+      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false }'
+    );
 
     const result = loadConfig(cwd);
 
     expect(result.config).toEqual({
       enabled: true,
       thinkingLevel: { enabled: true },
+      switchWorkspace: { enabled: true },
     });
     expect(result.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
+      expect.stringContaining('invalid switchWorkspace value'),
     ]);
   });
 });
