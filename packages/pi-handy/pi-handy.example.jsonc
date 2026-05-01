@@ -1,0 +1,9 @@
+{
+  // Master switch for pi-handy.
+  "enabled": true,
+
+  // /thinkinglevel <level>
+  "thinkingLevel": {
+    "enabled": true
+  }
+}

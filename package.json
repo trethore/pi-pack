@@ -22,18 +22,24 @@
     "importpi": "node scripts/importpi.ts",
     "dev": "pi -e .",
     "dev:pi-cut": "pi -e ./packages/pi-cut",
+    "dev:pi-codexify": "pi -e ./packages/pi-codexify",
+    "dev:pi-handy": "pi -e ./packages/pi-handy",
     "install:global": "pi install .",
     "install:local": "pi install -l .",
     "install:global:pi-cut": "pi install ./packages/pi-cut",
     "install:local:pi-cut": "pi install -l ./packages/pi-cut",
     "install:global:pi-codexify": "pi install ./packages/pi-codexify",
-    "install:local:pi-codexify": "pi install -l ./packages/pi-codexify"
+    "install:local:pi-codexify": "pi install -l ./packages/pi-codexify",
+    "install:global:pi-handy": "pi install ./packages/pi-handy",
+    "install:local:pi-handy": "pi install -l ./packages/pi-handy"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*"
   },
   "imports": {
-    "#pi-cut/*": "./packages/pi-cut/src/*"
+    "#pi-cut/*": "./packages/pi-cut/src/*",
+    "#pi-codexify/*": "./packages/pi-codexify/src/*",
+    "#pi-handy/*": "./packages/pi-handy/src/*"
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
