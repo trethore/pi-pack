@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { foldRepeatedOutput } from '#pi-cut/features/repetition-folding/fold-repeated-output.js';
+import {
+  MAX_FOLDING_LINES,
+  foldRepeatedOutput,
+} from '#pi-cut/features/repetition-folding/fold-repeated-output.js';
 
 const defaultConfig = {
   enabled: true,
@@ -48,6 +51,17 @@ describe('foldRepeatedOutput', () => {
 
     // Act
     const foldedText = foldRepeatedOutput(text, config);
+
+    // Assert
+    expect(foldedText).toBe(text);
+  });
+
+  it('skips folding above the safety line limit', () => {
+    // Arrange
+    const text = `${'same\n'.repeat(MAX_FOLDING_LINES)}same`;
+
+    // Act
+    const foldedText = foldRepeatedOutput(text, defaultConfig);
 
     // Assert
     expect(foldedText).toBe(text);

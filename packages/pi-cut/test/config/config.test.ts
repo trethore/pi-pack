@@ -167,6 +167,21 @@ describe('loadConfig', () => {
     expect(loaded.config.efficiencyReminder.text).toContain('Minimize tool output');
   });
 
+  it('preserves efficiency reminder text whitespace', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    const text = '  <system_reminder>Short reminder.</system_reminder>  ';
+    writeProjectConfig(cwd, JSON.stringify({ efficiencyReminder: { text } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.efficiencyReminder.text).toBe(text);
+  });
+
   it('rejects invalid efficiency reminder config values', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();

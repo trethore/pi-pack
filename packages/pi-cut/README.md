@@ -47,7 +47,7 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
       "lineTruncation": { "maxChars": 1000 },
     },
     {
-      "selector": "read",
+      "selector": "^read$",
       "lineTruncation": { "maxChars": 4000 },
     },
   ],
@@ -60,6 +60,7 @@ Tool override rules:
 - Add optional per-tool overrides in `tools`.
 - `selector` is a JavaScript regex string.
 - Use `"*"` to match every tool.
+- Use anchors for exact tool matches, such as `"^read$"`. An unanchored selector like `"read"` also matches names containing `read`.
 - Default tool behavior is applied before `tools` rules:
   - `terminalCleanup` runs on `bash` only.
   - `repetitionFolding` does not run on `edit` or `write`.
@@ -67,7 +68,9 @@ Tool override rules:
 - `tools` rules can override these defaults.
 - Rules are applied from top to bottom.
 - If multiple rules match, the last one wins.
-- Project config loads after global config, so project rules win.
+- Global config loads first, then project config is merged on top.
+- `tools` rules are appended rather than replaced, so project config inherits global tool rules by default.
+- If global and project `tools` rules both match, the later project rule wins for the fields it sets.
 
 ## Features
 
@@ -78,6 +81,8 @@ By default, bash tool results are cleaned by stripping ANSI escape sequences, co
 ### Repetition folding
 
 When enabled, repeated blocks are folded first, then repeated lines are folded.
+
+Note: Folding is skipped for outputs above the hardcoded safety limit of 10,000 lines.
 
 #### Line repetition folding
 

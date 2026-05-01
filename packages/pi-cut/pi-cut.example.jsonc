@@ -46,9 +46,11 @@
   },
 
   // Optional per-tool overrides. Selectors are JavaScript regex strings; "*" means all tools.
+  // Use anchors for exact matches, such as "^read$". Unanchored selectors match substrings.
   // Defaults before overrides: terminalCleanup only runs on bash; repetitionFolding and
   // lineTruncation do not run on edit/write.
   // Tools rules can override those defaults.
+  // Global tools rules are inherited by project config because rules are appended, not replaced.
   // Overrides are applied in order after the global config, so the last matching entry wins.
   "tools": [
     {
@@ -58,7 +60,7 @@
       }
     },
     {
-      "selector": "read",
+      "selector": "^read$",
       "lineTruncation": {
         "maxChars": 4000
       }
