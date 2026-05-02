@@ -125,4 +125,12 @@ first N chars [... truncated, +X chars]
 
 ### Efficiency reminder
 
-When enabled, the latest user prompt sent to the LLM gets an appended reminder to minimize tool output and irrelevant context. The saved session history is not modified. `onEvery` must be an integer greater than or equal to 1 and controls how often the reminder is appended. If `text` is omitted, the default reminder is used.
+When enabled, submitted user prompts are transformed before they are saved or sent by appending a reminder to minimize tool output and irrelevant context. This keeps provider context stable across turns because the reminder is persisted in session history. `onEvery` must be an integer greater than or equal to 1 and controls how often the reminder is appended. If `text` is omitted, the default reminder is used.
+
+```
+Hello, world!
+
+<system_reminder>
+Minimize tool output, file reads, and irrelevant context, retaining only the data necessary to complete the current task.
+</system_reminder>
+```

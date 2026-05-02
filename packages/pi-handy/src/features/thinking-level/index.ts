@@ -3,13 +3,15 @@ import type { AutocompleteItem } from '@mariozechner/pi-tui';
 
 type ThinkingLevel = Parameters<ExtensionAPI['setThinkingLevel']>[0];
 
+type ThinkingLevelMap = Partial<Record<ThinkingLevel, string | null>>;
+
 type ThinkingModel = {
   id: string;
   reasoning?: unknown;
+  thinkingLevelMap?: ThinkingLevelMap;
 };
 
-const STANDARD_THINKING_LEVELS: ThinkingLevel[] = ['off', 'minimal', 'low', 'medium', 'high'];
-const XHIGH_THINKING_LEVELS: ThinkingLevel[] = [...STANDARD_THINKING_LEVELS, 'xhigh'];
+const THINKING_LEVELS: ThinkingLevel[] = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 
 const THINKING_LEVEL_DESCRIPTIONS: Record<ThinkingLevel, string> = {
   off: 'Disable model thinking/reasoning',
@@ -80,22 +82,20 @@ export function getThinkingLevelArgumentCompletions(
 export function getAvailableThinkingLevels(model: ThinkingModel | undefined): ThinkingLevel[] {
   if (!model?.reasoning) return ['off'];
 
-  return supportsXhighThinking(model) ? XHIGH_THINKING_LEVELS : STANDARD_THINKING_LEVELS;
+  return THINKING_LEVELS.filter((level) => isLevelSupportedByModel(model, level));
 }
 
 function isThinkingLevel(value: string): value is ThinkingLevel {
-  return XHIGH_THINKING_LEVELS.includes(value as ThinkingLevel);
+  return THINKING_LEVELS.includes(value as ThinkingLevel);
 }
 
-function supportsXhighThinking(model: ThinkingModel): boolean {
-  return (
-    includesAny(model.id, ['gpt-5.2', 'gpt-5.3', 'gpt-5.4', 'gpt-5.5', 'deepseek-v4-pro']) ||
-    includesAny(model.id, ['opus-4-6', 'opus-4.6', 'opus-4-7', 'opus-4.7'])
-  );
-}
+function isLevelSupportedByModel(model: ThinkingModel, level: ThinkingLevel): boolean {
+  const mappedLevel = model.thinkingLevelMap?.[level];
 
-function includesAny(value: string, needles: string[]): boolean {
-  return needles.some((needle) => value.includes(needle));
+  if (mappedLevel === null) return false;
+  if (level === 'xhigh') return mappedLevel !== undefined;
+
+  return true;
 }
 
 function buildCurrentThinkingLevelMessage(

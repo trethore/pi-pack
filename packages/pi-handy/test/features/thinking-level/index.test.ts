@@ -10,6 +10,9 @@ import {
 type TestModel = {
   id: string;
   reasoning?: boolean;
+  thinkingLevelMap?: Partial<
+    Record<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh', string | null>
+  >;
 };
 
 describe('thinking level command', () => {
@@ -30,18 +33,41 @@ describe('thinking level command', () => {
     ]);
   });
 
-  it('includes xhigh for models that support it', () => {
-    expect(getAvailableThinkingLevels({ id: 'gpt-5.2', reasoning: true })).toEqual([
-      'off',
-      'minimal',
-      'low',
-      'medium',
-      'high',
-      'xhigh',
-    ]);
-    expect(getAvailableThinkingLevels({ id: 'claude-opus-4.7', reasoning: true })).toContain(
-      'xhigh'
-    );
+  it('uses thinkingLevelMap to expose model-specific supported levels', () => {
+    expect(
+      getAvailableThinkingLevels({
+        id: 'deepseek-v4-pro',
+        reasoning: true,
+        thinkingLevelMap: {
+          minimal: null,
+          low: null,
+          medium: null,
+          high: 'high',
+          xhigh: 'max',
+        },
+      })
+    ).toEqual(['off', 'high', 'xhigh']);
+  });
+
+  it('hides off when thinking cannot be disabled', () => {
+    expect(
+      getAvailableThinkingLevels({
+        id: 'always-thinking-model',
+        reasoning: true,
+        thinkingLevelMap: { off: null },
+      })
+    ).toEqual(['minimal', 'low', 'medium', 'high']);
+  });
+
+  it('only includes xhigh when it is explicitly mapped', () => {
+    expect(getAvailableThinkingLevels({ id: 'gpt-5.2', reasoning: true })).not.toContain('xhigh');
+    expect(
+      getAvailableThinkingLevels({
+        id: 'claude-opus-4.7',
+        reasoning: true,
+        thinkingLevelMap: { xhigh: 'xhigh' },
+      })
+    ).toContain('xhigh');
   });
 
   it('autocompletes thinking levels available for the current model', () => {
@@ -113,7 +139,7 @@ describe('thinking level command', () => {
       { value: 'high', label: 'high', description: 'Use high model thinking/reasoning' },
     ]);
 
-    pi.emitModelSelect({ id: 'gpt-5.2', reasoning: true });
+    pi.emitModelSelect({ id: 'gpt-5.2', reasoning: true, thinkingLevelMap: { xhigh: 'xhigh' } });
     expect(pi.command?.getArgumentCompletions?.('x')).toEqual([
       {
         value: 'xhigh',

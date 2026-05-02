@@ -3,51 +3,77 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import { defaultConfig, type PiCutConfig } from '#pi-cut/config/schema.js';
 import { registerEfficiencyReminder } from '#pi-cut/features/efficiency-reminder/index.js';
 
+const REMINDER = '<system_reminder>Keep output concise.</system_reminder>';
+
 describe('registerEfficiencyReminder', () => {
-  it('applies the reminder once every configured prompt count', () => {
-    // Arrange
+  it('transforms submitted input once every configured prompt count', () => {
     const handlers = registerWithConfig({
       ...defaultConfig,
       efficiencyReminder: {
         enabled: true,
         onEvery: 2,
-        text: '<system_reminder>Keep output concise.</system_reminder>',
+        text: REMINDER,
       },
     });
 
-    // Act
-    runBeforeAgentStart(handlers);
-    const firstResult = runContext(handlers, 'first');
-    runBeforeAgentStart(handlers);
-    const secondResult = runContext(handlers, 'second');
+    const firstResult = runInput(handlers, 'first');
+    const secondResult = runInput(handlers, 'second');
 
-    // Assert
     expect(firstResult).toBeUndefined();
-    expect(secondResult).toMatchObject({
-      messages: [
-        {
-          role: 'user',
-          content: 'second\n\n<system_reminder>Keep output concise.</system_reminder>',
-        },
-      ],
+    expect(secondResult).toEqual({
+      action: 'transform',
+      text: `second\n\n${REMINDER}`,
+      images: undefined,
     });
   });
 
-  it('does not apply the reminder when globally disabled', () => {
-    // Arrange
+  it('preserves images when transforming input', () => {
+    const handlers = registerWithConfig({
+      ...defaultConfig,
+      efficiencyReminder: {
+        enabled: true,
+        onEvery: 1,
+        text: REMINDER,
+      },
+    });
+    const images = [{ type: 'image' as const, data: 'abc', mimeType: 'image/png' }];
+
+    const result = runInput(handlers, 'prompt', images);
+
+    expect(result).toEqual({
+      action: 'transform',
+      text: `prompt\n\n${REMINDER}`,
+      images,
+    });
+  });
+
+  it('does not transform input when the reminder is already present', () => {
+    const handlers = registerWithConfig({
+      ...defaultConfig,
+      efficiencyReminder: {
+        enabled: true,
+        onEvery: 1,
+        text: REMINDER,
+      },
+    });
+
+    const result = runInput(handlers, `prompt\n\n${REMINDER}`);
+
+    expect(result).toBeUndefined();
+  });
+
+  it('does not transform input when globally disabled', () => {
     const handlers = registerWithConfig({ ...defaultConfig, enabled: false });
 
-    // Act
-    runBeforeAgentStart(handlers);
-    const result = runContext(handlers, 'prompt');
+    const result = runInput(handlers, 'prompt');
 
-    // Assert
     expect(result).toBeUndefined();
   });
 });
 
 type Handler = (event: unknown) => unknown;
 type RegisteredHandlers = Record<string, Handler[]>;
+type TestImage = { type: 'image'; data: string; mimeType: string };
 
 function registerWithConfig(config: PiCutConfig): RegisteredHandlers {
   const handlers: RegisteredHandlers = {};
@@ -61,13 +87,11 @@ function registerWithConfig(config: PiCutConfig): RegisteredHandlers {
   return handlers;
 }
 
-function runBeforeAgentStart(handlers: RegisteredHandlers) {
-  handlers.before_agent_start[0]({});
-}
-
-function runContext(handlers: RegisteredHandlers, content: string) {
-  return handlers.context[0]({
-    type: 'context',
-    messages: [{ role: 'user', content, timestamp: 1 }],
+function runInput(handlers: RegisteredHandlers, text: string, images?: TestImage[]) {
+  return handlers.input[0]({
+    type: 'input',
+    text,
+    images,
+    source: 'interactive',
   });
 }
