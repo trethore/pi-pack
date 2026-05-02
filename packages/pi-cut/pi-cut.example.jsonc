@@ -36,15 +36,6 @@
     "maxChars": 2000
   },
 
-  // Append an ephemeral reminder to every Nth user prompt before it is sent to the LLM.
-  // The saved session history is not modified. onEvery must be an integer >= 1.
-  // Omit text to use the default reminder.
-  "efficiencyReminder": {
-    "enabled": true,
-    "onEvery": 1,
-    "text": "<system_reminder>\nMinimize tool output, file reads, and irrelevant context, retaining only the data necessary to complete the current task.\n</system_reminder>"
-  },
-
   // Optional per-tool overrides. Selectors are JavaScript regex strings; "*" means all tools.
   // Use anchors for exact matches, such as "^read$". Unanchored selectors match substrings.
   // Defaults before overrides: terminalCleanup only runs on bash; repetitionFolding and

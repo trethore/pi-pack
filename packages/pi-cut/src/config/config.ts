@@ -7,7 +7,6 @@ import {
   type PartialPiCutConfig,
   type PiCutConfig,
 } from '#src/config/schema.js';
-import { mergeEfficiencyReminderFields } from '#src/config/sections/efficiency-reminder.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
 import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanup.js';
@@ -36,7 +35,6 @@ function cloneDefaultConfig(): PiCutConfig {
       block: { ...defaultConfig.repetitionFolding.block },
     },
     lineTruncation: { ...defaultConfig.lineTruncation },
-    efficiencyReminder: { ...defaultConfig.efficiencyReminder },
     tools: [],
   };
 }
@@ -65,15 +63,6 @@ function mergeConfig(
   });
   mergeSection(source, 'lineTruncation', configPath, errors, (section, sectionName) => {
     mergeLineTruncationFields(target.lineTruncation, section, sectionName, configPath, errors);
-  });
-  mergeSection(source, 'efficiencyReminder', configPath, errors, (section, sectionName) => {
-    mergeEfficiencyReminderFields(
-      target.efficiencyReminder,
-      section,
-      sectionName,
-      configPath,
-      errors
-    );
   });
   mergeToolOverrides(target, source, configPath, errors);
 }
