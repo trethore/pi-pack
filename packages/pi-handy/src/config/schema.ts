@@ -2,6 +2,7 @@ export interface PiHandyConfig {
   enabled: boolean;
   thinkingLevel: ThinkingLevelCommandConfig;
   switchWorkspace: SwitchWorkspaceCommandConfig;
+  showSysprompt: ShowSyspromptCommandConfig;
 }
 
 export interface ThinkingLevelCommandConfig {
@@ -12,12 +13,19 @@ export interface SwitchWorkspaceCommandConfig {
   enabled: boolean;
 }
 
+export interface ShowSyspromptCommandConfig {
+  enabled: boolean;
+}
+
 export type PartialPiHandyConfig = Partial<{
   enabled: unknown;
   thinkingLevel: Partial<{
     enabled: unknown;
   }>;
   switchWorkspace: Partial<{
+    enabled: unknown;
+  }>;
+  showSysprompt: Partial<{
     enabled: unknown;
   }>;
 }>;
@@ -33,6 +41,9 @@ export const defaultConfig: PiHandyConfig = {
     enabled: true,
   },
   switchWorkspace: {
+    enabled: true,
+  },
+  showSysprompt: {
     enabled: true,
   },
 };

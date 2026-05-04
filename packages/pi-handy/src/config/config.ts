@@ -25,6 +25,7 @@ function cloneDefaultConfig(): PiHandyConfig {
     ...defaultConfig,
     thinkingLevel: { ...defaultConfig.thinkingLevel },
     switchWorkspace: { ...defaultConfig.switchWorkspace },
+    showSysprompt: { ...defaultConfig.showSysprompt },
   };
 }
 
@@ -73,6 +74,13 @@ function mergeConfig(
     target.switchWorkspace,
     source.switchWorkspace,
     'switchWorkspace',
+    configPath,
+    errors
+  );
+  mergeFeatureConfig(
+    target.showSysprompt,
+    source.showSysprompt,
+    'showSysprompt',
     configPath,
     errors
   );

@@ -20,6 +20,9 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "switchWorkspace": {
     "enabled": true,
   },
+  "showSysprompt": {
+    "enabled": true,
+  },
 }
 ```
 
@@ -46,4 +49,17 @@ Examples:
 ```text
 /switchworkspace C:\Users\titou\.pi\agent
 /switchworkspace /Users/titou/my project
+```
+
+### Show system prompt command
+
+Registers `/showsysprompt [prompt|tools]` to show the current system prompt and available tools in Pi.
+Without arguments, it shows both. Use `prompt` or `tools` to show only that section.
+
+Examples:
+
+```text
+/showsysprompt
+/showsysprompt prompt
+/showsysprompt tools
 ```

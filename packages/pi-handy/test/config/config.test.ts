@@ -27,6 +27,7 @@ describe('pi-handy config', () => {
         enabled: true,
         thinkingLevel: { enabled: true },
         switchWorkspace: { enabled: true },
+        showSysprompt: { enabled: true },
       },
       errors: [],
     });
@@ -36,7 +37,7 @@ describe('pi-handy config', () => {
     const cwd = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false } }'
     );
     writeProjectConfig(cwd, '{ "enabled": true, "switchWorkspace": { "enabled": true } }');
 
@@ -44,6 +45,7 @@ describe('pi-handy config', () => {
       enabled: true,
       thinkingLevel: { enabled: false },
       switchWorkspace: { enabled: true },
+      showSysprompt: { enabled: false },
     });
   });
 
@@ -51,7 +53,7 @@ describe('pi-handy config', () => {
     const cwd = makeTempProject();
     writeProjectConfig(
       cwd,
-      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false }'
+      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false }'
     );
 
     const result = loadConfig(cwd);
@@ -60,11 +62,13 @@ describe('pi-handy config', () => {
       enabled: true,
       thinkingLevel: { enabled: true },
       switchWorkspace: { enabled: true },
+      showSysprompt: { enabled: true },
     });
     expect(result.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
       expect.stringContaining('invalid switchWorkspace value'),
+      expect.stringContaining('invalid showSysprompt value'),
     ]);
   });
 });

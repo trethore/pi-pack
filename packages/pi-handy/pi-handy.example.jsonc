@@ -10,5 +10,10 @@
   // /switchworkspace <path>
   "switchWorkspace": {
     "enabled": true
+  },
+
+  // /showsysprompt [prompt|tools]
+  "showSysprompt": {
+    "enabled": true
   }
 }

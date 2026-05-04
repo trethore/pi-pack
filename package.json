@@ -34,7 +34,7 @@
     "install:local:pi-handy": "pi install -l ./packages/pi-handy"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*"
+    "@mariozechner/pi-coding-agent": ">=0.72.0 <1"
   },
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",
