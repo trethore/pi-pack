@@ -13,9 +13,9 @@ type DescribedSchema = TSchema & Pick<TSchemaOptions, 'description'>;
 type ToolParameters = TObject<Record<string, DescribedSchema>> & { required?: string[] };
 
 export function registerShowSyspromptCommand(pi: ExtensionAPI) {
-  pi.registerMessageRenderer(SYSTEM_PROMPT_MESSAGE_TYPE, (message, _options, theme) => {
+  pi.registerMessageRenderer(SYSTEM_PROMPT_MESSAGE_TYPE, (message, { expanded }, theme) => {
     const prompt = typeof message.content === 'string' ? message.content : '';
-    return formatExpandedMessage('System prompt', prompt, theme);
+    return formatCollapsibleMessage('System prompt', prompt, expanded, theme);
   });
 
   pi.registerMessageRenderer(TOOL_SCHEMAS_MESSAGE_TYPE, (message, { expanded }, theme) => {
@@ -146,12 +146,6 @@ function formatCollapsibleMessage(title: string, content: string, expanded: bool
         theme
       );
   return formatMessageBox(expanded ? `${header}\n\n${displayContent}` : header, theme);
-}
-
-function formatExpandedMessage(title: string, content: string, theme: Theme) {
-  const displayContent = normalizeLineEndings(content);
-  const header = formatMessageHeader(title, `${countLines(displayContent)} lines`, theme);
-  return formatMessageBox(`${header}\n\n${displayContent}`, theme);
 }
 
 function formatMessageHeader(title: string, detail: string, theme: Theme) {
