@@ -24,11 +24,7 @@ function transformToolResultText(text: string, config: ResolvedToolConfig): stri
   let transformedText = text;
 
   if (config.terminalCleanup.enabled) {
-    transformedText = cleanTerminalOutput(transformedText, {
-      stripAnsi: config.terminalCleanup.stripAnsi,
-      collapseCarriageReturns: config.terminalCleanup.collapseCarriageReturns,
-      trimTrailingWhitespace: config.terminalCleanup.trimTrailingWhitespace,
-    });
+    transformedText = cleanTerminalOutput(transformedText, config.terminalCleanup);
   }
 
   if (config.repetitionFolding.enabled) {

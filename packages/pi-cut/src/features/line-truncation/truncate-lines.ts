@@ -1,14 +1,11 @@
-import { splitLineEnding } from '#src/shared/line.js';
+import { transformLines } from '#src/shared/line.js';
 
 export function truncateLines(text: string, maxChars: number): string {
-  return text.replaceAll(/[^\r\n]*(?:\r\n|\r|\n|$)/g, (lineWithEnding) => {
-    if (lineWithEnding === '') return lineWithEnding;
-
-    const { body, ending } = splitLineEnding(lineWithEnding);
-    if (body.length <= maxChars) return lineWithEnding;
+  return transformLines(text, ({ raw, body, ending }) => {
+    if (body.length <= maxChars) return raw;
 
     const chars = [...body];
-    if (chars.length <= maxChars) return lineWithEnding;
+    if (chars.length <= maxChars) return raw;
 
     const charsLeft = chars.length - maxChars;
     return `${chars.slice(0, maxChars).join('')} [... truncated, +${charsLeft} chars]${ending}`;

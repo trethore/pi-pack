@@ -8,6 +8,14 @@ import {
   type PiHandyConfig,
 } from '#src/config/schema.js';
 
+type FeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
+
+const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = [
+  'thinkingLevel',
+  'switchWorkspace',
+  'showSysprompt',
+];
+
 export function loadConfig(cwd: string): LoadedConfig {
   const errors: string[] = [];
   const config = cloneDefaultConfig();
@@ -63,27 +71,9 @@ function mergeConfig(
     if (enabled !== undefined) target.enabled = enabled;
   }
 
-  mergeFeatureConfig(
-    target.thinkingLevel,
-    source.thinkingLevel,
-    'thinkingLevel',
-    configPath,
-    errors
-  );
-  mergeFeatureConfig(
-    target.switchWorkspace,
-    source.switchWorkspace,
-    'switchWorkspace',
-    configPath,
-    errors
-  );
-  mergeFeatureConfig(
-    target.showSysprompt,
-    source.showSysprompt,
-    'showSysprompt',
-    configPath,
-    errors
-  );
+  for (const key of FEATURE_CONFIG_KEYS) {
+    mergeFeatureConfig(target[key], source[key], key, configPath, errors);
+  }
 }
 
 function mergeFeatureConfig(

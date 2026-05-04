@@ -58,7 +58,7 @@ describe('switch workspace command', () => {
   it('resolves relative paths against the current Pi cwd', async () => {
     const root = makeTempDirectory();
 
-    await expect(resolveWorkspacePath('child directory', root)).resolves.toBe(
+    expect(resolveWorkspacePath('child directory', root)).toBe(
       path.resolve(root, 'child directory')
     );
   });
@@ -66,7 +66,7 @@ describe('switch workspace command', () => {
   it('accepts matching quotes for compatibility', async () => {
     const root = makeTempDirectory();
 
-    await expect(resolveWorkspacePath('"child directory"', root)).resolves.toBe(
+    expect(resolveWorkspacePath('"child directory"', root)).toBe(
       path.resolve(root, 'child directory')
     );
   });

@@ -1,5 +1,5 @@
 import type { RepetitionFoldingConfig } from '#src/config/schema.js';
-import { splitLineEnding } from '#src/shared/line.js';
+import { type LineParts, splitLines } from '#src/shared/line.js';
 
 export const MAX_FOLDING_LINES = 10_000;
 const CHARS_PER_TOKEN = 4;
@@ -34,12 +34,6 @@ export function foldRepeatedOutput(text: string, config: RepetitionFoldingConfig
   return changed ? foldedLines.join('') : text;
 }
 
-interface LineParts {
-  raw: string;
-  body: string;
-  ending: string;
-}
-
 interface FoldingContext {
   lines: LineParts[];
   rawCharOffsets: number[];
@@ -52,20 +46,6 @@ interface RepetitionCandidate {
   savedLines: number;
   savedTokens: number;
   marker: string;
-}
-
-function splitLines(text: string): LineParts[] {
-  const lines: LineParts[] = [];
-
-  text.replaceAll(/[^\r\n]*(?:\r\n|\r|\n|$)/g, (raw) => {
-    if (raw === '') return raw;
-
-    const { body, ending } = splitLineEnding(raw);
-    lines.push({ raw, body, ending });
-    return raw;
-  });
-
-  return lines;
 }
 
 function makeFoldingContext(lines: LineParts[]): FoldingContext {
@@ -177,12 +157,27 @@ function passesSavingsChecks(
 ): boolean {
   if (candidate.savedTokens <= 0) return false;
 
-  const checks: boolean[] = [];
-  if (config.minSavedLines > 0) checks.push(candidate.savedLines >= config.minSavedLines);
-  if (config.minSavedTokens > 0) checks.push(candidate.savedTokens >= config.minSavedTokens);
-  if (checks.length === 0) return true;
+  const savedLinesCheck = getSavingsCheck(config.minSavedLines, candidate.savedLines);
+  const savedTokensCheck = getSavingsCheck(config.minSavedTokens, candidate.savedTokens);
+  if (savedLinesCheck === undefined && savedTokensCheck === undefined) return true;
 
-  return config.savingsMode === 'and' ? checks.every(Boolean) : checks.some(Boolean);
+  return combineSavingsChecks(savedLinesCheck, savedTokensCheck, config.savingsMode);
+}
+
+function getSavingsCheck(minimum: number, actual: number): boolean | undefined {
+  return minimum > 0 ? actual >= minimum : undefined;
+}
+
+function combineSavingsChecks(
+  left: boolean | undefined,
+  right: boolean | undefined,
+  savingsMode: RepetitionFoldingConfig['savingsMode']
+): boolean {
+  const leftPassed = left ?? false;
+  const rightPassed = right ?? false;
+
+  if (savingsMode === 'or') return leftPassed || rightPassed;
+  return (left ?? true) && (right ?? true);
 }
 
 function compareCandidates(left: RepetitionCandidate, right: RepetitionCandidate): number {

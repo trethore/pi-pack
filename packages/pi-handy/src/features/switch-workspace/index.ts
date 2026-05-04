@@ -47,7 +47,7 @@ export async function handleSwitchWorkspaceCommand(
     return;
   }
 
-  const targetPath = await resolveWorkspacePath(requestedPath, ctx.cwd);
+  const targetPath = resolveWorkspacePath(requestedPath, ctx.cwd);
   const validation = await validateWorkspacePath(targetPath);
   if (!validation.ok) {
     ctx.ui.notify(validation.message, 'warning');
@@ -83,7 +83,7 @@ export async function handleSwitchWorkspaceCommand(
   }
 }
 
-export async function resolveWorkspacePath(pathInput: string, cwd: string): Promise<string> {
+export function resolveWorkspacePath(pathInput: string, cwd: string): string {
   return path.resolve(cwd, expandHomePath(stripMatchingQuotes(pathInput)));
 }
 

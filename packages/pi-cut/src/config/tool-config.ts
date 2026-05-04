@@ -17,7 +17,7 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
       resolvedConfig.enabled = value;
     });
     applyStrategyOverride(resolvedConfig.terminalCleanup, override.terminalCleanup);
-    applyRepetitionFoldingOverride(resolvedConfig.repetitionFolding, override.repetitionFolding);
+    applyStrategyOverride(resolvedConfig.repetitionFolding, override.repetitionFolding);
     applyStrategyOverride(resolvedConfig.lineTruncation, override.lineTruncation);
   }
 
@@ -42,14 +42,6 @@ function matchesToolSelector(selector: RegExp, toolName: string): boolean {
 
 function applyBooleanOverride(value: boolean | undefined, apply: (value: boolean) => void) {
   if (value !== undefined) apply(value);
-}
-
-function applyRepetitionFoldingOverride(
-  target: ResolvedToolConfig['repetitionFolding'],
-  source: PiCutConfig['tools'][number]['repetitionFolding']
-) {
-  if (!source) return;
-  Object.assign(target, source);
 }
 
 function applyStrategyOverride<T extends object>(target: T, source: Partial<T> | undefined) {
