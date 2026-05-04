@@ -1,5 +1,5 @@
 import type { ExtensionAPI, Theme, ToolInfo } from '@mariozechner/pi-coding-agent';
-import { Box, Text } from '@mariozechner/pi-tui';
+import { Box, getKeybindings, Text } from '@mariozechner/pi-tui';
 import type { TArray, TEnum, TLiteral, TObject, TSchema, TSchemaOptions, TUnion } from 'typebox';
 
 const SYSTEM_PROMPT_MESSAGE_TYPE = 'pi-handy-system-prompt';
@@ -136,25 +136,42 @@ function getActiveToolSchemas(pi: Pick<ExtensionAPI, 'getActiveTools' | 'getAllT
 }
 
 function formatCollapsibleMessage(title: string, content: string, expanded: boolean, theme: Theme) {
+  const displayContent = normalizeLineEndings(content);
+  const expansionKey = formatKeybindingText('app.tools.expand');
   const header = expanded
-    ? formatMessageHeader(title, 'Ctrl+o to collapse', theme)
-    : formatMessageHeader(title, `${countLines(content)} lines, Ctrl+o to expand`, theme);
-  return formatMessageBox(expanded ? `${header}\n\n${content}` : header, theme);
+    ? formatMessageHeader(title, `${expansionKey} to collapse`, theme)
+    : formatMessageHeader(
+        title,
+        `${countLines(displayContent)} lines, ${expansionKey} to expand`,
+        theme
+      );
+  return formatMessageBox(expanded ? `${header}\n\n${displayContent}` : header, theme);
 }
 
 function formatExpandedMessage(title: string, content: string, theme: Theme) {
-  const header = formatMessageHeader(title, `${countLines(content)} lines`, theme);
-  return formatMessageBox(`${header}\n\n${content}`, theme);
+  const displayContent = normalizeLineEndings(content);
+  const header = formatMessageHeader(title, `${countLines(displayContent)} lines`, theme);
+  return formatMessageBox(`${header}\n\n${displayContent}`, theme);
 }
 
 function formatMessageHeader(title: string, detail: string, theme: Theme) {
   return `${theme.fg('accent', theme.bold(title))}${theme.fg('dim', ` (${detail})`)}`;
 }
 
+function formatKeybindingText(keybinding: 'app.tools.expand') {
+  const keys = getKeybindings().getKeys(keybinding);
+  if (keys.length === 0) return keybinding;
+  return keys.join('/');
+}
+
 function formatMessageBox(text: string, theme: Theme) {
   const box = new Box(1, 1, (value) => theme.bg('customMessageBg', value));
   box.addChild(new Text(text, 0, 0));
   return box;
+}
+
+function normalizeLineEndings(content: string) {
+  return content.replaceAll(/\r\n?/g, '\n');
 }
 
 function countLines(content: string) {
