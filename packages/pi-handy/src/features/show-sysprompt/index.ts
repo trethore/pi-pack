@@ -13,9 +13,9 @@ type DescribedSchema = TSchema & Pick<TSchemaOptions, 'description'>;
 type ToolParameters = TObject<Record<string, DescribedSchema>> & { required?: string[] };
 
 export function registerShowSyspromptCommand(pi: ExtensionAPI) {
-  pi.registerMessageRenderer(SYSTEM_PROMPT_MESSAGE_TYPE, (message, { expanded }, theme) => {
+  pi.registerMessageRenderer(SYSTEM_PROMPT_MESSAGE_TYPE, (message, _options, theme) => {
     const prompt = typeof message.content === 'string' ? message.content : '';
-    return formatCollapsibleMessage('System prompt', prompt, expanded, theme);
+    return formatExpandedMessage('System prompt', prompt, theme);
   });
 
   pi.registerMessageRenderer(TOOL_SCHEMAS_MESSAGE_TYPE, (message, { expanded }, theme) => {
@@ -136,14 +136,29 @@ function getActiveToolSchemas(pi: Pick<ExtensionAPI, 'getActiveTools' | 'getAllT
 }
 
 function formatCollapsibleMessage(title: string, content: string, expanded: boolean, theme: Theme) {
-  const lineCount = content.length === 0 ? 0 : content.split('\n').length;
   const header = expanded
-    ? `${theme.fg('accent', theme.bold(title))}${theme.fg('dim', ' (Ctrl+o to collapse)')}`
-    : `${theme.fg('accent', theme.bold(title))}${theme.fg('dim', ` (${lineCount} lines, Ctrl+o to expand)`)}`;
-  const text = expanded ? `${header}\n\n${content}` : header;
+    ? formatMessageHeader(title, 'Ctrl+o to collapse', theme)
+    : formatMessageHeader(title, `${countLines(content)} lines, Ctrl+o to expand`, theme);
+  return formatMessageBox(expanded ? `${header}\n\n${content}` : header, theme);
+}
+
+function formatExpandedMessage(title: string, content: string, theme: Theme) {
+  const header = formatMessageHeader(title, `${countLines(content)} lines`, theme);
+  return formatMessageBox(`${header}\n\n${content}`, theme);
+}
+
+function formatMessageHeader(title: string, detail: string, theme: Theme) {
+  return `${theme.fg('accent', theme.bold(title))}${theme.fg('dim', ` (${detail})`)}`;
+}
+
+function formatMessageBox(text: string, theme: Theme) {
   const box = new Box(1, 1, (value) => theme.bg('customMessageBg', value));
   box.addChild(new Text(text, 0, 0));
   return box;
+}
+
+function countLines(content: string) {
+  return content.length === 0 ? 0 : content.split('\n').length;
 }
 
 function formatSchemaType(schema: TSchema | undefined): string {
