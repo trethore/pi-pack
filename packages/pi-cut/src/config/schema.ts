@@ -1,9 +1,9 @@
 export const DEFAULT_MAX_CHARS = 2000;
 export const MIN_REPEATS = 2;
-export const DEFAULT_MIN_LINE_REPEATS = 3;
-export const DEFAULT_MIN_BLOCK_LINES = 4;
-export const DEFAULT_MIN_BLOCK_REPEATS = MIN_REPEATS;
-export const MIN_BLOCK_LINES = 3;
+export const DEFAULT_MIN_REPEATS = MIN_REPEATS;
+export const DEFAULT_MIN_SAVED_LINES = 3;
+export const DEFAULT_MIN_SAVED_TOKENS = 40;
+export const DEFAULT_SAVINGS_MODE: SavingsMode = 'or';
 export interface PiCutConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
@@ -34,21 +34,14 @@ export interface TerminalCleanupConfig {
   trimTrailingWhitespace: boolean;
 }
 
+export type SavingsMode = 'or' | 'and';
+
 export interface RepetitionFoldingConfig {
   enabled: boolean;
-  line: LineRepetitionFoldingConfig;
-  block: BlockRepetitionFoldingConfig;
-}
-
-export interface LineRepetitionFoldingConfig {
-  enabled: boolean;
   minRepeats: number;
-}
-
-export interface BlockRepetitionFoldingConfig {
-  enabled: boolean;
-  minLines: number;
-  minRepeats: number;
+  minSavedLines: number;
+  minSavedTokens: number;
+  savingsMode: SavingsMode;
 }
 
 export interface LineTruncationConfig {
@@ -65,8 +58,10 @@ export type PartialTerminalCleanupConfig = Partial<{
 
 export type PartialRepetitionFoldingConfig = Partial<{
   enabled: boolean;
-  line: Partial<LineRepetitionFoldingConfig>;
-  block: Partial<BlockRepetitionFoldingConfig>;
+  minRepeats: number;
+  minSavedLines: number;
+  minSavedTokens: number;
+  savingsMode: SavingsMode;
 }>;
 
 export type PartialLineTruncationConfig = Partial<{
@@ -97,15 +92,10 @@ export const defaultConfig: PiCutConfig = {
   },
   repetitionFolding: {
     enabled: true,
-    line: {
-      enabled: true,
-      minRepeats: DEFAULT_MIN_LINE_REPEATS,
-    },
-    block: {
-      enabled: true,
-      minLines: DEFAULT_MIN_BLOCK_LINES,
-      minRepeats: DEFAULT_MIN_BLOCK_REPEATS,
-    },
+    minRepeats: DEFAULT_MIN_REPEATS,
+    minSavedLines: DEFAULT_MIN_SAVED_LINES,
+    minSavedTokens: DEFAULT_MIN_SAVED_TOKENS,
+    savingsMode: DEFAULT_SAVINGS_MODE,
   },
   lineTruncation: {
     enabled: true,

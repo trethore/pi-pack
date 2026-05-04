@@ -10,23 +10,16 @@
     "trimTrailingWhitespace": true
   },
 
-  // Fold repeated text tool-output lines and blocks.
+  // Fold consecutive repeated non-empty text tool-output segments.
   "repetitionFolding": {
     "enabled": true,
-    "line": {
-      // Fold consecutive identical text tool-output lines.
-      // minRepeats must be an integer >= 2.
-      "enabled": true,
-      "minRepeats": 3
-    },
-    "block": {
-      // Fold consecutive repeated non-empty blocks of lines.
-      // minLines must be an integer >= 3. Default is 4.
-      // minRepeats must be an integer >= 2. Default is 2.
-      "enabled": true,
-      "minLines": 4,
-      "minRepeats": 2
-    }
+    // minRepeats must be an integer >= 2. Default is 2.
+    "minRepeats": 2,
+    // Values <= 0 disable the corresponding savings check. Defaults are 3 and 40.
+    "minSavedLines": 3,
+    "minSavedTokens": 40,
+    // "or" folds when any enabled savings check passes. "and" requires all enabled checks.
+    "savingsMode": "or"
   },
 
   // Truncate individual text tool-output lines after maxChars characters.

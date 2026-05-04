@@ -6,32 +6,53 @@ import {
 
 const defaultConfig = {
   enabled: true,
-  line: { enabled: true, minRepeats: 3 },
-  block: { enabled: true, minLines: 3, minRepeats: 2 },
+  minRepeats: 2,
+  minSavedLines: 3,
+  minSavedTokens: 40,
+  savingsMode: 'or' as const,
 };
 
 describe('foldRepeatedOutput', () => {
-  it('folds repeated blocks before duplicate lines', () => {
+  it('folds repeated segments when they save enough lines', () => {
     // Arrange
-    const text = 'a\nb\nc\na\nb\nc\nx\nx\nx\n';
+    const firstLine = `${'a'.repeat(30)}\n`;
+    const secondLine = `${'b'.repeat(30)}\n`;
+    const text = `${firstLine}${secondLine}`.repeat(3);
 
     // Act
     const foldedText = foldRepeatedOutput(text, defaultConfig);
 
     // Assert
-    expect(foldedText).toBe(
-      'a\nb\nc\n[previous block of 3 lines repeated x1]\nx\n[previous line repeated x2]\n'
-    );
+    expect(foldedText).toBe(`${firstLine}${secondLine}[previous block of 2 lines repeated x2]\n`);
   });
 
-  it('returns unchanged text when repetition folding is disabled', () => {
+  it('does not fold short repeated segments below the default savings thresholds', () => {
     // Arrange
-    const text = 'a\nb\nc\na\nb\nc\nx\nx\nx\n';
-    const config = {
-      enabled: false,
-      line: { enabled: true, minRepeats: 3 },
-      block: { enabled: true, minLines: 3, minRepeats: 2 },
-    };
+    const text = 'a\nb\na\nb\n';
+
+    // Act
+    const foldedText = foldRepeatedOutput(text, defaultConfig);
+
+    // Assert
+    expect(foldedText).toBe(text);
+  });
+
+  it('folds long duplicate lines when they save enough estimated tokens', () => {
+    // Arrange
+    const line = `${'x'.repeat(220)}\n`;
+    const text = line.repeat(2);
+
+    // Act
+    const foldedText = foldRepeatedOutput(text, defaultConfig);
+
+    // Assert
+    expect(foldedText).toBe(`${line}[previous line repeated x1]\n`);
+  });
+
+  it('requires all enabled savings checks in and mode', () => {
+    // Arrange
+    const text = 'a\nb\na\nb\na\nb\n';
+    const config = { ...defaultConfig, savingsMode: 'and' as const };
 
     // Act
     const foldedText = foldRepeatedOutput(text, config);
@@ -40,14 +61,35 @@ describe('foldRepeatedOutput', () => {
     expect(foldedText).toBe(text);
   });
 
-  it('returns unchanged text when repetition folding children are disabled', () => {
+  it('disables a savings check when its configured minimum is zero or less', () => {
     // Arrange
-    const text = 'a\nb\nc\na\nb\nc\nx\nx\nx\n';
-    const config = {
-      enabled: true,
-      line: { enabled: false, minRepeats: 3 },
-      block: { enabled: false, minLines: 3, minRepeats: 2 },
-    };
+    const line = `${'x'.repeat(220)}\n`;
+    const text = line.repeat(2);
+    const config = { ...defaultConfig, minSavedLines: -1, savingsMode: 'and' as const };
+
+    // Act
+    const foldedText = foldRepeatedOutput(text, config);
+
+    // Assert
+    expect(foldedText).toBe(`${line}[previous line repeated x1]\n`);
+  });
+
+  it('folds any token-saving repeat when all savings checks are disabled', () => {
+    // Arrange
+    const text = `${'abcdef'.repeat(20)}\n`.repeat(2);
+    const config = { ...defaultConfig, minSavedLines: 0, minSavedTokens: 0 };
+
+    // Act
+    const foldedText = foldRepeatedOutput(text, config);
+
+    // Assert
+    expect(foldedText).toBe(`${'abcdef'.repeat(20)}\n[previous line repeated x1]\n`);
+  });
+
+  it('returns unchanged text when repetition folding is disabled', () => {
+    // Arrange
+    const text = 'a\nb\na\nb\na\nb\n';
+    const config = { ...defaultConfig, enabled: false };
 
     // Act
     const foldedText = foldRepeatedOutput(text, config);

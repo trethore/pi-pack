@@ -4,11 +4,7 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
   const resolvedConfig: ResolvedToolConfig = {
     enabled: config.enabled,
     terminalCleanup: { ...config.terminalCleanup },
-    repetitionFolding: {
-      ...config.repetitionFolding,
-      line: { ...config.repetitionFolding.line },
-      block: { ...config.repetitionFolding.block },
-    },
+    repetitionFolding: { ...config.repetitionFolding },
     lineTruncation: { ...config.lineTruncation },
   };
 
@@ -53,12 +49,7 @@ function applyRepetitionFoldingOverride(
   source: PiCutConfig['tools'][number]['repetitionFolding']
 ) {
   if (!source) return;
-
-  applyBooleanOverride(source.enabled, (value) => {
-    target.enabled = value;
-  });
-  applyStrategyOverride(target.line, source.line);
-  applyStrategyOverride(target.block, source.block);
+  Object.assign(target, source);
 }
 
 function applyStrategyOverride<T extends object>(target: T, source: Partial<T> | undefined) {

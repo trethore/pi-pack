@@ -1,11 +1,14 @@
-import { mergeField, mergeNestedConfig } from '#src/config/merge.js';
+import { mergeField } from '#src/config/merge.js';
 import type {
-  BlockRepetitionFoldingConfig,
-  LineRepetitionFoldingConfig,
   PartialRepetitionFoldingConfig,
   RepetitionFoldingConfig,
 } from '#src/config/schema.js';
-import { booleanSchema, minBlockLinesSchema, minRepeatsSchema } from '#src/config/validation.js';
+import {
+  booleanSchema,
+  integerSchema,
+  minRepeatsSchema,
+  savingsModeSchema,
+} from '#src/config/validation.js';
 
 export function mergeRepetitionFoldingFields(
   target: Partial<RepetitionFoldingConfig> | PartialRepetitionFoldingConfig,
@@ -25,45 +28,6 @@ export function mergeRepetitionFoldingFields(
       target.enabled = value;
     }
   );
-
-  mergeNestedConfig(
-    target,
-    source,
-    'line',
-    configName,
-    configPath,
-    errors,
-    mergeLineRepetitionFoldingFields
-  );
-  mergeNestedConfig(
-    target,
-    source,
-    'block',
-    configName,
-    configPath,
-    errors,
-    mergeBlockRepetitionFoldingFields
-  );
-}
-
-function mergeLineRepetitionFoldingFields(
-  target: Partial<LineRepetitionFoldingConfig>,
-  source: Record<string, unknown>,
-  configName: string,
-  configPath: string,
-  errors: string[]
-) {
-  mergeField(
-    source,
-    'enabled',
-    `${configName}.enabled`,
-    booleanSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.enabled = value;
-    }
-  );
   mergeField(
     source,
     'minRepeats',
@@ -75,46 +39,37 @@ function mergeLineRepetitionFoldingFields(
       target.minRepeats = value;
     }
   );
-}
-
-function mergeBlockRepetitionFoldingFields(
-  target: Partial<BlockRepetitionFoldingConfig>,
-  source: Record<string, unknown>,
-  configName: string,
-  configPath: string,
-  errors: string[]
-) {
   mergeField(
     source,
-    'enabled',
-    `${configName}.enabled`,
-    booleanSchema,
+    'minSavedLines',
+    `${configName}.minSavedLines`,
+    integerSchema,
     configPath,
     errors,
     (value) => {
-      target.enabled = value;
+      target.minSavedLines = value;
     }
   );
   mergeField(
     source,
-    'minLines',
-    `${configName}.minLines`,
-    minBlockLinesSchema,
+    'minSavedTokens',
+    `${configName}.minSavedTokens`,
+    integerSchema,
     configPath,
     errors,
     (value) => {
-      target.minLines = value;
+      target.minSavedTokens = value;
     }
   );
   mergeField(
     source,
-    'minRepeats',
-    `${configName}.minRepeats`,
-    minRepeatsSchema,
+    'savingsMode',
+    `${configName}.savingsMode`,
+    savingsModeSchema,
     configPath,
     errors,
     (value) => {
-      target.minRepeats = value;
+      target.savingsMode = value;
     }
   );
 }

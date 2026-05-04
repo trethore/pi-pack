@@ -29,11 +29,7 @@ function cloneDefaultConfig(): PiCutConfig {
   return {
     ...defaultConfig,
     terminalCleanup: { ...defaultConfig.terminalCleanup },
-    repetitionFolding: {
-      ...defaultConfig.repetitionFolding,
-      line: { ...defaultConfig.repetitionFolding.line },
-      block: { ...defaultConfig.repetitionFolding.block },
-    },
+    repetitionFolding: { ...defaultConfig.repetitionFolding },
     lineTruncation: { ...defaultConfig.lineTruncation },
     tools: [],
   };

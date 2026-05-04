@@ -28,7 +28,7 @@ export function mergeField<T>(
   }
 
   errors.push(
-    `pi-cut config ignored invalid ${configName} value in ${configPath}; ${expected(schema)}.`
+    `pi-cut config ignored invalid ${configName} value in ${configPath}; ${expected(schema)}; keeping default.`
   );
 }
 

@@ -13,9 +13,13 @@ describe('resolveToolConfig', () => {
     // Assert
     expect(config.enabled).toBe(true);
     expect(config.terminalCleanup.enabled).toBe(false);
-    expect(config.repetitionFolding.enabled).toBe(true);
-    expect(config.repetitionFolding.line.enabled).toBe(true);
-    expect(config.repetitionFolding.block.enabled).toBe(true);
+    expect(config.repetitionFolding).toEqual({
+      enabled: true,
+      minRepeats: 2,
+      minSavedLines: 3,
+      minSavedTokens: 40,
+      savingsMode: 'or',
+    });
     expect(config.lineTruncation.enabled).toBe(true);
   });
 
@@ -55,7 +59,9 @@ describe('resolveToolConfig', () => {
           terminalCleanup: { enabled: true, trimTrailingWhitespace: false },
           repetitionFolding: {
             enabled: true,
-            block: { enabled: true, minLines: 3, minRepeats: 5 },
+            minRepeats: 5,
+            minSavedLines: 0,
+            savingsMode: 'and' as const,
           },
           lineTruncation: { enabled: true, maxChars: 10 },
         },
@@ -69,8 +75,13 @@ describe('resolveToolConfig', () => {
     // Assert
     expect(config.terminalCleanup.enabled).toBe(true);
     expect(config.terminalCleanup.trimTrailingWhitespace).toBe(false);
-    expect(config.repetitionFolding.enabled).toBe(true);
-    expect(config.repetitionFolding.block).toEqual({ enabled: true, minLines: 3, minRepeats: 5 });
+    expect(config.repetitionFolding).toEqual({
+      enabled: true,
+      minRepeats: 5,
+      minSavedLines: 0,
+      minSavedTokens: 40,
+      savingsMode: 'and',
+    });
     expect(config.lineTruncation).toEqual({ enabled: true, maxChars: 10 });
   });
 });
