@@ -18,7 +18,7 @@
     "#pi-cut/*": "./src/*"
   },
   "dependencies": {
-    "jsonc-parser": "^3.3.1",
+    "@trethore/pi-shared": "*",
     "zod": "4.4.1"
   },
   "pi": {

@@ -2,6 +2,11 @@ import { existsSync } from 'node:fs';
 
 import type { ExtensionAPI, ExtensionCommandContext } from '@mariozechner/pi-coding-agent';
 import type { AutocompleteItem } from '@mariozechner/pi-tui';
+import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostics.js';
+import {
+  registerEnabledFeaturesWithContext,
+  type ContextualExtensionFeature,
+} from '@trethore/pi-shared/features/registry.js';
 import { loadConfig } from '#src/config/config.js';
 import { GLOBAL_CONFIG_PATH, PROJECT_CONFIG_PATH } from '#src/config/locations.js';
 import type {
@@ -9,7 +14,7 @@ import type {
   CodexVerbosity,
   PiCodexifyConfig,
 } from '#src/config/schema.js';
-import { updateJsoncFile } from '#src/config/write-jsonc.js';
+import { updateJsoncFile } from '@trethore/pi-shared/config/write-jsonc.js';
 import {
   buildCodexControlsStatusMessage,
   type CodexControlsController,
@@ -20,32 +25,43 @@ import {
 import { notifyCodexUsage } from '#src/features/usage/index.js';
 import { registerWebSearch } from '#src/features/web-search/index.js';
 
-export default function piCodexify(pi: ExtensionAPI) {
-  const loadedConfig = loadConfig(process.cwd());
-
-  registerConfigDiagnostics(pi, loadedConfig.errors);
-
-  if (!loadedConfig.config.enabled) return;
-
-  const codexControls = registerCodexControls(pi, loadedConfig.config.codex);
-  registerWebSearch(pi, loadedConfig.config.webSearch);
-  registerCodexifyCommand(pi, loadedConfig.config, codexControls);
+interface CodexifyRuntime {
+  codexControls?: CodexControlsController;
 }
 
-function registerConfigDiagnostics(pi: ExtensionAPI, errors: string[]) {
-  if (errors.length === 0) return;
+const FEATURES: readonly ContextualExtensionFeature<PiCodexifyConfig, CodexifyRuntime>[] = [
+  {
+    isEnabled: (config) => config.enabled && config.codex.enabled,
+    register(pi, config, runtime) {
+      runtime.codexControls = registerCodexControls(pi, config.codex);
+    },
+  },
+  {
+    isEnabled: (config) => config.enabled && config.webSearch.enabled,
+    register(pi, config) {
+      registerWebSearch(pi, config.webSearch);
+    },
+  },
+  {
+    isEnabled: (config) => config.enabled,
+    register(pi, config, runtime) {
+      registerCodexifyCommand(pi, config, runtime.codexControls);
+    },
+  },
+];
 
-  pi.on('session_start', (_event, ctx) => {
-    for (const error of errors) {
-      ctx.ui.notify(error, 'warning');
-    }
-  });
+export default function piCodexify(pi: ExtensionAPI) {
+  const loadedConfig = loadConfig(process.cwd());
+  const runtime: CodexifyRuntime = {};
+
+  registerConfigDiagnostics(pi, loadedConfig.errors);
+  registerEnabledFeaturesWithContext(pi, loadedConfig.config, FEATURES, runtime);
 }
 
 function registerCodexifyCommand(
   pi: ExtensionAPI,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController
+  codexControls: CodexControlsController | undefined
 ) {
   pi.registerCommand('codexify', {
     description: 'Control Codex payload options and inspect Codex usage',
@@ -60,36 +76,84 @@ async function handleCodexifyCommand(
   args: string,
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController
+  codexControls: CodexControlsController | undefined
 ): Promise<void> {
   const parts = splitArgs(args);
+  const commandName = parts[0] ?? 'help';
+  const command = findCodexifyCommand(commandName);
 
-  if (parts.length === 0 || parts[0] === 'help') {
-    ctx.ui.notify(buildUsageMessage(config), 'info');
+  if (!command) {
+    ctx.ui.notify(buildUsageMessage(config), 'warning');
     return;
   }
 
-  if (parts[0] === 'status') {
-    ctx.ui.notify(buildStatusMessage(config, ctx, codexControls), 'info');
-    return;
-  }
+  await command.handle(parts, ctx, config, codexControls);
+}
 
-  if (parts[0] === 'usage') {
-    await handleUsageCommand(ctx, config);
-    return;
-  }
+interface CodexifyCommand {
+  name: string;
+  usage: string;
+  aliases?: readonly string[];
+  needsMoreArgs?: boolean;
+  isAvailable(config: PiCodexifyConfig): boolean;
+  handle(
+    parts: readonly string[],
+    ctx: ExtensionCommandContext,
+    config: PiCodexifyConfig,
+    codexControls: CodexControlsController | undefined
+  ): Promise<void> | void;
+}
 
-  if (parts[0] === 'verbosity') {
-    await handleVerbosityCommand(parts[1], ctx, config, codexControls);
-    return;
-  }
+const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
+  {
+    name: 'help',
+    usage: '/codexify help',
+    isAvailable: () => true,
+    handle(_parts, ctx, config) {
+      ctx.ui.notify(buildUsageMessage(config), 'info');
+    },
+  },
+  {
+    name: 'status',
+    usage: '/codexify status',
+    isAvailable: () => true,
+    handle(_parts, ctx, config, codexControls) {
+      ctx.ui.notify(buildStatusMessage(config, ctx, codexControls), 'info');
+    },
+  },
+  {
+    name: 'usage',
+    usage: '/codexify usage',
+    isAvailable: (config) => config.usage.enabled,
+    async handle(_parts, ctx, config) {
+      await handleUsageCommand(ctx, config);
+    },
+  },
+  {
+    name: 'verbosity',
+    usage: '/codexify verbosity low|medium|high|off',
+    needsMoreArgs: true,
+    isAvailable: (config) => config.codex.enabled,
+    async handle(parts, ctx, config, codexControls) {
+      await handleVerbosityCommand(parts[1], ctx, config, codexControls);
+    },
+  },
+  {
+    name: 'reasoning-summary',
+    usage: '/codexify reasoning-summary auto|concise|detailed|off',
+    aliases: ['summary'],
+    needsMoreArgs: true,
+    isAvailable: (config) => config.codex.enabled,
+    async handle(parts, ctx, config, codexControls) {
+      await handleReasoningSummaryCommand(parts[1], ctx, config, codexControls);
+    },
+  },
+];
 
-  if (parts[0] === 'reasoning-summary' || parts[0] === 'summary') {
-    await handleReasoningSummaryCommand(parts[1], ctx, config, codexControls);
-    return;
-  }
-
-  ctx.ui.notify(buildUsageMessage(config), 'warning');
+function findCodexifyCommand(commandName: string): CodexifyCommand | undefined {
+  return CODEXIFY_COMMANDS.find(
+    (command) => command.name === commandName || command.aliases?.includes(commandName)
+  );
 }
 
 async function handleUsageCommand(
@@ -108,15 +172,16 @@ async function handleVerbosityCommand(
   value: string | undefined,
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController
+  codexControls: CodexControlsController | undefined
 ): Promise<void> {
   if (!config.codex.enabled) {
     ctx.ui.notify('codexify codex controls are disabled in pi-codexify.jsonc.', 'warning');
     return;
   }
 
+  const controls = getCodexControls(codexControls);
   if (value === undefined) {
-    ctx.ui.notify(buildCodexControlsStatusMessage(codexControls.getConfig(), ctx.model), 'info');
+    ctx.ui.notify(buildCodexControlsStatusMessage(controls.getConfig(), ctx.model), 'info');
     return;
   }
 
@@ -129,7 +194,7 @@ async function handleVerbosityCommand(
   try {
     const scope = resolveConfigScope();
     await updateCodexControlConfig(scope, 'verbosity', parsedValue);
-    codexControls.updateVerbosity(parsedValue === 'off' ? undefined : parsedValue);
+    controls.updateVerbosity(parsedValue === 'off' ? undefined : parsedValue);
     ctx.ui.notify(buildConfigUpdateMessage('Codex verbosity', parsedValue, scope), 'info');
   } catch (error) {
     ctx.ui.notify(`codexify verbosity failed: ${getErrorMessage(error)}`, 'error');
@@ -140,15 +205,16 @@ async function handleReasoningSummaryCommand(
   value: string | undefined,
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController
+  codexControls: CodexControlsController | undefined
 ): Promise<void> {
   if (!config.codex.enabled) {
     ctx.ui.notify('codexify codex controls are disabled in pi-codexify.jsonc.', 'warning');
     return;
   }
 
+  const controls = getCodexControls(codexControls);
   if (value === undefined) {
-    ctx.ui.notify(buildCodexControlsStatusMessage(codexControls.getConfig(), ctx.model), 'info');
+    ctx.ui.notify(buildCodexControlsStatusMessage(controls.getConfig(), ctx.model), 'info');
     return;
   }
 
@@ -161,7 +227,7 @@ async function handleReasoningSummaryCommand(
   try {
     const scope = resolveConfigScope();
     await updateCodexControlConfig(scope, 'reasoningSummary', parsedValue);
-    codexControls.updateReasoningSummary(parsedValue === 'off' ? undefined : parsedValue);
+    controls.updateReasoningSummary(parsedValue === 'off' ? undefined : parsedValue);
     ctx.ui.notify(buildConfigUpdateMessage('Codex reasoning summary', parsedValue, scope), 'info');
   } catch (error) {
     ctx.ui.notify(`codexify reasoning-summary failed: ${getErrorMessage(error)}`, 'error');
@@ -171,7 +237,7 @@ async function handleReasoningSummaryCommand(
 function buildStatusMessage(
   config: PiCodexifyConfig,
   ctx: ExtensionCommandContext,
-  codexControls: CodexControlsController
+  codexControls: CodexControlsController | undefined
 ): string {
   const lines = [
     'pi-codexify',
@@ -181,27 +247,26 @@ function buildStatusMessage(
   ];
 
   if (config.codex.enabled) {
-    lines.push('', buildCodexControlsStatusMessage(codexControls.getConfig(), ctx.model));
+    const controls = getCodexControls(codexControls);
+    lines.push('', buildCodexControlsStatusMessage(controls.getConfig(), ctx.model));
   }
 
   return lines.join('\n');
 }
 
+function getCodexControls(
+  codexControls: CodexControlsController | undefined
+): CodexControlsController {
+  if (codexControls) return codexControls;
+  throw new Error('codex controls are not registered');
+}
+
 function buildUsageMessage(config: PiCodexifyConfig): string {
-  const lines = ['pi-codexify commands', '/codexify help', '/codexify status'];
+  const commandUsageLines = CODEXIFY_COMMANDS.filter((command) => command.isAvailable(config)).map(
+    (command) => command.usage
+  );
 
-  if (config.usage.enabled) {
-    lines.push('/codexify usage');
-  }
-
-  if (config.codex.enabled) {
-    lines.push(
-      '/codexify verbosity low|medium|high|off',
-      '/codexify reasoning-summary auto|concise|detailed|off'
-    );
-  }
-
-  return lines.join('\n');
+  return ['pi-codexify commands', ...commandUsageLines].join('\n');
 }
 
 type ConfigScope = 'global' | 'project';
@@ -275,17 +340,9 @@ function getCodexifyArgumentCompletions(
 }
 
 function getRootCompletionCandidates(config: PiCodexifyConfig): string[] {
-  const candidates = ['help', 'status'];
-
-  if (config.usage.enabled) {
-    candidates.push('usage');
-  }
-
-  if (config.codex.enabled) {
-    candidates.push('verbosity', 'reasoning-summary');
-  }
-
-  return candidates;
+  return CODEXIFY_COMMANDS.filter((command) => command.isAvailable(config)).map(
+    (command) => command.name
+  );
 }
 
 type CompletionState = {
@@ -329,11 +386,11 @@ function formatCompletionToken(candidate: string): string {
 }
 
 function candidateNeedsMoreArgs(candidate: string): boolean {
-  return candidate === 'verbosity' || candidate === 'reasoning-summary';
+  return findCodexifyCommand(candidate)?.needsMoreArgs === true;
 }
 
 function isReasoningSummaryCommand(command: string): boolean {
-  return command === 'reasoning-summary' || command === 'summary';
+  return findCodexifyCommand(command)?.name === 'reasoning-summary';
 }
 
 function splitArgs(args: string): string[] {

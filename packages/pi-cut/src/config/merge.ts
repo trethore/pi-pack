@@ -1,3 +1,4 @@
+import { isRecord } from '@trethore/pi-shared/object.js';
 import type { z } from 'zod';
 import { expected } from '#src/config/validation.js';
 
@@ -52,8 +53,4 @@ export function mergeSection(
 
 export function hasFields(value: object): boolean {
   return Object.keys(value).length > 0;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

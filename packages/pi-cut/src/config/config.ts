@@ -1,4 +1,4 @@
-import { readConfigFile } from '#src/config/config-file.js';
+import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
 import { getConfigPaths } from '#src/config/locations.js';
 import { mergeField, mergeSection } from '#src/config/merge.js';
 import {
@@ -13,12 +13,18 @@ import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanu
 import { mergeToolOverrides } from '#src/config/tool-overrides.js';
 import { booleanSchema } from '#src/config/validation.js';
 
+const EXTENSION_NAME = 'pi-cut';
+
 export function loadConfig(cwd: string): LoadedConfig {
   const errors: string[] = [];
   const config = cloneDefaultConfig();
 
   for (const configPath of getConfigPaths(cwd)) {
-    const parsedConfig = readConfigFile(configPath, errors);
+    const parsedConfig = readJsoncConfigFile<PartialPiCutConfig>(
+      configPath,
+      EXTENSION_NAME,
+      errors
+    );
     if (parsedConfig) mergeConfig(config, parsedConfig, configPath, errors);
   }
 

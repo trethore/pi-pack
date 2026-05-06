@@ -1,8 +1,7 @@
-import { homedir } from 'node:os';
-import path from 'node:path';
+import { getConfigPaths as getSharedConfigPaths } from '@trethore/pi-shared/config/locations.js';
 
-const GLOBAL_CONFIG_PATH = path.join(homedir(), '.pi', 'agent', 'pi-handy.jsonc');
+const CONFIG_FILE_NAME = 'pi-handy.jsonc';
+
 export function getConfigPaths(cwd: string): string[] {
-  const projectConfigPath = path.join(cwd, '.pi', 'pi-handy.jsonc');
-  return [GLOBAL_CONFIG_PATH, projectConfigPath];
+  return getSharedConfigPaths(cwd, CONFIG_FILE_NAME);
 }

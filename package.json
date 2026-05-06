@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier . --write",
+    "format": "prettier . --write --log-level warn",
     "format:check": "prettier . --check",
     "importpi": "node scripts/importpi.ts",
     "dev": "pi -e .",

@@ -2,7 +2,7 @@ import type { Api, Model } from '@mariozechner/pi-ai';
 import type { ExtensionAPI, ToolDefinition } from '@mariozechner/pi-coding-agent';
 import { Type } from 'typebox';
 
-import { isRecord } from '#src/shared/object.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
 
 const WEB_SEARCH_PARAMETERS = Type.Unsafe<Record<string, never>>({
   type: 'object',

@@ -7,7 +7,7 @@ import {
   type CodexReasoningSummary,
   type CodexVerbosity,
 } from '#src/config/schema.js';
-import { isRecord } from '#src/shared/object.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
 
 type SupportedCodexControlApi =
   | 'openai-responses'

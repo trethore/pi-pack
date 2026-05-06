@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { updateJsoncFile } from '#pi-codexify/config/write-jsonc.js';
+import { updateJsoncFile } from '@trethore/pi-shared/config/write-jsonc.js';
 
 describe('updateJsoncFile', () => {
   it('creates parent directories and writes nested JSONC values', async () => {

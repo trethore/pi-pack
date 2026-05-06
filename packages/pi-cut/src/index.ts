@@ -1,20 +1,23 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostics.js';
+import {
+  registerEnabledFeatures,
+  type ExtensionFeature,
+} from '@trethore/pi-shared/features/registry.js';
 import { loadConfig } from '#src/config/config.js';
+import type { PiCutConfig } from '#src/config/schema.js';
 import { registerToolResultPipeline } from '#src/features/tool-result-pipeline.js';
+
+const FEATURES: readonly ExtensionFeature<PiCutConfig>[] = [
+  {
+    isEnabled: (config) => config.enabled,
+    register: registerToolResultPipeline,
+  },
+];
 
 export default function piCut(pi: ExtensionAPI) {
   const loadedConfig = loadConfig(process.cwd());
 
   registerConfigDiagnostics(pi, loadedConfig.errors);
-  registerToolResultPipeline(pi, loadedConfig.config);
-}
-
-function registerConfigDiagnostics(pi: ExtensionAPI, errors: string[]) {
-  if (errors.length === 0) return;
-
-  pi.on('session_start', (_event, ctx) => {
-    for (const error of errors) {
-      ctx.ui.notify(error, 'warning');
-    }
-  });
+  registerEnabledFeatures(pi, loadedConfig.config, FEATURES);
 }

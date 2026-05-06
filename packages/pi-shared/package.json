@@ -1,0 +1,17 @@
+{
+  "name": "@trethore/pi-shared",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Shared utilities for pi-pack extensions.",
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": ">=0.72.0 <1"
+  },
+  "exports": {
+    "./*.js": "./src/*.ts"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
+  }
+}

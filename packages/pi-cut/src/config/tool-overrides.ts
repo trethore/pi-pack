@@ -1,4 +1,5 @@
-import { hasFields, isRecord, mergeField, type ConfigFieldMerger } from '#src/config/merge.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
+import { hasFields, mergeField, type ConfigFieldMerger } from '#src/config/merge.js';
 import type {
   LineTruncationConfig,
   PartialPiCutConfig,

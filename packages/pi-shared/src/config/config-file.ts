@@ -1,12 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
-import { isRecord } from '#src/config/merge.js';
-import type { PartialPiCutConfig } from '#src/config/schema.js';
 
-export function readConfigFile(
+import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
+import { isRecord } from '@trethore/pi-shared/object.js';
+
+export function readJsoncConfigFile<T extends Record<string, unknown>>(
   configPath: string,
+  extensionName: string,
   errors: string[]
-): PartialPiCutConfig | undefined {
+): T | undefined {
   if (!existsSync(configPath)) return undefined;
 
   const parseErrors: ParseError[] = [];
@@ -17,21 +18,25 @@ export function readConfigFile(
   }) as unknown;
 
   if (parseErrors.length > 0) {
-    errors.push(formatParseErrors(configPath, parseErrors));
+    errors.push(formatParseErrors(extensionName, configPath, parseErrors));
     return undefined;
   }
 
   if (!isRecord(parsed)) {
-    errors.push(`pi-cut config ignored: ${configPath} must contain a JSON object.`);
+    errors.push(`${extensionName} config ignored: ${configPath} must contain a JSON object.`);
     return undefined;
   }
 
-  return parsed;
+  return parsed as T;
 }
 
-function formatParseErrors(configPath: string, parseErrors: ParseError[]): string {
+function formatParseErrors(
+  extensionName: string,
+  configPath: string,
+  parseErrors: ParseError[]
+): string {
   const messages = parseErrors.map(
     (error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`
   );
-  return `pi-cut config ignored: ${configPath} has JSONC parse errors: ${messages.join(', ')}.`;
+  return `${extensionName} config ignored: ${configPath} has JSONC parse errors: ${messages.join(', ')}.`;
 }

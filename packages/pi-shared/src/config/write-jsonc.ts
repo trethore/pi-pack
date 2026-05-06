@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { applyEdits, modify, parse, type FormattingOptions, type JSONPath } from 'jsonc-parser';
-import { isRecord } from '#src/shared/object.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
 
 const REMOVE_JSONC_VALUE: unknown = undefined;
 

@@ -1,9 +1,14 @@
-import { homedir } from 'node:os';
-import path from 'node:path';
+import {
+  getConfigPaths as getSharedConfigPaths,
+  getGlobalConfigPath,
+  getProjectConfigPath,
+} from '@trethore/pi-shared/config/locations.js';
 
-export const GLOBAL_CONFIG_PATH = path.join(homedir(), '.pi', 'agent', 'pi-codexify.jsonc');
-export const PROJECT_CONFIG_PATH = path.join(process.cwd(), '.pi', 'pi-codexify.jsonc');
+const CONFIG_FILE_NAME = 'pi-codexify.jsonc';
+
+export const GLOBAL_CONFIG_PATH = getGlobalConfigPath(CONFIG_FILE_NAME);
+export const PROJECT_CONFIG_PATH = getProjectConfigPath(process.cwd(), CONFIG_FILE_NAME);
 
 export function getConfigPaths(cwd: string): string[] {
-  return [GLOBAL_CONFIG_PATH, path.join(cwd, '.pi', 'pi-codexify.jsonc')];
+  return getSharedConfigPaths(cwd, CONFIG_FILE_NAME);
 }

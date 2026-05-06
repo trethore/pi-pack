@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
+import { readBooleanField } from '@trethore/pi-shared/config/field.js';
+import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
 import { getConfigPaths } from '#src/config/locations.js';
 import {
   codexReasoningSummaryValues,
@@ -11,7 +12,6 @@ import {
   type PartialPiCodexifyConfig,
   type PiCodexifyConfig,
 } from '#src/config/schema.js';
-import { isRecord } from '#src/shared/object.js';
 
 export function loadConfig(cwd: string): LoadedConfig {
   const errors: string[] = [];
@@ -35,26 +35,7 @@ function cloneDefaultConfig(): PiCodexifyConfig {
 }
 
 function readConfigFile(configPath: string, errors: string[]): PartialPiCodexifyConfig | undefined {
-  if (!existsSync(configPath)) return undefined;
-
-  const parseErrors: ParseError[] = [];
-  const contents = readFileSync(configPath, 'utf8');
-  const parsed = parse(contents, parseErrors, {
-    allowTrailingComma: true,
-    disallowComments: false,
-  }) as unknown;
-
-  if (parseErrors.length > 0) {
-    errors.push(formatParseErrors(configPath, parseErrors));
-    return undefined;
-  }
-
-  if (!isRecord(parsed)) {
-    errors.push(`pi-codexify config ignored: ${configPath} must contain a JSON object.`);
-    return undefined;
-  }
-
-  return parsed;
+  return readJsoncConfigFile<PartialPiCodexifyConfig>(configPath, 'pi-codexify', errors);
 }
 
 function mergeConfig(
@@ -64,7 +45,7 @@ function mergeConfig(
   errors: string[]
 ) {
   if (source.enabled !== undefined) {
-    const enabled = readBooleanField(source.enabled, 'enabled', configPath, errors);
+    const enabled = readPiCodexifyBooleanField(source.enabled, 'enabled', configPath, errors);
     if (enabled !== undefined) target.enabled = enabled;
   }
 
@@ -89,7 +70,12 @@ function mergeCodexConfig(
   }
 
   if (source.codex.enabled !== undefined) {
-    const enabled = readBooleanField(source.codex.enabled, 'codex.enabled', configPath, errors);
+    const enabled = readPiCodexifyBooleanField(
+      source.codex.enabled,
+      'codex.enabled',
+      configPath,
+      errors
+    );
     if (enabled !== undefined) target.codex.enabled = enabled;
   }
 
@@ -147,7 +133,12 @@ function mergeUsageConfig(
   }
 
   if (source.usage.enabled !== undefined) {
-    const enabled = readBooleanField(source.usage.enabled, 'usage.enabled', configPath, errors);
+    const enabled = readPiCodexifyBooleanField(
+      source.usage.enabled,
+      'usage.enabled',
+      configPath,
+      errors
+    );
     if (enabled !== undefined) target.usage.enabled = enabled;
   }
 }
@@ -168,7 +159,7 @@ function mergeWebSearchConfig(
   }
 
   if (source.webSearch.enabled !== undefined) {
-    const enabled = readBooleanField(
+    const enabled = readPiCodexifyBooleanField(
       source.webSearch.enabled,
       'webSearch.enabled',
       configPath,
@@ -178,18 +169,13 @@ function mergeWebSearchConfig(
   }
 }
 
-function readBooleanField(
+function readPiCodexifyBooleanField(
   value: unknown,
   label: string,
   configPath: string,
   errors: string[]
 ): boolean | undefined {
-  if (typeof value === 'boolean') return value;
-
-  errors.push(
-    `pi-codexify config ignored invalid ${label} value in ${configPath}; expected boolean.`
-  );
-  return undefined;
+  return readBooleanField(value, 'pi-codexify', label, configPath, errors);
 }
 
 function isCodexVerbosity(value: unknown): value is CodexVerbosity {
@@ -198,11 +184,4 @@ function isCodexVerbosity(value: unknown): value is CodexVerbosity {
 
 function isCodexReasoningSummary(value: unknown): value is CodexReasoningSummary {
   return codexReasoningSummaryValues.includes(value as CodexReasoningSummary);
-}
-
-function formatParseErrors(configPath: string, parseErrors: ParseError[]): string {
-  const messages = parseErrors.map(
-    (error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`
-  );
-  return `pi-codexify config ignored: ${configPath} has JSONC parse errors: ${messages.join(', ')}.`;
 }

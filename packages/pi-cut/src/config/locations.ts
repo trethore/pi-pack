@@ -1,9 +1,7 @@
-import { homedir } from 'node:os';
-import path from 'node:path';
+import { getConfigPaths as getSharedConfigPaths } from '@trethore/pi-shared/config/locations.js';
+
+const CONFIG_FILE_NAME = 'pi-cut.jsonc';
 
 export function getConfigPaths(cwd: string): string[] {
-  return [
-    path.join(homedir(), '.pi', 'agent', 'pi-cut.jsonc'),
-    path.join(cwd, '.pi', 'pi-cut.jsonc'),
-  ];
+  return getSharedConfigPaths(cwd, CONFIG_FILE_NAME);
 }
