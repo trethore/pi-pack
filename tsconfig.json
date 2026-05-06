@@ -6,6 +6,9 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "paths": {
+      "@trethore/pi-shared/*.js": ["./packages/pi-shared/src/*.ts"]
+    },
     "types": ["node"]
   },
   "include": ["packages/**/*.ts", "scripts/**/*.ts", "eslint.config.js"]
