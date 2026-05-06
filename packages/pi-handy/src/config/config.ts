@@ -1,9 +1,9 @@
 import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
-import { readBooleanField } from '@trethore/pi-shared/config/field.js';
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
 import { getConfigPaths } from '#src/config/locations.js';
 import {
   defaultConfig,
+  enabledSchema,
   type LoadedConfig,
   type PartialPiHandyConfig,
   type PiHandyConfig,
@@ -11,18 +11,24 @@ import {
 
 type FeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
 
+const EXTENSION_NAME = 'pi-handy';
 const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = [
   'thinkingLevel',
   'switchWorkspace',
   'showSysprompt',
 ];
+const { mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string): LoadedConfig {
   const errors: string[] = [];
   const config = cloneDefaultConfig();
 
   for (const configPath of getConfigPaths(cwd)) {
-    const parsedConfig = readConfigFile(configPath, errors);
+    const parsedConfig = readJsoncConfigFile<PartialPiHandyConfig>(
+      configPath,
+      EXTENSION_NAME,
+      errors
+    );
     if (parsedConfig) mergeConfig(config, parsedConfig, configPath, errors);
   }
 
@@ -38,53 +44,31 @@ function cloneDefaultConfig(): PiHandyConfig {
   };
 }
 
-function readConfigFile(configPath: string, errors: string[]): PartialPiHandyConfig | undefined {
-  return readJsoncConfigFile<PartialPiHandyConfig>(configPath, 'pi-handy', errors);
-}
-
 function mergeConfig(
   target: PiHandyConfig,
   source: PartialPiHandyConfig,
   configPath: string,
   errors: string[]
 ) {
-  if (source.enabled !== undefined) {
-    const enabled = readPiHandyBooleanField(source.enabled, 'enabled', configPath, errors);
-    if (enabled !== undefined) target.enabled = enabled;
-  }
+  mergeField(source, 'enabled', 'enabled', enabledSchema, configPath, errors, (value) => {
+    target.enabled = value;
+  });
 
   for (const key of FEATURE_CONFIG_KEYS) {
-    mergeFeatureConfig(target[key], source[key], key, configPath, errors);
+    mergeSection(source, key, configPath, errors, (section, sectionName) => {
+      mergeFeatureConfig(target[key], section, sectionName, configPath, errors);
+    });
   }
 }
 
 function mergeFeatureConfig(
   target: { enabled: boolean },
-  source: unknown,
+  source: Record<string, unknown>,
   label: string,
   configPath: string,
   errors: string[]
 ) {
-  if (source === undefined) return;
-
-  if (!isRecord(source)) {
-    errors.push(
-      `pi-handy config ignored invalid ${label} value in ${configPath}; expected object.`
-    );
-    return;
-  }
-
-  if (source.enabled !== undefined) {
-    const enabled = readPiHandyBooleanField(source.enabled, `${label}.enabled`, configPath, errors);
-    if (enabled !== undefined) target.enabled = enabled;
-  }
-}
-
-function readPiHandyBooleanField(
-  value: unknown,
-  label: string,
-  configPath: string,
-  errors: string[]
-): boolean | undefined {
-  return readBooleanField(value, 'pi-handy', label, configPath, errors);
+  mergeField(source, 'enabled', `${label}.enabled`, enabledSchema, configPath, errors, (value) => {
+    target.enabled = value;
+  });
 }

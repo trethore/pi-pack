@@ -1,3 +1,5 @@
+export { booleanSchema as enabledSchema } from '@trethore/pi-shared/config/schema.js';
+
 export interface PiHandyConfig {
   enabled: boolean;
   thinkingLevel: ThinkingLevelCommandConfig;

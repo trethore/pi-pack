@@ -18,8 +18,7 @@
     "#pi-cut/*": "./src/*"
   },
   "dependencies": {
-    "@trethore/pi-shared": "*",
-    "zod": "4.4.1"
+    "@trethore/pi-shared": "*"
   },
   "pi": {
     "extensions": [

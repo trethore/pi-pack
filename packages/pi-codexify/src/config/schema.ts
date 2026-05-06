@@ -1,3 +1,7 @@
+import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
+
+export { booleanSchema as enabledSchema } from '@trethore/pi-shared/config/schema.js';
+
 export type CodexVerbosity = 'low' | 'medium' | 'high';
 export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed';
 
@@ -57,3 +61,12 @@ export const defaultConfig: PiCodexifyConfig = {
 
 export const codexVerbosityValues = ['low', 'medium', 'high'] as const;
 export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed'] as const;
+
+export const codexVerbositySchema = defineConfigSchema(
+  z.enum(codexVerbosityValues).nullable(),
+  'expected low, medium, high, or null'
+);
+export const codexReasoningSummarySchema = defineConfigSchema(
+  z.enum(codexReasoningSummaryValues).nullable(),
+  'expected auto, concise, detailed, or null'
+);
