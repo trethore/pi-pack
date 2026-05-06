@@ -1,6 +1,6 @@
 const LINE_PATTERN = /[^\r\n]*(?:\r\n|\r|\n|$)/g;
 
-export interface LineEndingParts {
+interface LineEndingParts {
   body: string;
   ending: string;
 }
@@ -9,7 +9,7 @@ export interface LineParts extends LineEndingParts {
   raw: string;
 }
 
-export function splitLineEnding(line: string): LineEndingParts {
+function splitLineEnding(line: string): LineEndingParts {
   if (line.endsWith('\r\n')) return { body: line.slice(0, -2), ending: '\r\n' };
   if (line.endsWith('\n')) return { body: line.slice(0, -1), ending: '\n' };
   if (line.endsWith('\r')) return { body: line.slice(0, -1), ending: '\r' };

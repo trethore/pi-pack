@@ -11,7 +11,9 @@
     "codex"
   ],
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": ">=0.72.0 <1"
+    "@mariozechner/pi-ai": ">=0.72.0 <1",
+    "@mariozechner/pi-coding-agent": ">=0.72.0 <1",
+    "@mariozechner/pi-tui": ">=0.72.0 <1"
   },
   "imports": {
     "#src/*": "./src/*",

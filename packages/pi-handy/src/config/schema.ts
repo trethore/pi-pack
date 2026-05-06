@@ -5,15 +5,15 @@ export interface PiHandyConfig {
   showSysprompt: ShowSyspromptCommandConfig;
 }
 
-export interface ThinkingLevelCommandConfig {
+interface ThinkingLevelCommandConfig {
   enabled: boolean;
 }
 
-export interface SwitchWorkspaceCommandConfig {
+interface SwitchWorkspaceCommandConfig {
   enabled: boolean;
 }
 
-export interface ShowSyspromptCommandConfig {
+interface ShowSyspromptCommandConfig {
   enabled: boolean;
 }
 

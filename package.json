@@ -13,6 +13,8 @@
   ],
   "scripts": {
     "lint": "eslint .",
+    "knip": "knip",
+    "lint:dead": "knip --include files",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -46,6 +48,7 @@
     "@mariozechner/pi-coding-agent": "latest",
     "eslint": "9.39.4",
     "eslint-plugin-unicorn": "64.0.0",
+    "knip": "^6.11.0",
     "prettier": "3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.0",

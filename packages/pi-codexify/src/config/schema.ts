@@ -14,11 +14,11 @@ export interface CodexControlsConfig {
   reasoningSummary?: CodexReasoningSummary;
 }
 
-export interface CodexUsageConfig {
+interface CodexUsageConfig {
   enabled: boolean;
 }
 
-export interface WebSearchConfig {
+interface WebSearchConfig {
   enabled: boolean;
 }
 

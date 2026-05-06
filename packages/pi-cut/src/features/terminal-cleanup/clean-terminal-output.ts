@@ -8,7 +8,7 @@ const ANSI_SEQUENCE_PATTERN = new RegExp(
 );
 const TRAILING_HORIZONTAL_WHITESPACE_PATTERN = /[ \t]+(?=\r\n|\r|\n|$)/g;
 
-export interface TerminalCleanupOptions {
+interface TerminalCleanupOptions {
   stripAnsi: boolean;
   collapseCarriageReturns: boolean;
   trimTrailingWhitespace: boolean;

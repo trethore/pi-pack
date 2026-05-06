@@ -10,7 +10,8 @@ Here is the structure of the project:
 pi-pack/                         # You are here!
 ├── packages/                    # Workspace packages for Pi extensions.
 │   ├── pi-cut/
-│   └── pi-codexify/
+│   ├── pi-codexify/
+│   └── pi-handy/
 ├── references/                  # References for source browsing and docs, DO NOT modify.
 │   └── pi-mono/                 # Pi-mono source code and docs.
 ├── scripts/                     # Dev and maintenance scripts.

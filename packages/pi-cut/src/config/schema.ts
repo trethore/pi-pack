@@ -1,9 +1,8 @@
-export const DEFAULT_MAX_CHARS = 2000;
+const DEFAULT_MAX_CHARS = 2000;
 export const MIN_REPEATS = 2;
-export const DEFAULT_MIN_REPEATS = MIN_REPEATS;
-export const DEFAULT_MIN_SAVED_LINES = 3;
-export const DEFAULT_MIN_SAVED_TOKENS = 40;
-export const DEFAULT_SAVINGS_MODE: SavingsMode = 'or';
+const DEFAULT_MIN_SAVED_LINES = 3;
+const DEFAULT_MIN_SAVED_TOKENS = 40;
+const DEFAULT_SAVINGS_MODE: SavingsMode = 'or';
 export interface PiCutConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
@@ -34,7 +33,7 @@ export interface TerminalCleanupConfig {
   trimTrailingWhitespace: boolean;
 }
 
-export type SavingsMode = 'or' | 'and';
+type SavingsMode = 'or' | 'and';
 
 export interface RepetitionFoldingConfig {
   enabled: boolean;
@@ -49,7 +48,7 @@ export interface LineTruncationConfig {
   maxChars: number;
 }
 
-export type PartialTerminalCleanupConfig = Partial<{
+type PartialTerminalCleanupConfig = Partial<{
   enabled: unknown;
   stripAnsi: unknown;
   collapseCarriageReturns: unknown;
@@ -64,7 +63,7 @@ export type PartialRepetitionFoldingConfig = Partial<{
   savingsMode: SavingsMode;
 }>;
 
-export type PartialLineTruncationConfig = Partial<{
+type PartialLineTruncationConfig = Partial<{
   enabled: unknown;
   maxChars: unknown;
 }>;
@@ -92,7 +91,7 @@ export const defaultConfig: PiCutConfig = {
   },
   repetitionFolding: {
     enabled: true,
-    minRepeats: DEFAULT_MIN_REPEATS,
+    minRepeats: MIN_REPEATS,
     minSavedLines: DEFAULT_MIN_SAVED_LINES,
     minSavedTokens: DEFAULT_MIN_SAVED_TOKENS,
     savingsMode: DEFAULT_SAVINGS_MODE,

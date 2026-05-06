@@ -50,31 +50,6 @@ export function mergeSection(
   merge(value, field);
 }
 
-export function mergeNestedConfig<T extends object>(
-  target: Record<string, unknown>,
-  source: Record<string, unknown>,
-  field: string,
-  configName: string,
-  configPath: string,
-  errors: string[],
-  mergeFields: ConfigFieldMerger<T>
-) {
-  const value = source[field];
-  if (value === undefined) return;
-
-  const nestedConfigName = `${configName}.${field}`;
-  if (!isRecord(value)) {
-    errors.push(
-      `pi-cut config ignored invalid ${nestedConfigName} value in ${configPath}; expected object.`
-    );
-    return;
-  }
-
-  const nestedTarget = (target[field] ?? {}) as Partial<T>;
-  mergeFields(nestedTarget, value, nestedConfigName, configPath, errors);
-  if (hasFields(nestedTarget)) target[field] = nestedTarget;
-}
-
 export function hasFields(value: object): boolean {
   return Object.keys(value).length > 0;
 }

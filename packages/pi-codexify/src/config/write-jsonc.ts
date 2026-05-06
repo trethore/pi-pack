@@ -7,7 +7,7 @@ import { isRecord } from '#src/shared/object.js';
 
 const REMOVE_JSONC_VALUE: unknown = undefined;
 
-export interface JsoncFileUpdate {
+interface JsoncFileUpdate {
   path: readonly string[];
   value: unknown;
 }
