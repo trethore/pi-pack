@@ -9,6 +9,7 @@ import type { PiHandyConfig } from '#src/config/schema.js';
 import { registerShowSyspromptCommand } from '#src/features/show-sysprompt/index.js';
 import { registerSwitchWorkspaceCommand } from '#src/features/switch-workspace/index.js';
 import { registerThinkingLevelCommand } from '#src/features/thinking-level/index.js';
+import { registerUpdatePiCommand } from '#src/features/update-pi/index.js';
 
 const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
@@ -22,6 +23,10 @@ const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
     isEnabled: (config) => config.enabled && config.showSysprompt.enabled,
     register: registerShowSyspromptCommand,
+  },
+  {
+    isEnabled: (config) => config.enabled && config.updatePi.enabled,
+    register: registerUpdatePiCommand,
   },
 ];
 

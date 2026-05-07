@@ -23,6 +23,9 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "showSysprompt": {
     "enabled": true,
   },
+  "updatePi": {
+    "enabled": true,
+  },
 }
 ```
 
@@ -63,3 +66,7 @@ Examples:
 /showsysprompt prompt
 /showsysprompt tools
 ```
+
+### Update pi command
+
+Registers `/updatepi` to check the latest published pi version. If an update is available, it quits Pi and starts `npm install -g @mariozechner/pi-coding-agent` in a detached process.

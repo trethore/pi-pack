@@ -15,5 +15,10 @@
   // /showsysprompt [prompt|tools]
   "showSysprompt": {
     "enabled": true
+  },
+
+  // /updatepi
+  "updatePi": {
+    "enabled": true
   }
 }

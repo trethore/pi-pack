@@ -28,6 +28,7 @@ describe('pi-handy config', () => {
         thinkingLevel: { enabled: true },
         switchWorkspace: { enabled: true },
         showSysprompt: { enabled: true },
+        updatePi: { enabled: true },
       },
       errors: [],
     });
@@ -37,7 +38,7 @@ describe('pi-handy config', () => {
     const cwd = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false }, "updatePi": { "enabled": false } }'
     );
     writeProjectConfig(cwd, '{ "enabled": true, "switchWorkspace": { "enabled": true } }');
 
@@ -46,6 +47,7 @@ describe('pi-handy config', () => {
       thinkingLevel: { enabled: false },
       switchWorkspace: { enabled: true },
       showSysprompt: { enabled: false },
+      updatePi: { enabled: false },
     });
   });
 
@@ -53,7 +55,7 @@ describe('pi-handy config', () => {
     const cwd = makeTempProject();
     writeProjectConfig(
       cwd,
-      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false }'
+      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false, "updatePi": false }'
     );
 
     const result = loadConfig(cwd);
@@ -63,12 +65,14 @@ describe('pi-handy config', () => {
       thinkingLevel: { enabled: true },
       switchWorkspace: { enabled: true },
       showSysprompt: { enabled: true },
+      updatePi: { enabled: true },
     });
     expect(result.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
       expect.stringContaining('invalid switchWorkspace value'),
       expect.stringContaining('invalid showSysprompt value'),
+      expect.stringContaining('invalid updatePi value'),
     ]);
   });
 });
