@@ -35,6 +35,7 @@ function cloneDefaultConfig(): PiCodexifyConfig {
     ...defaultConfig,
     codex: { ...defaultConfig.codex },
     usage: { ...defaultConfig.usage },
+    account: { ...defaultConfig.account },
     webSearch: { ...defaultConfig.webSearch },
   };
 }
@@ -54,6 +55,9 @@ function mergeConfig(
   });
   mergeSection(source, 'usage', configPath, errors, (section, sectionName) => {
     mergeEnabledSection(target.usage, section, sectionName, configPath, errors);
+  });
+  mergeSection(source, 'account', configPath, errors, (section, sectionName) => {
+    mergeEnabledSection(target.account, section, sectionName, configPath, errors);
   });
   mergeSection(source, 'webSearch', configPath, errors, (section, sectionName) => {
     mergeEnabledSection(target.webSearch, section, sectionName, configPath, errors);

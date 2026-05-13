@@ -22,6 +22,12 @@
     "enabled": true
   },
 
+  "account": {
+    // Enables /codexify account commands and Codex account sync.
+    // Set to false to hide /codexify account from help/completions and disable account switching.
+    "enabled": true
+  },
+
   "webSearch": {
     // Enables the native OpenAI Codex web_search tool.
     "enabled": true

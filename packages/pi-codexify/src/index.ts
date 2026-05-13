@@ -49,7 +49,7 @@ const FEATURES: readonly ContextualExtensionFeature<PiCodexifyConfig, CodexifyRu
     },
   },
   {
-    isEnabled: (config) => config.enabled,
+    isEnabled: (config) => config.enabled && config.account.enabled,
     register(pi) {
       registerCodexAccountSync(pi);
     },
@@ -145,9 +145,9 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     name: 'account',
     usage: '/codexify account list|current|save <name>|use <name>|delete <name>',
     needsMoreArgs: true,
-    isAvailable: () => true,
-    async handle(parts, ctx) {
-      await handleCodexAccountCommand(parts, ctx);
+    isAvailable: (config) => config.account.enabled,
+    async handle(parts, ctx, config) {
+      await handleAccountCommand(parts, ctx, config);
     },
   },
   {
@@ -187,6 +187,19 @@ async function handleUsageCommand(
   }
 
   await notifyCodexUsage(ctx);
+}
+
+async function handleAccountCommand(
+  parts: readonly string[],
+  ctx: ExtensionCommandContext,
+  config: PiCodexifyConfig
+): Promise<void> {
+  if (!config.account.enabled) {
+    ctx.ui.notify('codexify account is disabled in pi-codexify.jsonc.', 'warning');
+    return;
+  }
+
+  await handleCodexAccountCommand(parts, ctx);
 }
 
 async function handleVerbosityCommand(
@@ -264,6 +277,7 @@ function buildStatusMessage(
     'pi-codexify',
     `codex controls enabled: ${config.codex.enabled ? 'yes' : 'no'}`,
     `usage command enabled: ${config.usage.enabled ? 'yes' : 'no'}`,
+    `account command enabled: ${config.account.enabled ? 'yes' : 'no'}`,
     `web_search tool enabled: ${config.webSearch.enabled ? 'yes' : 'no'}`,
   ];
 
