@@ -16,6 +16,12 @@ import type {
 } from '#src/config/schema.js';
 import { updateJsoncFile } from '@trethore/pi-shared/config/write-jsonc.js';
 import {
+  codexAccountActions,
+  handleCodexAccountCommand,
+  parseCodexAccountAction,
+  registerCodexAccountSync,
+} from '#src/features/accounts/index.js';
+import {
   buildCodexControlsStatusMessage,
   type CodexControlsController,
   parseCodexReasoningSummary,
@@ -40,6 +46,12 @@ const FEATURES: readonly ContextualExtensionFeature<PiCodexifyConfig, CodexifyRu
     isEnabled: (config) => config.enabled && config.webSearch.enabled,
     register(pi, config) {
       registerWebSearch(pi, config.webSearch);
+    },
+  },
+  {
+    isEnabled: (config) => config.enabled,
+    register(pi) {
+      registerCodexAccountSync(pi);
     },
   },
   {
@@ -127,6 +139,15 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     isAvailable: (config) => config.usage.enabled,
     async handle(_parts, ctx, config) {
       await handleUsageCommand(ctx, config);
+    },
+  },
+  {
+    name: 'account',
+    usage: '/codexify account list|current|save <name>|use <name>|delete <name>',
+    needsMoreArgs: true,
+    isAvailable: () => true,
+    async handle(parts, ctx) {
+      await handleCodexAccountCommand(parts, ctx);
     },
   },
   {
@@ -336,6 +357,10 @@ function getCodexifyArgumentCompletions(
     return buildCompletionItems(state, ['auto', 'concise', 'detailed', 'off']);
   }
 
+  if (state.path.length === 1 && state.path[0] === 'account') {
+    return buildCompletionItems(state, codexAccountActions);
+  }
+
   return null;
 }
 
@@ -386,7 +411,10 @@ function formatCompletionToken(candidate: string): string {
 }
 
 function candidateNeedsMoreArgs(candidate: string): boolean {
-  return findCodexifyCommand(candidate)?.needsMoreArgs === true;
+  return (
+    findCodexifyCommand(candidate)?.needsMoreArgs === true ||
+    parseCodexAccountAction(candidate) != null
+  );
 }
 
 function isReasoningSummaryCommand(command: string): boolean {

@@ -8,6 +8,7 @@ Codex-focused controls for pi.
   - `text.verbosity`
   - `reasoning.summary`
 - Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
+- Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
 
 ## Commands
@@ -16,11 +17,28 @@ Codex-focused controls for pi.
 /codexify help
 /codexify status
 /codexify usage
+/codexify account list
+/codexify account current
+/codexify account save <name>
+/codexify account use <name>
+/codexify account delete <name>
 /codexify verbosity low|medium|high|off
 /codexify reasoning-summary auto|concise|detailed|off
 ```
 
 Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.
+
+Codex account commands store OAuth profile copies in `~/.pi/agent/pi-codexify-codex-accounts.json` and switch Pi's active `openai-codex` credential in `~/.pi/agent/auth.json`. Use Pi's normal login flow first:
+
+```text
+/login openai-codex
+/codexify account save personal
+/login openai-codex
+/codexify account save work
+/codexify account use personal
+```
+
+Account names may contain letters, numbers, dots, underscores, and dashes.
 
 ## Configuration
 
