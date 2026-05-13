@@ -19,7 +19,7 @@ interface UpdatePiServices {
   startUpdate(): boolean;
 }
 
-const PI_PACKAGE_NAME = '@mariozechner/pi-coding-agent';
+const PI_PACKAGE_NAME = '@earendil-works/pi-coding-agent';
 const NPM_COMMAND = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const defaultUpdatePiServices: UpdatePiServices = {
   getInstalledVersion: getInstalledPiVersion,

@@ -69,4 +69,4 @@ Examples:
 
 ### Update pi command
 
-Registers `/updatepi` to check the latest published pi version. If an update is available, it quits Pi and starts `npm install -g @mariozechner/pi-coding-agent` in a detached process.
+Registers `/updatepi` to check the latest published pi version. If an update is available, it quits Pi and starts `npm install -g @earendil-works/pi-coding-agent` in a detached process.
