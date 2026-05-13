@@ -76,4 +76,4 @@ Registers `/updatepi` to check the latest published pi version. If an update is 
 
 ### Apply patch tool
 
-Registers the `apply_patch` tool to create, update, or delete workspace files using structured patch operations.
+Registers the `apply_patch` tool to apply standard unified diff/git diff patches to workspace files using `git apply`.

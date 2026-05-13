@@ -3,150 +3,197 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { applyDiff, applyPatchOperation } from '#pi-handy/features/apply-patch/apply-patch.js';
+import { applyPatch } from '#pi-handy/features/apply-patch/apply-patch.js';
 
-describe('applyDiff', () => {
-  it('updates matching hunks while preserving surrounding content', () => {
-    // Arrange
-    const currentContent = [
-      'export function fib(n: number) {',
-      '  return fib(n - 1);',
-      '}',
-      '',
-    ].join('\n');
-    const diff = [
-      '@@',
-      '-export function fib(n: number) {',
-      '+export function fibonacci(n: number) {',
-      '   return fib(n - 1);',
-      '}',
-    ].join('\n');
-
-    // Act
-    const updatedContent = applyDiff(currentContent, diff);
-
-    // Assert
-    expect(updatedContent).toBe(
-      ['export function fibonacci(n: number) {', '  return fib(n - 1);', '}', ''].join('\n')
-    );
-  });
-
-  it('accepts diffs with trailing newlines', () => {
-    expect(applyDiff('old line\n', '@@\n-old line\n+new line\n')).toBe('new line\n');
-  });
-
-  it('reports invalid context when a hunk cannot be matched', () => {
-    expect(() =>
-      applyDiff('const name = "new";\n', '@@\n-const name = "old";\n+const name = "new";')
-    ).toThrow('Invalid Context');
-  });
-});
-
-describe('applyPatchOperation', () => {
-  it('creates a file from added diff lines', async () => {
+describe('applyPatch', () => {
+  it('applies a unified diff that creates a file', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
+    const patch = [
+      'diff --git a/notes/tasks.md b/notes/tasks.md',
+      'new file mode 100644',
+      'index 0000000..f69532c',
+      '--- /dev/null',
+      '+++ b/notes/tasks.md',
+      '@@ -0,0 +1,2 @@',
+      '+- buy milk',
+      '+- write tests',
+      '',
+    ].join('\n');
 
     // Act
-    const result = await applyPatchOperation(workspace, {
-      type: 'create_file',
-      path: 'notes/tasks.md',
-      diff: '+- buy milk\n+- write tests\n',
-    });
+    const result = await applyPatch(workspace, patch);
 
     // Assert
-    expect(result.status).toBe('completed');
+    expect(result).toEqual({ status: 'completed', output: 'Patch applied' });
     expect(readFileSync(path.join(workspace, 'notes', 'tasks.md'), 'utf8')).toBe(
       '- buy milk\n- write tests\n'
     );
   });
 
-  it('updates an existing file', async () => {
+  it('applies a unified diff that updates an existing file', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
     writeFileSync(path.join(workspace, 'readme.md'), 'Hello\nold line\nBye\n');
+    const patch = [
+      'diff --git a/readme.md b/readme.md',
+      'index f6739b7..1b4e214 100644',
+      '--- a/readme.md',
+      '+++ b/readme.md',
+      '@@ -1,3 +1,3 @@',
+      ' Hello',
+      '-old line',
+      '+new line',
+      ' Bye',
+      '',
+    ].join('\n');
 
     // Act
-    const result = await applyPatchOperation(workspace, {
-      type: 'update_file',
-      path: 'readme.md',
-      diff: '@@\n Hello\n-old line\n+new line\n Bye',
-    });
+    const result = await applyPatch(workspace, patch);
 
     // Assert
-    expect(result.status).toBe('completed');
+    expect(result).toEqual({ status: 'completed', output: 'Patch applied' });
     expect(readFileSync(path.join(workspace, 'readme.md'), 'utf8')).toBe('Hello\nnew line\nBye\n');
   });
 
-  it('deletes an existing file', async () => {
+  it('applies a unified diff that deletes an existing file', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
     const targetPath = path.join(workspace, 'delete-me.txt');
-    writeFileSync(targetPath, 'remove me');
+    writeFileSync(targetPath, 'remove me\n');
+    const patch = [
+      'diff --git a/delete-me.txt b/delete-me.txt',
+      'deleted file mode 100644',
+      'index 7f14183..0000000',
+      '--- a/delete-me.txt',
+      '+++ /dev/null',
+      '@@ -1 +0,0 @@',
+      '-remove me',
+      '',
+    ].join('\n');
 
     // Act
-    const result = await applyPatchOperation(workspace, {
-      type: 'delete_file',
-      path: 'delete-me.txt',
-    });
+    const result = await applyPatch(workspace, patch);
 
     // Assert
-    expect(result.status).toBe('completed');
+    expect(result).toEqual({ status: 'completed', output: 'Patch applied' });
     expect(existsSync(targetPath)).toBe(false);
   });
 
-  it.each([
-    ['add', 'Created alias.txt'],
-    ['create', 'Created alias.txt'],
-  ] as const)('accepts %s as a create_file alias', async (operationType, expectedOutput) => {
+  it('applies a multi-file unified diff', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
+    writeFileSync(path.join(workspace, 'first.txt'), 'old\n');
+    const patch = [
+      'diff --git a/first.txt b/first.txt',
+      'index 3e75765..8a0df76 100644',
+      '--- a/first.txt',
+      '+++ b/first.txt',
+      '@@ -1 +1 @@',
+      '-old',
+      '+new',
+      'diff --git a/second.txt b/second.txt',
+      'new file mode 100644',
+      'index 0000000..2e65efe',
+      '--- /dev/null',
+      '+++ b/second.txt',
+      '@@ -0,0 +1 @@',
+      '+created',
+      '',
+    ].join('\n');
 
     // Act
-    const result = await applyPatchOperation(workspace, {
-      type: operationType,
-      path: 'alias.txt',
-      diff: '+hello\n',
-    });
+    const result = await applyPatch(workspace, patch);
 
     // Assert
-    expect(result).toEqual({ status: 'completed', output: expectedOutput });
-    expect(readFileSync(path.join(workspace, 'alias.txt'), 'utf8')).toBe('hello\n');
+    expect(result).toEqual({ status: 'completed', output: 'Patch applied' });
+    expect(readFileSync(path.join(workspace, 'first.txt'), 'utf8')).toBe('new\n');
+    expect(readFileSync(path.join(workspace, 'second.txt'), 'utf8')).toBe('created\n');
   });
 
-  it('reports missing diffs for operations that require file contents', async () => {
+  it('applies a unified diff that renames a file', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
+    writeFileSync(path.join(workspace, 'old-name.txt'), 'old\n');
+    const patch = [
+      'diff --git a/old-name.txt b/new-name.txt',
+      'similarity index 50%',
+      'rename from old-name.txt',
+      'rename to new-name.txt',
+      'index 3e75765..8a0df76 100644',
+      '--- a/old-name.txt',
+      '+++ b/new-name.txt',
+      '@@ -1 +1 @@',
+      '-old',
+      '+new',
+      '',
+    ].join('\n');
 
     // Act
-    const result = await applyPatchOperation(workspace, {
-      type: 'update',
-      path: 'missing.txt',
-    });
+    const result = await applyPatch(workspace, patch);
 
     // Assert
-    expect(result).toEqual({
-      status: 'failed',
-      output: 'Error: Invalid update operation: diff is required',
-    });
+    expect(result).toEqual({ status: 'completed', output: 'Patch applied' });
+    expect(existsSync(path.join(workspace, 'old-name.txt'))).toBe(false);
+    expect(readFileSync(path.join(workspace, 'new-name.txt'), 'utf8')).toBe('new\n');
   });
 
-  it('rejects paths outside the workspace', async () => {
+  it('validates the patch before applying it', async () => {
+    // Arrange
+    const workspace = makeTempWorkspace();
+    writeFileSync(path.join(workspace, 'readme.md'), 'new line\n');
+    const patch = [
+      'diff --git a/readme.md b/readme.md',
+      'index 3e75765..8a0df76 100644',
+      '--- a/readme.md',
+      '+++ b/readme.md',
+      '@@ -1 +1 @@',
+      '-old line',
+      '+new line',
+      '',
+    ].join('\n');
+
+    // Act
+    const result = await applyPatch(workspace, patch);
+
+    // Assert
+    expect(result.status).toBe('failed');
+    expect(result.output).toContain('Patch validation failed');
+    expect(readFileSync(path.join(workspace, 'readme.md'), 'utf8')).toBe('new line\n');
+  });
+
+  it('rejects patch paths outside the workspace', async () => {
+    // Arrange
+    const workspace = makeTempWorkspace();
+    const patch = [
+      'diff --git a/../escape.txt b/../escape.txt',
+      'new file mode 100644',
+      'index 0000000..2e65efe',
+      '--- /dev/null',
+      '+++ b/../escape.txt',
+      '@@ -0,0 +1 @@',
+      '+escape',
+      '',
+    ].join('\n');
+
+    // Act
+    const result = await applyPatch(workspace, patch);
+
+    // Assert
+    expect(result.status).toBe('failed');
+    expect(result.output).toContain('path escapes the workspace');
+    expect(existsSync(path.join(workspace, '..', 'escape.txt'))).toBe(false);
+  });
+
+  it('rejects empty patches', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
 
     // Act
-    const result = await applyPatchOperation(workspace, {
-      type: 'create_file',
-      path: '../escape.txt',
-      diff: '+nope',
-    });
+    const result = await applyPatch(workspace, '   \n');
 
     // Assert
-    expect(result).toEqual({
-      status: 'failed',
-      output: expect.stringContaining('path escapes the workspace'),
-    });
+    expect(result).toEqual({ status: 'failed', output: 'Error: patch is required' });
   });
 });
 
