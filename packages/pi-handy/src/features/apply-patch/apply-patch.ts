@@ -2,7 +2,22 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { withFileMutationQueue } from '@earendil-works/pi-coding-agent';
 
-export type ApplyPatchOperation =
+export type ApplyPatchOperation = {
+  type:
+    | 'create_file'
+    | 'update_file'
+    | 'delete_file'
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'add'
+    | 'modify'
+    | 'remove';
+  path: string;
+  diff?: string;
+};
+
+type CanonicalApplyPatchOperation =
   | {
       type: 'create_file';
       path: string;
@@ -33,31 +48,57 @@ export async function applyPatchOperation(
   operation: ApplyPatchOperation
 ): Promise<ApplyPatchResult> {
   try {
-    const targetPath = resolveWorkspacePath(cwd, operation.path);
+    const canonicalOperation = normalizeOperation(operation);
+    const targetPath = resolveWorkspacePath(cwd, canonicalOperation.path);
 
     return await withFileMutationQueue(targetPath, async () => {
-      switch (operation.type) {
+      switch (canonicalOperation.type) {
         case 'create_file': {
-          const content = applyDiff('', operation.diff, { create: true });
+          const content = applyDiff('', canonicalOperation.diff, { create: true });
           await mkdir(path.dirname(targetPath), { recursive: true });
           await writeFile(targetPath, content, { encoding: 'utf8', flag: 'wx' });
-          return { status: 'completed', output: `Created ${operation.path}` };
+          return { status: 'completed', output: `Created ${canonicalOperation.path}` };
         }
         case 'update_file': {
           const currentContent = await readFile(targetPath, 'utf8');
-          const newContent = applyDiff(currentContent, operation.diff);
+          const newContent = applyDiff(currentContent, canonicalOperation.diff);
           await writeFile(targetPath, newContent, 'utf8');
-          return { status: 'completed', output: `Updated ${operation.path}` };
+          return { status: 'completed', output: `Updated ${canonicalOperation.path}` };
         }
         case 'delete_file': {
           await rm(targetPath, { force: false });
-          return { status: 'completed', output: `Deleted ${operation.path}` };
+          return { status: 'completed', output: `Deleted ${canonicalOperation.path}` };
         }
       }
     });
   } catch (error) {
     return { status: 'failed', output: formatError(error) };
   }
+}
+
+function normalizeOperation(operation: ApplyPatchOperation): CanonicalApplyPatchOperation {
+  switch (operation.type) {
+    case 'add':
+    case 'create':
+    case 'create_file': {
+      return { type: 'create_file', path: operation.path, diff: requireDiff(operation) };
+    }
+    case 'modify':
+    case 'update':
+    case 'update_file': {
+      return { type: 'update_file', path: operation.path, diff: requireDiff(operation) };
+    }
+    case 'remove':
+    case 'delete':
+    case 'delete_file': {
+      return { type: 'delete_file', path: operation.path };
+    }
+  }
+}
+
+function requireDiff(operation: ApplyPatchOperation): string {
+  if (operation.diff !== undefined) return operation.diff;
+  throw new Error(`Invalid ${operation.type} operation: diff is required`);
 }
 
 export function applyDiff(

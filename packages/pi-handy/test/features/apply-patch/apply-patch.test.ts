@@ -95,6 +95,42 @@ describe('applyPatchOperation', () => {
     expect(existsSync(targetPath)).toBe(false);
   });
 
+  it.each([
+    ['add', 'Created alias.txt'],
+    ['create', 'Created alias.txt'],
+  ] as const)('accepts %s as a create_file alias', async (operationType, expectedOutput) => {
+    // Arrange
+    const workspace = makeTempWorkspace();
+
+    // Act
+    const result = await applyPatchOperation(workspace, {
+      type: operationType,
+      path: 'alias.txt',
+      diff: '+hello\n',
+    });
+
+    // Assert
+    expect(result).toEqual({ status: 'completed', output: expectedOutput });
+    expect(readFileSync(path.join(workspace, 'alias.txt'), 'utf8')).toBe('hello\n');
+  });
+
+  it('reports missing diffs for operations that require file contents', async () => {
+    // Arrange
+    const workspace = makeTempWorkspace();
+
+    // Act
+    const result = await applyPatchOperation(workspace, {
+      type: 'update',
+      path: 'missing.txt',
+    });
+
+    // Assert
+    expect(result).toEqual({
+      status: 'failed',
+      output: 'Error: Invalid update operation: diff is required',
+    });
+  });
+
   it('rejects paths outside the workspace', async () => {
     // Arrange
     const workspace = makeTempWorkspace();
