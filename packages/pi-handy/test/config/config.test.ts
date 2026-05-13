@@ -20,9 +20,14 @@ describe('pi-handy config', () => {
   });
 
   it('uses defaults when no config files exist', () => {
-    const cwd = makeTempProject();
+    // Arrange
+    const projectDirectory = makeTempProject();
 
-    expect(loadConfig(cwd)).toEqual({
+    // Act
+    const loadedConfig = loadConfig(projectDirectory);
+
+    // Assert
+    expect(loadedConfig).toEqual({
       config: {
         enabled: true,
         thinkingLevel: { enabled: true },
@@ -35,14 +40,22 @@ describe('pi-handy config', () => {
   });
 
   it('lets project config override global config', () => {
-    const cwd = makeTempProject();
+    // Arrange
+    const projectDirectory = makeTempProject();
     writeFileSync(
       globalConfigPath,
       '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false }, "updatePi": { "enabled": false } }'
     );
-    writeProjectConfig(cwd, '{ "enabled": true, "switchWorkspace": { "enabled": true } }');
+    writeProjectConfig(
+      projectDirectory,
+      '{ "enabled": true, "switchWorkspace": { "enabled": true } }'
+    );
 
-    expect(loadConfig(cwd).config).toEqual({
+    // Act
+    const loadedConfig = loadConfig(projectDirectory);
+
+    // Assert
+    expect(loadedConfig.config).toEqual({
       enabled: true,
       thinkingLevel: { enabled: false },
       switchWorkspace: { enabled: true },
@@ -52,22 +65,25 @@ describe('pi-handy config', () => {
   });
 
   it('reports invalid fields and keeps previous values', () => {
-    const cwd = makeTempProject();
+    // Arrange
+    const projectDirectory = makeTempProject();
     writeProjectConfig(
-      cwd,
+      projectDirectory,
       '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false, "updatePi": false }'
     );
 
-    const result = loadConfig(cwd);
+    // Act
+    const loadedConfig = loadConfig(projectDirectory);
 
-    expect(result.config).toEqual({
+    // Assert
+    expect(loadedConfig.config).toEqual({
       enabled: true,
       thinkingLevel: { enabled: true },
       switchWorkspace: { enabled: true },
       showSysprompt: { enabled: true },
       updatePi: { enabled: true },
     });
-    expect(result.errors).toEqual([
+    expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
       expect.stringContaining('invalid switchWorkspace value'),

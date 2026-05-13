@@ -9,10 +9,13 @@ import type { ExtensionAPI, ToolInfo } from '@mariozechner/pi-coding-agent';
 
 describe('show sysprompt command', () => {
   it('shows prompt and tools when invoked without args', () => {
-    const { pi, ctx, sendMessage } = createHarness();
+    // Arrange
+    const { piApi, commandContext, sendMessage } = createHarness();
 
-    handleShowSyspromptCommand(pi, '', ctx);
+    // Act
+    handleShowSyspromptCommand(piApi, '', commandContext);
 
+    // Assert
     expect(sendMessage).toHaveBeenCalledTimes(2);
     expect(sendMessage).toHaveBeenNthCalledWith(1, {
       customType: 'pi-handy-system-prompt',
@@ -27,10 +30,13 @@ describe('show sysprompt command', () => {
   });
 
   it('shows only the requested section', () => {
-    const { pi, ctx, sendMessage } = createHarness();
+    // Arrange
+    const { piApi, commandContext, sendMessage } = createHarness();
 
-    handleShowSyspromptCommand(pi, 'tools', ctx);
+    // Act
+    handleShowSyspromptCommand(piApi, 'tools', commandContext);
 
+    // Assert
     expect(sendMessage).toHaveBeenCalledOnce();
     expect(sendMessage).toHaveBeenCalledWith({
       customType: 'pi-handy-tool-schemas',
@@ -40,10 +46,13 @@ describe('show sysprompt command', () => {
   });
 
   it('notifies on invalid args', () => {
-    const { pi, ctx, sendMessage, notify } = createHarness();
+    // Arrange
+    const { piApi, commandContext, sendMessage, notify } = createHarness();
 
-    handleShowSyspromptCommand(pi, 'all', ctx);
+    // Act
+    handleShowSyspromptCommand(piApi, 'all', commandContext);
 
+    // Assert
     expect(sendMessage).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledWith('Usage: /showsysprompt [prompt|tools]', 'warning');
   });
@@ -53,7 +62,11 @@ describe('show sysprompt command', () => {
   });
 
   it('completes prompt and tools args', () => {
-    expect(getShowSyspromptArgumentCompletions('p')).toEqual([
+    // Act
+    const completions = getShowSyspromptArgumentCompletions('p');
+
+    // Assert
+    expect(completions).toEqual([
       {
         value: 'prompt',
         label: 'prompt',
@@ -66,7 +79,7 @@ describe('show sysprompt command', () => {
 function createHarness() {
   const sendMessage = vi.fn();
   const notify = vi.fn();
-  const pi = {
+  const piApi = {
     getActiveTools: () => ['bash'],
     getAllTools: () => [
       {
@@ -86,10 +99,10 @@ function createHarness() {
     ],
     sendMessage,
   } satisfies Pick<ExtensionAPI, 'getActiveTools' | 'getAllTools' | 'sendMessage'>;
-  const ctx = {
+  const commandContext = {
     getSystemPrompt: () => 'system prompt',
     ui: { notify },
   };
 
-  return { pi, ctx, sendMessage, notify };
+  return { piApi, commandContext, sendMessage, notify };
 }

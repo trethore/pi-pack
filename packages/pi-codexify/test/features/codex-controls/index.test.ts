@@ -17,6 +17,7 @@ type TestModel = {
 
 describe('codex controls', () => {
   it('parses supported command values and rejects unsupported values', () => {
+    // Act and assert
     expect(parseCodexVerbosity('low')).toBe('low');
     expect(parseCodexVerbosity('off')).toBe('off');
     expect(parseCodexVerbosity('verbose')).toBeUndefined();
@@ -36,7 +37,7 @@ describe('codex controls', () => {
     const payload = { input: 'hello', text: { format: 'plain' }, reasoning: { effort: 'medium' } };
 
     // Act
-    const result = pi.emitBeforeProviderRequest(payload, {
+    const patchedPayload = pi.emitBeforeProviderRequest(payload, {
       provider: 'openai-codex',
       id: 'gpt-5-codex',
       api: 'openai-codex-responses',
@@ -44,12 +45,12 @@ describe('codex controls', () => {
     });
 
     // Assert
-    expect(result).toEqual({
+    expect(patchedPayload).toEqual({
       input: 'hello',
       text: { format: 'plain', verbosity: 'high' },
       reasoning: { effort: 'medium', summary: 'concise' },
     });
-    expect(result).not.toBe(payload);
+    expect(patchedPayload).not.toBe(payload);
   });
 
   it('does not add reasoning summary for supported response models without reasoning support', () => {
@@ -62,13 +63,13 @@ describe('codex controls', () => {
     });
 
     // Act
-    const result = pi.emitBeforeProviderRequest(
+    const patchedPayload = pi.emitBeforeProviderRequest(
       {},
       { provider: 'openai', id: 'gpt-5', api: 'openai-responses', reasoning: false }
     );
 
     // Assert
-    expect(result).toEqual({ text: { verbosity: 'medium' } });
+    expect(patchedPayload).toEqual({ text: { verbosity: 'medium' } });
   });
 
   it('leaves unsupported provider payloads unchanged', () => {
@@ -82,7 +83,7 @@ describe('codex controls', () => {
     const payload = { input: 'hello' };
 
     // Act
-    const result = pi.emitBeforeProviderRequest(payload, {
+    const unchangedPayload = pi.emitBeforeProviderRequest(payload, {
       provider: 'anthropic',
       id: 'claude',
       api: 'anthropic',
@@ -90,7 +91,7 @@ describe('codex controls', () => {
     });
 
     // Assert
-    expect(result).toBeUndefined();
+    expect(unchangedPayload).toBeUndefined();
   });
 
   it('uses controller updates for future request patches and status messages', () => {
@@ -101,7 +102,7 @@ describe('codex controls', () => {
     controller.updateReasoningSummary('detailed');
 
     // Act
-    const result = pi.emitBeforeProviderRequest(
+    const patchedPayload = pi.emitBeforeProviderRequest(
       {},
       {
         provider: 'openai-codex',
@@ -110,7 +111,7 @@ describe('codex controls', () => {
         reasoning: true,
       }
     );
-    const status = buildCodexControlsStatusMessage(controller.getConfig(), {
+    const statusMessage = buildCodexControlsStatusMessage(controller.getConfig(), {
       provider: 'openai-codex',
       id: 'gpt-5-codex',
       api: 'openai-codex-responses',
@@ -118,11 +119,14 @@ describe('codex controls', () => {
     });
 
     // Assert
-    expect(result).toEqual({ text: { verbosity: 'high' }, reasoning: { summary: 'detailed' } });
-    expect(status).toContain('verbosity: high');
-    expect(status).toContain('reasoning summary: detailed');
-    expect(status).toContain('verbosity supported here: yes');
-    expect(status).toContain('reasoning summary supported here: yes');
+    expect(patchedPayload).toEqual({
+      text: { verbosity: 'high' },
+      reasoning: { summary: 'detailed' },
+    });
+    expect(statusMessage).toContain('verbosity: high');
+    expect(statusMessage).toContain('reasoning summary: detailed');
+    expect(statusMessage).toContain('verbosity supported here: yes');
+    expect(statusMessage).toContain('reasoning summary supported here: yes');
   });
 });
 

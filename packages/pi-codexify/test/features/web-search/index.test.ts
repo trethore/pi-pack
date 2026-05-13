@@ -64,13 +64,13 @@ describe('web search', () => {
     };
 
     // Act
-    const result = pi.emitBeforeProviderRequest(payload, {
+    const rewrittenPayload = pi.emitBeforeProviderRequest(payload, {
       provider: 'openai-codex',
       id: 'gpt-5-codex',
     });
 
     // Assert
-    expect(result).toEqual({
+    expect(rewrittenPayload).toEqual({
       input: 'search',
       tools: [
         {
@@ -89,13 +89,13 @@ describe('web search', () => {
     registerWebSearch(pi.extensionApi, { enabled: true });
 
     // Act
-    const result = pi.emitBeforeProviderRequest(
+    const rewrittenPayload = pi.emitBeforeProviderRequest(
       { tools: [{ type: 'function', name: 'web_search' }] },
       { provider: 'openai-codex', id: 'codex-spark' }
     );
 
     // Assert
-    expect(result).toEqual({
+    expect(rewrittenPayload).toEqual({
       tools: [{ type: 'web_search', external_web_access: true }],
     });
   });
@@ -106,13 +106,13 @@ describe('web search', () => {
     registerWebSearch(pi.extensionApi, { enabled: true });
 
     // Act
-    const result = pi.emitBeforeProviderRequest(
+    const unchangedPayload = pi.emitBeforeProviderRequest(
       { tools: [{ type: 'function', name: 'web_search' }] },
       { provider: 'openai', id: 'gpt-5' }
     );
 
     // Assert
-    expect(result).toBeUndefined();
+    expect(unchangedPayload).toBeUndefined();
   });
 
   it('registered tool execution fails locally with provider-specific messages', async () => {

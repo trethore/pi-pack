@@ -30,68 +30,83 @@ describe('switch workspace command', () => {
   });
 
   it('treats the full command argument as a path so spaces do not need quotes', async () => {
-    const root = makeTempDirectory();
-    const target = path.join(root, 'workspace with spaces');
-    mkdirSync(target);
-    const sessionPath = path.join(root, 'session.jsonl');
-    const sourceSessionPath = path.join(root, 'source.jsonl');
-    const ctx = createContext(root, sourceSessionPath);
+    // Arrange
+    const rootDirectory = makeTempDirectory();
+    const targetDirectory = path.join(rootDirectory, 'workspace with spaces');
+    mkdirSync(targetDirectory);
+    const sessionPath = path.join(rootDirectory, 'session.jsonl');
+    const sourceSessionPath = path.join(rootDirectory, 'source.jsonl');
+    const commandContext = createContext(rootDirectory, sourceSessionPath);
     sessionForkFrom.mockReturnValue({ getSessionFile: () => sessionPath });
 
-    await handleSwitchWorkspaceCommand(`  ${target}  `, ctx);
+    // Act
+    await handleSwitchWorkspaceCommand(`  ${targetDirectory}  `, commandContext);
 
-    const canonicalTarget = await realpathForTest(target);
-    expect(sessionForkFrom).toHaveBeenCalledWith(sourceSessionPath, canonicalTarget);
+    // Assert
+    const canonicalTargetDirectory = await realpathForTest(targetDirectory);
+    expect(sessionForkFrom).toHaveBeenCalledWith(sourceSessionPath, canonicalTargetDirectory);
     expect(sessionCreate).not.toHaveBeenCalled();
-    expect(ctx.idleWaits).toBe(1);
-    expect(ctx.switches).toEqual([
+    expect(commandContext.idleWaits).toBe(1);
+    expect(commandContext.switches).toEqual([
       {
         sessionPath,
-        options: expect.objectContaining({ cwdOverride: canonicalTarget }),
+        options: expect.objectContaining({ cwdOverride: canonicalTargetDirectory }),
       },
     ]);
-    expect(ctx.notifications).toEqual([
-      { message: `Switched workspace: ${canonicalTarget}`, type: 'info' },
+    expect(commandContext.notifications).toEqual([
+      { message: `Switched workspace: ${canonicalTargetDirectory}`, type: 'info' },
     ]);
   });
 
   it('resolves relative paths against the current Pi cwd', async () => {
-    const root = makeTempDirectory();
+    // Arrange
+    const rootDirectory = makeTempDirectory();
 
-    expect(resolveWorkspacePath('child directory', root)).toBe(
-      path.resolve(root, 'child directory')
-    );
+    // Act
+    const resolvedPath = resolveWorkspacePath('child directory', rootDirectory);
+
+    // Assert
+    expect(resolvedPath).toBe(path.resolve(rootDirectory, 'child directory'));
   });
 
   it('accepts matching quotes for compatibility', async () => {
-    const root = makeTempDirectory();
+    // Arrange
+    const rootDirectory = makeTempDirectory();
 
-    expect(resolveWorkspacePath('"child directory"', root)).toBe(
-      path.resolve(root, 'child directory')
-    );
+    // Act
+    const resolvedPath = resolveWorkspacePath('"child directory"', rootDirectory);
+
+    // Assert
+    expect(resolvedPath).toBe(path.resolve(rootDirectory, 'child directory'));
   });
 
   it('rejects an empty path', async () => {
-    const ctx = createContext(makeTempDirectory());
+    // Arrange
+    const commandContext = createContext(makeTempDirectory());
 
-    await handleSwitchWorkspaceCommand('   ', ctx);
+    // Act
+    await handleSwitchWorkspaceCommand('   ', commandContext);
 
-    expect(ctx.switches).toEqual([]);
-    expect(ctx.notifications).toEqual([
+    // Assert
+    expect(commandContext.switches).toEqual([]);
+    expect(commandContext.notifications).toEqual([
       { message: 'Usage: /switchworkspace <path>', type: 'warning' },
     ]);
   });
 
   it('rejects a file path', async () => {
-    const root = makeTempDirectory();
-    const filePath = path.join(root, 'file.txt');
+    // Arrange
+    const rootDirectory = makeTempDirectory();
+    const filePath = path.join(rootDirectory, 'file.txt');
     writeFileSync(filePath, 'not a directory');
-    const ctx = createContext(root);
+    const commandContext = createContext(rootDirectory);
 
-    await handleSwitchWorkspaceCommand(filePath, ctx);
+    // Act
+    await handleSwitchWorkspaceCommand(filePath, commandContext);
 
-    expect(ctx.switches).toEqual([]);
-    expect(ctx.notifications).toEqual([
+    // Assert
+    expect(commandContext.switches).toEqual([]);
+    expect(commandContext.notifications).toEqual([
       {
         message: `Workspace is not a directory: ${await realpathForTest(filePath)}`,
         type: 'warning',

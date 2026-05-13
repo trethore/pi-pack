@@ -25,6 +25,12 @@ pi-pack/                         # You are here!
 
 ## Testing and Verification
 
+Tests should be easy to scan and understand. Follow these guidelines:
+
+- Use clear Arrange / Act / Assert sections for any non-trivial test, while allowing small one-line tests to remain compact.
+- Prefer meaningful local variable names that clearly describe the role of each value in the scenario.
+- Use `it.each` for repetitive input/output test cases.
+
 To verify changes, run the following command:
 
 ```bash

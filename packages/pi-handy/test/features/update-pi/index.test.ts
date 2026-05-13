@@ -21,47 +21,64 @@ describe('update pi command', () => {
   });
 
   it('does not quit when pi is already up to date', async () => {
-    const ctx = createCommandContext();
-    const services = createServices({ installedVersion: '1.2.3', latestVersion: '1.2.3' });
+    // Arrange
+    const commandContext = createCommandContext();
+    const updateServices = createServices({ installedVersion: '1.2.3', latestVersion: '1.2.3' });
 
-    await handleUpdatePiCommand(ctx, services);
+    // Act
+    await handleUpdatePiCommand(commandContext, updateServices);
 
-    expect(services.startUpdate).not.toHaveBeenCalled();
-    expect(ctx.shutdown).not.toHaveBeenCalled();
-    expect(ctx.ui.notify).toHaveBeenCalledWith('Pi is already up to date (1.2.3).', 'info');
+    // Assert
+    expect(updateServices.startUpdate).not.toHaveBeenCalled();
+    expect(commandContext.shutdown).not.toHaveBeenCalled();
+    expect(commandContext.ui.notify).toHaveBeenCalledWith(
+      'Pi is already up to date (1.2.3).',
+      'info'
+    );
   });
 
   it('starts a detached update and quits when a newer version exists', async () => {
-    const ctx = createCommandContext();
-    const services = createServices({ installedVersion: '1.2.3', latestVersion: '1.2.4' });
+    // Arrange
+    const commandContext = createCommandContext();
+    const updateServices = createServices({ installedVersion: '1.2.3', latestVersion: '1.2.4' });
 
-    await handleUpdatePiCommand(ctx, services);
+    // Act
+    await handleUpdatePiCommand(commandContext, updateServices);
 
-    expect(services.startUpdate).toHaveBeenCalledOnce();
-    expect(ctx.shutdown).toHaveBeenCalledOnce();
-    expect(ctx.ui.notify).toHaveBeenCalledWith(
+    // Assert
+    expect(updateServices.startUpdate).toHaveBeenCalledOnce();
+    expect(commandContext.shutdown).toHaveBeenCalledOnce();
+    expect(commandContext.ui.notify).toHaveBeenCalledWith(
       'Updating pi 1.2.3 -> 1.2.4. Pi will quit now.',
       'info'
     );
   });
 
   it('does not quit when checking the latest version fails', async () => {
-    const ctx = createCommandContext();
-    const services = createServices({
+    // Arrange
+    const commandContext = createCommandContext();
+    const updateServices = createServices({
       installedVersion: '1.2.3',
       latestError: new Error('offline'),
     });
 
-    await handleUpdatePiCommand(ctx, services);
+    // Act
+    await handleUpdatePiCommand(commandContext, updateServices);
 
-    expect(services.startUpdate).not.toHaveBeenCalled();
-    expect(ctx.shutdown).not.toHaveBeenCalled();
-    expect(ctx.ui.notify).toHaveBeenCalledWith('Unable to check for pi updates: offline', 'error');
+    // Assert
+    expect(updateServices.startUpdate).not.toHaveBeenCalled();
+    expect(commandContext.shutdown).not.toHaveBeenCalled();
+    expect(commandContext.ui.notify).toHaveBeenCalledWith(
+      'Unable to check for pi updates: offline',
+      'error'
+    );
   });
 
   it('checks the latest version from the current pi package', async () => {
+    // Arrange
     spawnMock.mockReturnValueOnce(createCommandProcess({ stdout: '1.2.4\n' }));
 
+    // Act and assert
     await expect(getLatestPiVersion()).resolves.toBe('1.2.4');
 
     expect(spawnMock).toHaveBeenCalledWith(
@@ -72,10 +89,14 @@ describe('update pi command', () => {
   });
 
   it('starts the global update from the current pi package', () => {
+    // Arrange
     spawnMock.mockReturnValueOnce(createDetachedProcess());
 
-    expect(startGlobalPiUpdate()).toBe(true);
+    // Act
+    const updateStarted = startGlobalPiUpdate();
 
+    // Assert
+    expect(updateStarted).toBe(true);
     expect(spawnMock).toHaveBeenCalledWith(
       expect.any(String),
       ['install', '-g', EXPECTED_PI_PACKAGE_NAME],
@@ -83,11 +104,13 @@ describe('update pi command', () => {
     );
   });
 
-  it('compares semantic versions', () => {
-    expect(compareVersions('1.2.3', '1.2.3')).toBe(0);
-    expect(compareVersions('1.2.4', '1.2.3')).toBe(1);
-    expect(compareVersions('1.10.0', '1.9.9')).toBe(1);
-    expect(compareVersions('1.2.3', '1.2.4')).toBe(-1);
+  it.each([
+    ['1.2.3', '1.2.3', 0],
+    ['1.2.4', '1.2.3', 1],
+    ['1.10.0', '1.9.9', 1],
+    ['1.2.3', '1.2.4', -1],
+  ])('compares %s to %s as %i', (leftVersion, rightVersion, expectedComparison) => {
+    expect(compareVersions(leftVersion, rightVersion)).toBe(expectedComparison);
   });
 });
 

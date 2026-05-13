@@ -17,65 +17,92 @@ type TestModel = {
 
 describe('thinking level command', () => {
   it('returns only off for models without reasoning support', () => {
-    const noModel: TestModel | undefined = undefined;
+    // Arrange
+    const nonReasoningModel = { id: 'gpt-4o', reasoning: false };
+    const missingModel: TestModel | undefined = undefined;
 
-    expect(getAvailableThinkingLevels({ id: 'gpt-4o', reasoning: false })).toEqual(['off']);
-    expect(getAvailableThinkingLevels(noModel)).toEqual(['off']);
+    // Act
+    const levelsForNonReasoningModel = getAvailableThinkingLevels(nonReasoningModel);
+    const levelsWithoutModel = getAvailableThinkingLevels(missingModel);
+
+    // Assert
+    expect(levelsForNonReasoningModel).toEqual(['off']);
+    expect(levelsWithoutModel).toEqual(['off']);
   });
 
   it('returns standard levels for reasoning models', () => {
-    expect(getAvailableThinkingLevels({ id: 'claude-sonnet-4-5', reasoning: true })).toEqual([
-      'off',
-      'minimal',
-      'low',
-      'medium',
-      'high',
-    ]);
+    // Arrange
+    const reasoningModel = { id: 'claude-sonnet-4-5', reasoning: true };
+
+    // Act
+    const availableLevels = getAvailableThinkingLevels(reasoningModel);
+
+    // Assert
+    expect(availableLevels).toEqual(['off', 'minimal', 'low', 'medium', 'high']);
   });
 
   it('uses thinkingLevelMap to expose model-specific supported levels', () => {
-    expect(
-      getAvailableThinkingLevels({
-        id: 'deepseek-v4-pro',
-        reasoning: true,
-        thinkingLevelMap: {
-          minimal: null,
-          low: null,
-          medium: null,
-          high: 'high',
-          xhigh: 'max',
-        },
-      })
-    ).toEqual(['off', 'high', 'xhigh']);
+    // Arrange
+    const modelWithCustomLevelMap = {
+      id: 'deepseek-v4-pro',
+      reasoning: true,
+      thinkingLevelMap: {
+        minimal: null,
+        low: null,
+        medium: null,
+        high: 'high',
+        xhigh: 'max',
+      },
+    };
+
+    // Act
+    const availableLevels = getAvailableThinkingLevels(modelWithCustomLevelMap);
+
+    // Assert
+    expect(availableLevels).toEqual(['off', 'high', 'xhigh']);
   });
 
   it('hides off when thinking cannot be disabled', () => {
-    expect(
-      getAvailableThinkingLevels({
-        id: 'always-thinking-model',
-        reasoning: true,
-        thinkingLevelMap: { off: null },
-      })
-    ).toEqual(['minimal', 'low', 'medium', 'high']);
+    // Arrange
+    const alwaysThinkingModel = {
+      id: 'always-thinking-model',
+      reasoning: true,
+      thinkingLevelMap: { off: null },
+    };
+
+    // Act
+    const availableLevels = getAvailableThinkingLevels(alwaysThinkingModel);
+
+    // Assert
+    expect(availableLevels).toEqual(['minimal', 'low', 'medium', 'high']);
   });
 
   it('only includes xhigh when it is explicitly mapped', () => {
-    expect(getAvailableThinkingLevels({ id: 'gpt-5.2', reasoning: true })).not.toContain('xhigh');
-    expect(
-      getAvailableThinkingLevels({
-        id: 'claude-opus-4.7',
-        reasoning: true,
-        thinkingLevelMap: { xhigh: 'xhigh' },
-      })
-    ).toContain('xhigh');
+    // Arrange
+    const standardReasoningModel = { id: 'gpt-5.2', reasoning: true };
+    const modelWithExtraHighThinking = {
+      id: 'claude-opus-4.7',
+      reasoning: true,
+      thinkingLevelMap: { xhigh: 'xhigh' },
+    };
+
+    // Act
+    const standardLevels = getAvailableThinkingLevels(standardReasoningModel);
+    const levelsWithExtraHighThinking = getAvailableThinkingLevels(modelWithExtraHighThinking);
+
+    // Assert
+    expect(standardLevels).not.toContain('xhigh');
+    expect(levelsWithExtraHighThinking).toContain('xhigh');
   });
 
   it('autocompletes thinking levels available for the current model', () => {
-    const completions = getThinkingLevelArgumentCompletions('m', {
-      id: 'claude-sonnet-4-5',
-      reasoning: true,
-    });
+    // Arrange
+    const currentModel = { id: 'claude-sonnet-4-5', reasoning: true };
 
+    // Act
+    const completions = getThinkingLevelArgumentCompletions('m', currentModel);
+
+    // Assert
     expect(completions).toEqual([
       {
         value: 'minimal',
@@ -91,23 +118,31 @@ describe('thinking level command', () => {
   });
 
   it('sets a valid thinking level', () => {
-    const pi = createPiApi('off');
-    const ctx = createCommandContext({ id: 'claude-sonnet-4-5', reasoning: true });
+    // Arrange
+    const piApi = createPiApi('off');
+    const commandContext = createCommandContext({ id: 'claude-sonnet-4-5', reasoning: true });
 
-    handleThinkingLevelCommand(pi, 'high', ctx);
+    // Act
+    handleThinkingLevelCommand(piApi, 'high', commandContext);
 
-    expect(pi.setLevels).toEqual(['high']);
-    expect(ctx.notifications).toEqual([{ message: 'Thinking level: high', type: 'info' }]);
+    // Assert
+    expect(piApi.setLevels).toEqual(['high']);
+    expect(commandContext.notifications).toEqual([
+      { message: 'Thinking level: high', type: 'info' },
+    ]);
   });
 
   it('shows current level when called without arguments', () => {
-    const pi = createPiApi('medium');
-    const ctx = createCommandContext({ id: 'claude-sonnet-4-5', reasoning: true });
+    // Arrange
+    const piApi = createPiApi('medium');
+    const commandContext = createCommandContext({ id: 'claude-sonnet-4-5', reasoning: true });
 
-    handleThinkingLevelCommand(pi, '   ', ctx);
+    // Act
+    handleThinkingLevelCommand(piApi, '   ', commandContext);
 
-    expect(pi.setLevels).toEqual([]);
-    expect(ctx.notifications).toEqual([
+    // Assert
+    expect(piApi.setLevels).toEqual([]);
+    expect(commandContext.notifications).toEqual([
       {
         message:
           'Current thinking level: medium. Available levels: off, minimal, low, medium, high.',
@@ -117,30 +152,37 @@ describe('thinking level command', () => {
   });
 
   it('rejects levels unavailable for the current model', () => {
-    const pi = createPiApi('off');
-    const ctx = createCommandContext({ id: 'gpt-4o', reasoning: false });
+    // Arrange
+    const piApi = createPiApi('off');
+    const commandContext = createCommandContext({ id: 'gpt-4o', reasoning: false });
 
-    handleThinkingLevelCommand(pi, 'high', ctx);
+    // Act
+    handleThinkingLevelCommand(piApi, 'high', commandContext);
 
-    expect(pi.setLevels).toEqual([]);
-    expect(ctx.notifications).toEqual([{ message: 'Usage: /thinkinglevel off', type: 'warning' }]);
+    // Assert
+    expect(piApi.setLevels).toEqual([]);
+    expect(commandContext.notifications).toEqual([
+      { message: 'Usage: /thinkinglevel off', type: 'warning' },
+    ]);
   });
 
   it('uses the latest session/model event for command argument completions', () => {
-    const pi = createRegisteredCommandApi();
-    registerThinkingLevelCommand(pi.extensionApi);
+    // Arrange
+    const piApi = createRegisteredCommandApi();
+    registerThinkingLevelCommand(piApi.extensionApi);
 
-    expect(pi.command?.getArgumentCompletions?.('')).toEqual([
+    // Act and assert
+    expect(piApi.command?.getArgumentCompletions?.('')).toEqual([
       { value: 'off', label: 'off', description: 'Disable model thinking/reasoning' },
     ]);
 
-    pi.emitSessionStart({ id: 'claude-sonnet-4-5', reasoning: true });
-    expect(pi.command?.getArgumentCompletions?.('h')).toEqual([
+    piApi.emitSessionStart({ id: 'claude-sonnet-4-5', reasoning: true });
+    expect(piApi.command?.getArgumentCompletions?.('h')).toEqual([
       { value: 'high', label: 'high', description: 'Use high model thinking/reasoning' },
     ]);
 
-    pi.emitModelSelect({ id: 'gpt-5.2', reasoning: true, thinkingLevelMap: { xhigh: 'xhigh' } });
-    expect(pi.command?.getArgumentCompletions?.('x')).toEqual([
+    piApi.emitModelSelect({ id: 'gpt-5.2', reasoning: true, thinkingLevelMap: { xhigh: 'xhigh' } });
+    expect(piApi.command?.getArgumentCompletions?.('x')).toEqual([
       {
         value: 'xhigh',
         label: 'xhigh',
