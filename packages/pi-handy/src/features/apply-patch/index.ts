@@ -13,7 +13,7 @@ export function registerApplyPatchTool(pi: ExtensionAPI) {
   pi.registerTool({
     name: 'apply_patch',
     label: 'Apply Patch',
-    description: 'Apply a git-style unified diff to workspace files.',
+    description: 'Apply a git-style unified diff to workspace files. Do not use simplified patch formats; the patch must be fully compatible with `git apply`.',
     promptSnippet: 'Apply focused file edits with a git-style unified diff.',
     promptGuidelines: [
       'Do not use simplified patch formats such as *** Begin Patch, *** Add File, or *** Update File; they will be rejected.',
