@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 export function registerConfigDiagnostics(pi: ExtensionAPI, errors: readonly string[]): void {
   if (errors.length === 0) return;

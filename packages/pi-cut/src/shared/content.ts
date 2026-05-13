@@ -1,4 +1,4 @@
-import type { ToolResultEvent } from '@mariozechner/pi-coding-agent';
+import type { ToolResultEvent } from '@earendil-works/pi-coding-agent';
 
 export function transformTextContent(
   content: ToolResultEvent['content'],

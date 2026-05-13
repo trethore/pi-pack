@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 
-import type { ExtensionAPI, ExtensionCommandContext } from '@mariozechner/pi-coding-agent';
-import type { AutocompleteItem } from '@mariozechner/pi-tui';
+import type { ExtensionAPI, ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
+import type { AutocompleteItem } from '@earendil-works/pi-tui';
 import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostics.js';
 import {
   registerEnabledFeaturesWithContext,

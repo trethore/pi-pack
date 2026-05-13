@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const sessionCreate = vi.fn();
 const sessionForkFrom = vi.fn();
 
-vi.mock('@mariozechner/pi-coding-agent', async (importActual) => ({
-  ...(await importActual<typeof import('@mariozechner/pi-coding-agent')>()),
+vi.mock('@earendil-works/pi-coding-agent', async (importActual) => ({
+  ...(await importActual<typeof import('@earendil-works/pi-coding-agent')>()),
   SessionManager: {
     create: sessionCreate,
     forkFrom: sessionForkFrom,

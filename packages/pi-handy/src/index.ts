@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostics.js';
 import {
   registerEnabledFeatures,

@@ -3,7 +3,7 @@ import {
   VERSION,
   type ExtensionAPI,
   type ExtensionCommandContext,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 

@@ -4,7 +4,7 @@ import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repositoryUrl = 'https://github.com/badlogic/pi-mono.git';
+const repositoryUrl = 'https://github.com/earendil-works/pi.git';
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const rootDirectory = path.resolve(scriptDirectory, '..');
 const referencesDirectory = path.resolve(rootDirectory, 'references');

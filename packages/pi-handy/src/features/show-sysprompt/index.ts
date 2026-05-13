@@ -1,5 +1,5 @@
-import type { ExtensionAPI, Theme, ToolInfo } from '@mariozechner/pi-coding-agent';
-import { Box, getKeybindings, Text } from '@mariozechner/pi-tui';
+import type { ExtensionAPI, Theme, ToolInfo } from '@earendil-works/pi-coding-agent';
+import { Box, getKeybindings, Text } from '@earendil-works/pi-tui';
 import type { TArray, TEnum, TLiteral, TObject, TSchema, TSchemaOptions, TUnion } from 'typebox';
 
 const SYSTEM_PROMPT_MESSAGE_TYPE = 'pi-handy-system-prompt';

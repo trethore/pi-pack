@@ -5,7 +5,7 @@ import {
   getShowSyspromptArgumentCompletions,
   handleShowSyspromptCommand,
 } from '#pi-handy/features/show-sysprompt/index.js';
-import type { ExtensionAPI, ToolInfo } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ToolInfo } from '@earendil-works/pi-coding-agent';
 
 describe('show sysprompt command', () => {
   it('shows prompt and tools when invoked without args', () => {

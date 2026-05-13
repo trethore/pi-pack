@@ -1,13 +1,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { getAgentDir } from '@mariozechner/pi-coding-agent';
+import { getAgentDir } from '@earendil-works/pi-coding-agent';
 import type {
   AuthCredential,
   AuthStorage,
   ExtensionAPI,
   ExtensionCommandContext,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 
 const CODEX_PROVIDER = 'openai-codex';
 const DEFAULT_PROFILE_PATH = path.join(getAgentDir(), 'pi-codexify-codex-accounts.json');

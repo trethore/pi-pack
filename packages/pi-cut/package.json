@@ -11,7 +11,7 @@
     "cost-control"
   ],
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": ">=0.72.0 <1"
+    "@earendil-works/pi-coding-agent": ">=0.74.0 <1"
   },
   "imports": {
     "#src/*": "./src/*",

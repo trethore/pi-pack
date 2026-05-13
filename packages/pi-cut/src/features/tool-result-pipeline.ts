@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { PiCutConfig, ResolvedToolConfig } from '#src/config/schema.js';
 import { resolveToolConfig } from '#src/config/tool-config.js';
 import { truncateLines } from '#src/features/line-truncation/truncate-lines.js';
