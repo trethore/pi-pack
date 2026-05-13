@@ -53,6 +53,7 @@ export function registerApplyPatchTool(pi: ExtensionAPI) {
     description: 'Apply a git-style unified diff to workspace files.',
     promptSnippet: 'Apply focused file edits with a git-style unified diff.',
     promptGuidelines: [
+      'Do not use simplified patch formats such as *** Begin Patch, *** Add File, or *** Update File; they will be rejected.',
       'Use apply_patch only with git-style unified diffs: diff --git, ---/+++, and @@ hunk headers.',
       'Keep patches focused; they must apply cleanly with git apply.',
     ],
