@@ -17,6 +17,7 @@ const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = [
   'switchWorkspace',
   'showSysprompt',
   'updatePi',
+  'applyPatch',
 ];
 const { mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
@@ -43,6 +44,7 @@ function cloneDefaultConfig(): PiHandyConfig {
     switchWorkspace: { ...defaultConfig.switchWorkspace },
     showSysprompt: { ...defaultConfig.showSysprompt },
     updatePi: { ...defaultConfig.updatePi },
+    applyPatch: { ...defaultConfig.applyPatch },
   };
 }
 

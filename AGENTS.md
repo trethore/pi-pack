@@ -23,6 +23,12 @@ pi-pack/                         # You are here!
 └── tsconfig.json
 ```
 
+Look root and packages `package.json` to discover scripts, paths, and dependencies.
+
+## Development and Code Quality
+
+- Do not use relative imports; instead use absolute ones.
+
 ## Testing and Verification
 
 Tests should be easy to scan and understand. Follow these guidelines:

@@ -52,14 +52,11 @@ export function registerWebSearch(pi: ExtensionAPI, config: WebSearchConfig): vo
 function createWebSearchTool(): ToolDefinition<typeof WEB_SEARCH_PARAMETERS> {
   return {
     name: 'web_search',
-    label: 'web_search',
-    description:
-      'Search the web for sources relevant to the current task. Use it when current information, external references, or broader context beyond the workspace are required.',
+    label: 'Web Search',
+    description: 'Search the web for current or external information.',
     promptSnippet:
-      'Search the web for sources relevant to the current task when current information, external references, or broader context beyond the workspace are required.',
-    promptGuidelines: [
-      'Use web_search only when current or external information is required; do not use web_search for repository-local questions.',
-    ],
+      'Use web_search when the task requires up-to-date facts, external sources, or broader context.',
+    promptGuidelines: ['Do not use web_search for repository-local questions.'],
     parameters: WEB_SEARCH_PARAMETERS,
     prepareArguments: () => ({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {

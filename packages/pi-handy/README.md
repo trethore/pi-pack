@@ -26,6 +26,9 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "updatePi": {
     "enabled": true,
   },
+  "applyPatch": {
+    "enabled": true,
+  },
 }
 ```
 
@@ -70,3 +73,7 @@ Examples:
 ### Update pi command
 
 Registers `/updatepi` to check the latest published pi version. If an update is available, it quits Pi and starts `npm install -g @earendil-works/pi-coding-agent` in a detached process.
+
+### Apply patch tool
+
+Registers the `apply_patch` tool to create, update, or delete workspace files using structured patch operations.

@@ -34,6 +34,7 @@ describe('pi-handy config', () => {
         switchWorkspace: { enabled: true },
         showSysprompt: { enabled: true },
         updatePi: { enabled: true },
+        applyPatch: { enabled: true },
       },
       errors: [],
     });
@@ -44,7 +45,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false }, "updatePi": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false }, "updatePi": { "enabled": false }, "applyPatch": { "enabled": false } }'
     );
     writeProjectConfig(
       projectDirectory,
@@ -61,6 +62,7 @@ describe('pi-handy config', () => {
       switchWorkspace: { enabled: true },
       showSysprompt: { enabled: false },
       updatePi: { enabled: false },
+      applyPatch: { enabled: false },
     });
   });
 
@@ -69,7 +71,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeProjectConfig(
       projectDirectory,
-      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false, "updatePi": false }'
+      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false, "updatePi": false, "applyPatch": false }'
     );
 
     // Act
@@ -82,6 +84,7 @@ describe('pi-handy config', () => {
       switchWorkspace: { enabled: true },
       showSysprompt: { enabled: true },
       updatePi: { enabled: true },
+      applyPatch: { enabled: true },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
@@ -89,6 +92,7 @@ describe('pi-handy config', () => {
       expect.stringContaining('invalid switchWorkspace value'),
       expect.stringContaining('invalid showSysprompt value'),
       expect.stringContaining('invalid updatePi value'),
+      expect.stringContaining('invalid applyPatch value'),
     ]);
   });
 });
