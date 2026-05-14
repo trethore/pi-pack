@@ -1,0 +1,25 @@
+{
+  "name": "@trethore/pi-toolbox",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Various and useful tools for Pi.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "tools"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.74.0 <1"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-toolbox/*": "./src/*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

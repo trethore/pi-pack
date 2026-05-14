@@ -26,6 +26,7 @@
     "dev:pi-cut": "pi -e ./packages/pi-cut",
     "dev:pi-codexify": "pi -e ./packages/pi-codexify",
     "dev:pi-handy": "pi -e ./packages/pi-handy",
+    "dev:pi-toolbox": "pi -e ./packages/pi-toolbox",
     "install:global": "pi install .",
     "install:local": "pi install -l .",
     "install:global:pi-cut": "pi install ./packages/pi-cut",
@@ -33,7 +34,9 @@
     "install:global:pi-codexify": "pi install ./packages/pi-codexify",
     "install:local:pi-codexify": "pi install -l ./packages/pi-codexify",
     "install:global:pi-handy": "pi install ./packages/pi-handy",
-    "install:local:pi-handy": "pi install -l ./packages/pi-handy"
+    "install:local:pi-handy": "pi install -l ./packages/pi-handy",
+    "install:global:pi-toolbox": "pi install ./packages/pi-toolbox",
+    "install:local:pi-toolbox": "pi install -l ./packages/pi-toolbox"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.74.0 <1"
@@ -41,7 +44,8 @@
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",
     "#pi-codexify/*": "./packages/pi-codexify/src/*",
-    "#pi-handy/*": "./packages/pi-handy/src/*"
+    "#pi-handy/*": "./packages/pi-handy/src/*",
+    "#pi-toolbox/*": "./packages/pi-toolbox/src/*"
   },
   "devDependencies": {
     "@eslint/js": "9.39.4",
