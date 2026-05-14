@@ -6,7 +6,6 @@ import {
 } from '@trethore/pi-shared/features/registry.js';
 import { loadConfig } from '#src/config/config.js';
 import type { PiHandyConfig } from '#src/config/schema.js';
-import { registerApplyPatchTool } from '#src/features/apply-patch/index.js';
 import { registerShowSyspromptCommand } from '#src/features/show-sysprompt/index.js';
 import { registerSwitchWorkspaceCommand } from '#src/features/switch-workspace/index.js';
 import { registerThinkingLevelCommand } from '#src/features/thinking-level/index.js';
@@ -28,10 +27,6 @@ const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
     isEnabled: (config) => config.enabled && config.updatePi.enabled,
     register: registerUpdatePiCommand,
-  },
-  {
-    isEnabled: (config) => config.enabled && config.applyPatch.enabled,
-    register: registerApplyPatchTool,
   },
 ];
 

@@ -20,10 +20,5 @@
   // /updatepi
   "updatePi": {
     "enabled": true
-  },
-
-  // apply_patch tool
-  "applyPatch": {
-    "enabled": true
   }
 }
