@@ -1,9 +1,11 @@
 {
   "name": "grep",
   "label": "grep",
-  "description": "Search file contents by regex using rg -n.",
+  "description": "Search file contents using ripgrep: rg --json -n '<regex>' <path>.",
   "promptSnippet": "Search file contents by regex",
-  "promptGuidelines": ["Use grep for fast content search when you know text or a regex to find."],
+  "promptGuidelines": [
+    "Use grep for fast content search when you know the text or a regex to find."
+  ],
   "parameters": {
     "type": "object",
     "additionalProperties": false,
@@ -11,37 +13,37 @@
     "properties": {
       "regex": {
         "type": "string",
-        "description": "Regex pattern to search for."
+        "description": "Ripgrep-compatible regex pattern to search for. Searches are line-oriented; inline flags like `(?i)` can be used."
       },
       "path": {
         "type": "string",
-        "description": "Directory or file to search in. If omitted, the current working directory is used as a default."
+        "description": "Directory or file to search in. If omitted, the current working directory is used."
       },
       "limit": {
         "type": "integer",
         "minimum": 1,
         "maximum": 1000,
-        "description": "Maximum number of matching lines to return. If omitted, defaults to {{defaultLimit}}."
+        "description": "Maximum number of matching lines to return globally. If omitted, defaults to {{defaultLimit}}."
       },
       "limitPerFile": {
         "type": "integer",
         "minimum": 1,
         "maximum": 1000,
-        "description": "Maximum number of matching lines to return per file.{{limitPerFileDefault}}"
+        "description": "Maximum number of matching lines to return per file. If omitted, defaults to {{defaultLimitPerFile}}."
       },
       "maxCharsPerMatch": {
         "type": "integer",
         "minimum": 100,
         "maximum": 2000,
-        "description": "Maximum number of chars per match. If omitted, defaults to {{defaultMaxCharsPerMatch}}."
+        "description": "Maximum number of characters to show per matching line. If omitted, defaults to {{defaultMaxCharsPerMatch}}."
       },
       "noIgnore": {
         "type": "boolean",
-        "description": "Ignore .gitignore and .ignore files with --no-ignore."
+        "description": "Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted, defaults to false."
       },
       "hidden": {
         "type": "boolean",
-        "description": "Show hidden files with --hidden."
+        "description": "Include hidden files. If true, passes `--hidden`. If omitted, defaults to false."
       }
     }
   }

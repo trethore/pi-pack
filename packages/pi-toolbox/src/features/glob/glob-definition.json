@@ -1,7 +1,7 @@
 {
   "name": "glob",
   "label": "glob",
-  "description": "Find files by glob pattern using rg --files -g.",
+  "description": "Find files using ripgrep file discovery: rg --files -g '<pattern>' <path>.",
   "promptSnippet": "Find files by glob pattern",
   "promptGuidelines": ["Use glob for fast file discovery."],
   "parameters": {
@@ -11,25 +11,25 @@
     "properties": {
       "pattern": {
         "type": "string",
-        "description": "Glob pattern to match file against."
+        "description": "Glob pattern used to match files."
       },
       "path": {
         "type": "string",
-        "description": "Directory to search in. If omitted, the current working directory is used as a default."
+        "description": "Directory to search in. If omitted, the current working directory is used."
       },
       "limit": {
         "type": "integer",
         "minimum": 1,
         "maximum": 1000,
-        "description": "Maximum number of files to return. If omitted, defaults to {{defaultLimit}}."
+        "description": "Maximum number of files to return. If omitted, the default limit is {{defaultLimit}}."
       },
       "noIgnore": {
         "type": "boolean",
-        "description": "Ignore .gitignore and .ignore files with --no-ignore."
+        "description": "Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted, defaults to false."
       },
       "hidden": {
         "type": "boolean",
-        "description": "Show hidden files with --hidden."
+        "description": "Include hidden files. If true, passes `--hidden`. If omitted, defaults to false."
       }
     }
   }

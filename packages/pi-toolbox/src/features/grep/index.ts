@@ -165,8 +165,8 @@ function createGrepParametersSchema(config: GrepToolConfig) {
   );
   parameters.properties.limitPerFile.description =
     parameters.properties.limitPerFile.description.replace(
-      '{{limitPerFileDefault}}',
-      formatLimitPerFileDefault(config.defaultLimitPerFile)
+      '{{defaultLimitPerFile}}',
+      formatDefaultLimitPerFileValue(config.defaultLimitPerFile)
     );
   parameters.properties.maxCharsPerMatch.description =
     parameters.properties.maxCharsPerMatch.description.replace(
@@ -180,9 +180,8 @@ function cloneParametersSchema(parameters: GrepParametersJsonSchema): GrepParame
   return structuredClone(parameters);
 }
 
-function formatLimitPerFileDefault(defaultLimitPerFile: number | undefined): string {
-  if (defaultLimitPerFile === undefined) return ' If omitted, no per-file limit is applied.';
-  return ` If omitted, defaults to ${defaultLimitPerFile}.`;
+function formatDefaultLimitPerFileValue(defaultLimitPerFile: number | undefined): string {
+  return defaultLimitPerFile === undefined ? 'no per-file limit' : String(defaultLimitPerFile);
 }
 
 function prepareGrepParameters(

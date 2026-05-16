@@ -55,7 +55,7 @@ describe('glob tool', () => {
     expect(
       (tool.parameters as never as { properties: { limit: { description: string } } }).properties
         .limit.description
-    ).toBe('Maximum number of files to return. If omitted, defaults to 42.');
+    ).toBe('Maximum number of files to return. If omitted, the default limit is 42.');
   });
 
   it('uses config defaults and forwards flags to the runner', async () => {

@@ -72,13 +72,28 @@ describe('grep tool', () => {
 
     // Assert
     expect(properties.limit.description).toBe(
-      'Maximum number of matching lines to return. If omitted, defaults to 42.'
+      'Maximum number of matching lines to return globally. If omitted, defaults to 42.'
     );
     expect(properties.limitPerFile.description).toBe(
       'Maximum number of matching lines to return per file. If omitted, defaults to 7.'
     );
     expect(properties.maxCharsPerMatch.description).toBe(
-      'Maximum number of chars per match. If omitted, defaults to 300.'
+      'Maximum number of characters to show per matching line. If omitted, defaults to 300.'
+    );
+  });
+
+  it('injects no per-file limit into the schema description when no default is configured', () => {
+    // Arrange and act
+    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG);
+    const properties = (
+      tool.parameters as never as {
+        properties: { limitPerFile: { description: string } };
+      }
+    ).properties;
+
+    // Assert
+    expect(properties.limitPerFile.description).toBe(
+      'Maximum number of matching lines to return per file. If omitted, defaults to no per-file limit.'
     );
   });
 
