@@ -19,9 +19,9 @@ export function formatGlobResult(options: GlobFormatOptions): string {
     addPath(root, file);
   }
 
-  const suffix = options.limited ? ' limited=true' : '';
-  const header = `base=${formatBase(options.base)} count=${files.length}${suffix}`;
-  return [header, ...formatChildren(root, 0)].join('\n');
+  const header = `base=${formatBase(options.base)} count=${files.length}`;
+  const footer = options.limited ? ['[more files available]'] : [];
+  return [header, ...formatChildren(root, 0), ...footer].join('\n');
 }
 
 function createNode(): TreeNode {

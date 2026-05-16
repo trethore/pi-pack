@@ -28,6 +28,7 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
     let stderr = '';
     let limited = false;
     let aborted = false;
+    const collectionLimit = options.limit + 1;
 
     const abort = () => {
       aborted = true;
@@ -41,7 +42,7 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
     child.stdout.on('data', (chunk: string) => {
       stdoutBuffer += chunk;
       collectCompleteLines();
-      if (files.length >= options.limit) {
+      if (files.length >= collectionLimit) {
         limited = true;
         child.kill();
       }
@@ -69,12 +70,12 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
       collectRemainingLine();
 
       if (limited) {
-        resolve({ files, limited });
+        resolve({ files: files.slice(0, options.limit), limited });
         return;
       }
 
       if (code === 0 || (code === 1 && files.length === 0)) {
-        resolve({ files, limited: false });
+        resolve({ files: files.slice(0, options.limit), limited: false });
         return;
       }
 
@@ -83,7 +84,7 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
 
     function collectCompleteLines() {
       let lineEnd = stdoutBuffer.indexOf('\n');
-      while (lineEnd !== -1 && files.length < options.limit) {
+      while (lineEnd !== -1 && files.length < collectionLimit) {
         const line = stdoutBuffer.slice(0, lineEnd).trimEnd();
         stdoutBuffer = stdoutBuffer.slice(lineEnd + 1);
         if (line) files.push(line);
@@ -92,7 +93,7 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
     }
 
     function collectRemainingLine() {
-      if (stdoutBuffer && files.length < options.limit) {
+      if (stdoutBuffer && files.length < collectionLimit) {
         files.push(stdoutBuffer.trimEnd());
       }
       stdoutBuffer = '';

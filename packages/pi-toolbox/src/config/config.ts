@@ -5,7 +5,9 @@ import {
   defaultConfig,
   enabledSchema,
   limitSchema,
+  maxCharsPerMatchSchema,
   type GlobToolConfig,
+  type GrepToolConfig,
   type LoadedConfig,
   type PartialPiToolboxConfig,
   type PiToolboxConfig,
@@ -34,6 +36,7 @@ function cloneDefaultConfig(): PiToolboxConfig {
   return {
     ...defaultConfig,
     glob: { ...defaultConfig.glob },
+    grep: { ...defaultConfig.grep },
   };
 }
 
@@ -50,6 +53,10 @@ function mergeConfig(
   mergeSection(source, 'glob', configPath, errors, (section, sectionName) => {
     mergeGlobConfig(target.glob, section, sectionName, configPath, errors);
   });
+
+  mergeSection(source, 'grep', configPath, errors, (section, sectionName) => {
+    mergeGrepConfig(target.grep, section, sectionName, configPath, errors);
+  });
 }
 
 function mergeGlobConfig(
@@ -59,9 +66,62 @@ function mergeGlobConfig(
   configPath: string,
   errors: string[]
 ) {
+  mergeToolEnabled(target, source, label, configPath, errors);
+  mergeDefaultLimit(target, source, label, configPath, errors);
+}
+
+function mergeGrepConfig(
+  target: GrepToolConfig,
+  source: Record<string, unknown>,
+  label: string,
+  configPath: string,
+  errors: string[]
+) {
+  mergeToolEnabled(target, source, label, configPath, errors);
+  mergeDefaultLimit(target, source, label, configPath, errors);
+  mergeField(
+    source,
+    'defaultLimitPerFile',
+    `${label}.defaultLimitPerFile`,
+    limitSchema,
+    configPath,
+    errors,
+    (value) => {
+      target.defaultLimitPerFile = value;
+    }
+  );
+  mergeField(
+    source,
+    'defaultMaxCharsPerMatch',
+    `${label}.defaultMaxCharsPerMatch`,
+    maxCharsPerMatchSchema,
+    configPath,
+    errors,
+    (value) => {
+      target.defaultMaxCharsPerMatch = value;
+    }
+  );
+}
+
+function mergeToolEnabled(
+  target: { enabled: boolean },
+  source: Record<string, unknown>,
+  label: string,
+  configPath: string,
+  errors: string[]
+) {
   mergeField(source, 'enabled', `${label}.enabled`, enabledSchema, configPath, errors, (value) => {
     target.enabled = value;
   });
+}
+
+function mergeDefaultLimit(
+  target: { defaultLimit: number },
+  source: Record<string, unknown>,
+  label: string,
+  configPath: string,
+  errors: string[]
+) {
   mergeField(
     source,
     'defaultLimit',

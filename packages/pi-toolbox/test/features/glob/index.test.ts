@@ -120,9 +120,10 @@ src/
     expect(result.details).toEqual({ base: 'packages/pi-toolbox', count: 1, limited: true });
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: `base=packages/pi-toolbox count=1 limited=true
+      text: `base=packages/pi-toolbox count=1
 src/
-  index.ts`,
+  index.ts
+[more files available]`,
     });
   });
 

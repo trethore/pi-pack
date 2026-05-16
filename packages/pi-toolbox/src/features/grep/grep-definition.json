@@ -1,0 +1,48 @@
+{
+  "name": "grep",
+  "label": "grep",
+  "description": "Search file contents by regex using rg -n.",
+  "promptSnippet": "Search file contents by regex",
+  "promptGuidelines": ["Use grep for fast content search when you know text or a regex to find."],
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["regex"],
+    "properties": {
+      "regex": {
+        "type": "string",
+        "description": "Regex pattern to search for."
+      },
+      "path": {
+        "type": "string",
+        "description": "Directory or file to search in. If omitted, the current working directory is used as a default."
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1000,
+        "description": "Maximum number of matching lines to return. If omitted, defaults to {{defaultLimit}}."
+      },
+      "limitPerFile": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1000,
+        "description": "Maximum number of matching lines to return per file.{{limitPerFileDefault}}"
+      },
+      "maxCharsPerMatch": {
+        "type": "integer",
+        "minimum": 100,
+        "maximum": 2000,
+        "description": "Maximum number of chars per match. If omitted, defaults to {{defaultMaxCharsPerMatch}}."
+      },
+      "noIgnore": {
+        "type": "boolean",
+        "description": "Ignore .gitignore and .ignore files with --no-ignore."
+      },
+      "hidden": {
+        "type": "boolean",
+        "description": "Show hidden files with --hidden."
+      }
+    }
+  }
+}

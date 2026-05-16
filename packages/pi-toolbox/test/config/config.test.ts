@@ -23,16 +23,26 @@ describe('loadConfig', () => {
     expect(loaded.config).toEqual({
       enabled: true,
       glob: { enabled: true, defaultLimit: 100 },
+      grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
   });
 
   it('merges global config before project config so project values override global values', async () => {
     // Arrange
     const homeDir = makeTempDir();
-    writeGlobalConfig(homeDir, JSON.stringify({ glob: { enabled: false, defaultLimit: 50 } }));
+    writeGlobalConfig(
+      homeDir,
+      JSON.stringify({
+        glob: { enabled: false, defaultLimit: 50 },
+        grep: { defaultLimit: 25, defaultLimitPerFile: 3 },
+      })
+    );
     const { loadConfig } = await importConfigWithHome(homeDir);
     const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ glob: { defaultLimit: 200 } }));
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({ grep: { defaultLimit: 300, defaultMaxCharsPerMatch: 500 } })
+    );
 
     // Act
     const loaded = loadConfig(cwd);
@@ -41,7 +51,13 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
-      glob: { enabled: false, defaultLimit: 200 },
+      glob: { enabled: false, defaultLimit: 50 },
+      grep: {
+        enabled: true,
+        defaultLimit: 300,
+        defaultLimitPerFile: 3,
+        defaultMaxCharsPerMatch: 500,
+      },
     });
   });
 
@@ -54,6 +70,12 @@ describe('loadConfig', () => {
       JSON.stringify({
         enabled: 'yes',
         glob: { enabled: 'yes', defaultLimit: 1001 },
+        grep: {
+          enabled: 'yes',
+          defaultLimit: 0,
+          defaultLimitPerFile: 1001,
+          defaultMaxCharsPerMatch: 99,
+        },
       })
     );
 
@@ -64,11 +86,16 @@ describe('loadConfig', () => {
     expect(loaded.config).toEqual({
       enabled: true,
       glob: { enabled: true, defaultLimit: 100 },
+      grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid glob.enabled value'),
       expect.stringContaining('invalid glob.defaultLimit value'),
+      expect.stringContaining('invalid grep.enabled value'),
+      expect.stringContaining('invalid grep.defaultLimit value'),
+      expect.stringContaining('invalid grep.defaultLimitPerFile value'),
+      expect.stringContaining('invalid grep.defaultMaxCharsPerMatch value'),
     ]);
   });
 

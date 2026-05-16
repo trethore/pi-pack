@@ -25,11 +25,12 @@ test/
     expect(formatGlobResult({ base: '.', files: [] })).toBe('base=. count=0');
   });
 
-  it('marks limited results', () => {
+  it('adds a footer when more files are available', () => {
     expect(formatGlobResult({ base: '.', files: ['src/index.ts'], limited: true })).toBe(
-      `base=. count=1 limited=true
+      `base=. count=1
 src/
-  index.ts`
+  index.ts
+[more files available]`
     );
   });
 });
