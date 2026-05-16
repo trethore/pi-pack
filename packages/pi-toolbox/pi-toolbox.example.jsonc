@@ -1,0 +1,10 @@
+{
+  // Master switch for pi-toolbox.
+  "enabled": true,
+
+  // glob tool powered by rg --files -g.
+  "glob": {
+    "enabled": true,
+    "defaultLimit": 100
+  }
+}
