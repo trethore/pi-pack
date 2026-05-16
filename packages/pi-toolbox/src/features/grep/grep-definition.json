@@ -53,7 +53,7 @@
       },
       "hidden": {
         "type": "boolean",
-        "description": "Include hidden files. If true, passes `--hidden`. If omitted, defaults to false."
+        "description": "Include hidden files. If true, passes `--hidden`. If omitted, defaults to false. Avoid using this argument unless intentionally searching hidden files; when using it, pair it with a targeted regex, glob, or path."
       }
     }
   }
