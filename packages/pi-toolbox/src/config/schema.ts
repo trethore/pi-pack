@@ -1,4 +1,5 @@
-import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
+import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
+import { defineConfigSchema, z, type EnabledConfig } from '@trethore/pi-shared/config/schema.js';
 
 export interface PiToolboxConfig {
   enabled: boolean;
@@ -6,13 +7,11 @@ export interface PiToolboxConfig {
   grep: GrepToolConfig;
 }
 
-export interface GlobToolConfig {
-  enabled: boolean;
+export interface GlobToolConfig extends EnabledConfig {
   defaultLimit: number;
 }
 
-export interface GrepToolConfig {
-  enabled: boolean;
+export interface GrepToolConfig extends EnabledConfig {
   defaultLimit: number;
   defaultLimitPerFile?: number;
   defaultMaxCharsPerMatch: number;
@@ -32,10 +31,7 @@ export type PartialPiToolboxConfig = Partial<{
   }>;
 }>;
 
-export interface LoadedConfig {
-  config: PiToolboxConfig;
-  errors: string[];
-}
+export type LoadedConfig = LoadedExtensionConfig<PiToolboxConfig>;
 
 export const limitSchema = defineConfigSchema(
   z.number().int().min(1).max(1000),

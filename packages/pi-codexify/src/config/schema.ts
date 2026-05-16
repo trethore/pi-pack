@@ -1,4 +1,10 @@
-import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
+import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
+import {
+  defineConfigSchema,
+  z,
+  type EnabledConfig,
+  type PartialEnabledConfig,
+} from '@trethore/pi-shared/config/schema.js';
 
 export type CodexVerbosity = 'low' | 'medium' | 'high';
 export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed';
@@ -11,23 +17,16 @@ export interface PiCodexifyConfig {
   webSearch: WebSearchConfig;
 }
 
-export interface CodexControlsConfig {
-  enabled: boolean;
+export interface CodexControlsConfig extends EnabledConfig {
   verbosity?: CodexVerbosity;
   reasoningSummary?: CodexReasoningSummary;
 }
 
-interface CodexUsageConfig {
-  enabled: boolean;
-}
+type CodexUsageConfig = EnabledConfig;
 
-interface CodexAccountConfig {
-  enabled: boolean;
-}
+type CodexAccountConfig = EnabledConfig;
 
-interface WebSearchConfig {
-  enabled: boolean;
-}
+type WebSearchConfig = EnabledConfig;
 
 export type PartialPiCodexifyConfig = Partial<{
   enabled: unknown;
@@ -36,21 +35,12 @@ export type PartialPiCodexifyConfig = Partial<{
     verbosity: unknown;
     reasoningSummary: unknown;
   }>;
-  usage: Partial<{
-    enabled: unknown;
-  }>;
-  account: Partial<{
-    enabled: unknown;
-  }>;
-  webSearch: Partial<{
-    enabled: unknown;
-  }>;
+  usage: PartialEnabledConfig;
+  account: PartialEnabledConfig;
+  webSearch: PartialEnabledConfig;
 }>;
 
-export interface LoadedConfig {
-  config: PiCodexifyConfig;
-  errors: string[];
-}
+export type LoadedConfig = LoadedExtensionConfig<PiCodexifyConfig>;
 
 export const defaultConfig: PiCodexifyConfig = {
   enabled: true,

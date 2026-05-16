@@ -10,6 +10,14 @@ export interface ConfigValueSchema<T> {
   safeParse(value: unknown): ConfigParseResult<T>;
 }
 
+export interface EnabledConfig {
+  enabled: boolean;
+}
+
+export type PartialEnabledConfig = Partial<{
+  enabled: unknown;
+}>;
+
 export type ConfigFieldMerger<T extends object> = (
   target: Partial<T>,
   source: Record<string, unknown>,
@@ -71,7 +79,7 @@ function makeMergeField(extensionName: string) {
 
 function makeMergeEnabledField(mergeField: ReturnType<typeof makeMergeField>) {
   return function mergeEnabledField(
-    target: { enabled?: boolean },
+    target: Partial<EnabledConfig>,
     source: Record<string, unknown>,
     configName: string,
     configPath: string,

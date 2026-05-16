@@ -1,3 +1,6 @@
+import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
+import type { EnabledConfig } from '@trethore/pi-shared/config/schema.js';
+
 const DEFAULT_MAX_CHARS = 2000;
 export const MIN_REPEATS = 2;
 const DEFAULT_MIN_SAVED_LINES = 3;
@@ -26,8 +29,7 @@ export interface ToolOverrideConfig {
   lineTruncation?: Partial<LineTruncationConfig>;
 }
 
-export interface TerminalCleanupConfig {
-  enabled: boolean;
+export interface TerminalCleanupConfig extends EnabledConfig {
   stripAnsi: boolean;
   collapseCarriageReturns: boolean;
   trimTrailingWhitespace: boolean;
@@ -35,16 +37,14 @@ export interface TerminalCleanupConfig {
 
 type SavingsMode = 'or' | 'and';
 
-export interface RepetitionFoldingConfig {
-  enabled: boolean;
+export interface RepetitionFoldingConfig extends EnabledConfig {
   minRepeats: number;
   minSavedLines: number;
   minSavedTokens: number;
   savingsMode: SavingsMode;
 }
 
-export interface LineTruncationConfig {
-  enabled: boolean;
+export interface LineTruncationConfig extends EnabledConfig {
   maxChars: number;
 }
 
@@ -76,10 +76,7 @@ export type PartialPiCutConfig = Partial<{
   tools: unknown;
 }>;
 
-export interface LoadedConfig {
-  config: PiCutConfig;
-  errors: string[];
-}
+export type LoadedConfig = LoadedExtensionConfig<PiCutConfig>;
 
 export const defaultConfig: PiCutConfig = {
   enabled: true,
