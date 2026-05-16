@@ -14,6 +14,12 @@ import { Type } from 'typebox';
 import type { GrepToolConfig } from '#src/config/schema.js';
 import { createGrepDisplay, formatGrepDisplay } from '#src/features/grep/format.js';
 import {
+  formatOptionalStringListFlag,
+  formatStringList,
+  normalizeOptionalStringList,
+  normalizeRequiredStringList,
+} from '#src/utils/string-list.js';
+import {
   runRipgrepGrep,
   type RipgrepGrepResult,
   type RunRipgrepGrepOptions,
@@ -23,8 +29,9 @@ const COLLAPSED_RESULT_LINES = 10;
 const GREP_TOOL_DEFINITION = readGrepDefinition();
 
 interface GrepParameters {
-  regex: string;
-  path?: string;
+  regexes: string[];
+  paths?: string[];
+  globs?: string[];
   limit?: number;
   limitPerFile?: number;
   maxCharsPerMatch?: number;
@@ -50,8 +57,9 @@ interface GrepParametersJsonSchema {
   additionalProperties: boolean;
   required: string[];
   properties: {
-    regex: Record<string, unknown>;
-    path: Record<string, unknown>;
+    regexes: Record<string, unknown>;
+    paths: Record<string, unknown>;
+    globs: Record<string, unknown>;
     limit: { description: string } & Record<string, unknown>;
     limitPerFile: { description: string } & Record<string, unknown>;
     maxCharsPerMatch: { description: string } & Record<string, unknown>;
@@ -103,13 +111,13 @@ export function createGrepToolDefinition(
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareGrepParameters(params, config);
-      const searchPath = resolveSearchPath(cwd, preparedParams.path);
-      await assertPathExists(searchPath);
+      await assertPathsExist(cwd, preparedParams.paths);
 
       const result = await runner({
         cwd,
-        searchPath: preparedParams.path,
-        regex: preparedParams.regex,
+        regexes: preparedParams.regexes,
+        paths: preparedParams.paths,
+        globs: preparedParams.globs,
         limit: preparedParams.limit,
         limitPerFile: preparedParams.limitPerFile,
         maxCharsPerMatch: preparedParams.maxCharsPerMatch,
@@ -189,8 +197,12 @@ function prepareGrepParameters(
   config: GrepToolConfig
 ): PreparedGrepParameters {
   return {
-    regex: params.regex,
-    path: params.path?.trim() || '.',
+    regexes: normalizeRequiredStringList(params.regexes, {
+      name: 'regexes',
+      toolName: 'grep',
+    }),
+    paths: normalizeOptionalStringList(params.paths, ['.']),
+    globs: normalizeOptionalStringList(params.globs, []),
     limit: params.limit ?? config.defaultLimit,
     limitPerFile: params.limitPerFile ?? config.defaultLimitPerFile,
     maxCharsPerMatch: params.maxCharsPerMatch ?? config.defaultMaxCharsPerMatch,
@@ -203,6 +215,12 @@ function resolveSearchPath(cwd: string, searchPath: string): string {
   return path.resolve(cwd, searchPath);
 }
 
+async function assertPathsExist(cwd: string, searchPaths: readonly string[]): Promise<void> {
+  await Promise.all(
+    searchPaths.map((searchPath) => assertPathExists(resolveSearchPath(cwd, searchPath)))
+  );
+}
+
 async function assertPathExists(searchPath: string): Promise<void> {
   try {
     await stat(searchPath);
@@ -212,16 +230,16 @@ async function assertPathExists(searchPath: string): Promise<void> {
 }
 
 function formatGrepCall(args: GrepParameters | undefined, theme: Theme): string {
-  const regex = args?.regex ?? '';
-  const searchPath = args?.path?.trim() || '.';
+  const regexes = formatStringList(args?.regexes, '...');
+  const searchPaths = formatStringList(args?.paths, '.');
   const flags = formatGrepFlags(args);
   const suffix = flags ? theme.fg('toolOutput', ` (${flags})`) : '';
 
   return [
     theme.fg('toolTitle', theme.bold('grep')),
     ' ',
-    theme.fg('accent', regex || '...'),
-    theme.fg('toolOutput', ` in ${searchPath}`),
+    theme.fg('accent', regexes),
+    theme.fg('toolOutput', ` in ${searchPaths}`),
     suffix,
   ].join('');
 }
@@ -231,6 +249,7 @@ function formatGrepFlags(args: GrepParameters | undefined): string {
     formatOptionalNumberFlag('limit', args?.limit),
     formatOptionalNumberFlag('limit/file', args?.limitPerFile),
     formatOptionalNumberFlag('chars', args?.maxCharsPerMatch),
+    formatOptionalStringListFlag('globs', args?.globs),
     args?.noIgnore ? 'noIgnore' : undefined,
     args?.hidden ? 'hidden' : undefined,
   ]

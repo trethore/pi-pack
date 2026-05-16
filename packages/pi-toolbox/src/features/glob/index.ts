@@ -14,6 +14,11 @@ import { Type } from 'typebox';
 import type { GlobToolConfig } from '#src/config/schema.js';
 import { formatGlobResult } from '#src/features/glob/format.js';
 import {
+  formatStringList,
+  normalizeOptionalStringList,
+  normalizeRequiredStringList,
+} from '#src/utils/string-list.js';
+import {
   runRipgrepGlob,
   type RipgrepGlobResult,
   type RunRipgrepGlobOptions,
@@ -23,8 +28,8 @@ const COLLAPSED_RESULT_LINES = 10;
 const GLOB_TOOL_DEFINITION = readGlobDefinition();
 
 interface GlobParameters {
-  pattern: string;
-  path?: string;
+  patterns: string[];
+  paths?: string[];
   limit?: number;
   noIgnore?: boolean;
   hidden?: boolean;
@@ -44,8 +49,8 @@ interface GlobParametersJsonSchema {
   additionalProperties: boolean;
   required: string[];
   properties: {
-    pattern: Record<string, unknown>;
-    path: Record<string, unknown>;
+    patterns: Record<string, unknown>;
+    paths: Record<string, unknown>;
     limit: { description: string } & Record<string, unknown>;
     noIgnore: Record<string, unknown>;
     hidden: Record<string, unknown>;
@@ -56,7 +61,7 @@ type GlobParametersSchema = ReturnType<typeof createGlobParametersSchema>;
 type GlobRunner = (options: RunRipgrepGlobOptions) => Promise<RipgrepGlobResult>;
 
 export interface GlobToolDetails {
-  base: string;
+  paths: string[];
   count: number;
   limited: boolean;
 }
@@ -95,33 +100,31 @@ export function createGlobToolDefinition(
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareGlobParameters(params, config);
-      const basePath = resolveBasePath(cwd, preparedParams.path);
-      await assertDirectory(basePath);
+      await assertDirectories(cwd, preparedParams.paths);
 
       const result = await runner({
-        basePath,
-        pattern: preparedParams.pattern,
+        cwd,
+        patterns: preparedParams.patterns,
+        paths: preparedParams.paths,
         limit: preparedParams.limit,
         noIgnore: preparedParams.noIgnore,
         hidden: preparedParams.hidden,
         signal,
       });
 
-      const base = preparedParams.path;
-
       return {
         content: [
           {
             type: 'text',
             text: formatGlobResult({
-              base,
+              paths: preparedParams.paths,
               files: result.files,
               limited: result.limited,
             }),
           },
         ],
         details: {
-          base,
+          paths: preparedParams.paths,
           count: result.files.length,
           limited: result.limited,
         },
@@ -164,42 +167,51 @@ function prepareGlobParameters(
   config: GlobToolConfig
 ): Required<GlobParameters> {
   return {
-    pattern: params.pattern,
-    path: params.path?.trim() || '.',
+    patterns: normalizeRequiredStringList(params.patterns, {
+      name: 'patterns',
+      toolName: 'glob',
+    }),
+    paths: normalizeOptionalStringList(params.paths, ['.']),
     limit: params.limit ?? config.defaultLimit,
     noIgnore: params.noIgnore ?? false,
     hidden: params.hidden ?? false,
   };
 }
 
-function resolveBasePath(cwd: string, basePath: string): string {
-  return path.resolve(cwd, basePath);
+function resolveSearchPath(cwd: string, searchPath: string): string {
+  return path.resolve(cwd, searchPath);
 }
 
-async function assertDirectory(basePath: string): Promise<void> {
+async function assertDirectories(cwd: string, searchPaths: readonly string[]): Promise<void> {
+  await Promise.all(
+    searchPaths.map((searchPath) => assertDirectory(resolveSearchPath(cwd, searchPath)))
+  );
+}
+
+async function assertDirectory(searchPath: string): Promise<void> {
   let stats;
   try {
-    stats = await stat(basePath);
+    stats = await stat(searchPath);
   } catch (error) {
-    throw new Error(`glob failed: base path does not exist: ${basePath}`, { cause: error });
+    throw new Error(`glob failed: search path does not exist: ${searchPath}`, { cause: error });
   }
 
   if (!stats.isDirectory()) {
-    throw new Error(`glob failed: base path is not a directory: ${basePath}`);
+    throw new Error(`glob failed: search path is not a directory: ${searchPath}`);
   }
 }
 
 function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string {
-  const pattern = args?.pattern ?? '';
-  const basePath = args?.path?.trim() || '.';
+  const patterns = formatStringList(args?.patterns, '...');
+  const searchPaths = formatStringList(args?.paths, '.');
   const flags = formatGlobFlags(args);
   const suffix = flags ? theme.fg('toolOutput', ` (${flags})`) : '';
 
   return [
     theme.fg('toolTitle', theme.bold('glob')),
     ' ',
-    theme.fg('accent', pattern || '...'),
-    theme.fg('toolOutput', ` in ${basePath}`),
+    theme.fg('accent', patterns),
+    theme.fg('toolOutput', ` in ${searchPaths}`),
     suffix,
   ].join('');
 }

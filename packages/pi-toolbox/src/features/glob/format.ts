@@ -1,7 +1,7 @@
-import path from 'node:path';
+import { toDisplayPath, toPosixPath } from '#src/utils/paths.js';
 
 export interface GlobFormatOptions {
-  base: string;
+  paths: readonly string[];
   files: readonly string[];
   limited?: boolean;
 }
@@ -19,7 +19,7 @@ export function formatGlobResult(options: GlobFormatOptions): string {
     addPath(root, file);
   }
 
-  const header = `base=${formatBase(options.base)} count=${files.length}`;
+  const header = `paths=${formatPaths(options.paths)} count=${files.length}`;
   const footer = options.limited ? ['[more files available]'] : [];
   return [header, ...formatChildren(root, 0), ...footer].join('\n');
 }
@@ -29,7 +29,7 @@ function createNode(): TreeNode {
 }
 
 function normalizeFiles(files: readonly string[]): string[] {
-  const uniqueFiles = new Set(files.map((file) => toPosixPath(file)).filter(Boolean));
+  const uniqueFiles = new Set(files.map((file) => toDisplayPath(file)).filter(Boolean));
   return sortedItems(uniqueFiles, (left, right) => left.localeCompare(right));
 }
 
@@ -80,10 +80,6 @@ function sortedItems<T>(items: Iterable<T>, compare: (left: T, right: T) => numb
   return sorted;
 }
 
-function formatBase(base: string): string {
-  return toPosixPath(base) || '.';
-}
-
-function toPosixPath(value: string): string {
-  return value.split(path.sep).join('/');
+function formatPaths(paths: readonly string[]): string {
+  return paths.map((pathValue) => toPosixPath(pathValue) || '.').join(',');
 }

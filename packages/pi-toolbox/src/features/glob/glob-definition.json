@@ -1,21 +1,25 @@
 {
   "name": "glob",
   "label": "glob",
-  "description": "Find files using ripgrep file discovery: rg --files -g '<pattern>' <path>.",
-  "promptSnippet": "Find files by glob pattern",
+  "description": "Find files using ripgrep file discovery: rg --files -g '<pattern>' <path(s)...>.",
+  "promptSnippet": "Find files by glob pattern(s)",
   "promptGuidelines": ["Use glob for fast file discovery."],
   "parameters": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["pattern"],
+    "required": ["patterns"],
     "properties": {
-      "pattern": {
-        "type": "string",
-        "description": "Glob pattern used to match files."
+      "patterns": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string" },
+        "description": "Glob pattern(s) used to match files. Provide one or more patterns; each pattern is passed as `-g <pattern>`; use `!` for exclusions."
       },
-      "path": {
-        "type": "string",
-        "description": "Directory to search in. If omitted, the current working directory is used."
+      "paths": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string" },
+        "description": "Path(s) to search in. Provide one or more directories. If omitted, the current working directory is used."
       },
       "limit": {
         "type": "integer",

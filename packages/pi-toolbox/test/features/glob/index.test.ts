@@ -40,7 +40,7 @@ describe('glob tool', () => {
     // Act
     const result = pi.handlers.tool_result?.({
       toolName: 'glob',
-      details: { base: '.', count: 0, limited: false },
+      details: { paths: ['.'], count: 0, limited: false },
     });
 
     // Assert
@@ -70,7 +70,7 @@ describe('glob tool', () => {
     // Act
     const result = await tool.execute(
       'call-id',
-      { pattern: '**/*.ts', noIgnore: true, hidden: true },
+      { patterns: ['**/*.ts'], noIgnore: true, hidden: true },
       undefined,
       undefined,
       {} as never
@@ -78,35 +78,44 @@ describe('glob tool', () => {
 
     // Assert
     expect(runner).toHaveBeenCalledWith({
-      basePath: cwd,
-      pattern: '**/*.ts',
+      cwd,
+      patterns: ['**/*.ts'],
+      paths: ['.'],
       limit: 42,
       noIgnore: true,
       hidden: true,
       signal: undefined,
     });
-    expect(result.details).toEqual({ base: '.', count: 1, limited: false });
+    expect(result.details).toEqual({ paths: ['.'], count: 1, limited: false });
     expect(result.content).toEqual([
       {
         type: 'text',
-        text: `base=. count=1
+        text: `paths=. count=1
 src/
   index.ts`,
       },
     ]);
   });
 
-  it('uses the provided path and limit', async () => {
+  it('uses the provided patterns, paths, and limit', async () => {
     // Arrange
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'packages', 'pi-toolbox'), { recursive: true });
-    const runner = vi.fn(async () => ({ files: ['src/index.ts'], limited: true }));
+    mkdirSync(path.join(cwd, 'scripts'), { recursive: true });
+    const runner = vi.fn(async () => ({
+      files: ['packages/pi-toolbox/src/index.ts'],
+      limited: true,
+    }));
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
 
     // Act
     const result = await tool.execute(
       'call-id',
-      { pattern: '**/*.ts', path: 'packages/pi-toolbox', limit: 5 },
+      {
+        patterns: ['**/*.ts', '!**/*.d.ts'],
+        paths: ['packages/pi-toolbox', 'scripts'],
+        limit: 5,
+      },
       undefined,
       undefined,
       {} as never
@@ -115,21 +124,29 @@ src/
     // Assert
     expect(runner).toHaveBeenCalledWith(
       expect.objectContaining({
-        basePath: path.join(cwd, 'packages', 'pi-toolbox'),
+        cwd,
+        patterns: ['**/*.ts', '!**/*.d.ts'],
+        paths: ['packages/pi-toolbox', 'scripts'],
         limit: 5,
       })
     );
-    expect(result.details).toEqual({ base: 'packages/pi-toolbox', count: 1, limited: true });
+    expect(result.details).toEqual({
+      paths: ['packages/pi-toolbox', 'scripts'],
+      count: 1,
+      limited: true,
+    });
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: `base=packages/pi-toolbox count=1
-src/
-  index.ts
+      text: `paths=packages/pi-toolbox,scripts count=1
+packages/
+  pi-toolbox/
+    src/
+      index.ts
 [more files available]`,
     });
   });
 
-  it('keeps absolute input paths in the result base display', async () => {
+  it('keeps absolute input paths in the result paths display', async () => {
     // Arrange
     const cwd = makeTempDir();
     const absoluteSearchPath = path.join(cwd, 'absolute-package');
@@ -140,17 +157,17 @@ src/
     // Act
     const result = await tool.execute(
       'call-id',
-      { pattern: '**/*.ts', path: absoluteSearchPath },
+      { patterns: ['**/*.ts'], paths: [absoluteSearchPath] },
       undefined,
       undefined,
       {} as never
     );
 
     // Assert
-    expect(result.details).toEqual({ base: absoluteSearchPath, count: 1, limited: false });
+    expect(result.details).toEqual({ paths: [absoluteSearchPath], count: 1, limited: false });
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: `base=${absoluteSearchPath} count=1
+      text: `paths=${absoluteSearchPath} count=1
 src/
   index.ts`,
     });
@@ -163,7 +180,7 @@ src/
     // Act
     const rendered = renderComponent(
       tool.renderCall?.(
-        { pattern: '*.ts', path: 'src', limit: 20, noIgnore: true, hidden: true },
+        { patterns: ['*.ts'], paths: ['src'], limit: 20, noIgnore: true, hidden: true },
         createTheme(),
         createRenderContext(false)
       )
@@ -183,7 +200,7 @@ src/
       tool.renderResult?.(
         {
           content: [{ type: 'text', text: output }],
-          details: { base: '.', count: 24, limited: false },
+          details: { paths: ['.'], count: 24, limited: false },
         },
         { expanded: false, isPartial: false },
         createTheme(),
@@ -202,14 +219,14 @@ src/
   it('renders expanded results with the full output returned to the model', () => {
     // Arrange
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
-    const output = ['base=. count=2', 'src/', '  index.ts'].join('\n');
+    const output = ['paths=. count=2', 'src/', '  index.ts'].join('\n');
 
     // Act
     const rendered = renderComponent(
       tool.renderResult?.(
         {
           content: [{ type: 'text', text: output }],
-          details: { base: '.', count: 2, limited: false },
+          details: { paths: ['.'], count: 2, limited: false },
         },
         { expanded: true, isPartial: false },
         createTheme(),
@@ -218,7 +235,7 @@ src/
     );
 
     // Assert
-    expect(rendered).toContain('<toolOutput>base=. count=2</toolOutput>');
+    expect(rendered).toContain('<toolOutput>paths=. count=2</toolOutput>');
     expect(rendered).toContain('<toolOutput>src/</toolOutput>');
     expect(rendered).toContain('<toolOutput>  index.ts</toolOutput>');
     expect(rendered).not.toContain('to expand');
@@ -232,8 +249,8 @@ src/
     const zeroResult = renderComponent(
       tool.renderResult?.(
         {
-          content: [{ type: 'text', text: 'base=. count=0' }],
-          details: { base: '.', count: 0, limited: false },
+          content: [{ type: 'text', text: 'paths=. count=0' }],
+          details: { paths: ['.'], count: 0, limited: false },
         },
         { expanded: false, isPartial: false },
         createTheme(),
@@ -253,11 +270,11 @@ src/
     );
 
     // Assert
-    expect(zeroResult).toContain('<toolOutput>base=. count=0</toolOutput>');
+    expect(zeroResult).toContain('<toolOutput>paths=. count=0</toolOutput>');
     expect(failedResult).toContain('<toolOutput>glob failed: rg executable not found</toolOutput>');
   });
 
-  it('fails when the base path is not a directory', async () => {
+  it('fails when the search path is not a directory', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'file.txt'), 'content');
@@ -267,12 +284,12 @@ src/
     await expect(
       tool.execute(
         'call-id',
-        { pattern: '**/*.ts', path: 'file.txt' },
+        { patterns: ['**/*.ts'], paths: ['file.txt'] },
         undefined,
         undefined,
         {} as never
       )
-    ).rejects.toThrow('base path is not a directory');
+    ).rejects.toThrow('search path is not a directory');
   });
 });
 
@@ -289,7 +306,7 @@ function createTheme() {
 
 function createRenderContext(isError: boolean) {
   return {
-    args: { pattern: '**/*.ts' },
+    args: { patterns: ['**/*.ts'] },
     toolCallId: 'call-id',
     invalidate: () => {},
     lastComponent: undefined,

@@ -1,9 +1,12 @@
 import { spawn } from 'node:child_process';
 
+import { formatRipgrepPaths } from '#src/utils/paths.js';
+
 export interface RunRipgrepGrepOptions {
   cwd: string;
-  searchPath: string;
-  regex: string;
+  regexes: string[];
+  paths: string[];
+  globs: string[];
   limit: number;
   limitPerFile?: number;
   maxCharsPerMatch: number;
@@ -150,8 +153,9 @@ function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
       : ['--max-count', String(options.limitPerFile + 1)]),
     ...(options.noIgnore ? ['--no-ignore'] : []),
     ...(options.hidden ? ['--hidden'] : []),
-    options.regex,
-    options.searchPath,
+    ...options.globs.flatMap((glob) => ['-g', glob]),
+    ...options.regexes.flatMap((regex) => ['-e', regex]),
+    ...formatRipgrepPaths(options.paths),
   ];
 }
 

@@ -1,8 +1,11 @@
 import { spawn } from 'node:child_process';
 
+import { formatRipgrepPaths } from '#src/utils/paths.js';
+
 export interface RunRipgrepGlobOptions {
-  basePath: string;
-  pattern: string;
+  cwd: string;
+  patterns: string[];
+  paths: string[];
   limit: number;
   noIgnore: boolean;
   hidden: boolean;
@@ -23,7 +26,7 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
 
     const files: string[] = [];
     const args = buildRipgrepArgs(options);
-    const child = spawn('rg', args, { cwd: options.basePath, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn('rg', args, { cwd: options.cwd, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdoutBuffer = '';
     let stderr = '';
     let limited = false;
@@ -104,10 +107,10 @@ export function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepG
 function buildRipgrepArgs(options: RunRipgrepGlobOptions): string[] {
   return [
     '--files',
-    '-g',
-    options.pattern,
+    ...options.patterns.flatMap((pattern) => ['-g', pattern]),
     ...(options.noIgnore ? ['--no-ignore'] : []),
     ...(options.hidden ? ['--hidden'] : []),
+    ...formatRipgrepPaths(options.paths),
   ];
 }
 

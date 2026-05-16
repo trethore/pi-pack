@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { toDisplayPath } from '#src/utils/paths.js';
 
 interface GrepMatch {
   file: string;
@@ -73,7 +73,7 @@ function formatWithGlobalFooter(text: string, display: GrepDisplay): string {
 }
 
 function normalizeMatches(matches: readonly GrepMatch[]): GrepMatch[] {
-  return matches.map((match) => ({ ...match, file: toPosixPath(match.file) || '.' }));
+  return matches.map((match) => ({ ...match, file: toDisplayPath(match.file) || '.' }));
 }
 
 function countFiles(matches: readonly GrepMatch[]): number {
@@ -117,8 +117,4 @@ function formatFileMatches(
 
 function formatMatch(match: GrepMatch): string {
   return `${match.line}: ${match.text}`;
-}
-
-function toPosixPath(value: string): string {
-  return value.split(path.sep).join('/');
 }

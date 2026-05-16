@@ -112,7 +112,7 @@ describe('grep tool', () => {
     // Act
     const result = await tool.execute(
       'call-id',
-      { regex: 'needle', noIgnore: true, hidden: true },
+      { regexes: ['needle'], noIgnore: true, hidden: true },
       undefined,
       undefined,
       {} as never
@@ -121,8 +121,9 @@ describe('grep tool', () => {
     // Assert
     expect(runner).toHaveBeenCalledWith({
       cwd,
-      searchPath: '.',
-      regex: 'needle',
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: [],
       limit: 42,
       limitPerFile: 7,
       maxCharsPerMatch: 300,
@@ -142,17 +143,25 @@ src/index.ts
     ]);
   });
 
-  it('uses the provided path and explicit limits', async () => {
+  it('uses the provided regexes, paths, globs, and explicit limits', async () => {
     // Arrange
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'src'), { recursive: true });
+    mkdirSync(path.join(cwd, 'test'), { recursive: true });
     const runner = vi.fn(async () => ({ matches: [], limited: true }));
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
 
     // Act
     const result = await tool.execute(
       'call-id',
-      { regex: 'needle', path: 'src', limit: 5, limitPerFile: 2, maxCharsPerMatch: 120 },
+      {
+        regexes: ['needle', 'haystack'],
+        paths: ['src', 'test'],
+        globs: ['*.ts', '!*.d.ts'],
+        limit: 5,
+        limitPerFile: 2,
+        maxCharsPerMatch: 120,
+      },
       undefined,
       undefined,
       {} as never
@@ -161,7 +170,9 @@ src/index.ts
     // Assert
     expect(runner).toHaveBeenCalledWith(
       expect.objectContaining({
-        searchPath: 'src',
+        regexes: ['needle', 'haystack'],
+        paths: ['src', 'test'],
+        globs: ['*.ts', '!*.d.ts'],
         limit: 5,
         limitPerFile: 2,
         maxCharsPerMatch: 120,
@@ -184,14 +195,14 @@ src/index.ts
     // Act
     await tool.execute(
       'call-id',
-      { regex: 'needle', path: 'file.txt' },
+      { regexes: ['needle'], paths: ['file.txt'] },
       undefined,
       undefined,
       {} as never
     );
 
     // Assert
-    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ searchPath: 'file.txt' }));
+    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ paths: ['file.txt'] }));
   });
 
   it('renders active call flags', () => {
@@ -202,8 +213,9 @@ src/index.ts
     const rendered = renderComponent(
       tool.renderCall?.(
         {
-          regex: 'needle',
-          path: 'src',
+          regexes: ['needle'],
+          paths: ['src'],
+          globs: ['*.ts'],
           limit: 20,
           limitPerFile: 2,
           maxCharsPerMatch: 120,
@@ -217,7 +229,7 @@ src/index.ts
 
     // Assert
     expect(rendered).toContain(
-      '<toolOutput> (limit 20, limit/file 2, chars 120, noIgnore, hidden)</toolOutput>'
+      '<toolOutput> (limit 20, limit/file 2, chars 120, globs *.ts, noIgnore, hidden)</toolOutput>'
     );
   });
 
@@ -256,7 +268,7 @@ src/index.ts
     await expect(
       tool.execute(
         'call-id',
-        { regex: 'needle', path: 'missing' },
+        { regexes: ['needle'], paths: ['missing'] },
         undefined,
         undefined,
         {} as never
@@ -278,7 +290,7 @@ function createTheme() {
 
 function createRenderContext(isError: boolean) {
   return {
-    args: { regex: 'needle' },
+    args: { regexes: ['needle'] },
     toolCallId: 'call-id',
     invalidate: () => {},
     lastComponent: undefined,
