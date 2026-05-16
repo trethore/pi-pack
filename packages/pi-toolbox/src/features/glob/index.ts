@@ -2,13 +2,8 @@ import { readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-import type {
-  ExtensionAPI,
-  Theme,
-  ToolDefinition,
-  ToolRenderResultOptions,
-} from '@earendil-works/pi-coding-agent';
-import { getKeybindings, Text } from '@earendil-works/pi-tui';
+import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
+import { Text } from '@earendil-works/pi-tui';
 import { Type } from 'typebox';
 
 import type { GlobToolConfig } from '#src/config/schema.js';
@@ -18,13 +13,13 @@ import {
   normalizeOptionalStringList,
   normalizeRequiredStringList,
 } from '#src/utils/string-list.js';
+import { formatTextToolResult, hasZeroCountDetails } from '#src/utils/tool-results.js';
 import {
   runRipgrepGlob,
   type RipgrepGlobResult,
   type RunRipgrepGlobOptions,
 } from '#src/features/glob/ripgrep.js';
 
-const COLLAPSED_RESULT_LINES = 10;
 const GLOB_TOOL_DEFINITION = readGlobDefinition();
 
 interface GlobParameters {
@@ -75,7 +70,7 @@ export function registerGlobTool(pi: ExtensionAPI, config: { glob: GlobToolConfi
   if (!config.glob.enabled) return;
   pi.registerTool(createGlobToolDefinition(config.glob));
   pi.on('tool_result', (event) => {
-    if (event.toolName !== GLOB_TOOL_DEFINITION.name || !isZeroCountGlobDetails(event.details)) {
+    if (event.toolName !== GLOB_TOOL_DEFINITION.name || !hasZeroCountDetails(event.details)) {
       return;
     }
 
@@ -137,7 +132,7 @@ export function createGlobToolDefinition(
     },
     renderResult(result, options, theme, context) {
       const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGlobRenderedResult(result, options, theme));
+      text.setText(formatTextToolResult(result, options, theme));
       return text;
     },
   };
@@ -222,47 +217,4 @@ function formatGlobFlags(args: GlobParameters | undefined): string {
   if (args?.noIgnore) flags.push('noIgnore');
   if (args?.hidden) flags.push('hidden');
   return flags.join(', ');
-}
-
-function formatGlobRenderedResult(
-  result: { content: Array<{ type: string; text?: string }>; details?: GlobToolDetails },
-  options: ToolRenderResultOptions,
-  theme: Theme
-): string {
-  const output = getTextOutput(result).trim();
-  if (!output) return '';
-
-  const lines = output.split('\n');
-  const maxLines = options.expanded ? lines.length : COLLAPSED_RESULT_LINES;
-  const displayLines = lines.slice(0, maxLines);
-  const remaining = lines.length - maxLines;
-  const color = 'toolOutput';
-  let text = `\n${displayLines.map((line) => theme.fg(color, line)).join('\n')}`;
-
-  if (remaining > 0) {
-    text += theme.fg('muted', `\n... (${remaining} more lines, ${formatExpansionKey()} to expand)`);
-  }
-
-  return text;
-}
-
-function isZeroCountGlobDetails(details: unknown): details is GlobToolDetails {
-  return (
-    typeof details === 'object' &&
-    details !== null &&
-    'count' in details &&
-    (details as { count: unknown }).count === 0
-  );
-}
-
-function getTextOutput(result: { content: Array<{ type: string; text?: string }> }): string {
-  return result.content
-    .filter((item) => item.type === 'text' && item.text !== undefined)
-    .map((item) => item.text)
-    .join('\n');
-}
-
-function formatExpansionKey(): string {
-  const keys = getKeybindings().getKeys('app.tools.expand');
-  return keys.length > 0 ? keys.join('/') : 'app.tools.expand';
 }

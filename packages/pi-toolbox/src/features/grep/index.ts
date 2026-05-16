@@ -2,13 +2,8 @@ import { readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-import type {
-  ExtensionAPI,
-  Theme,
-  ToolDefinition,
-  ToolRenderResultOptions,
-} from '@earendil-works/pi-coding-agent';
-import { getKeybindings, Text } from '@earendil-works/pi-tui';
+import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
+import { Text } from '@earendil-works/pi-tui';
 import { Type } from 'typebox';
 
 import type { GrepToolConfig } from '#src/config/schema.js';
@@ -19,13 +14,13 @@ import {
   normalizeOptionalStringList,
   normalizeRequiredStringList,
 } from '#src/utils/string-list.js';
+import { formatTextToolResult, hasZeroCountDetails } from '#src/utils/tool-results.js';
 import {
   runRipgrepGrep,
   type RipgrepGrepResult,
   type RunRipgrepGrepOptions,
 } from '#src/features/grep/ripgrep.js';
 
-const COLLAPSED_RESULT_LINES = 10;
 const GREP_TOOL_DEFINITION = readGrepDefinition();
 
 interface GrepParameters {
@@ -86,7 +81,7 @@ export function registerGrepTool(pi: ExtensionAPI, config: { grep: GrepToolConfi
   if (!config.grep.enabled) return;
   pi.registerTool(createGrepToolDefinition(config.grep));
   pi.on('tool_result', (event) => {
-    if (event.toolName !== GREP_TOOL_DEFINITION.name || !isZeroCountGrepDetails(event.details)) {
+    if (event.toolName !== GREP_TOOL_DEFINITION.name || !hasZeroCountDetails(event.details)) {
       return;
     }
 
@@ -154,7 +149,7 @@ export function createGrepToolDefinition(
     },
     renderResult(result, options, theme, context) {
       const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGrepRenderedResult(result, options, theme));
+      text.setText(formatTextToolResult(result, options, theme));
       return text;
     },
   };
@@ -260,47 +255,4 @@ function formatGrepFlags(args: GrepParameters | undefined): string {
 
 function formatOptionalNumberFlag(label: string, value: number | undefined): string | undefined {
   return value === undefined ? undefined : `${label} ${value}`;
-}
-
-function formatGrepRenderedResult(
-  result: { content: Array<{ type: string; text?: string }>; details?: GrepToolDetails },
-  options: ToolRenderResultOptions,
-  theme: Theme
-): string {
-  const output = getTextOutput(result).trim();
-  if (!output) return '';
-
-  const lines = output.split('\n');
-  const maxLines = options.expanded ? lines.length : COLLAPSED_RESULT_LINES;
-  const displayLines = lines.slice(0, maxLines);
-  const remaining = lines.length - maxLines;
-  const color = 'toolOutput';
-  let text = `\n${displayLines.map((line) => theme.fg(color, line)).join('\n')}`;
-
-  if (remaining > 0) {
-    text += theme.fg('muted', `\n... (${remaining} more lines, ${formatExpansionKey()} to expand)`);
-  }
-
-  return text;
-}
-
-function isZeroCountGrepDetails(details: unknown): details is GrepToolDetails {
-  return (
-    typeof details === 'object' &&
-    details !== null &&
-    'count' in details &&
-    (details as { count: unknown }).count === 0
-  );
-}
-
-function getTextOutput(result: { content: Array<{ type: string; text?: string }> }): string {
-  return result.content
-    .filter((item) => item.type === 'text' && item.text !== undefined)
-    .map((item) => item.text)
-    .join('\n');
-}
-
-function formatExpansionKey(): string {
-  const keys = getKeybindings().getKeys('app.tools.expand');
-  return keys.length > 0 ? keys.join('/') : 'app.tools.expand';
 }

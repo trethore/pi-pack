@@ -22,6 +22,11 @@ describe('path utilities', () => {
     expect(toPosixPath('src/index.ts')).toBe('src/index.ts');
   });
 
+  it('normalizes Windows paths to posix display paths on every platform', () => {
+    expect(toDisplayPath(String.raw`.\src\index.ts`)).toBe('src/index.ts');
+    expect(toPosixPath(String.raw`C:\repo\src\index.ts`)).toBe('C:/repo/src/index.ts');
+  });
+
   it('keeps current-directory paths relative', () => {
     const formatPath = createCompactPathFormatter(['.']);
 
@@ -32,6 +37,12 @@ describe('path utilities', () => {
     const formatPath = createCompactPathFormatter(['/tmp/test/git-repo']);
 
     expect(formatPath('/tmp/test/git-repo/src/visible.txt')).toBe('src/visible.txt');
+  });
+
+  it('formats Windows paths relative to a single absolute search root', () => {
+    const formatPath = createCompactPathFormatter([String.raw`C:\repo\project`]);
+
+    expect(formatPath(String.raw`C:\repo\project\src\visible.txt`)).toBe('src/visible.txt');
   });
 
   it('uses the shortest unique suffix for conflicting root basenames', () => {
