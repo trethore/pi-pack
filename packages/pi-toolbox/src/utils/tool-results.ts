@@ -1,5 +1,5 @@
 import type { Theme, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
-import { getKeybindings } from '@earendil-works/pi-tui';
+import { formatKeybindingText } from '@trethore/pi-shared/ui/keybindings.js';
 
 const DEFAULT_COLLAPSED_RESULT_LINES = 10;
 
@@ -23,7 +23,10 @@ export function formatTextToolResult(
   let text = `\n${displayLines.map((line) => theme.fg('toolOutput', line)).join('\n')}`;
 
   if (remaining > 0) {
-    text += theme.fg('muted', `\n... (${remaining} more lines, ${formatExpansionKey()} to expand)`);
+    text += theme.fg(
+      'muted',
+      `\n... (${remaining} more lines, ${formatKeybindingText('app.tools.expand')} to expand)`
+    );
   }
 
   return text;
@@ -43,9 +46,4 @@ function getTextOutput(result: TextToolResult): string {
     .filter((item) => item.type === 'text' && item.text !== undefined)
     .map((item) => item.text)
     .join('\n');
-}
-
-function formatExpansionKey(): string {
-  const keys = getKeybindings().getKeys('app.tools.expand');
-  return keys.length > 0 ? keys.join('/') : 'app.tools.expand';
 }

@@ -4,6 +4,7 @@ import {
   type ExtensionAPI,
   type ExtensionCommandContext,
 } from '@earendil-works/pi-coding-agent';
+import { getErrorMessage } from '@trethore/pi-shared/error.js';
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
@@ -50,7 +51,7 @@ export async function handleUpdatePiCommand(
   try {
     latestVersion = await services.getLatestVersion();
   } catch (error) {
-    ctx.ui.notify(`Unable to check for pi updates: ${formatError(error)}`, 'error');
+    ctx.ui.notify(`Unable to check for pi updates: ${getErrorMessage(error)}`, 'error');
     return;
   }
 
@@ -144,8 +145,4 @@ function parseVersion(version: string): number[] {
     .split(/[+-]/, 1)[0]
     .split('.')
     .map((part) => Number.parseInt(part, 10));
-}
-
-function formatError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

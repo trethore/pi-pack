@@ -1,5 +1,6 @@
 import type { ExtensionAPI, Theme, ToolInfo } from '@earendil-works/pi-coding-agent';
-import { Box, getKeybindings, Text } from '@earendil-works/pi-tui';
+import { Box, Text } from '@earendil-works/pi-tui';
+import { formatKeybindingText } from '@trethore/pi-shared/ui/keybindings.js';
 import type { TArray, TEnum, TLiteral, TObject, TSchema, TSchemaOptions, TUnion } from 'typebox';
 
 const SYSTEM_PROMPT_MESSAGE_TYPE = 'pi-handy-system-prompt';
@@ -150,12 +151,6 @@ function formatCollapsibleMessage(title: string, content: string, expanded: bool
 
 function formatMessageHeader(title: string, detail: string, theme: Theme) {
   return `${theme.fg('accent', theme.bold(title))}${theme.fg('dim', ` (${detail})`)}`;
-}
-
-function formatKeybindingText(keybinding: 'app.tools.expand') {
-  const keys = getKeybindings().getKeys(keybinding);
-  if (keys.length === 0) return keybinding;
-  return keys.join('/');
 }
 
 function formatMessageBox(text: string, theme: Theme) {

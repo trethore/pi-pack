@@ -8,6 +8,8 @@ import type {
   ExtensionAPI,
   ExtensionCommandContext,
 } from '@earendil-works/pi-coding-agent';
+import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
 
 const CODEX_PROVIDER = 'openai-codex';
 const DEFAULT_PROFILE_PATH = path.join(getAgentDir(), 'pi-codexify-codex-accounts.json');
@@ -328,14 +330,6 @@ async function saveProfiles(
   await fs.chmod(profilePath, 0o600);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function isNotFoundError(error: unknown): boolean {
   return isRecord(error) && error.code === 'ENOENT';
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
