@@ -30,6 +30,21 @@ describe('glob tool', () => {
     expect(pi.tools.map((tool) => tool.name)).toEqual(['glob']);
   });
 
+  it('marks zero-result glob calls as errors for shell rendering', () => {
+    // Arrange
+    const pi = createPi();
+    registerGlobTool(pi.extensionApi, { glob: { enabled: true, defaultLimit: 100 } });
+
+    // Act
+    const result = pi.handlers.tool_result?.({
+      toolName: 'glob',
+      details: { base: '.', count: 0, limited: false },
+    });
+
+    // Assert
+    expect(result).toEqual({ isError: true });
+  });
+
   it('injects the configured default limit into the tool schema description', () => {
     // Arrange and act
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 42 });
@@ -162,7 +177,7 @@ src/
     expect(rendered).not.toContain('to expand');
   });
 
-  it('renders zero-result and failed results with the error style', () => {
+  it('renders zero-result and failed result text with the output style', () => {
     // Arrange
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
 
@@ -191,8 +206,8 @@ src/
     );
 
     // Assert
-    expect(zeroResult).toContain('<error>base=. count=0</error>');
-    expect(failedResult).toContain('<error>glob failed: rg executable not found</error>');
+    expect(zeroResult).toContain('<toolOutput>base=. count=0</toolOutput>');
+    expect(failedResult).toContain('<toolOutput>glob failed: rg executable not found</toolOutput>');
   });
 
   it('fails when the base path is not a directory', async () => {
@@ -245,15 +260,22 @@ function createRenderContext(isError: boolean) {
 function createPi() {
   const state = {
     tools: [] as { name: string }[],
+    handlers: {} as Record<string, (event: unknown) => unknown>,
   };
 
   return {
     get tools() {
       return state.tools;
     },
+    get handlers() {
+      return state.handlers;
+    },
     extensionApi: {
       registerTool(tool: { name: string }) {
         state.tools.push(tool);
+      },
+      on(event: string, handler: (event: unknown) => unknown) {
+        state.handlers[event] = handler;
       },
     } as unknown as Parameters<typeof registerGlobTool>[0],
   };

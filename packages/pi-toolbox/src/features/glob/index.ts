@@ -69,6 +69,13 @@ export interface GlobToolOptions {
 export function registerGlobTool(pi: ExtensionAPI, config: { glob: GlobToolConfig }): void {
   if (!config.glob.enabled) return;
   pi.registerTool(createGlobToolDefinition(config.glob));
+  pi.on('tool_result', (event) => {
+    if (event.toolName !== GLOB_TOOL_DEFINITION.name || !isZeroCountGlobDetails(event.details)) {
+      return;
+    }
+
+    return { isError: true };
+  });
 }
 
 export function createGlobToolDefinition(
@@ -127,7 +134,7 @@ export function createGlobToolDefinition(
     },
     renderResult(result, options, theme, context) {
       const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGlobRenderedResult(result, options, theme, context.isError));
+      text.setText(formatGlobRenderedResult(result, options, theme));
       return text;
     },
   };
@@ -216,8 +223,7 @@ function formatGlobFlags(args: GlobParameters | undefined): string {
 function formatGlobRenderedResult(
   result: { content: Array<{ type: string; text?: string }>; details?: GlobToolDetails },
   options: ToolRenderResultOptions,
-  theme: Theme,
-  isError: boolean
+  theme: Theme
 ): string {
   const output = getTextOutput(result).trim();
   if (!output) return '';
@@ -226,7 +232,7 @@ function formatGlobRenderedResult(
   const maxLines = options.expanded ? lines.length : COLLAPSED_RESULT_LINES;
   const displayLines = lines.slice(0, maxLines);
   const remaining = lines.length - maxLines;
-  const color = isError || result.details?.count === 0 ? 'error' : 'toolOutput';
+  const color = 'toolOutput';
   let text = `\n${displayLines.map((line) => theme.fg(color, line)).join('\n')}`;
 
   if (remaining > 0) {
@@ -234,6 +240,15 @@ function formatGlobRenderedResult(
   }
 
   return text;
+}
+
+function isZeroCountGlobDetails(details: unknown): details is GlobToolDetails {
+  return (
+    typeof details === 'object' &&
+    details !== null &&
+    'count' in details &&
+    (details as { count: unknown }).count === 0
+  );
 }
 
 function getTextOutput(result: { content: Array<{ type: string; text?: string }> }): string {
