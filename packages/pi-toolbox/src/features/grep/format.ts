@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-export interface GrepMatch {
+interface GrepMatch {
   file: string;
   line: number;
   text: string;

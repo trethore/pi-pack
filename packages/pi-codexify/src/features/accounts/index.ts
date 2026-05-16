@@ -100,7 +100,7 @@ export function parseCodexAccountAction(value: string | undefined): CodexAccount
   return codexAccountActions.find((action) => action === value);
 }
 
-export function getCodexAccountUsage(): string {
+function getCodexAccountUsage(): string {
   return [
     'Usage:',
     '/codexify account list',
@@ -194,9 +194,7 @@ export async function buildCodexAccountListMessage(
   ].join('\n');
 }
 
-export async function buildCurrentCodexAccountMessage(
-  options: CodexAccountOptions = {}
-): Promise<string> {
+async function buildCurrentCodexAccountMessage(options: CodexAccountOptions = {}): Promise<string> {
   const profiles = await loadProfiles(options.profilePath);
   if (!profiles.active) return 'No active Codex account profile.';
 

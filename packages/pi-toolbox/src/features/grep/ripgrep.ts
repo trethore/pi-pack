@@ -12,7 +12,7 @@ export interface RunRipgrepGrepOptions {
   signal?: AbortSignal;
 }
 
-export interface RipgrepGrepMatch {
+interface RipgrepGrepMatch {
   file: string;
   line: number;
   text: string;

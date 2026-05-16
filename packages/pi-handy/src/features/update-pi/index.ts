@@ -69,7 +69,7 @@ export async function handleUpdatePiCommand(
   ctx.shutdown();
 }
 
-export function getInstalledPiVersion(): string | undefined {
+function getInstalledPiVersion(): string | undefined {
   return isVersion(VERSION) ? VERSION : undefined;
 }
 
