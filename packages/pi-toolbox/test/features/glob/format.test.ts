@@ -31,6 +31,32 @@ test/
     );
   });
 
+  it('formats files relative to a single absolute search root', () => {
+    expect(
+      formatGlobResult({
+        paths: ['/tmp/test/git-repo'],
+        files: ['/tmp/test/git-repo/ignored/ignored.txt', '/tmp/test/git-repo/src/visible.txt'],
+      })
+    ).toBe(`paths=/tmp/test/git-repo count=2
+ignored/
+  ignored.txt
+src/
+  visible.txt`);
+  });
+
+  it('uses shortest unique root suffixes for conflicting search roots', () => {
+    expect(
+      formatGlobResult({
+        paths: ['/home/u/project/src', '/tmp/project/src'],
+        files: ['/home/u/project/src/a.ts', '/tmp/project/src/a.ts'],
+      })
+    ).toBe(`paths=/home/u/project/src,/tmp/project/src count=2
+tmp/project/src/
+  a.ts
+u/project/src/
+  a.ts`);
+  });
+
   it('adds a footer when more files are available', () => {
     expect(formatGlobResult({ paths: ['.'], files: ['src/index.ts'], limited: true })).toBe(
       `paths=. count=1

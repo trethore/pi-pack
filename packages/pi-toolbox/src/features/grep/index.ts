@@ -128,6 +128,7 @@ export function createGrepToolDefinition(
       const display = createGrepDisplay({
         matches: result.matches,
         limit: preparedParams.limit,
+        paths: preparedParams.paths,
         limitPerFile: preparedParams.limitPerFile,
         limited: result.limited,
       });

@@ -138,10 +138,9 @@ src/
     expect(result.content[0]).toEqual({
       type: 'text',
       text: `paths=packages/pi-toolbox,scripts count=1
-packages/
-  pi-toolbox/
-    src/
-      index.ts
+pi-toolbox/
+  src/
+    index.ts
 [more files available]`,
     });
   });

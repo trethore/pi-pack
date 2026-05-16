@@ -1,4 +1,4 @@
-import { toDisplayPath } from '#src/utils/paths.js';
+import { createCompactPathFormatter } from '#src/utils/paths.js';
 
 interface GrepMatch {
   file: string;
@@ -9,6 +9,7 @@ interface GrepMatch {
 export interface GrepFormatOptions {
   matches: readonly GrepMatch[];
   limit: number;
+  paths?: readonly string[];
   limitPerFile?: number;
   limited?: boolean;
 }
@@ -37,7 +38,7 @@ export function formatGrepDisplay(display: GrepDisplay): string {
 }
 
 export function createGrepDisplay(options: GrepFormatOptions): GrepDisplay {
-  const matches = normalizeMatches(options.matches);
+  const matches = normalizeMatches(options.matches, options.paths ?? ['.']);
   const displayedMatches: GrepMatch[] = [];
   const displayedPerFile = new Map<string, number>();
   const perFileLimitedFiles = new Set<string>();
@@ -72,8 +73,9 @@ function formatWithGlobalFooter(text: string, display: GrepDisplay): string {
   return `${text}\n\n[more matches available]`;
 }
 
-function normalizeMatches(matches: readonly GrepMatch[]): GrepMatch[] {
-  return matches.map((match) => ({ ...match, file: toDisplayPath(match.file) || '.' }));
+function normalizeMatches(matches: readonly GrepMatch[], paths: readonly string[]): GrepMatch[] {
+  const formatPath = createCompactPathFormatter(paths);
+  return matches.map((match) => ({ ...match, file: formatPath(match.file) || '.' }));
 }
 
 function countFiles(matches: readonly GrepMatch[]): number {

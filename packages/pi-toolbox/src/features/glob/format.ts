@@ -1,4 +1,4 @@
-import { toDisplayPath, toPosixPath } from '#src/utils/paths.js';
+import { createCompactPathPartsFormatter, toPosixPath } from '#src/utils/paths.js';
 
 export interface GlobFormatOptions {
   paths: readonly string[];
@@ -13,7 +13,7 @@ interface TreeNode {
 
 export function formatGlobResult(options: GlobFormatOptions): string {
   const root = createNode();
-  const files = normalizeFiles(options.files);
+  const files = normalizeFiles(options.files, options.paths);
 
   for (const file of files) {
     addPath(root, file);
@@ -28,13 +28,27 @@ function createNode(): TreeNode {
   return { children: new Map(), isFile: false };
 }
 
-function normalizeFiles(files: readonly string[]): string[] {
-  const uniqueFiles = new Set(files.map((file) => toDisplayPath(file)).filter(Boolean));
-  return sortedItems(uniqueFiles, (left, right) => left.localeCompare(right));
+function normalizeFiles(files: readonly string[], paths: readonly string[]): string[][] {
+  const formatPath = createCompactPathPartsFormatter(paths);
+  const uniqueFiles = new Map<string, string[]>();
+
+  for (const file of files) {
+    const pathParts = formatPath(file);
+    const parts = [
+      ...(pathParts.rootLabel === undefined || pathParts.rootLabel === '.'
+        ? []
+        : [pathParts.rootLabel]),
+      ...pathParts.relativePath.split('/').filter(Boolean),
+    ];
+    if (parts.length > 0) uniqueFiles.set(pathParts.displayPath, parts);
+  }
+
+  return sortedItems(uniqueFiles.entries(), ([left], [right]) => left.localeCompare(right)).map(
+    ([, parts]) => parts
+  );
 }
 
-function addPath(root: TreeNode, filePath: string): void {
-  const parts = filePath.split('/').filter(Boolean);
+function addPath(root: TreeNode, parts: readonly string[]): void {
   let node = root;
 
   for (const part of parts) {

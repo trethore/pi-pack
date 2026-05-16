@@ -29,6 +29,42 @@ src/index.ts
     expect(formatGrepResult({ matches: [], limit: 100 })).toBe('matches=0 files=0');
   });
 
+  it('formats files relative to a single absolute search root', () => {
+    // Arrange and act
+    const result = formatGrepResult({
+      paths: ['/tmp/test/git-repo'],
+      matches: [{ file: '/tmp/test/git-repo/src/visible.txt', line: 1, text: 'visible TODO' }],
+      limit: 100,
+    });
+
+    // Assert
+    expect(result).toBe(`matches=1 files=1
+
+src/visible.txt
+1: visible TODO`);
+  });
+
+  it('uses shortest unique root suffixes for conflicting search roots', () => {
+    // Arrange and act
+    const result = formatGrepResult({
+      paths: ['/home/u/project/src', '/tmp/project/src'],
+      matches: [
+        { file: '/home/u/project/src/a.ts', line: 1, text: 'home match' },
+        { file: '/tmp/project/src/a.ts', line: 1, text: 'tmp match' },
+      ],
+      limit: 100,
+    });
+
+    // Assert
+    expect(result).toBe(`matches=2 files=2
+
+u/project/src/a.ts
+1: home match
+
+tmp/project/src/a.ts
+1: tmp match`);
+  });
+
   it('adds a footer when more matches are available', () => {
     expect(formatGrepResult({ matches: [], limit: 100, limited: true })).toBe(
       'matches=0 files=0\n\n[more matches available]'
