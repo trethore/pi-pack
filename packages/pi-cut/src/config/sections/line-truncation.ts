@@ -1,6 +1,6 @@
-import { mergeField } from '#src/config/merge.js';
+import { mergeEnabledField, mergeField } from '#src/config/merge.js';
 import type { LineTruncationConfig } from '#src/config/schema.js';
-import { booleanSchema, positiveIntegerSchema } from '#src/config/validation.js';
+import { positiveIntegerSchema } from '#src/config/validation.js';
 
 export function mergeLineTruncationFields(
   target: Partial<LineTruncationConfig>,
@@ -9,17 +9,7 @@ export function mergeLineTruncationFields(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(
-    source,
-    'enabled',
-    `${configName}.enabled`,
-    booleanSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.enabled = value;
-    }
-  );
+  mergeEnabledField(target, source, `${configName}.enabled`, configPath, errors);
   mergeField(
     source,
     'maxChars',

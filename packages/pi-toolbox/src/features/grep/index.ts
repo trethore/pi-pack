@@ -1,9 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import path from 'node:path';
-
 import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { Text } from '@earendil-works/pi-tui';
 import { Type } from 'typebox';
 
 import type { GrepToolConfig } from '#src/config/schema.js';
@@ -14,7 +9,15 @@ import {
   normalizeOptionalStringList,
   normalizeRequiredStringList,
 } from '#src/utils/string-list.js';
-import { formatTextToolResult, hasZeroCountDetails } from '#src/utils/tool-results.js';
+import {
+  assertSearchPaths,
+  cloneJsonSchema,
+  formatToolCall,
+  readJsonDefinition,
+  registerZeroCountToolResultError,
+  renderTextCall,
+  renderTextResult,
+} from '#src/utils/tool-definition.js';
 import {
   runRipgrepGrep,
   type RipgrepGrepResult,
@@ -80,13 +83,7 @@ export interface GrepToolOptions {
 export function registerGrepTool(pi: ExtensionAPI, config: { grep: GrepToolConfig }): void {
   if (!config.grep.enabled) return;
   pi.registerTool(createGrepToolDefinition(config.grep));
-  pi.on('tool_result', (event) => {
-    if (event.toolName !== GREP_TOOL_DEFINITION.name || !hasZeroCountDetails(event.details)) {
-      return;
-    }
-
-    return { isError: true };
-  });
+  registerZeroCountToolResultError(pi, GREP_TOOL_DEFINITION.name);
 }
 
 export function createGrepToolDefinition(
@@ -106,7 +103,7 @@ export function createGrepToolDefinition(
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareGrepParameters(params, config);
-      await assertPathsExist(cwd, preparedParams.paths);
+      await assertSearchPaths(cwd, preparedParams.paths, { toolName: 'grep' });
 
       const result = await runner({
         cwd,
@@ -143,22 +140,16 @@ export function createGrepToolDefinition(
       };
     },
     renderCall(args, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGrepCall(args, theme));
-      return text;
+      return renderTextCall(args, theme, context, formatGrepCall);
     },
     renderResult(result, options, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatTextToolResult(result, options, theme));
-      return text;
+      return renderTextResult(result, options, theme, context);
     },
   };
 }
 
 function readGrepDefinition(): GrepDefinition {
-  return JSON.parse(
-    readFileSync(new URL('grep-definition.json', import.meta.url), 'utf8')
-  ) as GrepDefinition;
+  return readJsonDefinition(new URL('grep-definition.json', import.meta.url));
 }
 
 function createGrepParametersSchema(config: GrepToolConfig) {
@@ -181,7 +172,7 @@ function createGrepParametersSchema(config: GrepToolConfig) {
 }
 
 function cloneParametersSchema(parameters: GrepParametersJsonSchema): GrepParametersJsonSchema {
-  return structuredClone(parameters);
+  return cloneJsonSchema(parameters);
 }
 
 function formatDefaultLimitPerFileValue(defaultLimitPerFile: number | undefined): string {
@@ -207,37 +198,16 @@ function prepareGrepParameters(
   };
 }
 
-function resolveSearchPath(cwd: string, searchPath: string): string {
-  return path.resolve(cwd, searchPath);
-}
-
-async function assertPathsExist(cwd: string, searchPaths: readonly string[]): Promise<void> {
-  await Promise.all(
-    searchPaths.map((searchPath) => assertPathExists(resolveSearchPath(cwd, searchPath)))
-  );
-}
-
-async function assertPathExists(searchPath: string): Promise<void> {
-  try {
-    await stat(searchPath);
-  } catch (error) {
-    throw new Error(`grep failed: search path does not exist: ${searchPath}`, { cause: error });
-  }
-}
-
 function formatGrepCall(args: GrepParameters | undefined, theme: Theme): string {
   const regexes = formatStringList(args?.regexes, '...');
   const searchPaths = formatStringList(args?.paths, '.');
   const flags = formatGrepFlags(args);
-  const suffix = flags ? theme.fg('toolOutput', ` (${flags})`) : '';
-
-  return [
-    theme.fg('toolTitle', theme.bold('grep')),
-    ' ',
-    theme.fg('accent', regexes),
-    theme.fg('toolOutput', ` in ${searchPaths}`),
-    suffix,
-  ].join('');
+  return formatToolCall(theme, {
+    toolName: 'grep',
+    query: regexes,
+    paths: searchPaths,
+    flags,
+  });
 }
 
 function formatGrepFlags(args: GrepParameters | undefined): string {

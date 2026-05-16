@@ -31,8 +31,11 @@ export function defineConfigSchema<T>(
 export const booleanSchema = defineConfigSchema(z.boolean(), 'expected boolean');
 
 export function createConfigMerger(extensionName: string) {
+  const mergeField = makeMergeField(extensionName);
+
   return {
-    mergeField: makeMergeField(extensionName),
+    mergeField,
+    mergeEnabledField: makeMergeEnabledField(mergeField),
     mergeSection: makeMergeSection(extensionName),
   };
 }
@@ -63,6 +66,20 @@ function makeMergeField(extensionName: string) {
     errors.push(
       `${extensionName} config ignored invalid ${configName} value in ${configPath}; ${schema.expected}; keeping default.`
     );
+  };
+}
+
+function makeMergeEnabledField(mergeField: ReturnType<typeof makeMergeField>) {
+  return function mergeEnabledField(
+    target: { enabled?: boolean },
+    source: Record<string, unknown>,
+    configName: string,
+    configPath: string,
+    errors: string[]
+  ) {
+    mergeField(source, 'enabled', configName, booleanSchema, configPath, errors, (value) => {
+      target.enabled = value;
+    });
   };
 }
 

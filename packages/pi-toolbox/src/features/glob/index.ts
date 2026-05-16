@@ -1,9 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import path from 'node:path';
-
 import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { Text } from '@earendil-works/pi-tui';
 import { Type } from 'typebox';
 
 import type { GlobToolConfig } from '#src/config/schema.js';
@@ -13,7 +8,15 @@ import {
   normalizeOptionalStringList,
   normalizeRequiredStringList,
 } from '#src/utils/string-list.js';
-import { formatTextToolResult, hasZeroCountDetails } from '#src/utils/tool-results.js';
+import {
+  assertSearchPaths,
+  cloneJsonSchema,
+  formatToolCall,
+  readJsonDefinition,
+  registerZeroCountToolResultError,
+  renderTextCall,
+  renderTextResult,
+} from '#src/utils/tool-definition.js';
 import {
   runRipgrepGlob,
   type RipgrepGlobResult,
@@ -69,13 +72,7 @@ export interface GlobToolOptions {
 export function registerGlobTool(pi: ExtensionAPI, config: { glob: GlobToolConfig }): void {
   if (!config.glob.enabled) return;
   pi.registerTool(createGlobToolDefinition(config.glob));
-  pi.on('tool_result', (event) => {
-    if (event.toolName !== GLOB_TOOL_DEFINITION.name || !hasZeroCountDetails(event.details)) {
-      return;
-    }
-
-    return { isError: true };
-  });
+  registerZeroCountToolResultError(pi, GLOB_TOOL_DEFINITION.name);
 }
 
 export function createGlobToolDefinition(
@@ -95,7 +92,10 @@ export function createGlobToolDefinition(
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareGlobParameters(params, config);
-      await assertDirectories(cwd, preparedParams.paths);
+      await assertSearchPaths(cwd, preparedParams.paths, {
+        toolName: 'glob',
+        requireDirectory: true,
+      });
 
       const result = await runner({
         cwd,
@@ -126,22 +126,16 @@ export function createGlobToolDefinition(
       };
     },
     renderCall(args, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGlobCall(args, theme));
-      return text;
+      return renderTextCall(args, theme, context, formatGlobCall);
     },
     renderResult(result, options, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatTextToolResult(result, options, theme));
-      return text;
+      return renderTextResult(result, options, theme, context);
     },
   };
 }
 
 function readGlobDefinition(): GlobDefinition {
-  return JSON.parse(
-    readFileSync(new URL('glob-definition.json', import.meta.url), 'utf8')
-  ) as GlobDefinition;
+  return readJsonDefinition(new URL('glob-definition.json', import.meta.url));
 }
 
 function createGlobParametersSchema(defaultLimit: number) {
@@ -154,7 +148,7 @@ function createGlobParametersSchema(defaultLimit: number) {
 }
 
 function cloneParametersSchema(parameters: GlobParametersJsonSchema): GlobParametersJsonSchema {
-  return structuredClone(parameters);
+  return cloneJsonSchema(parameters);
 }
 
 function prepareGlobParameters(
@@ -173,42 +167,16 @@ function prepareGlobParameters(
   };
 }
 
-function resolveSearchPath(cwd: string, searchPath: string): string {
-  return path.resolve(cwd, searchPath);
-}
-
-async function assertDirectories(cwd: string, searchPaths: readonly string[]): Promise<void> {
-  await Promise.all(
-    searchPaths.map((searchPath) => assertDirectory(resolveSearchPath(cwd, searchPath)))
-  );
-}
-
-async function assertDirectory(searchPath: string): Promise<void> {
-  let stats;
-  try {
-    stats = await stat(searchPath);
-  } catch (error) {
-    throw new Error(`glob failed: search path does not exist: ${searchPath}`, { cause: error });
-  }
-
-  if (!stats.isDirectory()) {
-    throw new Error(`glob failed: search path is not a directory: ${searchPath}`);
-  }
-}
-
 function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string {
   const patterns = formatStringList(args?.patterns, '...');
   const searchPaths = formatStringList(args?.paths, '.');
   const flags = formatGlobFlags(args);
-  const suffix = flags ? theme.fg('toolOutput', ` (${flags})`) : '';
-
-  return [
-    theme.fg('toolTitle', theme.bold('glob')),
-    ' ',
-    theme.fg('accent', patterns),
-    theme.fg('toolOutput', ` in ${searchPaths}`),
-    suffix,
-  ].join('');
+  return formatToolCall(theme, {
+    toolName: 'glob',
+    query: patterns,
+    paths: searchPaths,
+    flags,
+  });
 }
 
 function formatGlobFlags(args: GlobParameters | undefined): string {

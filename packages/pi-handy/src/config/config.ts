@@ -1,9 +1,8 @@
-import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
+import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
 import { getConfigPaths } from '#src/config/locations.js';
 import {
   defaultConfig,
-  enabledSchema,
   type LoadedConfig,
   type PartialPiHandyConfig,
   type PiHandyConfig,
@@ -18,22 +17,16 @@ const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = [
   'showSysprompt',
   'updatePi',
 ];
-const { mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
+const { mergeEnabledField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string): LoadedConfig {
-  const errors: string[] = [];
-  const config = cloneDefaultConfig();
-
-  for (const configPath of getConfigPaths(cwd)) {
-    const parsedConfig = readJsoncConfigFile<PartialPiHandyConfig>(
-      configPath,
-      EXTENSION_NAME,
-      errors
-    );
-    if (parsedConfig) mergeConfig(config, parsedConfig, configPath, errors);
-  }
-
-  return { config, errors };
+  return loadJsoncExtensionConfig({
+    cwd,
+    extensionName: EXTENSION_NAME,
+    getConfigPaths,
+    createDefaultConfig: cloneDefaultConfig,
+    mergeConfig,
+  });
 }
 
 function cloneDefaultConfig(): PiHandyConfig {
@@ -52,25 +45,11 @@ function mergeConfig(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(source, 'enabled', 'enabled', enabledSchema, configPath, errors, (value) => {
-    target.enabled = value;
-  });
+  mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   for (const key of FEATURE_CONFIG_KEYS) {
     mergeSection(source, key, configPath, errors, (section, sectionName) => {
-      mergeFeatureConfig(target[key], section, sectionName, configPath, errors);
+      mergeEnabledField(target[key], section, `${sectionName}.enabled`, configPath, errors);
     });
   }
-}
-
-function mergeFeatureConfig(
-  target: { enabled: boolean },
-  source: Record<string, unknown>,
-  label: string,
-  configPath: string,
-  errors: string[]
-) {
-  mergeField(source, 'enabled', `${label}.enabled`, enabledSchema, configPath, errors, (value) => {
-    target.enabled = value;
-  });
 }

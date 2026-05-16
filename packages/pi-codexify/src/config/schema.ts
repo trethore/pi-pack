@@ -1,7 +1,5 @@
 import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
 
-export { booleanSchema as enabledSchema } from '@trethore/pi-shared/config/schema.js';
-
 export type CodexVerbosity = 'low' | 'medium' | 'high';
 export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed';
 

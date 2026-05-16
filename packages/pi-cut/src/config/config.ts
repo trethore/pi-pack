@@ -1,6 +1,6 @@
-import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
+import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { getConfigPaths } from '#src/config/locations.js';
-import { mergeField, mergeSection } from '#src/config/merge.js';
+import { mergeEnabledField, mergeSection } from '#src/config/merge.js';
 import {
   defaultConfig,
   type LoadedConfig,
@@ -11,24 +11,16 @@ import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
 import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanup.js';
 import { mergeToolOverrides } from '#src/config/tool-overrides.js';
-import { booleanSchema } from '#src/config/validation.js';
-
 const EXTENSION_NAME = 'pi-cut';
 
 export function loadConfig(cwd: string): LoadedConfig {
-  const errors: string[] = [];
-  const config = cloneDefaultConfig();
-
-  for (const configPath of getConfigPaths(cwd)) {
-    const parsedConfig = readJsoncConfigFile<PartialPiCutConfig>(
-      configPath,
-      EXTENSION_NAME,
-      errors
-    );
-    if (parsedConfig) mergeConfig(config, parsedConfig, configPath, errors);
-  }
-
-  return { config, errors };
+  return loadJsoncExtensionConfig({
+    cwd,
+    extensionName: EXTENSION_NAME,
+    getConfigPaths,
+    createDefaultConfig: cloneDefaultConfig,
+    mergeConfig,
+  });
 }
 
 function cloneDefaultConfig(): PiCutConfig {
@@ -47,9 +39,7 @@ function mergeConfig(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(source, 'enabled', 'enabled', booleanSchema, configPath, errors, (value) => {
-    target.enabled = value;
-  });
+  mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   mergeSection(source, 'terminalCleanup', configPath, errors, (section, sectionName) => {
     mergeTerminalCleanupFields(target.terminalCleanup, section, sectionName, configPath, errors);

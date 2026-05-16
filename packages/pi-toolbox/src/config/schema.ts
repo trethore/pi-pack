@@ -1,7 +1,5 @@
 import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
 
-export { booleanSchema as enabledSchema } from '@trethore/pi-shared/config/schema.js';
-
 export interface PiToolboxConfig {
   enabled: boolean;
   glob: GlobToolConfig;
