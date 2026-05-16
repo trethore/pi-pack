@@ -107,7 +107,7 @@ export function createGlobToolDefinition(
         signal,
       });
 
-      const base = getBaseDisplay(cwd, preparedParams.path);
+      const base = preparedParams.path;
 
       return {
         content: [
@@ -189,14 +189,6 @@ async function assertDirectory(basePath: string): Promise<void> {
   }
 }
 
-function getBaseDisplay(cwd: string, basePath: string): string {
-  if (basePath === '.') return '.';
-
-  const absoluteBasePath = resolveBasePath(cwd, basePath);
-  const relativePath = path.relative(cwd, absoluteBasePath);
-  return relativePath || '.';
-}
-
 function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string {
   const pattern = args?.pattern ?? '';
   const basePath = args?.path?.trim() || '.';
@@ -215,8 +207,8 @@ function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string 
 function formatGlobFlags(args: GlobParameters | undefined): string {
   const flags: string[] = [];
   if (args?.limit !== undefined) flags.push(`limit ${args.limit}`);
+  if (args?.noIgnore) flags.push('noIgnore');
   if (args?.hidden) flags.push('hidden');
-  if (args?.noIgnore) flags.push('no-ignore');
   return flags.join(', ');
 }
 

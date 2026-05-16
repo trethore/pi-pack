@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createGlobToolDefinition, registerGlobTool } from '#pi-toolbox/features/glob/index.js';
 
+const RENDER_WIDTH = 240;
+
 describe('glob tool', () => {
   it('does not register when disabled', () => {
     // Arrange
@@ -127,6 +129,50 @@ src/
     });
   });
 
+  it('keeps absolute input paths in the result base display', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const absoluteSearchPath = path.join(cwd, 'absolute-package');
+    mkdirSync(absoluteSearchPath, { recursive: true });
+    const runner = vi.fn(async () => ({ files: ['src/index.ts'], limited: false }));
+    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
+
+    // Act
+    const result = await tool.execute(
+      'call-id',
+      { pattern: '**/*.ts', path: absoluteSearchPath },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    expect(result.details).toEqual({ base: absoluteSearchPath, count: 1, limited: false });
+    expect(result.content[0]).toEqual({
+      type: 'text',
+      text: `base=${absoluteSearchPath} count=1
+src/
+  index.ts`,
+    });
+  });
+
+  it('renders active call flags', () => {
+    // Arrange
+    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
+
+    // Act
+    const rendered = renderComponent(
+      tool.renderCall?.(
+        { pattern: '*.ts', path: 'src', limit: 20, noIgnore: true, hidden: true },
+        createTheme(),
+        createRenderContext(false)
+      )
+    );
+
+    // Assert
+    expect(rendered).toContain('<toolOutput> (limit 20, noIgnore, hidden)</toolOutput>');
+  });
+
   it('renders collapsed results with an expansion hint', () => {
     // Arrange
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
@@ -231,7 +277,7 @@ src/
 });
 
 function renderComponent(component: Component | undefined): string {
-  return component?.render(120).join('\n') ?? '';
+  return component?.render(RENDER_WIDTH).join('\n') ?? '';
 }
 
 function createTheme() {

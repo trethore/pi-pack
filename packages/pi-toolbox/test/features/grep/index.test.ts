@@ -12,6 +12,7 @@ const DEFAULT_GREP_CONFIG = {
   defaultLimit: 200,
   defaultMaxCharsPerMatch: 200,
 };
+const RENDER_WIDTH = 240;
 
 describe('grep tool', () => {
   it('does not register when disabled', () => {
@@ -178,6 +179,33 @@ src/index.ts
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ searchPath: 'file.txt' }));
   });
 
+  it('renders active call flags', () => {
+    // Arrange
+    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG);
+
+    // Act
+    const rendered = renderComponent(
+      tool.renderCall?.(
+        {
+          regex: 'needle',
+          path: 'src',
+          limit: 20,
+          limitPerFile: 2,
+          maxCharsPerMatch: 120,
+          noIgnore: true,
+          hidden: true,
+        },
+        createTheme(),
+        createRenderContext(false)
+      )
+    );
+
+    // Assert
+    expect(rendered).toContain(
+      '<toolOutput> (limit 20, limit/file 2, chars 120, noIgnore, hidden)</toolOutput>'
+    );
+  });
+
   it('renders collapsed results with an expansion hint', () => {
     // Arrange
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG);
@@ -223,7 +251,7 @@ src/index.ts
 });
 
 function renderComponent(component: Component | undefined): string {
-  return component?.render(120).join('\n') ?? '';
+  return component?.render(RENDER_WIDTH).join('\n') ?? '';
 }
 
 function createTheme() {

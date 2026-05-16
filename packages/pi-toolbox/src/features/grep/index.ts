@@ -232,8 +232,8 @@ function formatGrepFlags(args: GrepParameters | undefined): string {
     formatOptionalNumberFlag('limit', args?.limit),
     formatOptionalNumberFlag('limit/file', args?.limitPerFile),
     formatOptionalNumberFlag('chars', args?.maxCharsPerMatch),
+    args?.noIgnore ? 'noIgnore' : undefined,
     args?.hidden ? 'hidden' : undefined,
-    args?.noIgnore ? 'no-ignore' : undefined,
   ]
     .filter((flag): flag is string => flag !== undefined)
     .join(', ');
