@@ -34,7 +34,7 @@ interface GrepParameters {
   limitPerFile?: number;
   maxCharsPerMatch?: number;
   noIgnore?: boolean;
-  hidden?: boolean;
+  visibleOnly?: boolean;
 }
 
 interface PreparedGrepParameters extends Required<Omit<GrepParameters, 'limitPerFile'>> {
@@ -62,7 +62,7 @@ interface GrepParametersJsonSchema {
     limitPerFile: { description: string } & Record<string, unknown>;
     maxCharsPerMatch: { description: string } & Record<string, unknown>;
     noIgnore: Record<string, unknown>;
-    hidden: Record<string, unknown>;
+    visibleOnly: Record<string, unknown>;
   };
 }
 
@@ -114,7 +114,7 @@ export function createGrepToolDefinition(
         limitPerFile: preparedParams.limitPerFile,
         maxCharsPerMatch: preparedParams.maxCharsPerMatch,
         noIgnore: preparedParams.noIgnore,
-        hidden: preparedParams.hidden,
+        visibleOnly: preparedParams.visibleOnly,
         signal,
       });
       const display = createGrepDisplay({
@@ -194,7 +194,7 @@ function prepareGrepParameters(
     limitPerFile: params.limitPerFile ?? config.defaultLimitPerFile,
     maxCharsPerMatch: params.maxCharsPerMatch ?? config.defaultMaxCharsPerMatch,
     noIgnore: params.noIgnore ?? false,
-    hidden: params.hidden ?? false,
+    visibleOnly: params.visibleOnly ?? false,
   };
 }
 
@@ -217,7 +217,7 @@ function formatGrepFlags(args: GrepParameters | undefined): string {
     formatOptionalNumberFlag('chars', args?.maxCharsPerMatch),
     formatOptionalStringListFlag('globs', args?.globs),
     args?.noIgnore ? 'noIgnore' : undefined,
-    args?.hidden ? 'hidden' : undefined,
+    args?.visibleOnly ? 'visibleOnly' : undefined,
   ]
     .filter((flag): flag is string => flag !== undefined)
     .join(', ');

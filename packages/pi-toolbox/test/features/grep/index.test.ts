@@ -112,7 +112,7 @@ describe('grep tool', () => {
     // Act
     const result = await tool.execute(
       'call-id',
-      { regexes: ['needle'], noIgnore: true, hidden: true },
+      { regexes: ['needle'], noIgnore: true, visibleOnly: true },
       undefined,
       undefined,
       {} as never
@@ -128,7 +128,7 @@ describe('grep tool', () => {
       limitPerFile: 7,
       maxCharsPerMatch: 300,
       noIgnore: true,
-      hidden: true,
+      visibleOnly: true,
       signal: undefined,
     });
     expect(result.details).toEqual({ count: 1, files: 1, limited: false });
@@ -220,7 +220,7 @@ src/index.ts
           limitPerFile: 2,
           maxCharsPerMatch: 120,
           noIgnore: true,
-          hidden: true,
+          visibleOnly: true,
         },
         createTheme(),
         createRenderContext(false)
@@ -229,7 +229,7 @@ src/index.ts
 
     // Assert
     expect(rendered).toContain(
-      '<toolOutput> (limit 20, limit/file 2, chars 120, globs *.ts, noIgnore, hidden)</toolOutput>'
+      '<toolOutput> (limit 20, limit/file 2, chars 120, globs *.ts, noIgnore, visibleOnly)</toolOutput>'
     );
   });
 

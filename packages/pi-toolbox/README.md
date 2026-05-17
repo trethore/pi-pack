@@ -40,7 +40,7 @@ Arguments:
 - `path`: directory to run in, defaults to cwd
 - `limit`: maximum files to return, defaults to `glob.defaultLimit`, minimum `1`, maximum `1000`
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
-- `hidden`: show hidden files with `--hidden`, defaults to `false`
+- `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
 
 Example output:
 
@@ -69,7 +69,7 @@ Arguments:
 - `limitPerFile`: maximum matching lines to return per file, defaults to `grep.defaultLimitPerFile` when configured, otherwise no per-file limit
 - `maxCharsPerMatch`: maximum chars per matching line, defaults to `grep.defaultMaxCharsPerMatch`, minimum `100`, maximum `2000`
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
-- `hidden`: show hidden files with `--hidden`, defaults to `false`
+- `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
 
 Example output:
 

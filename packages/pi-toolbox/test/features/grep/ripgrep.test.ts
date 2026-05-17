@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -22,7 +22,7 @@ describe('ripgrep grep runner', () => {
       limit: 10,
       maxCharsPerMatch: 200,
       noIgnore: false,
-      hidden: false,
+      visibleOnly: false,
     });
 
     // Assert
@@ -30,6 +30,52 @@ describe('ripgrep grep runner', () => {
       matches: [{ file: 'index.ts', line: 1, text: 'const needle = true;' }],
       limited: false,
     });
+  });
+
+  it('searches hidden files by default while excluding git internals', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, '.git', 'objects'), { recursive: true });
+    writeFileSync(path.join(cwd, '.env.example'), 'needle=example\n');
+    writeFileSync(path.join(cwd, '.git', 'config'), 'needle=git\n');
+    writeFileSync(path.join(cwd, '.git', 'objects', 'object-file'), 'needle=object\n');
+
+    // Act
+    const result = await runRipgrepGrep({
+      cwd,
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: [],
+      limit: 10,
+      maxCharsPerMatch: 200,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result.matches).toEqual([{ file: '.env.example', line: 1, text: 'needle=example' }]);
+  });
+
+  it('excludes hidden files when visibleOnly is true', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'index.ts'), 'const needle = true;\n');
+    writeFileSync(path.join(cwd, '.env.example'), 'needle=example\n');
+
+    // Act
+    const result = await runRipgrepGrep({
+      cwd,
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: [],
+      limit: 10,
+      maxCharsPerMatch: 200,
+      noIgnore: false,
+      visibleOnly: true,
+    });
+
+    // Assert
+    expect(result.matches).toEqual([{ file: 'index.ts', line: 1, text: 'const needle = true;' }]);
   });
 });
 

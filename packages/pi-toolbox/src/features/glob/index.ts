@@ -30,7 +30,7 @@ interface GlobParameters {
   paths?: string[];
   limit?: number;
   noIgnore?: boolean;
-  hidden?: boolean;
+  visibleOnly?: boolean;
 }
 
 interface GlobDefinition {
@@ -51,7 +51,7 @@ interface GlobParametersJsonSchema {
     paths: Record<string, unknown>;
     limit: { description: string } & Record<string, unknown>;
     noIgnore: Record<string, unknown>;
-    hidden: Record<string, unknown>;
+    visibleOnly: Record<string, unknown>;
   };
 }
 
@@ -103,7 +103,7 @@ export function createGlobToolDefinition(
         paths: preparedParams.paths,
         limit: preparedParams.limit,
         noIgnore: preparedParams.noIgnore,
-        hidden: preparedParams.hidden,
+        visibleOnly: preparedParams.visibleOnly,
         signal,
       });
 
@@ -163,7 +163,7 @@ function prepareGlobParameters(
     paths: normalizeOptionalStringList(params.paths, ['.']),
     limit: params.limit ?? config.defaultLimit,
     noIgnore: params.noIgnore ?? false,
-    hidden: params.hidden ?? false,
+    visibleOnly: params.visibleOnly ?? false,
   };
 }
 
@@ -183,6 +183,6 @@ function formatGlobFlags(args: GlobParameters | undefined): string {
   const flags: string[] = [];
   if (args?.limit !== undefined) flags.push(`limit ${args.limit}`);
   if (args?.noIgnore) flags.push('noIgnore');
-  if (args?.hidden) flags.push('hidden');
+  if (args?.visibleOnly) flags.push('visibleOnly');
   return flags.join(', ');
 }

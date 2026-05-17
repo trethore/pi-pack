@@ -70,7 +70,7 @@ describe('glob tool', () => {
     // Act
     const result = await tool.execute(
       'call-id',
-      { patterns: ['**/*.ts'], noIgnore: true, hidden: true },
+      { patterns: ['**/*.ts'], noIgnore: true, visibleOnly: true },
       undefined,
       undefined,
       {} as never
@@ -83,7 +83,7 @@ describe('glob tool', () => {
       paths: ['.'],
       limit: 42,
       noIgnore: true,
-      hidden: true,
+      visibleOnly: true,
       signal: undefined,
     });
     expect(result.details).toEqual({ paths: ['.'], count: 1, limited: false });
@@ -179,14 +179,14 @@ src/
     // Act
     const rendered = renderComponent(
       tool.renderCall?.(
-        { patterns: ['*.ts'], paths: ['src'], limit: 20, noIgnore: true, hidden: true },
+        { patterns: ['*.ts'], paths: ['src'], limit: 20, noIgnore: true, visibleOnly: true },
         createTheme(),
         createRenderContext(false)
       )
     );
 
     // Assert
-    expect(rendered).toContain('<toolOutput> (limit 20, noIgnore, hidden)</toolOutput>');
+    expect(rendered).toContain('<toolOutput> (limit 20, noIgnore, visibleOnly)</toolOutput>');
   });
 
   it('renders collapsed results with an expansion hint', () => {

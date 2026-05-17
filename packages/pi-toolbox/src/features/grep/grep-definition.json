@@ -4,7 +4,8 @@
   "description": "Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)...>.",
   "promptSnippet": "Search file contents by regex(es)",
   "promptGuidelines": [
-    "Use grep for fast content search when you know the text(s) or regex(es) to find."
+    "Use grep for fast content search when you know the text(s) or regex(es) to find.",
+    ".git internals are always excluded from results."
   ],
   "parameters": {
     "type": "object",
@@ -51,9 +52,9 @@
         "type": "boolean",
         "description": "Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted, defaults to false."
       },
-      "hidden": {
+      "visibleOnly": {
         "type": "boolean",
-        "description": "Include hidden files. If true, passes `--hidden`. If omitted, defaults to false. Avoid using this argument unless intentionally searching hidden files; when using it, pair it with a targeted regex, glob, or path."
+        "description": "Search only non-hidden files and directories. If omitted or false, hidden files are included by default."
       }
     }
   }

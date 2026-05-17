@@ -1,5 +1,9 @@
 import { formatRipgrepPaths } from '#src/utils/paths.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
+import {
+  formatRipgrepExclusionGlobArgs,
+  formatRipgrepHiddenArgs,
+} from '#src/utils/ripgrep-visibility.js';
 
 export interface RunRipgrepGrepOptions {
   cwd: string;
@@ -10,7 +14,7 @@ export interface RunRipgrepGrepOptions {
   limitPerFile?: number;
   maxCharsPerMatch: number;
   noIgnore: boolean;
-  hidden: boolean;
+  visibleOnly: boolean;
   signal?: AbortSignal;
 }
 
@@ -62,9 +66,10 @@ function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
     ...(options.limitPerFile === undefined
       ? []
       : ['--max-count', String(options.limitPerFile + 1)]),
-    ...(options.noIgnore ? ['--no-ignore'] : []),
-    ...(options.hidden ? ['--hidden'] : []),
+    ...formatRipgrepHiddenArgs(options.visibleOnly),
     ...options.globs.flatMap((glob) => ['-g', glob]),
+    ...formatRipgrepExclusionGlobArgs(options.visibleOnly),
+    ...(options.noIgnore ? ['--no-ignore'] : []),
     ...options.regexes.flatMap((regex) => ['-e', regex]),
     ...formatRipgrepPaths(options.paths),
   ];

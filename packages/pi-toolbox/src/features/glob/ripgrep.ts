@@ -1,5 +1,9 @@
 import { formatRipgrepPaths } from '#src/utils/paths.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
+import {
+  formatRipgrepExclusionGlobArgs,
+  formatRipgrepHiddenArgs,
+} from '#src/utils/ripgrep-visibility.js';
 
 export interface RunRipgrepGlobOptions {
   cwd: string;
@@ -7,7 +11,7 @@ export interface RunRipgrepGlobOptions {
   paths: string[];
   limit: number;
   noIgnore: boolean;
-  hidden: boolean;
+  visibleOnly: boolean;
   signal?: AbortSignal;
 }
 
@@ -32,9 +36,10 @@ export async function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<Ri
 function buildRipgrepArgs(options: RunRipgrepGlobOptions): string[] {
   return [
     '--files',
+    ...formatRipgrepHiddenArgs(options.visibleOnly),
     ...options.patterns.flatMap((pattern) => ['-g', pattern]),
+    ...formatRipgrepExclusionGlobArgs(options.visibleOnly),
     ...(options.noIgnore ? ['--no-ignore'] : []),
-    ...(options.hidden ? ['--hidden'] : []),
     ...formatRipgrepPaths(options.paths),
   ];
 }

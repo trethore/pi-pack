@@ -3,7 +3,10 @@
   "label": "glob",
   "description": "Find files using ripgrep file discovery: rg --files -g '<pattern>' <path(s)...>.",
   "promptSnippet": "Find files by glob pattern(s)",
-  "promptGuidelines": ["Use glob for fast file discovery."],
+  "promptGuidelines": [
+    "Use glob for fast file discovery.",
+    ".git internals are always excluded from results."
+  ],
   "parameters": {
     "type": "object",
     "additionalProperties": false,
@@ -31,9 +34,9 @@
         "type": "boolean",
         "description": "Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted, defaults to false."
       },
-      "hidden": {
+      "visibleOnly": {
         "type": "boolean",
-        "description": "Include hidden files. If true, passes `--hidden`. If omitted, defaults to false. Avoid using this argument unless intentionally searching hidden files; when using it, pair it with a targeted pattern, or path."
+        "description": "Search only non-hidden files and directories. If omitted or false, hidden files are included by default."
       }
     }
   }
