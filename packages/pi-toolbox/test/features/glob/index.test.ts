@@ -90,9 +90,8 @@ describe('glob tool', () => {
     expect(result.content).toEqual([
       {
         type: 'text',
-        text: `paths=. count=1
-src/
-  index.ts`,
+        text: `found=1
+src/index.ts`,
       },
     ]);
   });
@@ -137,10 +136,8 @@ src/
     });
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: `paths=packages/pi-toolbox,scripts count=1
-pi-toolbox/
-  src/
-    index.ts
+      text: `found=1
+packages/pi-toolbox/src/index.ts
 [more files available]`,
     });
   });
@@ -166,9 +163,8 @@ pi-toolbox/
     expect(result.details).toEqual({ paths: [absoluteSearchPath], count: 1, limited: false });
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: `paths=${absoluteSearchPath} count=1
-src/
-  index.ts`,
+      text: `found=1
+src/index.ts`,
     });
   });
 

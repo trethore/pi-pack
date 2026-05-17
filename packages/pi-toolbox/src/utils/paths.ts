@@ -1,4 +1,4 @@
-export interface CompactPathParts {
+interface CompactPathParts {
   rootLabel?: string;
   relativePath: string;
   displayPath: string;
@@ -21,7 +21,7 @@ export function createCompactPathFormatter(
   return (value: string) => formatParts(value).displayPath;
 }
 
-export function createCompactPathPartsFormatter(
+function createCompactPathPartsFormatter(
   searchPaths: readonly string[]
 ): (value: string) => CompactPathParts {
   const roots = createCompactRoots(searchPaths);

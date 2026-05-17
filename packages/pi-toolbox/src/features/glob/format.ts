@@ -1,4 +1,4 @@
-import { createCompactPathPartsFormatter, toPosixPath } from '#src/utils/paths.js';
+import { toDisplayPath } from '#src/utils/paths.js';
 
 export interface GlobFormatOptions {
   paths: readonly string[];
@@ -11,41 +11,47 @@ interface TreeNode {
   isFile: boolean;
 }
 
+interface CompressedNode {
+  label: string;
+  node: TreeNode;
+}
+
 export function formatGlobResult(options: GlobFormatOptions): string {
   const root = createNode();
-  const files = normalizeFiles(options.files, options.paths);
+  const files = normalizeFiles(options.files);
 
   for (const file of files) {
     addPath(root, file);
   }
 
-  const header = `paths=${formatPaths(options.paths)} count=${files.length}`;
   const footer = options.limited ? ['[more files available]'] : [];
-  return [header, ...formatChildren(root, 0), ...footer].join('\n');
+  return [`found=${files.length}`, ...formatChildren(root, 0), ...footer].join('\n');
 }
 
 function createNode(): TreeNode {
   return { children: new Map(), isFile: false };
 }
 
-function normalizeFiles(files: readonly string[], paths: readonly string[]): string[][] {
-  const formatPath = createCompactPathPartsFormatter(paths);
+function normalizeFiles(files: readonly string[]): string[][] {
   const uniqueFiles = new Map<string, string[]>();
 
   for (const file of files) {
-    const pathParts = formatPath(file);
-    const parts = [
-      ...(pathParts.rootLabel === undefined || pathParts.rootLabel === '.'
-        ? []
-        : [pathParts.rootLabel]),
-      ...pathParts.relativePath.split('/').filter(Boolean),
-    ];
-    if (parts.length > 0) uniqueFiles.set(pathParts.displayPath, parts);
+    const displayPath = toDisplayPath(file) || '.';
+    const parts = splitDisplayPath(displayPath);
+    if (parts.length > 0) uniqueFiles.set(displayPath, parts);
   }
 
   return sortedItems(uniqueFiles.entries(), ([left], [right]) => left.localeCompare(right)).map(
     ([, parts]) => parts
   );
+}
+
+function splitDisplayPath(displayPath: string): string[] {
+  const parts = displayPath.split('/').filter(Boolean);
+  if (!displayPath.startsWith('/')) return parts;
+
+  const [firstPart, ...remainingParts] = parts;
+  return firstPart === undefined ? ['/'] : [`/${firstPart}`, ...remainingParts];
 }
 
 function addPath(root: TreeNode, parts: readonly string[]): void {
@@ -64,12 +70,33 @@ function formatChildren(node: TreeNode, depth: number): string[] {
   const lines: string[] = [];
 
   for (const [name, child] of sortedEntries(node.children)) {
+    const compressed = compressNode(name, child);
     const indent = '  '.repeat(depth);
-    const suffix = child.isFile ? '' : '/';
-    lines.push(`${indent}${name}${suffix}`, ...formatChildren(child, depth + 1));
+    const suffix = compressed.node.isFile ? '' : '/';
+    lines.push(
+      `${indent}${compressed.label}${suffix}`,
+      ...formatChildren(compressed.node, depth + 1)
+    );
   }
 
   return lines;
+}
+
+function compressNode(name: string, node: TreeNode): CompressedNode {
+  let label = name;
+  let current = node;
+
+  while (!current.isFile && current.children.size === 1) {
+    const [[childName, child]] = current.children;
+    label = joinPathLabel(label, childName);
+    current = child;
+  }
+
+  return { label, node: current };
+}
+
+function joinPathLabel(left: string, right: string): string {
+  return left === '/' ? `/${right}` : `${left}/${right}`;
 }
 
 function sortedEntries(children: Map<string, TreeNode>): [string, TreeNode][] {
@@ -92,8 +119,4 @@ function sortedItems<T>(items: Iterable<T>, compare: (left: T, right: T) => numb
   }
 
   return sorted;
-}
-
-function formatPaths(paths: readonly string[]): string {
-  return paths.map((pathValue) => toPosixPath(pathValue) || '.').join(',');
 }

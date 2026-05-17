@@ -3,65 +3,102 @@ import { describe, expect, it } from 'vitest';
 import { formatGlobResult } from '#pi-toolbox/features/glob/format.js';
 
 describe('formatGlobResult', () => {
-  it('formats files as a compact tree', () => {
+  it('formats files as a compact whitespace tree', () => {
     // Arrange
-    const files = ['test/glob.test.ts', 'src/agent/tools.ts', 'src/index.ts', 'src/agent/glob.ts'];
+    const files = ['src/app/page.tsx', 'src/app/layout.tsx', 'src/lib/utils.ts', 'src/lib/auth.ts'];
 
     // Act
     const output = formatGlobResult({ paths: ['.'], files });
 
     // Assert
-    expect(output).toBe(`paths=. count=4
+    expect(output).toBe(`found=4
 src/
-  index.ts
-  agent/
-    glob.ts
-    tools.ts
-test/
-  glob.test.ts`);
+  app/
+    layout.tsx
+    page.tsx
+  lib/
+    auth.ts
+    utils.ts`);
+  });
+
+  it('collapses directories until branching points', () => {
+    // Arrange
+    const files = [
+      'foo/bar/some/thing/file1.txt',
+      'foo/bar/some/thing/some/other/file2.txt',
+      'foo/bar/some/thing/some/other/file3.txt',
+      'foo/bar2/another.txt',
+      'foo/bar3/deep/nested/path/final.txt',
+    ];
+
+    // Act
+    const output = formatGlobResult({ paths: ['foo'], files });
+
+    // Assert
+    expect(output).toBe(`found=5
+foo/
+  bar/some/thing/
+    file1.txt
+    some/other/
+      file2.txt
+      file3.txt
+  bar2/another.txt
+  bar3/deep/nested/path/final.txt`);
   });
 
   it('formats empty results without extra tree lines', () => {
-    expect(formatGlobResult({ paths: ['.'], files: [] })).toBe('paths=. count=0');
+    expect(formatGlobResult({ paths: ['.'], files: [] })).toBe('found=0');
   });
 
-  it('formats multiple search paths in the header', () => {
-    expect(formatGlobResult({ paths: ['packages', 'scripts'], files: [] })).toBe(
-      'paths=packages,scripts count=0'
-    );
+  it('merges multiple search paths into one tree', () => {
+    expect(
+      formatGlobResult({
+        paths: ['foo/bar/project1', 'foo/bar/project2'],
+        files: [
+          'foo/bar/project1/src/app/page.tsx',
+          'foo/bar/project1/src/lib/utils.ts',
+          'foo/bar/project2/docs/intro.md',
+          'foo/bar/project2/docs/install.md',
+        ],
+      })
+    ).toBe(`found=4
+foo/bar/
+  project1/src/
+    app/page.tsx
+    lib/utils.ts
+  project2/docs/
+    install.md
+    intro.md`);
   });
 
-  it('formats files relative to a single absolute search root', () => {
+  it('formats absolute paths', () => {
     expect(
       formatGlobResult({
         paths: ['/tmp/test/git-repo'],
         files: ['/tmp/test/git-repo/ignored/ignored.txt', '/tmp/test/git-repo/src/visible.txt'],
       })
-    ).toBe(`paths=/tmp/test/git-repo count=2
-ignored/
-  ignored.txt
-src/
-  visible.txt`);
+    ).toBe(`found=2
+/tmp/test/git-repo/
+  ignored/ignored.txt
+  src/visible.txt`);
   });
 
-  it('uses shortest unique root suffixes for conflicting search roots', () => {
+  it('deduplicates normalized file paths', () => {
     expect(
       formatGlobResult({
-        paths: ['/home/u/project/src', '/tmp/project/src'],
-        files: ['/home/u/project/src/a.ts', '/tmp/project/src/a.ts'],
+        paths: ['foo', 'foo/bar'],
+        files: ['foo/bar/a.txt', './foo/bar/a.txt', 'foo/bar/b.txt'],
       })
-    ).toBe(`paths=/home/u/project/src,/tmp/project/src count=2
-tmp/project/src/
-  a.ts
-u/project/src/
-  a.ts`);
+    ).toBe(`found=2
+foo/bar/
+  a.txt
+  b.txt`);
   });
 
   it('adds a footer when more files are available', () => {
     expect(formatGlobResult({ paths: ['.'], files: ['src/index.ts'], limited: true })).toBe(
-      `paths=. count=1
-src/
-  index.ts
+      `found=1
+src/index.ts
 [more files available]`
     );
   });
