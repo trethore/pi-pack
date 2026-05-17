@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { formatGrepResult } from '#pi-toolbox/features/grep/format.js';
+import { lines } from '#test/utils/lines.js';
 
 describe('formatGrepResult', () => {
   it('formats matches grouped by file', () => {
@@ -15,14 +16,18 @@ describe('formatGrepResult', () => {
     });
 
     // Assert
-    expect(result).toBe(`matches=3 files=2
-
-src/agent/tools.ts
-12: export const globTool = ...
-18: export const grepTool = ...
-
-src/index.ts
-9: tools: [globTool, grepTool]`);
+    expect(result).toBe(
+      lines(
+        'matches=3 files=2',
+        '',
+        'src/agent/tools.ts',
+        '12: export const globTool = ...',
+        '18: export const grepTool = ...',
+        '',
+        'src/index.ts',
+        '9: tools: [globTool, grepTool]'
+      )
+    );
   });
 
   it('formats zero matches without an empty body', () => {
@@ -42,11 +47,15 @@ src/index.ts
     });
 
     // Assert
-    expect(result).toBe(`matches=2 files=1
-
-README.md
-39: - \`patterns\`: glob pattern(s)
-40: - \`paths\`: directories to search in`);
+    expect(result).toBe(
+      lines(
+        'matches=2 files=1',
+        '',
+        'README.md',
+        '39: - `patterns`: glob pattern(s)',
+        '40: - `paths`: directories to search in'
+      )
+    );
   });
 
   it('formats files relative to a single absolute search root', () => {
@@ -58,10 +67,7 @@ README.md
     });
 
     // Assert
-    expect(result).toBe(`matches=1 files=1
-
-src/visible.txt
-1: visible TODO`);
+    expect(result).toBe(lines('matches=1 files=1', '', 'src/visible.txt', '1: visible TODO'));
   });
 
   it('uses shortest unique root suffixes for conflicting search roots', () => {
@@ -76,13 +82,17 @@ src/visible.txt
     });
 
     // Assert
-    expect(result).toBe(`matches=2 files=2
-
-u/project/src/a.ts
-1: home match
-
-tmp/project/src/a.ts
-1: tmp match`);
+    expect(result).toBe(
+      lines(
+        'matches=2 files=2',
+        '',
+        'u/project/src/a.ts',
+        '1: home match',
+        '',
+        'tmp/project/src/a.ts',
+        '1: tmp match'
+      )
+    );
   });
 
   it('adds a footer when more matches are available', () => {
@@ -104,12 +114,16 @@ tmp/project/src/a.ts
     });
 
     // Assert
-    expect(result).toBe(`matches=2 files=1
-
-src/index.ts
-1: first
-2: second
-[more matches in this file]`);
+    expect(result).toBe(
+      lines(
+        'matches=2 files=1',
+        '',
+        'src/index.ts',
+        '1: first',
+        '2: second',
+        '[more matches in this file]'
+      )
+    );
   });
 
   it('separates the global footer from per-file footers', () => {
@@ -127,14 +141,18 @@ src/index.ts
     });
 
     // Assert
-    expect(result).toBe(`matches=2 files=1
-
-src/index.ts
-1: first
-2: second
-[more matches in this file]
-
-[more matches available]`);
+    expect(result).toBe(
+      lines(
+        'matches=2 files=1',
+        '',
+        'src/index.ts',
+        '1: first',
+        '2: second',
+        '[more matches in this file]',
+        '',
+        '[more matches available]'
+      )
+    );
   });
 
   it('does not mark the global limit hit for extra matches in already per-file-limited files', () => {
@@ -153,19 +171,23 @@ src/index.ts
     });
 
     // Assert
-    expect(result).toBe(`matches=3 files=3
-
-a.txt
-1: a1
-[more matches in this file]
-
-b.txt
-1: b1
-[more matches in this file]
-
-c.txt
-1: c1
-[more matches in this file]`);
+    expect(result).toBe(
+      lines(
+        'matches=3 files=3',
+        '',
+        'a.txt',
+        '1: a1',
+        '[more matches in this file]',
+        '',
+        'b.txt',
+        '1: b1',
+        '[more matches in this file]',
+        '',
+        'c.txt',
+        '1: c1',
+        '[more matches in this file]'
+      )
+    );
   });
 
   it('formats clipped match text without a truncation marker', () => {
@@ -174,9 +196,6 @@ c.txt
         matches: [{ file: 'src/index.ts', line: 1, text: 'abc' }],
         limit: 100,
       })
-    ).toBe(`matches=1 files=1
-
-src/index.ts
-1: abc`);
+    ).toBe(lines('matches=1 files=1', '', 'src/index.ts', '1: abc'));
   });
 });

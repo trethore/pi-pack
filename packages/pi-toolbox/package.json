@@ -21,7 +21,8 @@
   },
   "imports": {
     "#src/*": "./src/*",
-    "#pi-toolbox/*": "./src/*"
+    "#pi-toolbox/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "pi": {
     "extensions": [
