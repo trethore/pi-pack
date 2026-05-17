@@ -205,6 +205,37 @@ src/index.ts
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ paths: ['file.txt'] }));
   });
 
+  it('fills the global display limit when per-file limit sentinels are present', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'a.txt'), 'needle a1\nneedle a2\n');
+    writeFileSync(path.join(cwd, 'b.txt'), 'needle b1\nneedle b2\n');
+    writeFileSync(path.join(cwd, 'c.txt'), 'needle c1\nneedle c2\n');
+    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd });
+
+    // Act
+    const result = await tool.execute(
+      'call-id',
+      { regexes: ['needle'], paths: ['.'], limit: 3, limitPerFile: 1 },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    const output = result.content[0];
+
+    expect(result.details).toEqual({ count: 3, files: 3, limited: false });
+    expect(output?.type).toBe('text');
+    if (output?.type !== 'text') throw new Error('expected text output');
+    expect(output.text).toContain('matches=3 files=3');
+    expect(output.text).toContain('a.txt\n1: needle a1');
+    expect(output.text).toContain('b.txt\n1: needle b1');
+    expect(output.text).toContain('c.txt\n1: needle c1');
+    expect(output.text).toContain('[more matches in this file]');
+    expect(output.text).not.toContain('[more matches available]');
+  });
+
   it('renders active call flags', () => {
     // Arrange
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG);

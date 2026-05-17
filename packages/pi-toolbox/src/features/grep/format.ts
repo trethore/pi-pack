@@ -45,15 +45,15 @@ export function createGrepDisplay(options: GrepFormatOptions): GrepDisplay {
   let globalLimited = options.limited ?? false;
 
   for (const match of matches) {
-    if (displayedMatches.length >= options.limit) {
-      globalLimited = true;
-      break;
-    }
-
     const fileCount = displayedPerFile.get(match.file) ?? 0;
     if (options.limitPerFile !== undefined && fileCount >= options.limitPerFile) {
       perFileLimitedFiles.add(match.file);
       continue;
+    }
+
+    if (displayedMatches.length >= options.limit) {
+      globalLimited = true;
+      break;
     }
 
     displayedMatches.push(match);

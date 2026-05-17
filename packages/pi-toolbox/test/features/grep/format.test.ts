@@ -137,6 +137,37 @@ src/index.ts
 [more matches available]`);
   });
 
+  it('does not mark the global limit hit for extra matches in already per-file-limited files', () => {
+    // Arrange and act
+    const result = formatGrepResult({
+      matches: [
+        { file: 'a.txt', line: 1, text: 'a1' },
+        { file: 'a.txt', line: 2, text: 'a2' },
+        { file: 'b.txt', line: 1, text: 'b1' },
+        { file: 'b.txt', line: 2, text: 'b2' },
+        { file: 'c.txt', line: 1, text: 'c1' },
+        { file: 'c.txt', line: 2, text: 'c2' },
+      ],
+      limit: 3,
+      limitPerFile: 1,
+    });
+
+    // Assert
+    expect(result).toBe(`matches=3 files=3
+
+a.txt
+1: a1
+[more matches in this file]
+
+b.txt
+1: b1
+[more matches in this file]
+
+c.txt
+1: c1
+[more matches in this file]`);
+  });
+
   it('formats clipped match text without a truncation marker', () => {
     expect(
       formatGrepResult({

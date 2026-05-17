@@ -49,13 +49,19 @@ export async function runRipgrepGrep(options: RunRipgrepGrepOptions): Promise<Ri
     toolName: 'grep',
     cwd: options.cwd,
     args: buildRipgrepArgs(options),
-    limit: options.limit,
+    limit: calculateCollectionLimit(options),
     signal: options.signal,
     parseLine: (line) => parseMatchLine(line, options.maxCharsPerMatch),
     formatItemKey: (match) => formatMatchKey(options.cwd, match),
   });
 
   return { matches: result.items, limited: result.limited };
+}
+
+function calculateCollectionLimit(options: RunRipgrepGrepOptions): number {
+  if (options.limitPerFile === undefined) return options.limit;
+
+  return options.limit + Math.ceil(options.limit / options.limitPerFile);
 }
 
 function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
