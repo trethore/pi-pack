@@ -1,7 +1,7 @@
-import path from 'node:path';
+import { toDisplayPath } from '#src/utils/paths.js';
 
 export interface GlobFormatOptions {
-  base: string;
+  paths: readonly string[];
   files: readonly string[];
   limited?: boolean;
 }
@@ -9,6 +9,15 @@ export interface GlobFormatOptions {
 interface TreeNode {
   children: Map<string, TreeNode>;
   isFile: boolean;
+}
+
+interface CompressedNode {
+  label: string;
+  node: TreeNode;
+}
+
+export function countGlobFiles(files: readonly string[]): number {
+  return normalizeFiles(files).length;
 }
 
 export function formatGlobResult(options: GlobFormatOptions): string {
@@ -19,22 +28,37 @@ export function formatGlobResult(options: GlobFormatOptions): string {
     addPath(root, file);
   }
 
-  const suffix = options.limited ? ' limited=true' : '';
-  const header = `base=${formatBase(options.base)} count=${files.length}${suffix}`;
-  return [header, ...formatChildren(root, 0)].join('\n');
+  const footer = options.limited ? ['[more files available]'] : [];
+  return [`found=${files.length}`, ...formatChildren(root, 0), ...footer].join('\n');
 }
 
 function createNode(): TreeNode {
   return { children: new Map(), isFile: false };
 }
 
-function normalizeFiles(files: readonly string[]): string[] {
-  const uniqueFiles = new Set(files.map((file) => toPosixPath(file)).filter(Boolean));
-  return sortedItems(uniqueFiles, (left, right) => left.localeCompare(right));
+function normalizeFiles(files: readonly string[]): string[][] {
+  const uniqueFiles = new Map<string, string[]>();
+
+  for (const file of files) {
+    const displayPath = toDisplayPath(file) || '.';
+    const parts = splitDisplayPath(displayPath);
+    if (parts.length > 0) uniqueFiles.set(displayPath, parts);
+  }
+
+  return sortedItems(uniqueFiles.entries(), ([left], [right]) => left.localeCompare(right)).map(
+    ([, parts]) => parts
+  );
 }
 
-function addPath(root: TreeNode, filePath: string): void {
-  const parts = filePath.split('/').filter(Boolean);
+function splitDisplayPath(displayPath: string): string[] {
+  const parts = displayPath.split('/').filter(Boolean);
+  if (!displayPath.startsWith('/')) return parts;
+
+  const [firstPart, ...remainingParts] = parts;
+  return firstPart === undefined ? ['/'] : [`/${firstPart}`, ...remainingParts];
+}
+
+function addPath(root: TreeNode, parts: readonly string[]): void {
   let node = root;
 
   for (const part of parts) {
@@ -50,12 +74,33 @@ function formatChildren(node: TreeNode, depth: number): string[] {
   const lines: string[] = [];
 
   for (const [name, child] of sortedEntries(node.children)) {
+    const compressed = compressNode(name, child);
     const indent = '  '.repeat(depth);
-    const suffix = child.isFile ? '' : '/';
-    lines.push(`${indent}${name}${suffix}`, ...formatChildren(child, depth + 1));
+    const suffix = compressed.node.isFile ? '' : '/';
+    lines.push(
+      `${indent}${compressed.label}${suffix}`,
+      ...formatChildren(compressed.node, depth + 1)
+    );
   }
 
   return lines;
+}
+
+function compressNode(name: string, node: TreeNode): CompressedNode {
+  let label = name;
+  let current = node;
+
+  while (!current.isFile && current.children.size === 1) {
+    const [[childName, child]] = current.children;
+    label = joinPathLabel(label, childName);
+    current = child;
+  }
+
+  return { label, node: current };
+}
+
+function joinPathLabel(left: string, right: string): string {
+  return left === '/' ? `/${right}` : `${left}/${right}`;
 }
 
 function sortedEntries(children: Map<string, TreeNode>): [string, TreeNode][] {
@@ -78,12 +123,4 @@ function sortedItems<T>(items: Iterable<T>, compare: (left: T, right: T) => numb
   }
 
   return sorted;
-}
-
-function formatBase(base: string): string {
-  return toPosixPath(base) || '.';
-}
-
-function toPosixPath(value: string): string {
-  return value.split(path.sep).join('/');
 }

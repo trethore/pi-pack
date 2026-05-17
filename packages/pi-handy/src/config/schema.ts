@@ -1,4 +1,5 @@
-export { booleanSchema as enabledSchema } from '@trethore/pi-shared/config/schema.js';
+import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
+import type { EnabledConfig, PartialEnabledConfig } from '@trethore/pi-shared/config/schema.js';
 
 export interface PiHandyConfig {
   enabled: boolean;
@@ -8,42 +9,23 @@ export interface PiHandyConfig {
   updatePi: UpdatePiCommandConfig;
 }
 
-interface ThinkingLevelCommandConfig {
-  enabled: boolean;
-}
+type ThinkingLevelCommandConfig = EnabledConfig;
 
-interface SwitchWorkspaceCommandConfig {
-  enabled: boolean;
-}
+type SwitchWorkspaceCommandConfig = EnabledConfig;
 
-interface ShowSyspromptCommandConfig {
-  enabled: boolean;
-}
+type ShowSyspromptCommandConfig = EnabledConfig;
 
-interface UpdatePiCommandConfig {
-  enabled: boolean;
-}
+type UpdatePiCommandConfig = EnabledConfig;
 
 export type PartialPiHandyConfig = Partial<{
   enabled: unknown;
-  thinkingLevel: Partial<{
-    enabled: unknown;
-  }>;
-  switchWorkspace: Partial<{
-    enabled: unknown;
-  }>;
-  showSysprompt: Partial<{
-    enabled: unknown;
-  }>;
-  updatePi: Partial<{
-    enabled: unknown;
-  }>;
+  thinkingLevel: PartialEnabledConfig;
+  switchWorkspace: PartialEnabledConfig;
+  showSysprompt: PartialEnabledConfig;
+  updatePi: PartialEnabledConfig;
 }>;
 
-export interface LoadedConfig {
-  config: PiHandyConfig;
-  errors: string[];
-}
+export type LoadedConfig = LoadedExtensionConfig<PiHandyConfig>;
 
 export const defaultConfig: PiHandyConfig = {
   enabled: true,

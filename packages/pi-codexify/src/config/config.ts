@@ -1,33 +1,26 @@
-import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
+import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
 import { getConfigPaths } from '#src/config/locations.js';
 import {
   codexReasoningSummarySchema,
   codexVerbositySchema,
   defaultConfig,
-  enabledSchema,
   type LoadedConfig,
   type PartialPiCodexifyConfig,
   type PiCodexifyConfig,
 } from '#src/config/schema.js';
 
 const EXTENSION_NAME = 'pi-codexify';
-const { mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
+const { mergeEnabledField, mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string): LoadedConfig {
-  const errors: string[] = [];
-  const config = cloneDefaultConfig();
-
-  for (const configPath of getConfigPaths(cwd)) {
-    const parsedConfig = readJsoncConfigFile<PartialPiCodexifyConfig>(
-      configPath,
-      EXTENSION_NAME,
-      errors
-    );
-    if (parsedConfig) mergeConfig(config, parsedConfig, configPath, errors);
-  }
-
-  return { config, errors };
+  return loadJsoncExtensionConfig({
+    cwd,
+    extensionName: EXTENSION_NAME,
+    getConfigPaths,
+    createDefaultConfig: cloneDefaultConfig,
+    mergeConfig,
+  });
 }
 
 function cloneDefaultConfig(): PiCodexifyConfig {
@@ -46,21 +39,19 @@ function mergeConfig(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(source, 'enabled', 'enabled', enabledSchema, configPath, errors, (value) => {
-    target.enabled = value;
-  });
+  mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   mergeSection(source, 'codex', configPath, errors, (section, sectionName) => {
     mergeCodexFields(target, section, sectionName, configPath, errors);
   });
   mergeSection(source, 'usage', configPath, errors, (section, sectionName) => {
-    mergeEnabledSection(target.usage, section, sectionName, configPath, errors);
+    mergeEnabledField(target.usage, section, `${sectionName}.enabled`, configPath, errors);
   });
   mergeSection(source, 'account', configPath, errors, (section, sectionName) => {
-    mergeEnabledSection(target.account, section, sectionName, configPath, errors);
+    mergeEnabledField(target.account, section, `${sectionName}.enabled`, configPath, errors);
   });
   mergeSection(source, 'webSearch', configPath, errors, (section, sectionName) => {
-    mergeEnabledSection(target.webSearch, section, sectionName, configPath, errors);
+    mergeEnabledField(target.webSearch, section, `${sectionName}.enabled`, configPath, errors);
   });
 }
 
@@ -71,7 +62,7 @@ function mergeCodexFields(
   configPath: string,
   errors: string[]
 ) {
-  mergeEnabledSection(target.codex, source, configName, configPath, errors);
+  mergeEnabledField(target.codex, source, `${configName}.enabled`, configPath, errors);
   mergeField(
     source,
     'verbosity',
@@ -92,26 +83,6 @@ function mergeCodexFields(
     errors,
     (value) => {
       target.codex.reasoningSummary = value ?? undefined;
-    }
-  );
-}
-
-function mergeEnabledSection(
-  target: { enabled: boolean },
-  source: Record<string, unknown>,
-  configName: string,
-  configPath: string,
-  errors: string[]
-) {
-  mergeField(
-    source,
-    'enabled',
-    `${configName}.enabled`,
-    enabledSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.enabled = value;
     }
   );
 }

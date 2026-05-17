@@ -1,9 +1,10 @@
-import { spawn } from 'node:child_process';
 import {
   VERSION,
   type ExtensionAPI,
   type ExtensionCommandContext,
 } from '@earendil-works/pi-coding-agent';
+import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { runCommand, startDetachedCommand } from '@trethore/pi-shared/process.js';
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
@@ -50,7 +51,7 @@ export async function handleUpdatePiCommand(
   try {
     latestVersion = await services.getLatestVersion();
   } catch (error) {
-    ctx.ui.notify(`Unable to check for pi updates: ${formatError(error)}`, 'error');
+    ctx.ui.notify(`Unable to check for pi updates: ${getErrorMessage(error)}`, 'error');
     return;
   }
 
@@ -69,7 +70,7 @@ export async function handleUpdatePiCommand(
   ctx.shutdown();
 }
 
-export function getInstalledPiVersion(): string | undefined {
+function getInstalledPiVersion(): string | undefined {
   return isVersion(VERSION) ? VERSION : undefined;
 }
 
@@ -85,20 +86,7 @@ export async function getLatestPiVersion(): Promise<string> {
 }
 
 export function startGlobalPiUpdate(): boolean {
-  try {
-    const child = spawn(NPM_COMMAND, ['install', '-g', PI_PACKAGE_NAME], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.on('error', () => {
-      // The update check already verified npm is runnable. Prevent an unhandled
-      // child process error if the detached install fails to start later.
-    });
-    child.unref();
-    return true;
-  } catch {
-    return false;
-  }
+  return startDetachedCommand(NPM_COMMAND, ['install', '-g', PI_PACKAGE_NAME]);
 }
 
 export function compareVersions(left: string, right: string): number {
@@ -113,28 +101,6 @@ export function compareVersions(left: string, right: string): number {
   return 0;
 }
 
-function runCommand(
-  command: string,
-  args: string[]
-): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString();
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
-    child.on('error', reject);
-    child.on('close', (exitCode) => {
-      resolve({ exitCode, stdout, stderr });
-    });
-  });
-}
-
 function isVersion(value: string): boolean {
   return /^\d+\.\d+\.\d+(?:[-+].*)?$/.test(value);
 }
@@ -144,8 +110,4 @@ function parseVersion(version: string): number[] {
     .split(/[+-]/, 1)[0]
     .split('.')
     .map((part) => Number.parseInt(part, 10));
-}
-
-function formatError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

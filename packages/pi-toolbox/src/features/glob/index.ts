@@ -1,33 +1,36 @@
-import { readFileSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import path from 'node:path';
-
-import type {
-  ExtensionAPI,
-  Theme,
-  ToolDefinition,
-  ToolRenderResultOptions,
-} from '@earendil-works/pi-coding-agent';
-import { getKeybindings, Text } from '@earendil-works/pi-tui';
+import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
 
 import type { GlobToolConfig } from '#src/config/schema.js';
-import { formatGlobResult } from '#src/features/glob/format.js';
+import { countGlobFiles, formatGlobResult } from '#src/features/glob/format.js';
+import {
+  formatStringList,
+  normalizeOptionalStringList,
+  normalizeRequiredStringList,
+} from '#src/utils/string-list.js';
+import {
+  assertSearchPaths,
+  cloneJsonSchema,
+  formatToolCall,
+  readJsonDefinition,
+  registerZeroCountToolResultError,
+  renderTextCall,
+  renderTextResult,
+} from '#src/utils/tool-definition.js';
 import {
   runRipgrepGlob,
   type RipgrepGlobResult,
   type RunRipgrepGlobOptions,
 } from '#src/features/glob/ripgrep.js';
 
-const COLLAPSED_RESULT_LINES = 10;
 const GLOB_TOOL_DEFINITION = readGlobDefinition();
 
 interface GlobParameters {
-  pattern: string;
-  path?: string;
+  patterns: string[];
+  paths?: string[];
   limit?: number;
   noIgnore?: boolean;
-  hidden?: boolean;
+  visibleOnly?: boolean;
 }
 
 interface GlobDefinition {
@@ -44,11 +47,11 @@ interface GlobParametersJsonSchema {
   additionalProperties: boolean;
   required: string[];
   properties: {
-    pattern: Record<string, unknown>;
-    path: Record<string, unknown>;
+    patterns: Record<string, unknown>;
+    paths: Record<string, unknown>;
     limit: { description: string } & Record<string, unknown>;
     noIgnore: Record<string, unknown>;
-    hidden: Record<string, unknown>;
+    visibleOnly: Record<string, unknown>;
   };
 }
 
@@ -56,7 +59,7 @@ type GlobParametersSchema = ReturnType<typeof createGlobParametersSchema>;
 type GlobRunner = (options: RunRipgrepGlobOptions) => Promise<RipgrepGlobResult>;
 
 export interface GlobToolDetails {
-  base: string;
+  paths: string[];
   count: number;
   limited: boolean;
 }
@@ -69,13 +72,7 @@ export interface GlobToolOptions {
 export function registerGlobTool(pi: ExtensionAPI, config: { glob: GlobToolConfig }): void {
   if (!config.glob.enabled) return;
   pi.registerTool(createGlobToolDefinition(config.glob));
-  pi.on('tool_result', (event) => {
-    if (event.toolName !== GLOB_TOOL_DEFINITION.name || !isZeroCountGlobDetails(event.details)) {
-      return;
-    }
-
-    return { isError: true };
-  });
+  registerZeroCountToolResultError(pi, GLOB_TOOL_DEFINITION.name);
 }
 
 export function createGlobToolDefinition(
@@ -95,55 +92,52 @@ export function createGlobToolDefinition(
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareGlobParameters(params, config);
-      const basePath = resolveBasePath(cwd, preparedParams.path);
-      await assertDirectory(basePath);
+      await assertSearchPaths(cwd, preparedParams.paths, {
+        toolName: 'glob',
+        requireDirectory: true,
+      });
 
       const result = await runner({
-        basePath,
-        pattern: preparedParams.pattern,
+        cwd,
+        patterns: preparedParams.patterns,
+        paths: preparedParams.paths,
         limit: preparedParams.limit,
         noIgnore: preparedParams.noIgnore,
-        hidden: preparedParams.hidden,
+        visibleOnly: preparedParams.visibleOnly,
         signal,
       });
 
-      const base = getBaseDisplay(cwd, preparedParams.path);
+      const count = countGlobFiles(result.files);
 
       return {
         content: [
           {
             type: 'text',
             text: formatGlobResult({
-              base,
+              paths: preparedParams.paths,
               files: result.files,
               limited: result.limited,
             }),
           },
         ],
         details: {
-          base,
-          count: result.files.length,
+          paths: preparedParams.paths,
+          count,
           limited: result.limited,
         },
       };
     },
     renderCall(args, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGlobCall(args, theme));
-      return text;
+      return renderTextCall(args, theme, context, formatGlobCall);
     },
     renderResult(result, options, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-      text.setText(formatGlobRenderedResult(result, options, theme));
-      return text;
+      return renderTextResult(result, options, theme, context);
     },
   };
 }
 
 function readGlobDefinition(): GlobDefinition {
-  return JSON.parse(
-    readFileSync(new URL('glob-definition.json', import.meta.url), 'utf8')
-  ) as GlobDefinition;
+  return readJsonDefinition(new URL('glob-definition.json', import.meta.url));
 }
 
 function createGlobParametersSchema(defaultLimit: number) {
@@ -156,7 +150,7 @@ function createGlobParametersSchema(defaultLimit: number) {
 }
 
 function cloneParametersSchema(parameters: GlobParametersJsonSchema): GlobParametersJsonSchema {
-  return structuredClone(parameters);
+  return cloneJsonSchema(parameters);
 }
 
 function prepareGlobParameters(
@@ -164,101 +158,33 @@ function prepareGlobParameters(
   config: GlobToolConfig
 ): Required<GlobParameters> {
   return {
-    pattern: params.pattern,
-    path: params.path?.trim() || '.',
+    patterns: normalizeRequiredStringList(params.patterns, {
+      name: 'patterns',
+      toolName: 'glob',
+    }),
+    paths: normalizeOptionalStringList(params.paths, ['.']),
     limit: params.limit ?? config.defaultLimit,
     noIgnore: params.noIgnore ?? false,
-    hidden: params.hidden ?? false,
+    visibleOnly: params.visibleOnly ?? false,
   };
 }
 
-function resolveBasePath(cwd: string, basePath: string): string {
-  return path.resolve(cwd, basePath);
-}
-
-async function assertDirectory(basePath: string): Promise<void> {
-  let stats;
-  try {
-    stats = await stat(basePath);
-  } catch (error) {
-    throw new Error(`glob failed: base path does not exist: ${basePath}`, { cause: error });
-  }
-
-  if (!stats.isDirectory()) {
-    throw new Error(`glob failed: base path is not a directory: ${basePath}`);
-  }
-}
-
-function getBaseDisplay(cwd: string, basePath: string): string {
-  if (basePath === '.') return '.';
-
-  const absoluteBasePath = resolveBasePath(cwd, basePath);
-  const relativePath = path.relative(cwd, absoluteBasePath);
-  return relativePath || '.';
-}
-
 function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string {
-  const pattern = args?.pattern ?? '';
-  const basePath = args?.path?.trim() || '.';
+  const patterns = formatStringList(args?.patterns, '...');
+  const searchPaths = formatStringList(args?.paths, '.');
   const flags = formatGlobFlags(args);
-  const suffix = flags ? theme.fg('toolOutput', ` (${flags})`) : '';
-
-  return [
-    theme.fg('toolTitle', theme.bold('glob')),
-    ' ',
-    theme.fg('accent', pattern || '...'),
-    theme.fg('toolOutput', ` in ${basePath}`),
-    suffix,
-  ].join('');
+  return formatToolCall(theme, {
+    toolName: 'glob',
+    query: patterns,
+    paths: searchPaths,
+    flags,
+  });
 }
 
 function formatGlobFlags(args: GlobParameters | undefined): string {
   const flags: string[] = [];
   if (args?.limit !== undefined) flags.push(`limit ${args.limit}`);
-  if (args?.hidden) flags.push('hidden');
-  if (args?.noIgnore) flags.push('no-ignore');
+  if (args?.noIgnore) flags.push('noIgnore');
+  if (args?.visibleOnly) flags.push('visibleOnly');
   return flags.join(', ');
-}
-
-function formatGlobRenderedResult(
-  result: { content: Array<{ type: string; text?: string }>; details?: GlobToolDetails },
-  options: ToolRenderResultOptions,
-  theme: Theme
-): string {
-  const output = getTextOutput(result).trim();
-  if (!output) return '';
-
-  const lines = output.split('\n');
-  const maxLines = options.expanded ? lines.length : COLLAPSED_RESULT_LINES;
-  const displayLines = lines.slice(0, maxLines);
-  const remaining = lines.length - maxLines;
-  const color = 'toolOutput';
-  let text = `\n${displayLines.map((line) => theme.fg(color, line)).join('\n')}`;
-
-  if (remaining > 0) {
-    text += theme.fg('muted', `\n... (${remaining} more lines, ${formatExpansionKey()} to expand)`);
-  }
-
-  return text;
-}
-
-function isZeroCountGlobDetails(details: unknown): details is GlobToolDetails {
-  return (
-    typeof details === 'object' &&
-    details !== null &&
-    'count' in details &&
-    (details as { count: unknown }).count === 0
-  );
-}
-
-function getTextOutput(result: { content: Array<{ type: string; text?: string }> }): string {
-  return result.content
-    .filter((item) => item.type === 'text' && item.text !== undefined)
-    .map((item) => item.text)
-    .join('\n');
-}
-
-function formatExpansionKey(): string {
-  const keys = getKeybindings().getKeys('app.tools.expand');
-  return keys.length > 0 ? keys.join('/') : 'app.tools.expand';
 }

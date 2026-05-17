@@ -1,4 +1,4 @@
-import { mergeField } from '#src/config/merge.js';
+import { mergeEnabledField, mergeField } from '#src/config/merge.js';
 import type { TerminalCleanupConfig } from '#src/config/schema.js';
 import { booleanSchema } from '#src/config/validation.js';
 
@@ -9,17 +9,7 @@ export function mergeTerminalCleanupFields(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(
-    source,
-    'enabled',
-    `${configName}.enabled`,
-    booleanSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.enabled = value;
-    }
-  );
+  mergeEnabledField(target, source, `${configName}.enabled`, configPath, errors);
   mergeField(
     source,
     'stripAnsi',

@@ -7,11 +7,16 @@ import {
 import { loadConfig } from '#src/config/config.js';
 import type { PiToolboxConfig } from '#src/config/schema.js';
 import { registerGlobTool } from '#src/features/glob/index.js';
+import { registerGrepTool } from '#src/features/grep/index.js';
 
 const FEATURES: readonly ExtensionFeature<PiToolboxConfig>[] = [
   {
     isEnabled: (config) => config.enabled && config.glob.enabled,
     register: registerGlobTool,
+  },
+  {
+    isEnabled: (config) => config.enabled && config.grep.enabled,
+    register: registerGrepTool,
   },
 ];
 

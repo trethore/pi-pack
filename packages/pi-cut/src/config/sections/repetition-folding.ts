@@ -1,14 +1,9 @@
-import { mergeField } from '#src/config/merge.js';
+import { mergeEnabledField, mergeField } from '#src/config/merge.js';
 import type {
   PartialRepetitionFoldingConfig,
   RepetitionFoldingConfig,
 } from '#src/config/schema.js';
-import {
-  booleanSchema,
-  integerSchema,
-  minRepeatsSchema,
-  savingsModeSchema,
-} from '#src/config/validation.js';
+import { integerSchema, minRepeatsSchema, savingsModeSchema } from '#src/config/validation.js';
 
 export function mergeRepetitionFoldingFields(
   target: Partial<RepetitionFoldingConfig> | PartialRepetitionFoldingConfig,
@@ -17,17 +12,7 @@ export function mergeRepetitionFoldingFields(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(
-    source,
-    'enabled',
-    `${configName}.enabled`,
-    booleanSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.enabled = value;
-    }
-  );
+  mergeEnabledField(target, source, `${configName}.enabled`, configPath, errors);
   mergeField(
     source,
     'minRepeats',

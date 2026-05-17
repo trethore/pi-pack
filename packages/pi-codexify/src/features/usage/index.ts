@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { getAgentDir } from '@earendil-works/pi-coding-agent';
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
+import { getErrorMessage } from '@trethore/pi-shared/error.js';
 
 type UsageWindow = {
   used_percent?: number | null;
@@ -172,8 +173,4 @@ async function fetchUsage(): Promise<CodexUsageResponse> {
   }
 
   return (await response.json()) as CodexUsageResponse;
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
