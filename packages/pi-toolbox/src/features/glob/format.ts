@@ -16,6 +16,10 @@ interface CompressedNode {
   node: TreeNode;
 }
 
+export function countGlobFiles(files: readonly string[]): number {
+  return normalizeFiles(files).length;
+}
+
 export function formatGlobResult(options: GlobFormatOptions): string {
   const root = createNode();
   const files = normalizeFiles(options.files);

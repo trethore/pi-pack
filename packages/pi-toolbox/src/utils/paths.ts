@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 interface CompactPathParts {
   rootLabel?: string;
   relativePath: string;
@@ -42,6 +44,10 @@ export function toDisplayPath(value: string): string {
 
 export function toPosixPath(value: string): string {
   return value.replaceAll('\\', '/');
+}
+
+export function toResolvedDisplayPath(cwd: string, value: string): string {
+  return toDisplayPath(path.resolve(cwd, value));
 }
 
 function formatRootedCompactPath(

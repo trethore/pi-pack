@@ -2,7 +2,7 @@ import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-cod
 import { Type } from 'typebox';
 
 import type { GlobToolConfig } from '#src/config/schema.js';
-import { formatGlobResult } from '#src/features/glob/format.js';
+import { countGlobFiles, formatGlobResult } from '#src/features/glob/format.js';
 import {
   formatStringList,
   normalizeOptionalStringList,
@@ -107,6 +107,8 @@ export function createGlobToolDefinition(
         signal,
       });
 
+      const count = countGlobFiles(result.files);
+
       return {
         content: [
           {
@@ -120,7 +122,7 @@ export function createGlobToolDefinition(
         ],
         details: {
           paths: preparedParams.paths,
-          count: result.files.length,
+          count,
           limited: result.limited,
         },
       };

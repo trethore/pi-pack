@@ -1,4 +1,4 @@
-import { formatRipgrepPaths } from '#src/utils/paths.js';
+import { formatRipgrepPaths, toResolvedDisplayPath } from '#src/utils/paths.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
 import {
   formatRipgrepExclusionGlobArgs,
@@ -28,6 +28,7 @@ export async function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<Ri
     limit: options.limit,
     signal: options.signal,
     parseLine: parseFileLine,
+    formatItemKey: (file) => toResolvedDisplayPath(options.cwd, file),
   });
 
   return { files: result.items, limited: result.limited };

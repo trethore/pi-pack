@@ -29,6 +29,26 @@ src/index.ts
     expect(formatGrepResult({ matches: [], limit: 100 })).toBe('matches=0 files=0');
   });
 
+  it('deduplicates matches returned through overlapping search paths', () => {
+    // Arrange and act
+    const result = formatGrepResult({
+      matches: [
+        { file: 'README.md', line: 39, text: '- `patterns`: glob pattern(s)' },
+        { file: 'README.md', line: 40, text: '- `paths`: directories to search in' },
+        { file: 'README.md', line: 39, text: '- `patterns`: glob pattern(s)' },
+        { file: 'README.md', line: 40, text: '- `paths`: directories to search in' },
+      ],
+      limit: 100,
+    });
+
+    // Assert
+    expect(result).toBe(`matches=2 files=1
+
+README.md
+39: - \`patterns\`: glob pattern(s)
+40: - \`paths\`: directories to search in`);
+  });
+
   it('formats files relative to a single absolute search root', () => {
     // Arrange and act
     const result = formatGrepResult({

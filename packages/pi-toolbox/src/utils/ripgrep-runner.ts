@@ -14,6 +14,7 @@ export interface RunRipgrepLinesOptions<T> {
   limit: number;
   signal?: AbortSignal;
   parseLine: (line: string) => T | undefined;
+  formatItemKey?: (item: T) => string;
 }
 
 export function runRipgrepLines<T>(
@@ -26,6 +27,7 @@ export function runRipgrepLines<T>(
     }
 
     const items: T[] = [];
+    const seenItemKeys = new Set<string>();
     const child = spawn(getRipgrepExecutable(), options.args, {
       cwd: options.cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -106,7 +108,20 @@ export function runRipgrepLines<T>(
 
     function collectLine(line: string) {
       const item = options.parseLine(line);
-      if (item !== undefined) items.push(item);
+      if (item === undefined) return;
+      if (isDuplicateItem(item)) return;
+
+      items.push(item);
+    }
+
+    function isDuplicateItem(item: T): boolean {
+      if (options.formatItemKey === undefined) return false;
+
+      const key = options.formatItemKey(item);
+      if (seenItemKeys.has(key)) return true;
+
+      seenItemKeys.add(key);
+      return false;
     }
   });
 }

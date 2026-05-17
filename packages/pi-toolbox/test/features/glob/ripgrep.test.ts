@@ -27,6 +27,28 @@ describe('ripgrep glob runner', () => {
     expect(result).toEqual({ files: ['index.ts'], limited: false });
   });
 
+  it('deduplicates files before applying the collection limit', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'dir'), { recursive: true });
+    writeFileSync(path.join(cwd, 'dir', 'a.txt'), 'a');
+    writeFileSync(path.join(cwd, 'dir', 'b.txt'), 'b');
+
+    // Act
+    const result = await runRipgrepGlob({
+      cwd,
+      patterns: ['**/*'],
+      paths: ['dir', path.join(cwd, 'dir', 'a.txt')],
+      limit: 2,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(toRelativeFiles(cwd, result.files)).toEqual(['dir/a.txt', 'dir/b.txt']);
+    expect(result.limited).toBe(false);
+  });
+
   it('includes hidden files by default while excluding git internals', async () => {
     // Arrange
     const cwd = makeTempDir();
@@ -72,6 +94,10 @@ describe('ripgrep glob runner', () => {
     expect(result.files).not.toContain('.env.example');
   });
 });
+
+function toRelativeFiles(cwd: string, files: readonly string[]): string[] {
+  return files.map((file) => path.relative(cwd, path.resolve(cwd, file)));
+}
 
 function makeTempDir(): string {
   return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-ripgrep-glob-test-'));

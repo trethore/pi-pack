@@ -1,4 +1,4 @@
-import { formatRipgrepPaths } from '#src/utils/paths.js';
+import { formatRipgrepPaths, toResolvedDisplayPath } from '#src/utils/paths.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
 import {
   formatRipgrepExclusionGlobArgs,
@@ -52,6 +52,7 @@ export async function runRipgrepGrep(options: RunRipgrepGrepOptions): Promise<Ri
     limit: options.limit,
     signal: options.signal,
     parseLine: (line) => parseMatchLine(line, options.maxCharsPerMatch),
+    formatItemKey: (match) => formatMatchKey(options.cwd, match),
   });
 
   return { matches: result.items, limited: result.limited };
@@ -102,6 +103,10 @@ function truncateMatchText(value: string, maxChars: number): string {
   }
 
   return text;
+}
+
+function formatMatchKey(cwd: string, match: RipgrepGrepMatch): string {
+  return `${toResolvedDisplayPath(cwd, match.file)}\0${match.line}\0${match.text}`;
 }
 
 function parseMatchLine(line: string, maxCharsPerMatch: number): RipgrepGrepMatch | undefined {

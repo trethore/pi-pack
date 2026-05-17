@@ -75,7 +75,23 @@ function formatWithGlobalFooter(text: string, display: GrepDisplay): string {
 
 function normalizeMatches(matches: readonly GrepMatch[], paths: readonly string[]): GrepMatch[] {
   const formatPath = createCompactPathFormatter(paths);
-  return matches.map((match) => ({ ...match, file: formatPath(match.file) || '.' }));
+  const normalizedMatches: GrepMatch[] = [];
+  const seenMatches = new Set<string>();
+
+  for (const match of matches) {
+    const normalizedMatch = { ...match, file: formatPath(match.file) || '.' };
+    const key = formatMatchKey(normalizedMatch);
+    if (seenMatches.has(key)) continue;
+
+    seenMatches.add(key);
+    normalizedMatches.push(normalizedMatch);
+  }
+
+  return normalizedMatches;
+}
+
+function formatMatchKey(match: GrepMatch): string {
+  return `${match.file}\0${match.line}\0${match.text}`;
 }
 
 function countFiles(matches: readonly GrepMatch[]): number {

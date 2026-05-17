@@ -96,6 +96,35 @@ src/index.ts`,
     ]);
   });
 
+  it('deduplicates files returned through overlapping search paths in details', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'src'), { recursive: true });
+    const runner = vi.fn(async () => ({
+      files: ['src/index.ts', './src/index.ts', 'README.md'],
+      limited: false,
+    }));
+    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
+
+    // Act
+    const result = await tool.execute(
+      'call-id',
+      { patterns: ['**/*'], paths: ['.', 'src'] },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    expect(result.details).toEqual({ paths: ['.', 'src'], count: 2, limited: false });
+    expect(result.content[0]).toEqual({
+      type: 'text',
+      text: `found=2
+README.md
+src/index.ts`,
+    });
+  });
+
   it('uses the provided patterns, paths, and limit', async () => {
     // Arrange
     const cwd = makeTempDir();
