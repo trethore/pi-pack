@@ -51,6 +51,28 @@ describe('ripgrep glob runner', () => {
     expect(result.files).toEqual(expect.arrayContaining(['nested/child.txt', 'root.txt']));
   });
 
+  it('applies depth independently to each search path', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'root', 'nested', 'deep'), { recursive: true });
+    writeFileSync(path.join(cwd, 'root', 'nested', 'child.txt'), 'child');
+    writeFileSync(path.join(cwd, 'root', 'nested', 'deep', 'grandchild.txt'), 'grandchild');
+
+    // Act
+    const result = await runRipgrepGlob({
+      cwd,
+      patterns: ['**/*.txt'],
+      paths: ['root', 'root/nested'],
+      limit: 10,
+      depth: 1,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(toRelativeFiles(cwd, result.files)).toEqual(['root/nested/child.txt']);
+  });
+
   it('deduplicates files before applying the collection limit', async () => {
     // Arrange
     const cwd = makeTempDir();
