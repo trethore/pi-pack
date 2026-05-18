@@ -54,6 +54,42 @@ describe('update pi command', () => {
     );
   });
 
+  it('uses the active pi CLI version when updating the global install', async () => {
+    // Arrange
+    const commandContext = createCommandContext();
+    spawnMock
+      .mockReturnValueOnce(createCommandProcess({ stdout: '0.73.1\n' }))
+      .mockReturnValueOnce(createCommandProcess({ stdout: '0.75.1\n' }))
+      .mockReturnValueOnce(createDetachedProcess());
+
+    // Act
+    await handleUpdatePiCommand(commandContext);
+
+    // Assert
+    expect(spawnMock).toHaveBeenNthCalledWith(1, expect.any(String), ['--version'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    expect(spawnMock).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      ['view', EXPECTED_PI_PACKAGE_NAME, 'version'],
+      {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
+    expect(spawnMock).toHaveBeenNthCalledWith(
+      3,
+      expect.any(String),
+      ['install', '-g', '--force', EXPECTED_PI_PACKAGE_NAME],
+      { detached: true, stdio: 'ignore' }
+    );
+    expect(commandContext.shutdown).toHaveBeenCalledOnce();
+    expect(commandContext.ui.notify).toHaveBeenCalledWith(
+      'Updating pi 0.73.1 -> 0.75.1. Pi will quit now.',
+      'info'
+    );
+  });
+
   it('does not quit when checking the latest version fails', async () => {
     // Arrange
     const commandContext = createCommandContext();
@@ -99,7 +135,7 @@ describe('update pi command', () => {
     expect(updateStarted).toBe(true);
     expect(spawnMock).toHaveBeenCalledWith(
       expect.any(String),
-      ['install', '-g', EXPECTED_PI_PACKAGE_NAME],
+      ['install', '-g', '--force', EXPECTED_PI_PACKAGE_NAME],
       { detached: true, stdio: 'ignore' }
     );
   });
@@ -155,7 +191,7 @@ function createServices(options: {
   latestError?: Error;
 }) {
   return {
-    getInstalledVersion: vi.fn(() => options.installedVersion),
+    getInstalledVersion: vi.fn(async () => options.installedVersion),
     getLatestVersion: vi.fn(async () => {
       if (options.latestError) throw options.latestError;
       return options.latestVersion ?? '0.0.0';

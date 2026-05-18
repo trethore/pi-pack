@@ -15,12 +15,13 @@ type UpdatePiCommandContext = Pick<ExtensionCommandContext, 'shutdown'> & {
 };
 
 interface UpdatePiServices {
-  getInstalledVersion(): string | undefined;
+  getInstalledVersion(): Promise<string | undefined>;
   getLatestVersion(): Promise<string>;
   startUpdate(): boolean;
 }
 
 const PI_PACKAGE_NAME = '@earendil-works/pi-coding-agent';
+const PI_COMMAND = process.platform === 'win32' ? 'pi.cmd' : 'pi';
 const NPM_COMMAND = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const defaultUpdatePiServices: UpdatePiServices = {
   getInstalledVersion: getInstalledPiVersion,
@@ -41,7 +42,14 @@ export async function handleUpdatePiCommand(
   ctx: UpdatePiCommandContext,
   services: UpdatePiServices = defaultUpdatePiServices
 ): Promise<void> {
-  const currentVersion = services.getInstalledVersion();
+  let currentVersion: string | undefined;
+  try {
+    currentVersion = await services.getInstalledVersion();
+  } catch (error) {
+    ctx.ui.notify(`Unable to determine the current pi version: ${getErrorMessage(error)}`, 'error');
+    return;
+  }
+
   if (!currentVersion) {
     ctx.ui.notify('Unable to determine the current pi version.', 'error');
     return;
@@ -70,7 +78,17 @@ export async function handleUpdatePiCommand(
   ctx.shutdown();
 }
 
-function getInstalledPiVersion(): string | undefined {
+async function getInstalledPiVersion(): Promise<string | undefined> {
+  try {
+    const result = await runCommand(PI_COMMAND, ['--version']);
+    if (result.exitCode === 0) {
+      const version = result.stdout.trim();
+      if (isVersion(version)) return version;
+    }
+  } catch {
+    // Fall back to the loaded package version when the global pi binary is unavailable.
+  }
+
   return isVersion(VERSION) ? VERSION : undefined;
 }
 
@@ -86,7 +104,7 @@ export async function getLatestPiVersion(): Promise<string> {
 }
 
 export function startGlobalPiUpdate(): boolean {
-  return startDetachedCommand(NPM_COMMAND, ['install', '-g', PI_PACKAGE_NAME]);
+  return startDetachedCommand(NPM_COMMAND, ['install', '-g', '--force', PI_PACKAGE_NAME]);
 }
 
 export function compareVersions(left: string, right: string): number {
