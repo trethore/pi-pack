@@ -30,6 +30,11 @@
         "maximum": 1000,
         "description": "Maximum number of files to return. If omitted, the default limit is {{defaultLimit}}."
       },
+      "depth": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Maximum directory traversal depth relative to each search path. If provided, passes `--max-depth <depth>`. If omitted, traversal is unlimited."
+      },
       "noIgnore": {
         "type": "boolean",
         "description": "Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted, defaults to false."

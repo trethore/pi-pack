@@ -47,15 +47,29 @@ describe('glob tool', () => {
     expect(result).toEqual({ isError: true });
   });
 
-  it('injects the configured default limit into the tool schema description', () => {
+  it('defines limit and depth in the tool schema', () => {
     // Arrange and act
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 42 });
+    const properties = (
+      tool.parameters as never as {
+        properties: {
+          limit: { description: string };
+          depth: { minimum: number; description: string };
+        };
+      }
+    ).properties;
 
     // Assert
-    expect(
-      (tool.parameters as never as { properties: { limit: { description: string } } }).properties
-        .limit.description
-    ).toBe('Maximum number of files to return. If omitted, the default limit is 42.');
+    expect(properties.limit.description).toBe(
+      'Maximum number of files to return. If omitted, the default limit is 42.'
+    );
+    expect(properties.depth).toEqual(
+      expect.objectContaining({
+        minimum: 1,
+        description:
+          'Maximum directory traversal depth relative to each search path. If provided, passes `--max-depth <depth>`. If omitted, traversal is unlimited.',
+      })
+    );
   });
 
   it('uses config defaults and forwards flags to the runner', async () => {
@@ -82,6 +96,7 @@ describe('glob tool', () => {
       patterns: ['**/*.ts'],
       paths: ['.'],
       limit: 42,
+      depth: undefined,
       noIgnore: true,
       visibleOnly: true,
       signal: undefined,
@@ -125,7 +140,7 @@ src/index.ts`,
     });
   });
 
-  it('uses the provided patterns, paths, and limit', async () => {
+  it('uses the provided patterns, paths, limit, and depth', async () => {
     // Arrange
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'packages', 'pi-toolbox'), { recursive: true });
@@ -143,6 +158,7 @@ src/index.ts`,
         patterns: ['**/*.ts', '!**/*.d.ts'],
         paths: ['packages/pi-toolbox', 'scripts'],
         limit: 5,
+        depth: 2,
       },
       undefined,
       undefined,
@@ -156,6 +172,7 @@ src/index.ts`,
         patterns: ['**/*.ts', '!**/*.d.ts'],
         paths: ['packages/pi-toolbox', 'scripts'],
         limit: 5,
+        depth: 2,
       })
     );
     expect(result.details).toEqual({
@@ -204,14 +221,23 @@ src/index.ts`,
     // Act
     const rendered = renderComponent(
       tool.renderCall?.(
-        { patterns: ['*.ts'], paths: ['src'], limit: 20, noIgnore: true, visibleOnly: true },
+        {
+          patterns: ['*.ts'],
+          paths: ['src'],
+          limit: 20,
+          depth: 2,
+          noIgnore: true,
+          visibleOnly: true,
+        },
         createTheme(),
         createRenderContext(false)
       )
     );
 
     // Assert
-    expect(rendered).toContain('<toolOutput> (limit 20, noIgnore, visibleOnly)</toolOutput>');
+    expect(rendered).toContain(
+      '<toolOutput> (limit 20, depth 2, noIgnore, visibleOnly)</toolOutput>'
+    );
   });
 
   it('renders collapsed results with an expansion hint', () => {

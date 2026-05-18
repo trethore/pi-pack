@@ -29,8 +29,13 @@ interface GlobParameters {
   patterns: string[];
   paths?: string[];
   limit?: number;
+  depth?: number;
   noIgnore?: boolean;
   visibleOnly?: boolean;
+}
+
+interface PreparedGlobParameters extends Required<Omit<GlobParameters, 'depth'>> {
+  depth?: number;
 }
 
 interface GlobDefinition {
@@ -50,6 +55,7 @@ interface GlobParametersJsonSchema {
     patterns: Record<string, unknown>;
     paths: Record<string, unknown>;
     limit: { description: string } & Record<string, unknown>;
+    depth: Record<string, unknown>;
     noIgnore: Record<string, unknown>;
     visibleOnly: Record<string, unknown>;
   };
@@ -102,6 +108,7 @@ export function createGlobToolDefinition(
         patterns: preparedParams.patterns,
         paths: preparedParams.paths,
         limit: preparedParams.limit,
+        depth: preparedParams.depth,
         noIgnore: preparedParams.noIgnore,
         visibleOnly: preparedParams.visibleOnly,
         signal,
@@ -156,7 +163,7 @@ function cloneParametersSchema(parameters: GlobParametersJsonSchema): GlobParame
 function prepareGlobParameters(
   params: GlobParameters,
   config: GlobToolConfig
-): Required<GlobParameters> {
+): PreparedGlobParameters {
   return {
     patterns: normalizeRequiredStringList(params.patterns, {
       name: 'patterns',
@@ -164,6 +171,7 @@ function prepareGlobParameters(
     }),
     paths: normalizeOptionalStringList(params.paths, ['.']),
     limit: params.limit ?? config.defaultLimit,
+    depth: params.depth,
     noIgnore: params.noIgnore ?? false,
     visibleOnly: params.visibleOnly ?? false,
   };
@@ -184,6 +192,7 @@ function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string 
 function formatGlobFlags(args: GlobParameters | undefined): string {
   const flags: string[] = [];
   if (args?.limit !== undefined) flags.push(`limit ${args.limit}`);
+  if (args?.depth !== undefined) flags.push(`depth ${args.depth}`);
   if (args?.noIgnore) flags.push('noIgnore');
   if (args?.visibleOnly) flags.push('visibleOnly');
   return flags.join(', ');

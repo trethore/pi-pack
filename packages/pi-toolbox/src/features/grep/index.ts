@@ -32,13 +32,15 @@ interface GrepParameters {
   globs?: string[];
   limit?: number;
   limitPerFile?: number;
+  depth?: number;
   maxCharsPerMatch?: number;
   noIgnore?: boolean;
   visibleOnly?: boolean;
 }
 
-interface PreparedGrepParameters extends Required<Omit<GrepParameters, 'limitPerFile'>> {
+interface PreparedGrepParameters extends Required<Omit<GrepParameters, 'limitPerFile' | 'depth'>> {
   limitPerFile?: number;
+  depth?: number;
 }
 
 interface GrepDefinition {
@@ -60,6 +62,7 @@ interface GrepParametersJsonSchema {
     globs: Record<string, unknown>;
     limit: { description: string } & Record<string, unknown>;
     limitPerFile: { description: string } & Record<string, unknown>;
+    depth: Record<string, unknown>;
     maxCharsPerMatch: { description: string } & Record<string, unknown>;
     noIgnore: Record<string, unknown>;
     visibleOnly: Record<string, unknown>;
@@ -112,6 +115,7 @@ export function createGrepToolDefinition(
         globs: preparedParams.globs,
         limit: preparedParams.limit,
         limitPerFile: preparedParams.limitPerFile,
+        depth: preparedParams.depth,
         maxCharsPerMatch: preparedParams.maxCharsPerMatch,
         noIgnore: preparedParams.noIgnore,
         visibleOnly: preparedParams.visibleOnly,
@@ -192,6 +196,7 @@ function prepareGrepParameters(
     globs: normalizeOptionalStringList(params.globs, []),
     limit: params.limit ?? config.defaultLimit,
     limitPerFile: params.limitPerFile ?? config.defaultLimitPerFile,
+    depth: params.depth,
     maxCharsPerMatch: params.maxCharsPerMatch ?? config.defaultMaxCharsPerMatch,
     noIgnore: params.noIgnore ?? false,
     visibleOnly: params.visibleOnly ?? false,
@@ -214,6 +219,7 @@ function formatGrepFlags(args: GrepParameters | undefined): string {
   return [
     formatOptionalNumberFlag('limit', args?.limit),
     formatOptionalNumberFlag('limit/file', args?.limitPerFile),
+    formatOptionalNumberFlag('depth', args?.depth),
     formatOptionalNumberFlag('chars', args?.maxCharsPerMatch),
     formatOptionalStringListFlag('globs', args?.globs),
     args?.noIgnore ? 'noIgnore' : undefined,

@@ -1,4 +1,5 @@
 import { formatRipgrepPaths, toResolvedDisplayPath } from '#src/utils/paths.js';
+import { formatRipgrepDepthArgs } from '#src/utils/ripgrep-depth.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
 import {
   formatRipgrepExclusionGlobArgs,
@@ -12,6 +13,7 @@ export interface RunRipgrepGrepOptions {
   globs: string[];
   limit: number;
   limitPerFile?: number;
+  depth?: number;
   maxCharsPerMatch: number;
   noIgnore: boolean;
   visibleOnly: boolean;
@@ -73,6 +75,7 @@ function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
     ...(options.limitPerFile === undefined
       ? []
       : ['--max-count', String(options.limitPerFile + 1)]),
+    ...formatRipgrepDepthArgs(options.depth),
     ...formatRipgrepHiddenArgs(options.visibleOnly),
     ...options.globs.flatMap((glob) => ['-g', glob]),
     ...formatRipgrepExclusionGlobArgs(options.visibleOnly),

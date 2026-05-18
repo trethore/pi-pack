@@ -39,6 +39,7 @@ Arguments:
 - `patterns`: glob pattern(s) passed to `rg -g`; provide one or more patterns; use `!` for exclusions
 - `paths`: directories to search in, defaults to cwd
 - `limit`: maximum files to return, defaults to `glob.defaultLimit`, minimum `1`, maximum `1000`
+- `depth`: maximum directory traversal depth relative to each search path, passed as `--max-depth`; omitted for unlimited traversal, minimum `1`
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
 - `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
 
@@ -68,6 +69,7 @@ Arguments:
 - `globs`: glob filter(s) for files to search; passed as `-g`; use `!` for exclusions
 - `limit`: maximum matching lines to return, defaults to `grep.defaultLimit`, minimum `1`, maximum `1000`
 - `limitPerFile`: maximum matching lines to return per file, defaults to `grep.defaultLimitPerFile` when configured, otherwise no per-file limit
+- `depth`: maximum directory traversal depth relative to each search path, passed as `--max-depth`; omitted for unlimited traversal, minimum `1`
 - `maxCharsPerMatch`: maximum chars per matching line, defaults to `grep.defaultMaxCharsPerMatch`, minimum `100`, maximum `2000`
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
 - `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded

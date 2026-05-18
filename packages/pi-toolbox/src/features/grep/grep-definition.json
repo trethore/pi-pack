@@ -42,6 +42,11 @@
         "maximum": 1000,
         "description": "Maximum number of matching lines to return per file. If omitted, defaults to {{defaultLimitPerFile}}."
       },
+      "depth": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Maximum directory traversal depth relative to each search path. If provided, passes `--max-depth <depth>`. If omitted, traversal is unlimited."
+      },
       "maxCharsPerMatch": {
         "type": "integer",
         "minimum": 100,

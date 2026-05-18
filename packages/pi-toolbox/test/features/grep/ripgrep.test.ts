@@ -32,6 +32,39 @@ describe('ripgrep grep runner', () => {
     });
   });
 
+  it('limits directory traversal depth relative to each search path', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'nested', 'deep'), { recursive: true });
+    writeFileSync(path.join(cwd, 'root.txt'), 'needle root\n');
+    writeFileSync(path.join(cwd, 'nested', 'child.txt'), 'needle child\n');
+    writeFileSync(path.join(cwd, 'nested', 'deep', 'grandchild.txt'), 'needle grandchild\n');
+
+    // Act
+    const result = await runRipgrepGrep({
+      cwd,
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: [],
+      limit: 10,
+      depth: 2,
+      maxCharsPerMatch: 200,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    const matches = toRelativeMatches(cwd, result.matches);
+
+    expect(matches).toHaveLength(2);
+    expect(matches).toEqual(
+      expect.arrayContaining([
+        { file: 'nested/child.txt', line: 1, text: 'needle child' },
+        { file: 'root.txt', line: 1, text: 'needle root' },
+      ])
+    );
+  });
+
   it('deduplicates matches before applying the collection limit', async () => {
     // Arrange
     const cwd = makeTempDir();

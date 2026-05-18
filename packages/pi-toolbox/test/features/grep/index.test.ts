@@ -52,7 +52,7 @@ describe('grep tool', () => {
     expect(result).toEqual({ isError: true });
   });
 
-  it('injects configured defaults into the tool schema descriptions', () => {
+  it('injects configured defaults and defines depth in the tool schema', () => {
     // Arrange and act
     const tool = createGrepToolDefinition({
       enabled: true,
@@ -65,6 +65,7 @@ describe('grep tool', () => {
         properties: {
           limit: { description: string };
           limitPerFile: { description: string };
+          depth: { minimum: number; description: string };
           maxCharsPerMatch: { description: string };
         };
       }
@@ -76,6 +77,13 @@ describe('grep tool', () => {
     );
     expect(properties.limitPerFile.description).toBe(
       'Maximum number of matching lines to return per file. If omitted, defaults to 7.'
+    );
+    expect(properties.depth).toEqual(
+      expect.objectContaining({
+        minimum: 1,
+        description:
+          'Maximum directory traversal depth relative to each search path. If provided, passes `--max-depth <depth>`. If omitted, traversal is unlimited.',
+      })
     );
     expect(properties.maxCharsPerMatch.description).toBe(
       'Maximum number of characters to show per matching line. If omitted, defaults to 300.'
@@ -126,6 +134,7 @@ describe('grep tool', () => {
       globs: [],
       limit: 42,
       limitPerFile: 7,
+      depth: undefined,
       maxCharsPerMatch: 300,
       noIgnore: true,
       visibleOnly: true,
@@ -143,7 +152,7 @@ src/index.ts
     ]);
   });
 
-  it('uses the provided regexes, paths, globs, and explicit limits', async () => {
+  it('uses the provided regexes, paths, globs, explicit limits, and depth', async () => {
     // Arrange
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'src'), { recursive: true });
@@ -160,6 +169,7 @@ src/index.ts
         globs: ['*.ts', '!*.d.ts'],
         limit: 5,
         limitPerFile: 2,
+        depth: 2,
         maxCharsPerMatch: 120,
       },
       undefined,
@@ -175,6 +185,7 @@ src/index.ts
         globs: ['*.ts', '!*.d.ts'],
         limit: 5,
         limitPerFile: 2,
+        depth: 2,
         maxCharsPerMatch: 120,
       })
     );
@@ -249,6 +260,7 @@ src/index.ts
           globs: ['*.ts'],
           limit: 20,
           limitPerFile: 2,
+          depth: 2,
           maxCharsPerMatch: 120,
           noIgnore: true,
           visibleOnly: true,
@@ -260,7 +272,7 @@ src/index.ts
 
     // Assert
     expect(rendered).toContain(
-      '<toolOutput> (limit 20, limit/file 2, chars 120, globs *.ts, noIgnore, visibleOnly)</toolOutput>'
+      '<toolOutput> (limit 20, limit/file 2, depth 2, chars 120, globs *.ts, noIgnore, visibleOnly)</toolOutput>'
     );
   });
 
