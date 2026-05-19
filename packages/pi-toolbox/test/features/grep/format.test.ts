@@ -34,6 +34,24 @@ describe('formatGrepResult', () => {
     expect(formatGrepResult({ matches: [], limit: 100 })).toBe('matches=0 files=0');
   });
 
+  it('sorts matches by file and line before formatting', () => {
+    // Arrange and act
+    const result = formatGrepResult({
+      matches: [
+        { file: 'b.txt', line: 2, text: 'b2' },
+        { file: 'a.txt', line: 2, text: 'a2' },
+        { file: 'b.txt', line: 1, text: 'b1' },
+        { file: 'a.txt', line: 1, text: 'a1' },
+      ],
+      limit: 100,
+    });
+
+    // Assert
+    expect(result).toBe(
+      lines('matches=4 files=2', '', 'a.txt', '1: a1', '2: a2', '', 'b.txt', '1: b1', '2: b2')
+    );
+  });
+
   it('deduplicates matches returned through overlapping search paths', () => {
     // Arrange and act
     const result = formatGrepResult({
@@ -86,11 +104,11 @@ describe('formatGrepResult', () => {
       lines(
         'matches=2 files=2',
         '',
-        'u/project/src/a.ts',
-        '1: home match',
-        '',
         'tmp/project/src/a.ts',
-        '1: tmp match'
+        '1: tmp match',
+        '',
+        'u/project/src/a.ts',
+        '1: home match'
       )
     );
   });

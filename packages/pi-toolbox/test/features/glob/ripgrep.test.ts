@@ -73,6 +73,27 @@ describe('ripgrep glob runner', () => {
     expect(toRelativeFiles(cwd, result.files)).toEqual(['root/nested/child.txt']);
   });
 
+  it('sorts files by path before applying the collection limit', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'z.txt'), 'z');
+    writeFileSync(path.join(cwd, 'a.txt'), 'a');
+    writeFileSync(path.join(cwd, 'm.txt'), 'm');
+
+    // Act
+    const result = await runRipgrepGlob({
+      cwd,
+      patterns: ['*.txt'],
+      paths: ['.'],
+      limit: 2,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result).toEqual({ files: ['a.txt', 'm.txt'], limited: true });
+  });
+
   it('deduplicates files before applying the collection limit', async () => {
     // Arrange
     const cwd = makeTempDir();

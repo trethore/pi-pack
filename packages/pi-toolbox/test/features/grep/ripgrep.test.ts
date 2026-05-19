@@ -119,6 +119,35 @@ describe('ripgrep grep runner', () => {
     ]);
   });
 
+  it('sorts matches by path before applying the collection limit', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'z.txt'), 'needle z\n');
+    writeFileSync(path.join(cwd, 'a.txt'), 'needle a\n');
+    writeFileSync(path.join(cwd, 'm.txt'), 'needle m\n');
+
+    // Act
+    const result = await runRipgrepGrep({
+      cwd,
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: [],
+      limit: 2,
+      maxCharsPerMatch: 200,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result).toEqual({
+      matches: [
+        { file: 'a.txt', line: 1, text: 'needle a' },
+        { file: 'm.txt', line: 1, text: 'needle m' },
+      ],
+      limited: true,
+    });
+  });
+
   it('deduplicates matches before applying the collection limit', async () => {
     // Arrange
     const cwd = makeTempDir();

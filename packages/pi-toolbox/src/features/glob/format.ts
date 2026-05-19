@@ -1,4 +1,5 @@
 import { toDisplayPath } from '#src/utils/paths.js';
+import { sortedItems } from '#src/utils/sorted-items.js';
 
 export interface GlobFormatOptions {
   paths: readonly string[];
@@ -108,19 +109,4 @@ function sortedEntries(children: Map<string, TreeNode>): [string, TreeNode][] {
     if (leftNode.isFile !== rightNode.isFile) return leftNode.isFile ? -1 : 1;
     return leftName.localeCompare(rightName);
   });
-}
-
-function sortedItems<T>(items: Iterable<T>, compare: (left: T, right: T) => number): T[] {
-  const sorted: T[] = [];
-
-  for (const item of items) {
-    const index = sorted.findIndex((sortedItem) => compare(item, sortedItem) < 0);
-    if (index === -1) {
-      sorted.push(item);
-    } else {
-      sorted.splice(index, 0, item);
-    }
-  }
-
-  return sorted;
 }

@@ -39,6 +39,8 @@ export async function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<Ri
 function buildRipgrepArgs(options: RunRipgrepGlobOptions): string[] {
   return [
     '--files',
+    '--sort',
+    'path',
     ...formatRipgrepHiddenArgs(options.visibleOnly),
     ...formatRipgrepDepthArgs(options.depth),
     ...options.patterns.flatMap((pattern) => ['-g', pattern]),
