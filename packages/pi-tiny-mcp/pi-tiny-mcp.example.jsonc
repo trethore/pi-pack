@@ -55,6 +55,7 @@
       // "auth": "bearer",
       // "bearerToken": "${MCP_TOKEN}",
       // "bearerTokenEnv": "MCP_TOKEN",
+      // OAuth HTTP servers can use "auth": "oauth" and /mcp-auth <server>.
       // Per-server lifecycle override. Omit to use lifecycle.defaultMode.
       "lifecycle": "lazy",
       // Optional working directory. Supports ~, ${VAR}, and $env:VAR.

@@ -4,6 +4,7 @@ import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostic
 import { loadConfig } from '#src/config/config.js';
 import type { PiTinyMcpConfig } from '#src/config/schema.js';
 import { TinyMcpRuntime } from '#src/core/runtime.js';
+import { registerMcpAuthCommand } from '#src/features/mcp-auth-command.js';
 import { registerMcpCommand } from '#src/features/mcp-command.js';
 import { registerProxyTool } from '#src/features/proxy-tool.js';
 
@@ -16,6 +17,7 @@ export default function piTinyMcp(pi: ExtensionAPI) {
   const runtimeController = createRuntimeController(loadedConfig.config);
   registerProxyTool(pi, loadedConfig.config, runtimeController.getRuntime);
   registerMcpCommand(pi, runtimeController.getRuntime);
+  registerMcpAuthCommand(pi, runtimeController.getRuntime);
 
   pi.on('session_start', async (_event, _ctx: ExtensionContext) => {
     await runtimeController.restart();

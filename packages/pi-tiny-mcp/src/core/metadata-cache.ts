@@ -8,7 +8,7 @@ import { isRecord } from '@trethore/pi-shared/object.js';
 import type { ServerConfig, ToolPrefix } from '#src/config/schema.js';
 import { buildToolMetadata } from '#src/core/tool-metadata.js';
 import type { McpResource, McpTool, ToolMetadata } from '#src/core/types.js';
-import { interpolateEnvRecord, resolveConfigPath } from '#src/utils/env.js';
+import { interpolateEnvRecord, interpolateEnvVars, resolveConfigPath } from '#src/utils/env.js';
 
 const CACHE_VERSION = 1;
 const CACHE_FILE_NAME = 'pi-tiny-mcp-cache.json';
@@ -114,6 +114,13 @@ export function computeServerHash(definition: ServerConfig): string {
     args: definition.args,
     env: interpolateEnvRecord(definition.env),
     cwd: resolveConfigPath(definition.cwd),
+    url: definition.url ? interpolateEnvVars(definition.url) : undefined,
+    headers: interpolateEnvRecord(definition.headers),
+    auth: definition.auth,
+    bearerToken: definition.bearerToken ? interpolateEnvVars(definition.bearerToken) : undefined,
+    bearerTokenEnv: definition.bearerTokenEnv
+      ? interpolateEnvVars(definition.bearerTokenEnv)
+      : undefined,
     exposeResources: definition.exposeResources,
     excludeTools: definition.excludeTools,
   };

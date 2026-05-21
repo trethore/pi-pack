@@ -49,6 +49,10 @@ Pi-specific server entries override standard MCP entries by server name.
       "auth": "bearer",
       "bearerTokenEnv": "MCP_TOKEN",
     },
+    "oauth-remote": {
+      "url": "https://mcp.example.com/mcp",
+      "auth": "oauth",
+    },
   },
 }
 ```
@@ -74,4 +78,6 @@ mcp({ tool: 'chrome_devtools_take_screenshot', args: '{"format":"png"}' });
 /mcp tools [server]
 /mcp reconnect <server>
 /mcp cache clear
+/mcp-auth <server>
+/mcp-auth <server> <authorization-code-or-redirect-url>
 ```

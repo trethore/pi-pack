@@ -111,6 +111,33 @@ describe('loadConfig', () => {
     });
   });
 
+  it('loads OAuth HTTP MCP server fields', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithHome(makeTempDir());
+    const cwd = makeTempDir();
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({
+        servers: {
+          remote: {
+            url: 'https://mcp.example.com/mcp',
+            auth: 'oauth',
+          },
+        },
+      })
+    );
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.servers.remote).toEqual({
+      url: 'https://mcp.example.com/mcp',
+      auth: 'oauth',
+    });
+  });
+
   it('loads standard HTTP MCP servers', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithHome(makeTempDir());
@@ -151,7 +178,7 @@ describe('loadConfig', () => {
             args: [1],
             lifecycle: 'forever',
             exposeResources: 'yes',
-            auth: 'oauth',
+            auth: true,
           },
         },
       })

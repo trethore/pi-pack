@@ -73,7 +73,7 @@ function normalizeStandardServer(value: Record<string, unknown>): ServerConfig {
     cwd: typeof value.cwd === 'string' ? value.cwd : undefined,
     url: typeof value.url === 'string' ? value.url : undefined,
     headers: asStringRecord(value.headers),
-    auth: value.auth === 'bearer' ? value.auth : undefined,
+    auth: value.auth === 'bearer' || value.auth === 'oauth' ? value.auth : undefined,
     bearerToken: typeof value.bearerToken === 'string' ? value.bearerToken : undefined,
     bearerTokenEnv: typeof value.bearerTokenEnv === 'string' ? value.bearerTokenEnv : undefined,
     debug: typeof value.debug === 'boolean' ? value.debug : undefined,

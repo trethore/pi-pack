@@ -10,6 +10,7 @@ import {
   reconstructToolMetadata,
   saveServerMetadataCache,
 } from '#src/core/metadata-cache.js';
+import { authorizeOAuthServer, type OAuthAuthorizationResult } from '#src/core/oauth.js';
 import { McpServerManager } from '#src/core/server-manager.js';
 import { buildToolMetadata, findToolByName } from '#src/core/tool-metadata.js';
 import type { McpContent, McpResource, McpTool, ToolMetadata } from '#src/core/types.js';
@@ -67,6 +68,15 @@ export class TinyMcpRuntime {
 
   describeTool(toolName: string): ToolMetadata | undefined {
     return findToolByName(this.metadataByServer, toolName);
+  }
+
+  async authorizeServer(
+    serverName: string,
+    authorizationCode?: string,
+    state?: string
+  ): Promise<OAuthAuthorizationResult> {
+    const definition = this.getServerDefinition(serverName);
+    return authorizeOAuthServer(serverName, definition, authorizationCode, state);
   }
 
   async connectServer(serverName: string): Promise<void> {

@@ -1,3 +1,7 @@
+import {
+  UnauthorizedError,
+  type OAuthClientProvider,
+} from '@modelcontextprotocol/sdk/client/auth.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -6,6 +10,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 
 import type { ServerConfig } from '#src/config/schema.js';
+import { createOAuthProvider } from '#src/core/oauth.js';
 import type { McpResource, McpTool, ServerConnection } from '#src/core/types.js';
 import {
   interpolateEnvRecord,
@@ -92,19 +97,27 @@ export class McpServerManager {
   ): Promise<ServerConnection> {
     const url = createServerUrl(definition);
     const headers = createHttpHeaders(definition);
+    const authProvider = definition.auth === 'oauth' ? createOAuthProvider(name) : undefined;
 
     try {
       return await createStartedConnection(
         name,
         definition,
-        createStreamableHttpTransport(url, headers)
+        createStreamableHttpTransport(url, headers, authProvider)
       );
     } catch (streamableError) {
+      if (streamableError instanceof UnauthorizedError)
+        throw createUnauthorizedError(name, definition);
       if (!shouldTrySseFallback(streamableError)) throw streamableError;
 
       try {
-        return await createStartedConnection(name, definition, createSseTransport(url, headers));
+        return await createStartedConnection(
+          name,
+          definition,
+          createSseTransport(url, headers, authProvider)
+        );
       } catch (sseError) {
+        if (sseError instanceof UnauthorizedError) throw createUnauthorizedError(name, definition);
         throw new Error(
           `MCP server "${name}" failed to connect with Streamable HTTP and SSE fallback: ${formatErrorMessage(sseError)}`,
           { cause: sseError }
@@ -170,16 +183,22 @@ async function fetchAllResources(client: Client): Promise<McpResource[]> {
 
 function createStreamableHttpTransport(
   url: URL,
-  headers: Record<string, string>
+  headers: Record<string, string>,
+  authProvider: OAuthClientProvider | undefined
 ): StreamableHTTPClientTransport {
   return new StreamableHTTPClientTransport(url, {
+    authProvider,
     requestInit: { headers },
   });
 }
 
-function createSseTransport(url: URL, headers: Record<string, string>): SSEClientTransport {
+function createSseTransport(
+  url: URL,
+  headers: Record<string, string>,
+  authProvider: OAuthClientProvider | undefined
+): SSEClientTransport {
   return new SSEClientTransport(url, {
-    eventSourceInit: { fetch: createFetchWithHeaders(headers) },
+    authProvider,
     requestInit: { headers },
   });
 }
@@ -210,12 +229,20 @@ function resolveBearerToken(definition: ServerConfig): string | undefined {
   throw new Error('MCP bearer auth requires bearerToken or bearerTokenEnv');
 }
 
-function createFetchWithHeaders(headers: Record<string, string>): typeof fetch {
-  return (input, init) => {
-    const nextHeaders = new Headers(init?.headers);
-    for (const [key, value] of Object.entries(headers)) nextHeaders.set(key, value);
-    return fetch(input, { ...init, headers: nextHeaders });
-  };
+function createUnauthorizedError(serverName: string, definition: ServerConfig): Error {
+  if (definition.auth === 'oauth') {
+    return new Error(
+      `MCP server "${serverName}" requires OAuth authorization. Run /mcp-auth ${serverName} to authorize, then retry.`
+    );
+  }
+  if (definition.auth === 'bearer') {
+    return new Error(
+      `MCP server "${serverName}" rejected bearer auth. Check bearerToken or bearerTokenEnv, then retry.`
+    );
+  }
+  return new Error(
+    `MCP server "${serverName}" requires authentication. Configure auth as "bearer" or "oauth"; for OAuth, run /mcp-auth ${serverName}.`
+  );
 }
 
 function shouldTrySseFallback(error: unknown): boolean {

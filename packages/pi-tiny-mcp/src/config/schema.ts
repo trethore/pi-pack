@@ -39,7 +39,7 @@ export interface ConfigSourcesConfig {
   standardProject: boolean;
 }
 
-export type ServerAuth = 'bearer';
+export type ServerAuth = 'bearer' | 'oauth';
 
 export interface ServerConfig {
   command?: string;
@@ -80,7 +80,10 @@ export const toolPrefixSchema = defineConfigSchema(
   'expected one of "server", "short", "none"'
 );
 
-export const serverAuthSchema = defineConfigSchema(z.enum(['bearer']), 'expected "bearer"');
+export const serverAuthSchema = defineConfigSchema(
+  z.enum(['bearer', 'oauth']),
+  'expected one of "bearer", "oauth"'
+);
 
 export const stringSchema = defineConfigSchema(z.string(), 'expected string');
 
