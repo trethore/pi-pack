@@ -71,6 +71,8 @@ mcp({ search: 'screenshot' });
 mcp({ server: 'chrome-devtools' });
 mcp({ describe: 'chrome_devtools_take_screenshot' });
 mcp({ connect: 'chrome-devtools' });
+mcp({ refresh: 'chrome-devtools' });
+mcp({ refresh: 'all' });
 mcp({ tool: 'chrome_devtools_take_screenshot', args: '{"format":"png"}' });
 ```
 
@@ -87,6 +89,7 @@ Set `directTools.enabled` to `true` to register cached MCP tools as Pi tools. Se
 /mcp status
 /mcp tools [server]
 /mcp reconnect <server>
+/mcp refresh [server]
 /mcp cache clear
 /mcp-auth <server>
 /mcp-auth <server> <authorization-code-or-redirect-url>

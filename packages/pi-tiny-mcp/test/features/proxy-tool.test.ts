@@ -70,6 +70,46 @@ describe('proxy tool error UX', () => {
     expect(getText(result)).toContain('Run mcp({}) to list configured servers');
   });
 
+  it('refreshes metadata for one server', async () => {
+    // Arrange
+    const refreshServer = vi.fn(async () => ({
+      serverName: 'github',
+      status: 'refreshed' as const,
+      toolCount: 2,
+    }));
+    const proxyTool = createRegisteredProxyTool({
+      getStatus: () => [{ name: 'github', status: 'cached', toolCount: 1 }],
+      refreshServer,
+    });
+
+    // Act
+    const result = await executeProxyTool(proxyTool, { refresh: 'github' });
+
+    // Assert
+    expect(refreshServer).toHaveBeenCalledWith('github');
+    expect(result.details).toMatchObject({ mode: 'refresh', count: 1, failedCount: 0 });
+    expect(getText(result)).toContain('github: refreshed (2 tools)');
+  });
+
+  it('refreshes metadata for all servers', async () => {
+    // Arrange
+    const refreshAllServers = vi.fn(async () => [
+      { serverName: 'github', status: 'refreshed' as const, toolCount: 2 },
+      { serverName: 'browser', status: 'refreshed' as const, toolCount: 1 },
+    ]);
+    const proxyTool = createRegisteredProxyTool({
+      refreshAllServers,
+    });
+
+    // Act
+    const result = await executeProxyTool(proxyTool, { refresh: 'all' });
+
+    // Assert
+    expect(refreshAllServers).toHaveBeenCalled();
+    expect(result.details).toMatchObject({ mode: 'refresh', count: 2, failedCount: 0 });
+    expect(getText(result)).toContain('browser: refreshed (1 tools)');
+  });
+
   it('returns a structured error for server connection failures', async () => {
     // Arrange
     const proxyTool = createRegisteredProxyTool({
@@ -93,6 +133,10 @@ describe('proxy tool error UX', () => {
 });
 
 function createRegisteredProxyTool(runtime: Partial<TinyMcpRuntime>): RegisteredTool {
+  const runtimeWithDefaults = {
+    hasServer: (serverName: string) => serverName === 'github',
+    ...runtime,
+  };
   let registeredTool: RegisteredTool | undefined;
   const pi = {
     registerTool(tool: RegisteredTool) {
@@ -100,7 +144,7 @@ function createRegisteredProxyTool(runtime: Partial<TinyMcpRuntime>): Registered
     },
   } as Pick<ExtensionAPI, 'registerTool'> as ExtensionAPI;
 
-  registerProxyTool(pi, createConfig(), async () => runtime as TinyMcpRuntime);
+  registerProxyTool(pi, createConfig(), async () => runtimeWithDefaults as TinyMcpRuntime);
   if (!registeredTool) throw new Error('proxy tool was not registered');
   return registeredTool;
 }

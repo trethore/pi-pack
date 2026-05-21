@@ -23,6 +23,13 @@ export interface ServerStatus {
   error?: string;
 }
 
+export interface RefreshResult {
+  serverName: string;
+  status: 'refreshed' | 'failed';
+  toolCount: number;
+  error?: string;
+}
+
 export class TinyMcpRuntime {
   readonly manager = new McpServerManager();
   readonly metadataByServer = new Map<string, ToolMetadata[]>();
@@ -56,6 +63,10 @@ export class TinyMcpRuntime {
     return Object.keys(this.config.servers).map((name) => this.getServerStatus(name));
   }
 
+  hasServer(serverName: string): boolean {
+    return this.config.servers[serverName] !== undefined;
+  }
+
   listTools(serverName?: string): ToolMetadata[] {
     if (serverName) return this.metadataByServer.get(serverName) ?? [];
     return [...this.metadataByServer.values()].flat();
@@ -81,17 +92,35 @@ export class TinyMcpRuntime {
 
   async connectServer(serverName: string): Promise<void> {
     const definition = this.getServerDefinition(serverName);
+    await this.connectAndCacheServer(serverName, definition);
+  }
+
+  async refreshServer(serverName: string): Promise<RefreshResult> {
+    const definition = this.getServerDefinition(serverName);
+    await this.manager.close(serverName);
+
     try {
-      const connection = await this.manager.connect(
+      await this.connectAndCacheServer(serverName, definition);
+      return {
         serverName,
-        withDefaultLifecycle(definition, this.config.lifecycle.defaultMode)
-      );
-      this.failures.delete(serverName);
-      this.setServerMetadata(serverName, connection.tools, connection.resources, definition);
+        status: 'refreshed',
+        toolCount: this.metadataByServer.get(serverName)?.length ?? 0,
+      };
     } catch (error) {
-      this.failures.set(serverName, getErrorMessage(error));
-      throw error;
+      return {
+        serverName,
+        status: 'failed',
+        toolCount: this.metadataByServer.get(serverName)?.length ?? 0,
+        error: getErrorMessage(error),
+      };
     }
+  }
+
+  async refreshAllServers(): Promise<RefreshResult[]> {
+    const serverNames = Object.keys(this.config.servers);
+    return parallelLimit(serverNames, this.config.lifecycle.startupConcurrency, (serverName) =>
+      this.refreshServer(serverName)
+    );
   }
 
   async callTool(
@@ -129,6 +158,20 @@ export class TinyMcpRuntime {
         serverName,
         reconstructToolMetadata(serverName, entry, definition, this.config.toolNames.prefix)
       );
+    }
+  }
+
+  private async connectAndCacheServer(serverName: string, definition: ServerConfig): Promise<void> {
+    try {
+      const connection = await this.manager.connect(
+        serverName,
+        withDefaultLifecycle(definition, this.config.lifecycle.defaultMode)
+      );
+      this.failures.delete(serverName);
+      this.setServerMetadata(serverName, connection.tools, connection.resources, definition);
+    } catch (error) {
+      this.failures.set(serverName, getErrorMessage(error));
+      throw error;
     }
   }
 

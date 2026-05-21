@@ -1,6 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 
 import { clearMetadataCache } from '#src/core/metadata-cache.js';
+import { countFailedRefreshResults, formatRefreshResults } from '#src/core/refresh-results.js';
 import type { TinyMcpRuntime } from '#src/core/runtime.js';
 
 export function registerMcpCommand(
@@ -39,6 +40,11 @@ async function handleMcpCommand(
     return;
   }
 
+  if (subcommand === 'refresh') {
+    await refreshMetadata(ctx, runtime, target);
+    return;
+  }
+
   if (subcommand === 'tools') {
     showTools(ctx, runtime, target);
     return;
@@ -46,6 +52,24 @@ async function handleMcpCommand(
 
   if (extra) notify(ctx, `Ignoring extra /mcp arguments after "${target}".`, 'warning');
   showStatus(ctx, runtime);
+}
+
+async function refreshMetadata(
+  ctx: ExtensionContext,
+  runtime: TinyMcpRuntime,
+  serverName?: string
+): Promise<void> {
+  if (serverName && !runtime.hasServer(serverName)) {
+    notify(ctx, `pi-tiny-mcp: server "${serverName}" is not configured.`, 'error');
+    return;
+  }
+
+  const results = serverName
+    ? [await runtime.refreshServer(serverName)]
+    : await runtime.refreshAllServers();
+  const failedCount = countFailedRefreshResults(results);
+  const level = failedCount > 0 ? 'warning' : 'info';
+  notify(ctx, formatRefreshResults(results), level);
 }
 
 function showStatus(ctx: ExtensionContext, runtime: TinyMcpRuntime): void {
