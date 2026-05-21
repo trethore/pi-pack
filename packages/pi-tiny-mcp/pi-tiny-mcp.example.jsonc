@@ -1,0 +1,63 @@
+{
+  // Master switch for pi-tiny-mcp.
+  "enabled": true,
+
+  // Register one compact proxy tool instead of exposing every MCP tool directly.
+  "proxyTool": {
+    "enabled": true,
+    "name": "mcp",
+    // Include compact parameter summaries in search/describe output.
+    "includeSchemasInSearch": true
+  },
+
+  // Cache MCP tool metadata so search/list/describe can work without reconnecting.
+  "metadataCache": {
+    "enabled": true,
+    // 0 means cache entries do not expire by age.
+    "maxAgeHours": 168
+  },
+
+  // Server startup and shutdown behavior.
+  "lifecycle": {
+    // "lazy" starts servers on first use. Other options: "eager", "keep-alive".
+    "defaultMode": "lazy",
+    // 0 disables idle shutdown.
+    "idleTimeoutMinutes": 10,
+    "healthCheckSeconds": 30,
+    "startupConcurrency": 10
+  },
+
+  // Displayed MCP tool names.
+  "toolNames": {
+    // "server" -> chrome_devtools_take_screenshot
+    // "short" strips common MCP suffixes from server names.
+    // "none" keeps original MCP tool names and can collide across servers.
+    "prefix": "server"
+  },
+
+  // Standard MCP config files are read by default:
+  // - ~/.config/mcp/mcp.json
+  // - <project>/.mcp.json
+  "sources": {
+    "standardGlobal": true,
+    "standardProject": true
+  },
+
+  // Pi-specific server definitions and overrides.
+  // Entries here override standard MCP entries with the same server name.
+  "servers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
+      // Per-server lifecycle override. Omit to use lifecycle.defaultMode.
+      "lifecycle": "lazy",
+      // Optional working directory. Supports ~, ${VAR}, and $env:VAR.
+      // "cwd": "${PROJECT_DIR}",
+      // Optional environment overrides. Values support ${VAR} and $env:VAR.
+      // "env": { "API_TOKEN": "${API_TOKEN}" },
+      "exposeResources": true,
+      "excludeTools": [],
+      "debug": false
+    }
+  }
+}

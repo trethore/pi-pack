@@ -6,3 +6,4 @@ references/
 .pi/**
 .env
 .DS_Store
+.todo.md
