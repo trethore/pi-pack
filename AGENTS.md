@@ -12,6 +12,7 @@ pi-pack/                         # You are here!
 │   ├── pi-cut/
 │   ├── pi-codexify/
 │   ├── pi-handy/
+│   ├── pi-tiny-mcp/
 │   ├── pi-toolbox/
 │   └── pi-shared/               # Shared utilities and types for Pi extensions
 ├── references/                  # Reference source code and documentation; do not modify
