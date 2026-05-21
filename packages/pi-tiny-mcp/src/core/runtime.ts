@@ -93,6 +93,13 @@ export class TinyMcpRuntime {
     toolName: string,
     argsJson: string | undefined
   ): Promise<AgentToolResult<Record<string, unknown>>> {
+    return this.callToolWithArgs(toolName, parseArgsJson(argsJson));
+  }
+
+  async callToolWithArgs(
+    toolName: string,
+    args: Record<string, unknown>
+  ): Promise<AgentToolResult<Record<string, unknown>>> {
     const tool = this.describeTool(toolName);
     if (!tool)
       throw new Error(`MCP tool "${toolName}" not found. Use mcp({ search: "..." }) first.`);
@@ -100,11 +107,7 @@ export class TinyMcpRuntime {
     await this.connectServer(tool.serverName);
     if (tool.resourceUri) return this.readResource(tool);
 
-    const result = await this.manager.callTool(
-      tool.serverName,
-      tool.originalName,
-      parseArgsJson(argsJson)
-    );
+    const result = await this.manager.callTool(tool.serverName, tool.originalName, args);
     return formatMcpCallResult(result, tool);
   }
 

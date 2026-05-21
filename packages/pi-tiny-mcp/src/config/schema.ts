@@ -7,6 +7,7 @@ export type ToolPrefix = 'server' | 'short' | 'none';
 export interface PiTinyMcpConfig {
   enabled: boolean;
   proxyTool: ProxyToolConfig;
+  directTools: DirectToolsConfig;
   metadataCache: MetadataCacheConfig;
   lifecycle: LifecycleConfig;
   toolNames: ToolNamesConfig;
@@ -17,6 +18,10 @@ export interface PiTinyMcpConfig {
 export interface ProxyToolConfig extends EnabledConfig {
   name: string;
   includeSchemasInSearch: boolean;
+}
+
+export interface DirectToolsConfig extends EnabledConfig {
+  disableProxyTool: boolean;
 }
 
 export interface MetadataCacheConfig extends EnabledConfig {
@@ -54,6 +59,7 @@ export interface ServerConfig {
   lifecycle?: LifecycleMode;
   idleTimeoutMinutes?: number;
   exposeResources?: boolean;
+  directTools?: boolean;
   excludeTools?: string[];
   debug?: boolean;
 }
@@ -61,6 +67,7 @@ export interface ServerConfig {
 export type PartialPiTinyMcpConfig = Partial<{
   enabled: unknown;
   proxyTool: Partial<Record<keyof ProxyToolConfig, unknown>>;
+  directTools: Partial<Record<keyof DirectToolsConfig, unknown>>;
   metadataCache: Partial<Record<keyof MetadataCacheConfig, unknown>>;
   lifecycle: Partial<Record<keyof LifecycleConfig, unknown>>;
   toolNames: Partial<Record<keyof ToolNamesConfig, unknown>>;
@@ -118,6 +125,10 @@ export const defaultConfig: PiTinyMcpConfig = {
     enabled: true,
     name: 'mcp',
     includeSchemasInSearch: true,
+  },
+  directTools: {
+    enabled: false,
+    disableProxyTool: false,
   },
   metadataCache: {
     enabled: true,

@@ -25,6 +25,10 @@ describe('loadConfig', () => {
       name: 'mcp',
       includeSchemasInSearch: true,
     });
+    expect(loaded.config.directTools).toEqual({
+      enabled: false,
+      disableProxyTool: false,
+    });
     expect(loaded.config.servers).toEqual({});
   });
 
@@ -165,6 +169,32 @@ describe('loadConfig', () => {
     });
   });
 
+  it('loads direct tool settings', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithHome(makeTempDir());
+    const cwd = makeTempDir();
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({
+        directTools: { enabled: true, disableProxyTool: true },
+        servers: {
+          github: {
+            command: 'npx',
+            directTools: false,
+          },
+        },
+      })
+    );
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.directTools).toEqual({ enabled: true, disableProxyTool: true });
+    expect(loaded.config.servers.github).toEqual({ command: 'npx', directTools: false });
+  });
+
   it('reports invalid server fields and keeps valid values', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithHome(makeTempDir());
@@ -178,6 +208,7 @@ describe('loadConfig', () => {
             args: [1],
             lifecycle: 'forever',
             exposeResources: 'yes',
+            directTools: 'yes',
             auth: true,
           },
         },
@@ -194,6 +225,7 @@ describe('loadConfig', () => {
       expect.stringContaining('invalid servers.github.auth value'),
       expect.stringContaining('invalid servers.github.lifecycle value'),
       expect.stringContaining('invalid servers.github.exposeResources value'),
+      expect.stringContaining('invalid servers.github.directTools value'),
     ]);
   });
 });

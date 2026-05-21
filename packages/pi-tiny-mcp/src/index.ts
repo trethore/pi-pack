@@ -6,6 +6,7 @@ import type { PiTinyMcpConfig } from '#src/config/schema.js';
 import { TinyMcpRuntime } from '#src/core/runtime.js';
 import { registerMcpAuthCommand } from '#src/features/mcp-auth-command.js';
 import { registerMcpCommand } from '#src/features/mcp-command.js';
+import { registerDirectTools, shouldRegisterProxyTool } from '#src/features/direct-tools.js';
 import { registerProxyTool } from '#src/features/proxy-tool.js';
 
 export default function piTinyMcp(pi: ExtensionAPI) {
@@ -15,12 +16,16 @@ export default function piTinyMcp(pi: ExtensionAPI) {
   if (!loadedConfig.config.enabled) return;
 
   const runtimeController = createRuntimeController(loadedConfig.config);
-  registerProxyTool(pi, loadedConfig.config, runtimeController.getRuntime);
+  if (shouldRegisterProxyTool(loadedConfig.config)) {
+    registerProxyTool(pi, loadedConfig.config, runtimeController.getRuntime);
+  }
   registerMcpCommand(pi, runtimeController.getRuntime);
   registerMcpAuthCommand(pi, runtimeController.getRuntime);
 
   pi.on('session_start', async (_event, _ctx: ExtensionContext) => {
-    await runtimeController.restart();
+    const runtime = await runtimeController.restart();
+    if (runtime)
+      registerDirectTools(pi, loadedConfig.config, runtime, runtimeController.getRuntime);
   });
 
   pi.on('session_shutdown', async () => {
@@ -64,13 +69,14 @@ function createRuntimeController(config: PiTinyMcpConfig) {
     if (currentRuntime) await currentRuntime.shutdown();
   }
 
-  async function restart(): Promise<void> {
+  async function restart(): Promise<TinyMcpRuntime | null> {
     await shutdown();
     runtimePromise = createRuntime().finally(() => {
       runtimePromise = null;
     });
-    await runtimePromise.catch((error: unknown) => {
+    return runtimePromise.catch((error: unknown) => {
       console.error('pi-tiny-mcp initialization failed:', error);
+      return null;
     });
   }
 

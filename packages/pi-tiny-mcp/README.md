@@ -5,6 +5,7 @@ Tiny and token-efficient MCP adapter for Pi.
 ## What it does
 
 - Registers one compact `mcp` proxy tool instead of exposing every MCP tool by default.
+- Can optionally register cached MCP tools directly when you want native tool calls.
 - Starts MCP servers lazily unless configured otherwise.
 - Caches tool metadata so search/list/describe can work without reconnecting every time.
 - Reads standard MCP project/user files and Pi-specific JSONC config.
@@ -33,6 +34,10 @@ Pi-specific server entries override standard MCP entries by server name.
     "name": "mcp",
     "includeSchemasInSearch": true,
   },
+  "directTools": {
+    "enabled": false,
+    "disableProxyTool": false,
+  },
   "lifecycle": {
     "defaultMode": "lazy",
     "idleTimeoutMinutes": 10,
@@ -42,6 +47,7 @@ Pi-specific server entries override standard MCP entries by server name.
       "command": "npx",
       "args": ["-y", "chrome-devtools-mcp@latest"],
       "lifecycle": "lazy",
+      "directTools": false,
     },
     "remote": {
       "url": "https://mcp.example.com/mcp",
@@ -69,6 +75,10 @@ mcp({ tool: 'chrome_devtools_take_screenshot', args: '{"format":"png"}' });
 ```
 
 `args` must be a JSON object string.
+
+## Direct tools
+
+Set `directTools.enabled` to `true` to register cached MCP tools as Pi tools. Set `servers.<name>.directTools` to override this per server. `directTools.disableProxyTool` hides the `mcp` proxy only when all direct-enabled servers have valid cached metadata.
 
 ## Commands
 

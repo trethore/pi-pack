@@ -10,6 +10,13 @@
     "includeSchemasInSearch": true
   },
 
+  // Optionally expose cached MCP tools directly as Pi tools.
+  "directTools": {
+    "enabled": false,
+    // Only disables the compact proxy after all direct-enabled servers have valid cache entries.
+    "disableProxyTool": false
+  },
+
   // Cache MCP tool metadata so search/list/describe can work without reconnecting.
   "metadataCache": {
     "enabled": true,
@@ -63,6 +70,8 @@
       // Optional environment overrides. Values support ${VAR} and $env:VAR.
       // "env": { "API_TOKEN": "${API_TOKEN}" },
       "exposeResources": true,
+      // Override global directTools.enabled for this server.
+      "directTools": false,
       "excludeTools": [],
       "debug": false
     }

@@ -73,6 +73,7 @@ function cloneDefaultConfig(): PiTinyMcpConfig {
   return {
     ...defaultConfig,
     proxyTool: { ...defaultConfig.proxyTool },
+    directTools: { ...defaultConfig.directTools },
     metadataCache: { ...defaultConfig.metadataCache },
     lifecycle: { ...defaultConfig.lifecycle },
     toolNames: { ...defaultConfig.toolNames },
@@ -89,6 +90,7 @@ function mergeConfig(
 ): void {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
   mergeProxyToolConfig(target, source, configPath, errors);
+  mergeDirectToolsConfig(target, source, configPath, errors);
   mergeMetadataCacheConfig(target, source, configPath, errors);
   mergeLifecycleConfig(target, source, configPath, errors);
   mergeToolNamesConfig(target, source, configPath, errors);
@@ -115,6 +117,27 @@ function mergeProxyToolConfig(
       errors,
       (value) => {
         target.proxyTool.includeSchemasInSearch = value;
+      }
+    );
+  });
+}
+
+function mergeDirectToolsConfig(
+  target: PiTinyMcpConfig,
+  source: PartialPiTinyMcpConfig,
+  configPath: string,
+  errors: string[]
+): void {
+  mergeSection(source, 'directTools', configPath, errors, (section, label) => {
+    mergeEnabledField(target.directTools, section, `${label}.enabled`, configPath, errors);
+    mergeBooleanField(
+      section,
+      'disableProxyTool',
+      `${label}.disableProxyTool`,
+      configPath,
+      errors,
+      (value) => {
+        target.directTools.disableProxyTool = value;
       }
     );
   });
@@ -360,6 +383,9 @@ function mergeServerConfig(
       next.exposeResources = value;
     }
   );
+  mergeBooleanField(source, 'directTools', `${label}.directTools`, configPath, errors, (value) => {
+    next.directTools = value;
+  });
   mergeField(
     source,
     'excludeTools',
