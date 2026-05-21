@@ -55,7 +55,7 @@ async function executeProxyMode(
   config: PiTinyMcpConfig,
   params: ProxyParameters
 ): Promise<ProxyToolResult> {
-  if (params.tool) return runtime.callTool(params.tool, params.args);
+  if (params.tool) return executeCall(runtime, params.tool, params.args);
   if (params.connect) return executeConnect(runtime, params.connect);
   if (params.describe) return executeDescribe(runtime, config, params.describe);
   if (params.search) return executeSearch(runtime, config, params.search);
@@ -86,11 +86,36 @@ function executeStatus(runtime: TinyMcpRuntime): ProxyToolResult {
   };
 }
 
+async function executeCall(
+  runtime: TinyMcpRuntime,
+  toolName: string,
+  argsJson: string | undefined
+): Promise<ProxyToolResult> {
+  const tool = runtime.describeTool(toolName);
+  if (!tool) return toolNotFoundResult(toolName, 'call');
+
+  const parsedArgs = parseProxyArgs(argsJson);
+  if (!parsedArgs.ok) return invalidArgsResult(toolName, parsedArgs.message);
+
+  try {
+    return await runtime.callToolWithArgs(toolName, parsedArgs.args);
+  } catch (error) {
+    return serverFailureResult('call', tool.serverName, getErrorMessage(error), toolName);
+  }
+}
+
 async function executeConnect(
   runtime: TinyMcpRuntime,
   serverName: string
 ): Promise<ProxyToolResult> {
-  await runtime.connectServer(serverName);
+  if (!isConfiguredServer(runtime, serverName)) return serverNotFoundResult(serverName, 'connect');
+
+  try {
+    await runtime.connectServer(serverName);
+  } catch (error) {
+    return serverFailureResult('connect', serverName, getErrorMessage(error));
+  }
+
   const tools = runtime.listTools(serverName);
   return {
     content: [
@@ -106,7 +131,7 @@ function executeDescribe(
   toolName: string
 ): ProxyToolResult {
   const tool = runtime.describeTool(toolName);
-  if (!tool) return notFoundResult(toolName);
+  if (!tool) return toolNotFoundResult(toolName, 'describe');
 
   const lines = [
     tool.name,
@@ -141,6 +166,8 @@ function executeSearch(
 }
 
 function executeList(runtime: TinyMcpRuntime, serverName: string): ProxyToolResult {
+  if (!isConfiguredServer(runtime, serverName)) return serverNotFoundResult(serverName, 'list');
+
   const tools = runtime.listTools(serverName);
   const text =
     tools.length === 0
@@ -152,13 +179,77 @@ function executeList(runtime: TinyMcpRuntime, serverName: string): ProxyToolResu
   };
 }
 
-function notFoundResult(toolName: string): ProxyToolResult {
+function toolNotFoundResult(toolName: string, mode: 'call' | 'describe'): ProxyToolResult {
+  return errorResult(
+    mode,
+    'tool_not_found',
+    `MCP tool "${toolName}" was not found.\n\nNext steps:\n- Use mcp({ search: "keyword" }) to find the displayed tool name.\n- Use mcp({}) to check whether servers have cached tools.\n- Use mcp({ connect: "server" }) to refresh a server cache.`,
+    { tool: toolName }
+  );
+}
+
+function serverNotFoundResult(serverName: string, mode: 'connect' | 'list'): ProxyToolResult {
+  return errorResult(
+    mode,
+    'server_not_found',
+    `MCP server "${serverName}" is not configured.\n\nNext steps:\n- Run mcp({}) to list configured servers.\n- Add the server to .pi/pi-tiny-mcp.jsonc or a standard .mcp.json file.`,
+    { server: serverName }
+  );
+}
+
+function invalidArgsResult(toolName: string, message: string): ProxyToolResult {
+  return errorResult(
+    'call',
+    'invalid_json_args',
+    `Invalid MCP args for "${toolName}": ${message}\n\nNext steps:\n- Pass args as a JSON object string, for example: mcp({ tool: "${toolName}", args: "{\\"key\\":\\"value\\"}" }).\n- Use mcp({ describe: "${toolName}" }) to inspect the expected parameters.`,
+    { tool: toolName }
+  );
+}
+
+function serverFailureResult(
+  mode: 'connect' | 'call',
+  serverName: string,
+  message: string,
+  toolName?: string
+): ProxyToolResult {
+  return errorResult(
+    mode,
+    'server_connection_failed',
+    `MCP server "${serverName}" could not be reached: ${message}\n\nNext steps:\n- Check the server command, url, credentials, and environment variables.\n- Use mcp({ connect: "${serverName}" }) to retry after fixing the configuration.`,
+    { server: serverName, tool: toolName }
+  );
+}
+
+function errorResult(
+  mode: string,
+  error: string,
+  text: string,
+  details: Record<string, unknown>
+): ProxyToolResult {
   return {
-    content: [
-      { type: 'text', text: `Tool "${toolName}" not found. Use mcp({ search: "..." }) to search.` },
-    ],
-    details: { mode: 'describe', error: 'tool_not_found', tool: toolName },
+    content: [{ type: 'text', text }],
+    details: { mode, error, ...details },
   };
+}
+
+function isConfiguredServer(runtime: TinyMcpRuntime, serverName: string): boolean {
+  return runtime.getStatus().some((server) => server.name === serverName);
+}
+
+function parseProxyArgs(
+  argsJson: string | undefined
+): { ok: true; args: Record<string, unknown> } | { ok: false; message: string } {
+  if (!argsJson?.trim()) return { ok: true, args: {} };
+
+  try {
+    const parsed = JSON.parse(argsJson) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { ok: false, message: 'expected a JSON object string.' };
+    }
+    return { ok: true, args: parsed as Record<string, unknown> };
+  } catch (error) {
+    return { ok: false, message: getErrorMessage(error) };
+  }
 }
 
 function formatServerStatus(server: ReturnType<TinyMcpRuntime['getStatus']>[number]): string {
@@ -179,6 +270,10 @@ function formatToolSummary(tool: ToolMetadata, config?: PiTinyMcpConfig): string
   if (config?.proxyTool.includeSchemasInSearch && !tool.resourceUri)
     lines.push(formatSchema(tool.inputSchema, '  '));
   return lines.join('\n');
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function buildProxyDescription(config: PiTinyMcpConfig): string {

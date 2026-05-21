@@ -81,12 +81,17 @@ export class TinyMcpRuntime {
 
   async connectServer(serverName: string): Promise<void> {
     const definition = this.getServerDefinition(serverName);
-    const connection = await this.manager.connect(
-      serverName,
-      withDefaultLifecycle(definition, this.config.lifecycle.defaultMode)
-    );
-    this.failures.delete(serverName);
-    this.setServerMetadata(serverName, connection.tools, connection.resources, definition);
+    try {
+      const connection = await this.manager.connect(
+        serverName,
+        withDefaultLifecycle(definition, this.config.lifecycle.defaultMode)
+      );
+      this.failures.delete(serverName);
+      this.setServerMetadata(serverName, connection.tools, connection.resources, definition);
+    } catch (error) {
+      this.failures.set(serverName, getErrorMessage(error));
+      throw error;
+    }
   }
 
   async callTool(
