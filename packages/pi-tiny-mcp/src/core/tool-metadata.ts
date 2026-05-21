@@ -1,5 +1,5 @@
 import type { ServerConfig, ToolPrefix } from '#src/config/schema.js';
-import { resourceNameToToolName } from '#src/core/resource-tools.js';
+import { resourceNameToToolName, resourceUriToToolSuffix } from '#src/core/resource-tools.js';
 import type { McpResource, McpTool, ToolMetadata } from '#src/core/types.js';
 import { formatToolName, isToolExcluded } from '#src/utils/names.js';
 
@@ -10,10 +10,10 @@ export function buildToolMetadata(
   serverName: string,
   prefix: ToolPrefix
 ): ToolMetadata[] {
-  return [
+  return uniquifyToolNames([
     ...buildMcpToolMetadata(tools, definition, serverName, prefix),
     ...buildResourceToolMetadata(resources, definition, serverName, prefix),
-  ];
+  ]);
 }
 
 export function findToolByName(
@@ -92,6 +92,49 @@ function buildResourceToolMetadata(
       description: resource.description ?? `Read resource: ${resource.uri}`,
       resourceUri: resource.uri,
     }));
+}
+
+function uniquifyToolNames(metadata: ToolMetadata[]): ToolMetadata[] {
+  const usedNames = new Set<string>();
+  const duplicateCounts = new Map<string, number>();
+
+  return metadata.map((tool) => {
+    const key = toolNameKey(tool.name);
+    const count = duplicateCounts.get(key) ?? 0;
+    duplicateCounts.set(key, count + 1);
+
+    if (!usedNames.has(key)) {
+      usedNames.add(key);
+      return tool;
+    }
+
+    const name = createUniqueToolName(tool, count + 1, usedNames);
+    usedNames.add(toolNameKey(name));
+    return { ...tool, name };
+  });
+}
+
+function createUniqueToolName(
+  tool: ToolMetadata,
+  duplicateIndex: number,
+  usedNames: ReadonlySet<string>
+): string {
+  const preferredSuffix = tool.resourceUri ? resourceUriToToolSuffix(tool.resourceUri) : '';
+  const suffixes = [preferredSuffix, String(duplicateIndex)].filter(Boolean);
+
+  for (const suffix of suffixes) {
+    const candidate = `${tool.name}_${suffix}`;
+    if (!usedNames.has(toolNameKey(candidate))) return candidate;
+  }
+
+  for (let index = duplicateIndex + 1; ; index += 1) {
+    const candidate = `${tool.name}_${index}`;
+    if (!usedNames.has(toolNameKey(candidate))) return candidate;
+  }
+}
+
+function toolNameKey(name: string): string {
+  return name.replaceAll('-', '_');
 }
 
 function formatObjectProperties(

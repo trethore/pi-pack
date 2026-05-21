@@ -13,7 +13,13 @@ import {
 import { authorizeOAuthServer, type OAuthAuthorizationResult } from '#src/core/oauth.js';
 import { McpServerManager } from '#src/core/server-manager.js';
 import { buildToolMetadata, findToolByName } from '#src/core/tool-metadata.js';
-import type { McpContent, McpResource, McpTool, ToolMetadata } from '#src/core/types.js';
+import type {
+  McpContent,
+  McpResource,
+  McpResourceContent,
+  McpTool,
+  ToolMetadata,
+} from '#src/core/types.js';
 import { parallelLimit } from '#src/utils/concurrency.js';
 
 export interface ServerStatus {
@@ -236,13 +242,16 @@ export class TinyMcpRuntime {
   ): Promise<AgentToolResult<Record<string, unknown>>> {
     if (!tool.resourceUri) throw new Error(`MCP tool "${tool.name}" is not a resource tool.`);
     const result = await this.manager.readResource(tool.serverName, tool.resourceUri);
+    const contents = result.contents as McpResourceContent[];
     return {
-      content: transformMcpContent(result.contents as McpContent[]),
+      content: transformMcpContent(contents),
       details: {
         mode: 'resource',
         server: tool.serverName,
         tool: tool.name,
         uri: tool.resourceUri,
+        contentCount: contents.length,
+        mimeTypes: contents.map((content) => content.mimeType).filter(Boolean),
       },
     };
   }

@@ -27,9 +27,17 @@ export interface McpContent {
     uri: string;
     text?: string;
     blob?: string;
+    mimeType?: string;
   };
   uri?: string;
   name?: string;
+}
+
+export interface McpResourceContent {
+  uri: string;
+  text?: string;
+  blob?: string;
+  mimeType?: string;
 }
 
 export interface ToolMetadata {
