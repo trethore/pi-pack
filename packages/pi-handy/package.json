@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Handy features for pi.",
+  "description": "Handy features.",
   "keywords": [
     "pi-package",
     "pi-extension",

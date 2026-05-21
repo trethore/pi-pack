@@ -1,6 +1,6 @@
 # pi-codexify
 
-Codex-focused controls for pi.
+Codex-focused controls.
 
 ## Features
 

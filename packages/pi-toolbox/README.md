@@ -1,6 +1,6 @@
 # pi-toolbox
 
-Various and useful tools for Pi.
+Various and useful tools.
 
 ## Configuration
 

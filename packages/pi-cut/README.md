@@ -1,6 +1,6 @@
 # pi-cut
 
-Cost-cutting strategies for pi.
+Cost-cutting strategies.
 
 ## Configuration
 

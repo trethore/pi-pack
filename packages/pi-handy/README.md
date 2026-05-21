@@ -1,6 +1,6 @@
 # pi-handy
 
-Handy features for pi.
+Handy features.
 
 ## Configuration
 

@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Cost-cutting strategies for pi.",
+  "description": "Cost-cutting strategies.",
   "keywords": [
     "pi-package",
     "pi-extension",

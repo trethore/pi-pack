@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Codex controls for pi.",
+  "description": "Codex controls.",
   "keywords": [
     "pi-package",
     "pi-extension",
