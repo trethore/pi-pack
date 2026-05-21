@@ -80,6 +80,64 @@ describe('loadConfig', () => {
     expect(loaded.config.servers).toEqual({});
   });
 
+  it('loads HTTP MCP server fields', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithHome(makeTempDir());
+    const cwd = makeTempDir();
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({
+        servers: {
+          remote: {
+            url: 'https://mcp.example.com/mcp',
+            headers: { 'X-Api-Key': '${API_KEY}' },
+            auth: 'bearer',
+            bearerTokenEnv: 'MCP_TOKEN',
+          },
+        },
+      })
+    );
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.servers.remote).toEqual({
+      url: 'https://mcp.example.com/mcp',
+      headers: { 'X-Api-Key': '${API_KEY}' },
+      auth: 'bearer',
+      bearerTokenEnv: 'MCP_TOKEN',
+    });
+  });
+
+  it('loads standard HTTP MCP servers', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithHome(makeTempDir());
+    const cwd = makeTempDir();
+    writeFileSync(
+      path.join(cwd, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          remote: {
+            url: 'https://mcp.example.com/mcp',
+            headers: { Authorization: 'Bearer ${TOKEN}' },
+          },
+        },
+      })
+    );
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.servers.remote).toEqual({
+      url: 'https://mcp.example.com/mcp',
+      headers: { Authorization: 'Bearer ${TOKEN}' },
+    });
+  });
+
   it('reports invalid server fields and keeps valid values', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithHome(makeTempDir());
@@ -93,6 +151,7 @@ describe('loadConfig', () => {
             args: [1],
             lifecycle: 'forever',
             exposeResources: 'yes',
+            auth: 'oauth',
           },
         },
       })
@@ -105,6 +164,7 @@ describe('loadConfig', () => {
     expect(loaded.config.servers.github).toEqual({ command: 'npx' });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid servers.github.args value'),
+      expect.stringContaining('invalid servers.github.auth value'),
       expect.stringContaining('invalid servers.github.lifecycle value'),
       expect.stringContaining('invalid servers.github.exposeResources value'),
     ]);

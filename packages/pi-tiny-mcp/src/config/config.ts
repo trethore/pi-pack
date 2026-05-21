@@ -9,6 +9,7 @@ import {
   lifecycleModeSchema,
   nonNegativeIntegerSchema,
   positiveIntegerSchema,
+  serverAuthSchema,
   stringArraySchema,
   stringRecordSchema,
   stringSchema,
@@ -60,9 +61,9 @@ function mergeServerMaps(
 
 function validateServerDefinitions(config: PiTinyMcpConfig, errors: string[]): void {
   for (const [serverName, definition] of Object.entries(config.servers)) {
-    if (definition.command) continue;
+    if (definition.command || definition.url) continue;
     errors.push(
-      `${EXTENSION_NAME} config ignored invalid servers.${serverName}; command is required.`
+      `${EXTENSION_NAME} config ignored invalid servers.${serverName}; command or url is required.`
     );
     delete config.servers[serverName];
   }
@@ -297,6 +298,36 @@ function mergeServerConfig(
   mergeStringField(source, 'cwd', `${label}.cwd`, configPath, errors, (value) => {
     next.cwd = value;
   });
+  mergeStringField(source, 'url', `${label}.url`, configPath, errors, (value) => {
+    next.url = value;
+  });
+  mergeField(
+    source,
+    'headers',
+    `${label}.headers`,
+    stringRecordSchema,
+    configPath,
+    errors,
+    (value) => {
+      next.headers = value;
+    }
+  );
+  mergeField(source, 'auth', `${label}.auth`, serverAuthSchema, configPath, errors, (value) => {
+    next.auth = value;
+  });
+  mergeStringField(source, 'bearerToken', `${label}.bearerToken`, configPath, errors, (value) => {
+    next.bearerToken = value;
+  });
+  mergeStringField(
+    source,
+    'bearerTokenEnv',
+    `${label}.bearerTokenEnv`,
+    configPath,
+    errors,
+    (value) => {
+      next.bearerTokenEnv = value;
+    }
+  );
   mergeField(
     source,
     'lifecycle',

@@ -1,8 +1,8 @@
-import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import type { Transport as McpTransport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 import type { ServerConfig } from '#src/config/schema.js';
 
-export type Transport = StdioClientTransport;
+export type Transport = McpTransport;
 
 export interface McpTool {
   name: string;

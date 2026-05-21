@@ -1,10 +1,18 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 
 import type { ServerConfig } from '#src/config/schema.js';
 import type { McpResource, McpTool, ServerConnection } from '#src/core/types.js';
-import { resolveConfigPath, resolveProcessEnv } from '#src/utils/env.js';
+import {
+  interpolateEnvRecord,
+  interpolateEnvVars,
+  resolveConfigPath,
+  resolveProcessEnv,
+} from '#src/utils/env.js';
 
 export class McpServerManager {
   private readonly connections = new Map<string, ServerConnection>();
@@ -71,28 +79,37 @@ export class McpServerManager {
     name: string,
     definition: ServerConfig
   ): Promise<ServerConnection> {
-    if (!definition.command) throw new Error(`MCP server "${name}" has no command`);
+    if (definition.url) return this.createHttpConnection(name, definition);
+    if (definition.command) {
+      return createStartedConnection(name, definition, createStdioTransport(definition));
+    }
+    throw new Error(`MCP server "${name}" has no command or url`);
+  }
 
-    const client = new Client({ name: `pi-tiny-mcp-${name}`, version: '1.0.0' });
-    const transport = new StdioClientTransport({
-      command: definition.command,
-      args: definition.args ?? [],
-      env: resolveProcessEnv(definition.env),
-      cwd: resolveConfigPath(definition.cwd),
-      stderr: definition.debug ? 'inherit' : 'ignore',
-    });
+  private async createHttpConnection(
+    name: string,
+    definition: ServerConfig
+  ): Promise<ServerConnection> {
+    const url = createServerUrl(definition);
+    const headers = createHttpHeaders(definition);
 
     try {
-      await client.connect(transport);
-      const [tools, resources] = await Promise.all([
-        fetchAllTools(client),
-        fetchAllResources(client),
-      ]);
-      return createConnection(definition, client, transport, tools, resources);
-    } catch (error) {
-      await client.close().catch(() => {});
-      await transport.close().catch(() => {});
-      throw error;
+      return await createStartedConnection(
+        name,
+        definition,
+        createStreamableHttpTransport(url, headers)
+      );
+    } catch (streamableError) {
+      if (!shouldTrySseFallback(streamableError)) throw streamableError;
+
+      try {
+        return await createStartedConnection(name, definition, createSseTransport(url, headers));
+      } catch (sseError) {
+        throw new Error(
+          `MCP server "${name}" failed to connect with Streamable HTTP and SSE fallback: ${formatErrorMessage(sseError)}`,
+          { cause: sseError }
+        );
+      }
     }
   }
 
@@ -151,10 +168,102 @@ async function fetchAllResources(client: Client): Promise<McpResource[]> {
   }
 }
 
+function createStreamableHttpTransport(
+  url: URL,
+  headers: Record<string, string>
+): StreamableHTTPClientTransport {
+  return new StreamableHTTPClientTransport(url, {
+    requestInit: { headers },
+  });
+}
+
+function createSseTransport(url: URL, headers: Record<string, string>): SSEClientTransport {
+  return new SSEClientTransport(url, {
+    eventSourceInit: { fetch: createFetchWithHeaders(headers) },
+    requestInit: { headers },
+  });
+}
+
+function createServerUrl(definition: ServerConfig): URL {
+  if (!definition.url) throw new Error('MCP HTTP server has no url');
+  return new URL(interpolateEnvVars(definition.url));
+}
+
+function createHttpHeaders(definition: ServerConfig): Record<string, string> {
+  const headers = interpolateEnvRecord(definition.headers) ?? {};
+  const bearerToken = resolveBearerToken(definition);
+  if (bearerToken) headers.Authorization = `Bearer ${bearerToken}`;
+  return headers;
+}
+
+function resolveBearerToken(definition: ServerConfig): string | undefined {
+  if (definition.auth !== 'bearer') return undefined;
+  if (definition.bearerToken !== undefined) return interpolateEnvVars(definition.bearerToken);
+  if (definition.bearerTokenEnv !== undefined) {
+    const envName = interpolateEnvVars(definition.bearerTokenEnv);
+    const token = process.env[envName];
+    if (token === undefined || token === '') {
+      throw new Error(`MCP bearer token env var "${envName}" is not set`);
+    }
+    return interpolateEnvVars(token);
+  }
+  throw new Error('MCP bearer auth requires bearerToken or bearerTokenEnv');
+}
+
+function createFetchWithHeaders(headers: Record<string, string>): typeof fetch {
+  return (input, init) => {
+    const nextHeaders = new Headers(init?.headers);
+    for (const [key, value] of Object.entries(headers)) nextHeaders.set(key, value);
+    return fetch(input, { ...init, headers: nextHeaders });
+  };
+}
+
+function shouldTrySseFallback(error: unknown): boolean {
+  const code =
+    typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  return code === 404 || code === 405;
+}
+
+function formatErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function createStartedConnection(
+  name: string,
+  definition: ServerConfig,
+  transport: Transport
+): Promise<ServerConnection> {
+  const client = new Client({ name: `pi-tiny-mcp-${name}`, version: '1.0.0' });
+
+  try {
+    await client.connect(transport);
+    const [tools, resources] = await Promise.all([
+      fetchAllTools(client),
+      fetchAllResources(client),
+    ]);
+    return createConnection(definition, client, transport, tools, resources);
+  } catch (error) {
+    await client.close().catch(() => {});
+    await transport.close().catch(() => {});
+    throw error;
+  }
+}
+
+function createStdioTransport(definition: ServerConfig): StdioClientTransport {
+  if (!definition.command) throw new Error('MCP stdio server has no command');
+  return new StdioClientTransport({
+    command: definition.command,
+    args: definition.args ?? [],
+    env: resolveProcessEnv(definition.env),
+    cwd: resolveConfigPath(definition.cwd),
+    stderr: definition.debug ? 'inherit' : 'ignore',
+  });
+}
+
 function createConnection(
   definition: ServerConfig,
   client: Client,
-  transport: StdioClientTransport,
+  transport: Transport,
   tools: McpTool[],
   resources: McpResource[]
 ): ServerConnection {

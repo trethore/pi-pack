@@ -43,6 +43,12 @@ Pi-specific server entries override standard MCP entries by server name.
       "args": ["-y", "chrome-devtools-mcp@latest"],
       "lifecycle": "lazy",
     },
+    "remote": {
+      "url": "https://mcp.example.com/mcp",
+      "headers": { "X-Api-Key": "${MCP_API_KEY}" },
+      "auth": "bearer",
+      "bearerTokenEnv": "MCP_TOKEN",
+    },
   },
 }
 ```
