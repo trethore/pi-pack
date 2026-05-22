@@ -3,11 +3,7 @@ import { Type } from 'typebox';
 
 import type { GlobToolConfig } from '#src/config/schema.js';
 import { countGlobFiles, formatGlobResult } from '#src/features/glob/format.js';
-import {
-  formatStringList,
-  normalizeOptionalStringList,
-  normalizeRequiredStringList,
-} from '#src/utils/string-list.js';
+import { formatStringList, normalizeOptionalStringList } from '#src/utils/string-list.js';
 import {
   assertSearchPaths,
   cloneJsonSchema,
@@ -26,7 +22,7 @@ import {
 const GLOB_TOOL_DEFINITION = readGlobDefinition();
 
 interface GlobParameters {
-  patterns: string[];
+  patterns?: string[];
   paths?: string[];
   limit?: number;
   depth?: number;
@@ -34,7 +30,8 @@ interface GlobParameters {
   visibleOnly?: boolean;
 }
 
-interface PreparedGlobParameters extends Required<Omit<GlobParameters, 'depth'>> {
+interface PreparedGlobParameters extends Required<Omit<GlobParameters, 'depth' | 'patterns'>> {
+  patterns: string[];
   depth?: number;
 }
 
@@ -50,7 +47,7 @@ interface GlobDefinition {
 interface GlobParametersJsonSchema {
   type: 'object';
   additionalProperties: boolean;
-  required: string[];
+  required?: string[];
   properties: {
     patterns: Record<string, unknown>;
     paths: Record<string, unknown>;
@@ -165,10 +162,7 @@ function prepareGlobParameters(
   config: GlobToolConfig
 ): PreparedGlobParameters {
   return {
-    patterns: normalizeRequiredStringList(params.patterns, {
-      name: 'patterns',
-      toolName: 'glob',
-    }),
+    patterns: normalizeOptionalStringList(params.patterns, []),
     paths: normalizeOptionalStringList(params.paths, ['.']),
     limit: params.limit ?? config.defaultLimit,
     depth: params.depth,

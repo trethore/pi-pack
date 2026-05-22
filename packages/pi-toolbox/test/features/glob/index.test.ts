@@ -47,23 +47,27 @@ describe('glob tool', () => {
     expect(result).toEqual({ isError: true });
   });
 
-  it('defines limit and depth in the tool schema', () => {
+  it('defines optional patterns, limit, and depth in the tool schema', () => {
     // Arrange and act
     const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 42 });
-    const properties = (
-      tool.parameters as never as {
-        properties: {
-          limit: { description: string };
-          depth: { minimum: number; description: string };
-        };
-      }
-    ).properties;
+    const parameters = tool.parameters as never as {
+      required?: string[];
+      properties: {
+        patterns: { description: string };
+        limit: { description: string };
+        depth: { minimum: number; description: string };
+      };
+    };
 
     // Assert
-    expect(properties.limit.description).toBe(
+    expect(parameters.required).toBeUndefined();
+    expect(parameters.properties.patterns.description).toBe(
+      'Optional glob pattern(s) used to match files. Each pattern is passed as `-g <pattern>`; use `!` for exclusions. If omitted, no glob filters are applied.'
+    );
+    expect(parameters.properties.limit.description).toBe(
       'Maximum number of files to return. If omitted, the default limit is 42.'
     );
-    expect(properties.depth).toEqual(
+    expect(parameters.properties.depth).toEqual(
       expect.objectContaining({
         minimum: 1,
         description:
@@ -84,7 +88,7 @@ describe('glob tool', () => {
     // Act
     const result = await tool.execute(
       'call-id',
-      { patterns: ['**/*.ts'], noIgnore: true, visibleOnly: true },
+      { noIgnore: true, visibleOnly: true },
       undefined,
       undefined,
       {} as never
@@ -93,7 +97,7 @@ describe('glob tool', () => {
     // Assert
     expect(runner).toHaveBeenCalledWith({
       cwd,
-      patterns: ['**/*.ts'],
+      patterns: [],
       paths: ['.'],
       limit: 42,
       depth: undefined,

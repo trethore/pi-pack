@@ -32,11 +32,11 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 
 ### Glob tool
 
-Registers `glob`, a low-token file discovery tool powered by `rg --files -g`.
+Registers `glob`, a low-token file discovery tool powered by `rg --files`.
 
 Arguments:
 
-- `patterns`: glob pattern(s) passed to `rg -g`; provide one or more patterns; use `!` for exclusions
+- `patterns`: optional glob pattern(s) passed to `rg -g`; use `!` for exclusions; omitted for no glob filters
 - `paths`: directories to search in, defaults to cwd
 - `limit`: maximum files to return, defaults to `glob.defaultLimit`, minimum `1`, maximum `1000`
 - `depth`: maximum directory traversal depth relative to each search path, passed as `--max-depth`; omitted for unlimited traversal, minimum `1`

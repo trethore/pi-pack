@@ -27,6 +27,50 @@ describe('ripgrep glob runner', () => {
     expect(result).toEqual({ files: ['index.ts'], limited: false });
   });
 
+  it('discovers files without glob filters when patterns are omitted', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, '.git'), { recursive: true });
+    writeFileSync(path.join(cwd, 'index.ts'), 'export {};');
+    writeFileSync(path.join(cwd, 'notes.md'), '# notes');
+    writeFileSync(path.join(cwd, '.gitignore'), 'ignored.txt\n');
+    writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
+
+    // Act
+    const result = await runRipgrepGlob({
+      cwd,
+      patterns: [],
+      paths: ['.'],
+      limit: 10,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result.files).toEqual(['.gitignore', 'index.ts', 'notes.md']);
+  });
+
+  it('includes ignored files without glob filters when noIgnore is true', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, '.git'), { recursive: true });
+    writeFileSync(path.join(cwd, '.gitignore'), 'ignored.txt\n');
+    writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
+
+    // Act
+    const result = await runRipgrepGlob({
+      cwd,
+      patterns: [],
+      paths: ['.'],
+      limit: 10,
+      noIgnore: true,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result.files).toContain('ignored.txt');
+  });
+
   it('limits directory traversal depth relative to each search path', async () => {
     // Arrange
     const cwd = makeTempDir();

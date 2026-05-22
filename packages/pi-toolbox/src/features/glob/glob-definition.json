@@ -10,13 +10,12 @@
   "parameters": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["patterns"],
     "properties": {
       "patterns": {
         "type": "array",
         "minItems": 1,
         "items": { "type": "string" },
-        "description": "Glob pattern(s) used to match files. Provide one or more patterns; each pattern is passed as `-g <pattern>`; use `!` for exclusions."
+        "description": "Optional glob pattern(s) used to match files. Each pattern is passed as `-g <pattern>`; use `!` for exclusions. If omitted, no glob filters are applied."
       },
       "paths": {
         "type": "array",
