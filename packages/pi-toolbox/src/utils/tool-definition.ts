@@ -72,7 +72,7 @@ export function registerZeroCountToolResultError(pi: ExtensionAPI, toolName: str
   });
 }
 
-export function renderTextCall<TArgs>(
+function renderTextCall<TArgs>(
   args: TArgs | undefined,
   theme: Theme,
   context: TextRenderContext,
@@ -81,7 +81,7 @@ export function renderTextCall<TArgs>(
   return renderText(context, format(args, theme));
 }
 
-export function renderTextResult(
+function renderTextResult(
   result: TextToolResult,
   options: ToolRenderResultOptions,
   theme: Theme,
