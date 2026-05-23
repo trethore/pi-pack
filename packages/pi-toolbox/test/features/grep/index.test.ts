@@ -152,6 +152,38 @@ src/index.ts
     ]);
   });
 
+  it('normalizes blank optional lists to fallback values at the tool boundary', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const runner = vi.fn(async () => ({ matches: [], limited: false }));
+    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
+
+    // Act
+    await tool.execute(
+      'call-id',
+      { regexes: ['needle'], paths: [' '], globs: [' '] },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ paths: ['.'], globs: [] }));
+  });
+
+  it('fails when regexes only contain blank values', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const runner = vi.fn(async () => ({ matches: [], limited: false }));
+    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
+
+    // Act and assert
+    await expect(
+      tool.execute('call-id', { regexes: [' ', ''] }, undefined, undefined, {} as never)
+    ).rejects.toThrow('grep failed: regexes must contain at least one non-empty string');
+    expect(runner).not.toHaveBeenCalled();
+  });
+
   it('uses the provided regexes, paths, globs, explicit limits, and depth', async () => {
     // Arrange
     const cwd = makeTempDir();

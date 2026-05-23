@@ -2,8 +2,14 @@ import { readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ExtensionAPI, Theme, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
+import type {
+  ExtensionAPI,
+  Theme,
+  ToolDefinition,
+  ToolRenderResultOptions,
+} from '@earendil-works/pi-coding-agent';
 import { Text } from '@earendil-works/pi-tui';
+import type { Static, TSchema } from 'typebox';
 
 import {
   formatTextToolResult,
@@ -15,12 +21,47 @@ interface TextRenderContext {
   lastComponent?: unknown;
 }
 
+interface TextToolMetadata {
+  name: string;
+  label: string;
+  description: string;
+  promptSnippet: string;
+  promptGuidelines: string[];
+}
+
+interface CreateTextToolDefinitionOptions<TParameters extends TSchema, TDetails> {
+  metadata: TextToolMetadata;
+  parameters: TParameters;
+  execute: ToolDefinition<TParameters, TDetails>['execute'];
+  formatCall: (args: Static<TParameters> | undefined, theme: Theme) => string;
+}
+
 export function readJsonDefinition<TDefinition>(url: URL): TDefinition {
   return JSON.parse(readFileSync(url, 'utf8')) as TDefinition;
 }
 
 export function cloneJsonSchema<TSchema>(schema: TSchema): TSchema {
   return structuredClone(schema);
+}
+
+export function createTextToolDefinition<TParameters extends TSchema, TDetails>(
+  options: CreateTextToolDefinitionOptions<TParameters, TDetails>
+): ToolDefinition<TParameters, TDetails> {
+  return {
+    name: options.metadata.name,
+    label: options.metadata.label,
+    description: options.metadata.description,
+    promptSnippet: options.metadata.promptSnippet,
+    promptGuidelines: options.metadata.promptGuidelines,
+    parameters: options.parameters,
+    execute: options.execute,
+    renderCall(args, theme, context) {
+      return renderTextCall(args, theme, context, options.formatCall);
+    },
+    renderResult(result, resultOptions, theme, context) {
+      return renderTextResult(result, resultOptions, theme, context);
+    },
+  };
 }
 
 export function registerZeroCountToolResultError(pi: ExtensionAPI, toolName: string): void {

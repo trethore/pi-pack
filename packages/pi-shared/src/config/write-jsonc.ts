@@ -74,8 +74,6 @@ function detectIndentation(text: string): { insertSpaces: boolean; tabSize: numb
 function sortLongestPathsFirst(
   paths: readonly (readonly string[])[]
 ): readonly (readonly string[])[] {
-  // ES2022 target does not include Array#toSorted.
-  // eslint-disable-next-line unicorn/no-array-sort
   return [...paths].sort((left, right) => right.length - left.length);
 }
 

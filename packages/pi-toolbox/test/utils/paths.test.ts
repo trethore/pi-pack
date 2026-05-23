@@ -59,6 +59,12 @@ describe('path utilities', () => {
     expect(formatPath('/tmp/project/src/a.ts')).toBe('tmp/project/src/a.ts');
   });
 
+  it('keeps duplicate search roots compact and deterministic', () => {
+    const formatPath = createCompactPathFormatter(['/tmp/project/src', '/tmp/project/src']);
+
+    expect(formatPath('/tmp/project/src/a.ts')).toBe('a.ts');
+  });
+
   it('leaves paths outside search roots unchanged', () => {
     const formatPath = createCompactPathFormatter(['/tmp/project/src']);
 

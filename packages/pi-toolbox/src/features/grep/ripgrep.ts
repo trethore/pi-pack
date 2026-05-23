@@ -1,10 +1,6 @@
 import { formatRipgrepPaths, toResolvedDisplayPath } from '#src/utils/paths.js';
-import { formatRipgrepDepthArgs } from '#src/utils/ripgrep-depth.js';
+import { formatRipgrepSearchFilterArgs } from '#src/utils/ripgrep-args.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
-import {
-  formatRipgrepExclusionGlobArgs,
-  formatRipgrepHiddenArgs,
-} from '#src/utils/ripgrep-visibility.js';
 
 export interface RunRipgrepGrepOptions {
   cwd: string;
@@ -20,7 +16,7 @@ export interface RunRipgrepGrepOptions {
   signal?: AbortSignal;
 }
 
-interface RipgrepGrepMatch {
+export interface RipgrepGrepMatch {
   file: string;
   line: number;
   text: string;
@@ -53,7 +49,7 @@ export async function runRipgrepGrep(options: RunRipgrepGrepOptions): Promise<Ri
     args: buildRipgrepArgs(options),
     limit: calculateCollectionLimit(options),
     signal: options.signal,
-    parseLine: (line) => parseMatchLine(line, options.maxCharsPerMatch),
+    parseLine: (line) => parseRipgrepMatchLine(line, options.maxCharsPerMatch),
     formatItemKey: (match) => formatMatchKey(options.cwd, match),
   });
 
@@ -77,11 +73,12 @@ function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
     ...(options.limitPerFile === undefined
       ? []
       : ['--max-count', String(options.limitPerFile + 1)]),
-    ...formatRipgrepDepthArgs(options.depth),
-    ...formatRipgrepHiddenArgs(options.visibleOnly),
-    ...options.globs.flatMap((glob) => ['-g', glob]),
-    ...formatRipgrepExclusionGlobArgs(options.visibleOnly),
-    ...(options.noIgnore ? ['--no-ignore'] : []),
+    ...formatRipgrepSearchFilterArgs({
+      depth: options.depth,
+      globs: options.globs,
+      noIgnore: options.noIgnore,
+      visibleOnly: options.visibleOnly,
+    }),
     ...options.regexes.flatMap((regex) => ['-e', regex]),
     ...formatRipgrepPaths(options.paths),
   ];
@@ -120,13 +117,20 @@ function formatMatchKey(cwd: string, match: RipgrepGrepMatch): string {
   return `${toResolvedDisplayPath(cwd, match.file)}\0${match.line}\0${match.text}`;
 }
 
-function parseMatchLine(line: string, maxCharsPerMatch: number): RipgrepGrepMatch | undefined {
+export function parseRipgrepMatchLine(
+  line: string,
+  maxCharsPerMatch: number
+): RipgrepGrepMatch | undefined {
   const event = parseRipgrepEvent(line);
   if (!isRipgrepJsonMatch(event)) return undefined;
 
+  const file = event.data.path.text;
+  const text = event.data.lines.text;
+  if (file === undefined || text === undefined) return undefined;
+
   return {
-    file: event.data.path.text ?? '',
+    file,
     line: event.data.line_number,
-    text: truncateMatchText(trimLineEnding(event.data.lines.text ?? ''), maxCharsPerMatch),
+    text: truncateMatchText(trimLineEnding(text), maxCharsPerMatch),
   };
 }

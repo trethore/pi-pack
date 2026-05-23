@@ -1,4 +1,4 @@
-import { toDisplayPath } from '#src/utils/paths.js';
+import { createCompactPathFormatter } from '#src/utils/paths.js';
 import { sortedItems } from '#src/utils/sorted-items.js';
 
 export interface FindFilesFormatOptions {
@@ -17,13 +17,13 @@ interface CompressedNode {
   node: TreeNode;
 }
 
-export function countFindFiles(files: readonly string[]): number {
-  return normalizeFiles(files).length;
+export function countFindFiles(files: readonly string[], paths: readonly string[] = ['.']): number {
+  return normalizeFiles(files, paths).length;
 }
 
 export function formatFindFilesResult(options: FindFilesFormatOptions): string {
   const root = createNode();
-  const files = normalizeFiles(options.files);
+  const files = normalizeFiles(options.files, options.paths);
 
   for (const file of files) {
     addPath(root, file);
@@ -37,11 +37,12 @@ function createNode(): TreeNode {
   return { children: new Map(), isFile: false };
 }
 
-function normalizeFiles(files: readonly string[]): string[][] {
+function normalizeFiles(files: readonly string[], paths: readonly string[]): string[][] {
+  const formatPath = createCompactPathFormatter(paths);
   const uniqueFiles = new Map<string, string[]>();
 
   for (const file of files) {
-    const displayPath = toDisplayPath(file) || '.';
+    const displayPath = formatPath(file) || '.';
     const parts = splitDisplayPath(displayPath);
     if (parts.length > 0) uniqueFiles.set(displayPath, parts);
   }

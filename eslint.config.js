@@ -21,13 +21,14 @@ export default defineConfig([
   unicorn.configs.recommended,
   {
     languageOptions: {
-      ecmaVersion: 'latest',
+      ecmaVersion: 2022,
       sourceType: 'module',
     },
     rules: {
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/filename-case': 'off',
       'unicorn/no-null': 'off',
+      'unicorn/no-array-sort': 'off',
       complexity: ['error', 10],
       'max-depth': ['error', 3],
     },

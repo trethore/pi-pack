@@ -7,11 +7,10 @@ import { formatStringList, normalizeOptionalStringList } from '#src/utils/string
 import {
   assertSearchPaths,
   cloneJsonSchema,
+  createTextToolDefinition,
   formatToolCall,
   readJsonDefinition,
   registerZeroCountToolResultError,
-  renderTextCall,
-  renderTextResult,
 } from '#src/utils/tool-definition.js';
 import {
   runRipgrepFindFiles,
@@ -91,12 +90,8 @@ export function createFindFilesToolDefinition(
   const runner = options.runner ?? runRipgrepFindFiles;
   const parameters = createFindFilesParametersSchema(config.defaultLimit);
 
-  return {
-    name: FIND_FILES_TOOL_DEFINITION.name,
-    label: FIND_FILES_TOOL_DEFINITION.label,
-    description: FIND_FILES_TOOL_DEFINITION.description,
-    promptSnippet: FIND_FILES_TOOL_DEFINITION.promptSnippet,
-    promptGuidelines: FIND_FILES_TOOL_DEFINITION.promptGuidelines,
+  return createTextToolDefinition<FindFilesParametersSchema, FindFilesToolDetails | undefined>({
+    metadata: FIND_FILES_TOOL_DEFINITION,
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareFindFilesParameters(params, config);
@@ -116,7 +111,7 @@ export function createFindFilesToolDefinition(
         signal,
       });
 
-      const count = countFindFiles(result.files);
+      const count = countFindFiles(result.files, preparedParams.paths);
 
       return {
         content: [
@@ -136,13 +131,8 @@ export function createFindFilesToolDefinition(
         },
       };
     },
-    renderCall(args, theme, context) {
-      return renderTextCall(args, theme, context, formatFindFilesCall);
-    },
-    renderResult(result, options, theme, context) {
-      return renderTextResult(result, options, theme, context);
-    },
-  };
+    formatCall: formatFindFilesCall,
+  });
 }
 
 function readFindFilesDefinition(): FindFilesDefinition {

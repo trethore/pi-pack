@@ -35,19 +35,38 @@ export function runRipgrepLines<T>(
     let stdoutBuffer = '';
     let stderr = '';
     let limited = false;
-    let aborted = false;
+    let settled = false;
     const collectionLimit = options.limit + 1;
 
+    const cleanup = () => {
+      options.signal?.removeEventListener('abort', abort);
+    };
+
+    const resolveOnce = (result: RipgrepLinesResult<T>) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    };
+
+    const rejectOnce = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
     const abort = () => {
-      aborted = true;
       child.kill();
-      reject(new Error('Operation aborted'));
+      rejectOnce(new Error('Operation aborted'));
     };
 
     options.signal?.addEventListener('abort', abort, { once: true });
 
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk: string) => {
+      if (settled) return;
+
       stdoutBuffer += chunk;
       collectCompleteLines();
       if (items.length >= collectionLimit) {
@@ -58,36 +77,35 @@ export function runRipgrepLines<T>(
 
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk: string) => {
+      if (settled) return;
+
       stderr += chunk;
     });
 
     child.on('error', (error) => {
-      options.signal?.removeEventListener('abort', abort);
-      if (aborted) return;
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        reject(new Error(`${options.toolName} failed: rg executable not found`));
+        rejectOnce(new Error(`${options.toolName} failed: rg executable not found`));
         return;
       }
-      reject(error);
+      rejectOnce(error);
     });
 
     child.on('close', (code) => {
-      options.signal?.removeEventListener('abort', abort);
-      if (aborted) return;
+      if (settled) return;
 
       collectRemainingLine();
 
       if (limited) {
-        resolve({ items: items.slice(0, options.limit), limited });
+        resolveOnce({ items: items.slice(0, options.limit), limited });
         return;
       }
 
       if (code === 0 || (code === 1 && items.length === 0)) {
-        resolve({ items: items.slice(0, options.limit), limited: false });
+        resolveOnce({ items: items.slice(0, options.limit), limited: false });
         return;
       }
 
-      reject(new Error(formatRipgrepError(options.toolName, code, stderr)));
+      rejectOnce(new Error(formatRipgrepError(options.toolName, code, stderr)));
     });
 
     function collectCompleteLines() {

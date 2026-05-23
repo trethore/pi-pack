@@ -204,6 +204,49 @@ describe('ripgrep find_files runner', () => {
     expect(result.files).toContain('index.ts');
     expect(result.files).not.toContain('.env.example');
   });
+
+  it('keeps hidden ignored files excluded when noIgnore and visibleOnly are both true', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, '.gitignore'), 'ignored.txt\n');
+    writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
+    writeFileSync(path.join(cwd, '.env.example'), 'TOKEN=example');
+
+    // Act
+    const result = await runRipgrepFindFiles({
+      cwd,
+      patterns: ['**/*'],
+      paths: ['.'],
+      limit: 10,
+      noIgnore: true,
+      visibleOnly: true,
+    });
+
+    // Assert
+    expect(result.files).toContain('ignored.txt');
+    expect(result.files).not.toContain('.env.example');
+  });
+
+  it('applies inclusion and exclusion glob patterns in order', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'index.ts'), 'export {};');
+    writeFileSync(path.join(cwd, 'index.test.ts'), 'test();');
+    writeFileSync(path.join(cwd, 'notes.md'), '# notes');
+
+    // Act
+    const result = await runRipgrepFindFiles({
+      cwd,
+      patterns: ['*.ts', '!*.test.ts'],
+      paths: ['.'],
+      limit: 10,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result.files).toEqual(['index.ts']);
+  });
 });
 
 function toRelativeFiles(cwd: string, files: readonly string[]): string[] {

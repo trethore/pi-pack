@@ -43,14 +43,13 @@ describe('formatFindFilesResult', () => {
     expect(output).toBe(
       lines(
         'found=5',
-        'foo/',
-        '  bar/some/thing/',
-        '    file1.txt',
-        '    some/other/',
-        '      file2.txt',
-        '      file3.txt',
-        '  bar2/another.txt',
-        '  bar3/deep/nested/path/final.txt'
+        'bar/some/thing/',
+        '  file1.txt',
+        '  some/other/',
+        '    file2.txt',
+        '    file3.txt',
+        'bar2/another.txt',
+        'bar3/deep/nested/path/final.txt'
       )
     );
   });
@@ -73,13 +72,12 @@ describe('formatFindFilesResult', () => {
     ).toBe(
       lines(
         'found=4',
-        'foo/bar/',
-        '  project1/src/',
-        '    app/page.tsx',
-        '    lib/utils.ts',
-        '  project2/docs/',
-        '    install.md',
-        '    intro.md'
+        'project1/src/',
+        '  app/page.tsx',
+        '  lib/utils.ts',
+        'project2/docs/',
+        '  install.md',
+        '  intro.md'
       )
     );
   });
@@ -90,7 +88,7 @@ describe('formatFindFilesResult', () => {
         paths: ['/tmp/test/git-repo'],
         files: ['/tmp/test/git-repo/ignored/ignored.txt', '/tmp/test/git-repo/src/visible.txt'],
       })
-    ).toBe(lines('found=2', '/tmp/test/git-repo/', '  ignored/ignored.txt', '  src/visible.txt'));
+    ).toBe(lines('found=2', 'ignored/ignored.txt', 'src/visible.txt'));
   });
 
   it('deduplicates normalized file paths', () => {
@@ -99,7 +97,7 @@ describe('formatFindFilesResult', () => {
         paths: ['foo', 'foo/bar'],
         files: ['foo/bar/a.txt', './foo/bar/a.txt', 'foo/bar/b.txt'],
       })
-    ).toBe(lines('found=2', 'foo/bar/', '  a.txt', '  b.txt'));
+    ).toBe(lines('found=2', 'bar/', '  a.txt', '  b.txt'));
   });
 
   it('adds a footer when more files are available', () => {

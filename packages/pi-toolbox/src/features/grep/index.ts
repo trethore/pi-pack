@@ -12,11 +12,10 @@ import {
 import {
   assertSearchPaths,
   cloneJsonSchema,
+  createTextToolDefinition,
   formatToolCall,
   readJsonDefinition,
   registerZeroCountToolResultError,
-  renderTextCall,
-  renderTextResult,
 } from '#src/utils/tool-definition.js';
 import {
   runRipgrepGrep,
@@ -97,12 +96,8 @@ export function createGrepToolDefinition(
   const runner = options.runner ?? runRipgrepGrep;
   const parameters = createGrepParametersSchema(config);
 
-  return {
-    name: GREP_TOOL_DEFINITION.name,
-    label: GREP_TOOL_DEFINITION.label,
-    description: GREP_TOOL_DEFINITION.description,
-    promptSnippet: GREP_TOOL_DEFINITION.promptSnippet,
-    promptGuidelines: GREP_TOOL_DEFINITION.promptGuidelines,
+  return createTextToolDefinition<GrepParametersSchema, GrepToolDetails | undefined>({
+    metadata: GREP_TOOL_DEFINITION,
     parameters,
     async execute(_toolCallId, params, signal) {
       const preparedParams = prepareGrepParameters(params, config);
@@ -143,13 +138,8 @@ export function createGrepToolDefinition(
         },
       };
     },
-    renderCall(args, theme, context) {
-      return renderTextCall(args, theme, context, formatGrepCall);
-    },
-    renderResult(result, options, theme, context) {
-      return renderTextResult(result, options, theme, context);
-    },
-  };
+    formatCall: formatGrepCall,
+  });
 }
 
 function readGrepDefinition(): GrepDefinition {

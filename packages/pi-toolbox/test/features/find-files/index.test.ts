@@ -121,6 +121,28 @@ src/index.ts`,
     ]);
   });
 
+  it('normalizes blank optional lists to fallback values at the tool boundary', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const runner = vi.fn(async () => ({ files: [], limited: false }));
+    const tool = createFindFilesToolDefinition(
+      { enabled: true, defaultLimit: 100 },
+      { cwd, runner }
+    );
+
+    // Act
+    await tool.execute(
+      'call-id',
+      { patterns: [' ', ''], paths: [' '] },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ patterns: [], paths: ['.'] }));
+  });
+
   it('deduplicates files returned through overlapping search paths in details', async () => {
     // Arrange
     const cwd = makeTempDir();
@@ -199,7 +221,7 @@ src/index.ts`,
     expect(result.content[0]).toEqual({
       type: 'text',
       text: `found=1
-packages/pi-toolbox/src/index.ts
+pi-toolbox/src/index.ts
 [more files available]`,
     });
   });

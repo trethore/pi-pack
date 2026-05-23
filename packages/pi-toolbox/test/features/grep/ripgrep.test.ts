@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { runRipgrepGrep } from '#pi-toolbox/features/grep/ripgrep.js';
+import { parseRipgrepMatchLine, runRipgrepGrep } from '#pi-toolbox/features/grep/ripgrep.js';
 
 describe('ripgrep grep runner', () => {
   it('finds matches with the packaged ripgrep executable', async () => {
@@ -219,6 +219,73 @@ describe('ripgrep grep runner', () => {
 
     // Assert
     expect(result.matches).toEqual([{ file: 'index.ts', line: 1, text: 'const needle = true;' }]);
+  });
+
+  it('keeps hidden ignored files excluded when noIgnore and visibleOnly are both true', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, '.gitignore'), 'ignored.txt\n');
+    writeFileSync(path.join(cwd, 'ignored.txt'), 'needle ignored\n');
+    writeFileSync(path.join(cwd, '.env.example'), 'needle hidden\n');
+
+    // Act
+    const result = await runRipgrepGrep({
+      cwd,
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: [],
+      limit: 10,
+      maxCharsPerMatch: 200,
+      noIgnore: true,
+      visibleOnly: true,
+    });
+
+    // Assert
+    expect(result.matches).toEqual([{ file: 'ignored.txt', line: 1, text: 'needle ignored' }]);
+  });
+
+  it('applies inclusion and exclusion globs in order', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'index.ts'), 'needle ts\n');
+    writeFileSync(path.join(cwd, 'index.test.ts'), 'needle test\n');
+    writeFileSync(path.join(cwd, 'notes.md'), 'needle md\n');
+
+    // Act
+    const result = await runRipgrepGrep({
+      cwd,
+      regexes: ['needle'],
+      paths: ['.'],
+      globs: ['*.ts', '!*.test.ts'],
+      limit: 10,
+      maxCharsPerMatch: 200,
+      noIgnore: false,
+      visibleOnly: false,
+    });
+
+    // Assert
+    expect(result.matches).toEqual([{ file: 'index.ts', line: 1, text: 'needle ts' }]);
+  });
+
+  it('skips ripgrep JSON match events without text fields', () => {
+    expect(
+      parseRipgrepMatchLine(
+        JSON.stringify({
+          type: 'match',
+          data: { path: {}, lines: { text: 'needle' }, line_number: 1 },
+        }),
+        200
+      )
+    ).toBeUndefined();
+    expect(
+      parseRipgrepMatchLine(
+        JSON.stringify({
+          type: 'match',
+          data: { path: { text: 'file.txt' }, lines: {}, line_number: 1 },
+        }),
+        200
+      )
+    ).toBeUndefined();
   });
 });
 

@@ -77,7 +77,7 @@ function formatExactRootPath(root: CompactRoot, includeRootLabel: boolean): Comp
 }
 
 function createCompactRoots(searchPaths: readonly string[]): CompactRoot[] {
-  const rootPaths = searchPaths.map((searchPath) => toDisplayPath(searchPath) || '.');
+  const rootPaths = [...new Set(searchPaths.map((searchPath) => toDisplayPath(searchPath) || '.'))];
   const labels = createUniqueSuffixLabels(rootPaths);
 
   return rootPaths.map((rootPath, index) => ({ path: rootPath, label: labels[index] ?? rootPath }));

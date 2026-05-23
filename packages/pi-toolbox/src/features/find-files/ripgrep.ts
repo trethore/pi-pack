@@ -1,10 +1,6 @@
-import { formatRipgrepPaths, toResolvedDisplayPath } from '#src/utils/paths.js';
-import { formatRipgrepDepthArgs } from '#src/utils/ripgrep-depth.js';
+import { toResolvedDisplayPath } from '#src/utils/paths.js';
+import { formatRipgrepSearchArgs } from '#src/utils/ripgrep-args.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
-import {
-  formatRipgrepExclusionGlobArgs,
-  formatRipgrepHiddenArgs,
-} from '#src/utils/ripgrep-visibility.js';
 
 export interface RunRipgrepFindFilesOptions {
   cwd: string;
@@ -43,12 +39,13 @@ function buildRipgrepArgs(options: RunRipgrepFindFilesOptions): string[] {
     '--files',
     '--sort',
     'path',
-    ...formatRipgrepHiddenArgs(options.visibleOnly),
-    ...formatRipgrepDepthArgs(options.depth),
-    ...options.patterns.flatMap((pattern) => ['-g', pattern]),
-    ...formatRipgrepExclusionGlobArgs(options.visibleOnly),
-    ...(options.noIgnore ? ['--no-ignore'] : []),
-    ...formatRipgrepPaths(options.paths),
+    ...formatRipgrepSearchArgs({
+      depth: options.depth,
+      globs: options.patterns,
+      noIgnore: options.noIgnore,
+      paths: options.paths,
+      visibleOnly: options.visibleOnly,
+    }),
   ];
 }
 
