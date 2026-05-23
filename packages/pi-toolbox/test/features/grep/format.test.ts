@@ -208,7 +208,7 @@ describe('formatGrepResult', () => {
     );
   });
 
-  it('formats clipped match text without a truncation marker', () => {
+  it('formats already-clipped match text as provided by the runner', () => {
     expect(
       formatGrepResult({
         matches: [{ file: 'src/index.ts', line: 1, text: 'abc' }],

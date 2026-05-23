@@ -267,6 +267,18 @@ describe('ripgrep grep runner', () => {
     expect(result.matches).toEqual([{ file: 'index.ts', line: 1, text: 'needle ts' }]);
   });
 
+  it('clips match text to the max character limit without adding a marker', () => {
+    expect(
+      parseRipgrepMatchLine(
+        JSON.stringify({
+          type: 'match',
+          data: { path: { text: 'file.txt' }, lines: { text: 'abcdef' }, line_number: 1 },
+        }),
+        5
+      )
+    ).toEqual({ file: 'file.txt', line: 1, text: 'abcde' });
+  });
+
   it('skips ripgrep JSON match events without text fields', () => {
     expect(
       parseRipgrepMatchLine(

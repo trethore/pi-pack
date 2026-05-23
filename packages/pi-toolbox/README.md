@@ -43,6 +43,16 @@ Arguments:
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
 - `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
 
+Example calls:
+
+```jsonc
+// Find TypeScript files two levels deep, excluding declarations.
+{ "patterns": ["**/*.ts", "!**/*.d.ts"], "paths": ["src", "test"], "depth": 2 }
+
+// Include ignored files but keep hidden files/directories excluded.
+{ "patterns": ["**/*"], "noIgnore": true, "visibleOnly": true }
+```
+
 Example output:
 
 ```text
@@ -74,6 +84,16 @@ Arguments:
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
 - `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
 
+Example calls:
+
+```jsonc
+// Search TypeScript sources, excluding tests, with per-file limiting.
+{ "regexes": ["TODO|FIXME"], "paths": ["src"], "globs": ["**/*.ts", "!**/*.test.ts"], "limitPerFile": 3 }
+
+// Search ignored files but skip hidden files/directories.
+{ "regexes": ["API_KEY"], "noIgnore": true, "visibleOnly": true }
+```
+
 Example output:
 
 ```text
@@ -82,7 +102,7 @@ matches=5 files=2
 src/agent/tools.ts
 12: export const findFilesTool = ...
 18: export const grepTool = ...
-25: very long line clipped by maxCharsPerMatch
+25: very long line clipped by maxCharsPerMatch, once it hits the char limit, it just ends: abcdefabcdefabcd
 [more matches in this file]
 
 src/index.ts

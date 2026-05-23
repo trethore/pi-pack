@@ -1,18 +1,22 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Component } from '@earendil-works/pi-tui';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGrepToolDefinition, registerGrepTool } from '#pi-toolbox/features/grep/index.js';
+import {
+  createPi,
+  createRenderContext,
+  createTheme,
+  makeTempDir as makePrefixedTempDir,
+  renderComponent,
+} from '#test/utils/tool-test-helpers.js';
 
 const DEFAULT_GREP_CONFIG = {
   enabled: true,
   defaultLimit: 200,
   defaultMaxCharsPerMatch: 200,
 };
-const RENDER_WIDTH = 240;
 
 describe('grep tool', () => {
   it('does not register when disabled', () => {
@@ -352,58 +356,6 @@ src/index.ts
   });
 });
 
-function renderComponent(component: Component | undefined): string {
-  return component?.render(RENDER_WIDTH).join('\n') ?? '';
-}
-
-function createTheme() {
-  return {
-    bold: (value: string) => value,
-    fg: (color: string, value: string) => `<${color}>${value}</${color}>`,
-  } as never;
-}
-
-function createRenderContext(isError: boolean) {
-  return {
-    args: { regexes: ['needle'] },
-    toolCallId: 'call-id',
-    invalidate: () => {},
-    lastComponent: undefined,
-    state: {},
-    cwd: process.cwd(),
-    executionStarted: true,
-    argsComplete: true,
-    isPartial: false,
-    expanded: false,
-    showImages: false,
-    isError,
-  } as never;
-}
-
-function createPi() {
-  const state = {
-    tools: [] as { name: string }[],
-    handlers: {} as Record<string, (event: unknown) => unknown>,
-  };
-
-  return {
-    get tools() {
-      return state.tools;
-    },
-    get handlers() {
-      return state.handlers;
-    },
-    extensionApi: {
-      registerTool(tool: { name: string }) {
-        state.tools.push(tool);
-      },
-      on(event: string, handler: (event: unknown) => unknown) {
-        state.handlers[event] = handler;
-      },
-    } as unknown as Parameters<typeof registerGrepTool>[0],
-  };
-}
-
 function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-grep-test-'));
+  return makePrefixedTempDir('pi-toolbox-grep-test-');
 }
