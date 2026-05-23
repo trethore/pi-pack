@@ -17,13 +17,7 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "thinkingLevel": {
     "enabled": true,
   },
-  "switchWorkspace": {
-    "enabled": true,
-  },
   "showSysprompt": {
-    "enabled": true,
-  },
-  "updatePi": {
     "enabled": true,
   },
 }
@@ -42,18 +36,6 @@ Examples:
 /thinkinglevel off
 ```
 
-### Switch workspace command
-
-Registers `/switchworkspace <path>` to switch Pi to a different workspace directory.
-The full argument is treated as the path, so spaces do not require quotes.
-
-Examples:
-
-```text
-/switchworkspace C:\Users\titou\.pi\agent
-/switchworkspace /Users/titou/my project
-```
-
 ### Show system prompt command
 
 Registers `/showsysprompt [prompt|tools]` to show the current system prompt and available tools in Pi.
@@ -66,7 +48,3 @@ Examples:
 /showsysprompt prompt
 /showsysprompt tools
 ```
-
-### Update pi command
-
-Registers `/updatepi` to check the latest published pi version. If an update is available, it quits Pi and starts `npm install -g @earendil-works/pi-coding-agent` in a detached process.

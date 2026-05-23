@@ -1,7 +1,7 @@
 import { toDisplayPath } from '#src/utils/paths.js';
 import { sortedItems } from '#src/utils/sorted-items.js';
 
-export interface GlobFormatOptions {
+export interface FindFilesFormatOptions {
   paths: readonly string[];
   files: readonly string[];
   limited?: boolean;
@@ -17,11 +17,11 @@ interface CompressedNode {
   node: TreeNode;
 }
 
-export function countGlobFiles(files: readonly string[]): number {
+export function countFindFiles(files: readonly string[]): number {
   return normalizeFiles(files).length;
 }
 
-export function formatGlobResult(options: GlobFormatOptions): string {
+export function formatFindFilesResult(options: FindFilesFormatOptions): string {
   const root = createNode();
   const files = normalizeFiles(options.files);
 

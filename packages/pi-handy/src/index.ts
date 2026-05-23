@@ -7,9 +7,7 @@ import {
 import { loadConfig } from '#src/config/config.js';
 import type { PiHandyConfig } from '#src/config/schema.js';
 import { registerShowSyspromptCommand } from '#src/features/show-sysprompt/index.js';
-import { registerSwitchWorkspaceCommand } from '#src/features/switch-workspace/index.js';
 import { registerThinkingLevelCommand } from '#src/features/thinking-level/index.js';
-import { registerUpdatePiCommand } from '#src/features/update-pi/index.js';
 
 const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
@@ -17,16 +15,8 @@ const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
     register: registerThinkingLevelCommand,
   },
   {
-    isEnabled: (config) => config.enabled && config.switchWorkspace.enabled,
-    register: registerSwitchWorkspaceCommand,
-  },
-  {
     isEnabled: (config) => config.enabled && config.showSysprompt.enabled,
     register: registerShowSyspromptCommand,
-  },
-  {
-    isEnabled: (config) => config.enabled && config.updatePi.enabled,
-    register: registerUpdatePiCommand,
   },
 ];
 

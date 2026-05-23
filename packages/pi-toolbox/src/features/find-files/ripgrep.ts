@@ -6,7 +6,7 @@ import {
   formatRipgrepHiddenArgs,
 } from '#src/utils/ripgrep-visibility.js';
 
-export interface RunRipgrepGlobOptions {
+export interface RunRipgrepFindFilesOptions {
   cwd: string;
   patterns: string[];
   paths: string[];
@@ -17,14 +17,16 @@ export interface RunRipgrepGlobOptions {
   signal?: AbortSignal;
 }
 
-export interface RipgrepGlobResult {
+export interface RipgrepFindFilesResult {
   files: string[];
   limited: boolean;
 }
 
-export async function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<RipgrepGlobResult> {
+export async function runRipgrepFindFiles(
+  options: RunRipgrepFindFilesOptions
+): Promise<RipgrepFindFilesResult> {
   const result = await runRipgrepLines({
-    toolName: 'glob',
+    toolName: 'find_files',
     cwd: options.cwd,
     args: buildRipgrepArgs(options),
     limit: options.limit,
@@ -36,7 +38,7 @@ export async function runRipgrepGlob(options: RunRipgrepGlobOptions): Promise<Ri
   return { files: result.items, limited: result.limited };
 }
 
-function buildRipgrepArgs(options: RunRipgrepGlobOptions): string[] {
+function buildRipgrepArgs(options: RunRipgrepFindFilesOptions): string[] {
   return [
     '--files',
     '--sort',

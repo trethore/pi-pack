@@ -8,9 +8,9 @@ describe('formatGrepResult', () => {
     // Arrange and act
     const result = formatGrepResult({
       matches: [
-        { file: 'src/agent/tools.ts', line: 12, text: 'export const globTool = ...' },
+        { file: 'src/agent/tools.ts', line: 12, text: 'export const findFilesTool = ...' },
         { file: 'src/agent/tools.ts', line: 18, text: 'export const grepTool = ...' },
-        { file: 'src/index.ts', line: 9, text: 'tools: [globTool, grepTool]' },
+        { file: 'src/index.ts', line: 9, text: 'tools: [findFilesTool, grepTool]' },
       ],
       limit: 100,
     });
@@ -21,11 +21,11 @@ describe('formatGrepResult', () => {
         'matches=3 files=2',
         '',
         'src/agent/tools.ts',
-        '12: export const globTool = ...',
+        '12: export const findFilesTool = ...',
         '18: export const grepTool = ...',
         '',
         'src/index.ts',
-        '9: tools: [globTool, grepTool]'
+        '9: tools: [findFilesTool, grepTool]'
       )
     );
   });

@@ -4,9 +4,9 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { runRipgrepGlob } from '#pi-toolbox/features/glob/ripgrep.js';
+import { runRipgrepFindFiles } from '#pi-toolbox/features/find-files/ripgrep.js';
 
-describe('ripgrep glob runner', () => {
+describe('ripgrep find_files runner', () => {
   it('discovers files with the packaged ripgrep executable', async () => {
     // Arrange
     const cwd = makeTempDir();
@@ -14,7 +14,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'notes.md'), '# notes');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['*.ts'],
       paths: ['.'],
@@ -37,7 +37,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: [],
       paths: ['.'],
@@ -58,7 +58,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: [],
       paths: ['.'],
@@ -80,7 +80,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'nested', 'deep', 'grandchild.txt'), 'grandchild');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['**/*.txt'],
       paths: ['.'],
@@ -103,7 +103,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'root', 'nested', 'deep', 'grandchild.txt'), 'grandchild');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['**/*.txt'],
       paths: ['root', 'root/nested'],
@@ -125,7 +125,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'm.txt'), 'm');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['*.txt'],
       paths: ['.'],
@@ -146,7 +146,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, 'dir', 'b.txt'), 'b');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['**/*'],
       paths: ['dir', path.join(cwd, 'dir', 'a.txt')],
@@ -169,7 +169,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, '.git', 'objects', 'object-file'), 'object');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['**/*'],
       paths: ['.'],
@@ -191,7 +191,7 @@ describe('ripgrep glob runner', () => {
     writeFileSync(path.join(cwd, '.env.example'), 'TOKEN=example');
 
     // Act
-    const result = await runRipgrepGlob({
+    const result = await runRipgrepFindFiles({
       cwd,
       patterns: ['**/*'],
       paths: ['.'],
@@ -211,5 +211,5 @@ function toRelativeFiles(cwd: string, files: readonly string[]): string[] {
 }
 
 function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-ripgrep-glob-test-'));
+  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-ripgrep-find-files-test-'));
 }

@@ -1,7 +1,7 @@
 import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { defineConfigSchema, z, type EnabledConfig } from '@trethore/pi-shared/config/schema.js';
 
-export type LifecycleMode = 'lazy' | 'eager' | 'keep-alive';
+type LifecycleMode = 'lazy' | 'eager' | 'keep-alive';
 export type ToolPrefix = 'server' | 'short' | 'none';
 
 export interface PiTinyMcpConfig {
@@ -15,16 +15,16 @@ export interface PiTinyMcpConfig {
   servers: Record<string, ServerConfig>;
 }
 
-export interface ProxyToolConfig extends EnabledConfig {
+interface ProxyToolConfig extends EnabledConfig {
   name: string;
   includeSchemasInSearch: boolean;
 }
 
-export interface DirectToolsConfig extends EnabledConfig {
+interface DirectToolsConfig extends EnabledConfig {
   disableProxyTool: boolean;
 }
 
-export interface MetadataCacheConfig extends EnabledConfig {
+interface MetadataCacheConfig extends EnabledConfig {
   maxAgeHours: number;
 }
 
@@ -35,16 +35,16 @@ export interface LifecycleConfig {
   startupConcurrency: number;
 }
 
-export interface ToolNamesConfig {
+interface ToolNamesConfig {
   prefix: ToolPrefix;
 }
 
-export interface ConfigSourcesConfig {
+interface ConfigSourcesConfig {
   standardGlobal: boolean;
   standardProject: boolean;
 }
 
-export type ServerAuth = 'bearer' | 'oauth';
+type ServerAuth = 'bearer' | 'oauth';
 
 export interface ServerConfig {
   command?: string;

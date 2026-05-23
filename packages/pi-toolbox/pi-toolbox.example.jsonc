@@ -2,8 +2,8 @@
   // Master switch for pi-toolbox.
   "enabled": true,
 
-  // glob tool powered by rg --files -g.
-  "glob": {
+  // find_files tool powered by rg --files.
+  "findFiles": {
     "enabled": true,
     "defaultLimit": 100
   },

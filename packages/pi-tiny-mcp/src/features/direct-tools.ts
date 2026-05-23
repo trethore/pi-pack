@@ -30,7 +30,7 @@ export function shouldRegisterProxyTool(config: PiTinyMcpConfig): boolean {
   return !hasCompleteDirectToolCache(config);
 }
 
-export function isDirectToolsEnabled(config: PiTinyMcpConfig, serverName: string): boolean {
+function isDirectToolsEnabled(config: PiTinyMcpConfig, serverName: string): boolean {
   const definition = config.servers[serverName];
   return definition?.directTools ?? config.directTools.enabled;
 }

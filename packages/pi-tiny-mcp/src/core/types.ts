@@ -2,7 +2,7 @@ import type { Transport as McpTransport } from '@modelcontextprotocol/sdk/shared
 
 import type { ServerConfig } from '#src/config/schema.js';
 
-export type Transport = McpTransport;
+type Transport = McpTransport;
 
 export interface McpTool {
   name: string;

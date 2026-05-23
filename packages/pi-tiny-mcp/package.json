@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@trethore/pi-shared": "*",
     "typebox": "^1.1.38"
   }
 }

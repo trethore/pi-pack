@@ -27,7 +27,7 @@ export function findToolByName(
   return undefined;
 }
 
-export function findToolInList(
+function findToolInList(
   metadata: readonly ToolMetadata[] | undefined,
   toolName: string
 ): ToolMetadata | undefined {

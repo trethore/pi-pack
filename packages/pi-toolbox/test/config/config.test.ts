@@ -22,7 +22,7 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
-      glob: { enabled: true, defaultLimit: 100 },
+      findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
   });
@@ -33,7 +33,7 @@ describe('loadConfig', () => {
     writeGlobalConfig(
       homeDir,
       JSON.stringify({
-        glob: { enabled: false, defaultLimit: 50 },
+        findFiles: { enabled: false, defaultLimit: 50 },
         grep: { defaultLimit: 25, defaultLimitPerFile: 3 },
       })
     );
@@ -51,7 +51,7 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
-      glob: { enabled: false, defaultLimit: 50 },
+      findFiles: { enabled: false, defaultLimit: 50 },
       grep: {
         enabled: true,
         defaultLimit: 300,
@@ -69,7 +69,7 @@ describe('loadConfig', () => {
       cwd,
       JSON.stringify({
         enabled: 'yes',
-        glob: { enabled: 'yes', defaultLimit: 1001 },
+        findFiles: { enabled: 'yes', defaultLimit: 1001 },
         grep: {
           enabled: 'yes',
           defaultLimit: 0,
@@ -85,13 +85,13 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.config).toEqual({
       enabled: true,
-      glob: { enabled: true, defaultLimit: 100 },
+      findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
-      expect.stringContaining('invalid glob.enabled value'),
-      expect.stringContaining('invalid glob.defaultLimit value'),
+      expect.stringContaining('invalid findFiles.enabled value'),
+      expect.stringContaining('invalid findFiles.defaultLimit value'),
       expect.stringContaining('invalid grep.enabled value'),
       expect.stringContaining('invalid grep.defaultLimit value'),
       expect.stringContaining('invalid grep.defaultLimitPerFile value'),
@@ -106,8 +106,8 @@ describe('loadConfig', () => {
     writeProjectConfig(
       cwd,
       `{
-        // Change only the default glob limit.
-        "glob": { "defaultLimit": 250, },
+        // Change only the default find_files limit.
+        "findFiles": { "defaultLimit": 250, },
       }`
     );
 
@@ -116,7 +116,7 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.config.glob.defaultLimit).toBe(250);
+    expect(loaded.config.findFiles.defaultLimit).toBe(250);
   });
 });
 

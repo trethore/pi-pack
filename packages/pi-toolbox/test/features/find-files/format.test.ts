@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatGlobResult } from '#pi-toolbox/features/glob/format.js';
+import { formatFindFilesResult } from '#pi-toolbox/features/find-files/format.js';
 import { lines } from '#test/utils/lines.js';
 
-describe('formatGlobResult', () => {
+describe('formatFindFilesResult', () => {
   it('formats files as a compact whitespace tree', () => {
     // Arrange
     const files = ['src/app/page.tsx', 'src/app/layout.tsx', 'src/lib/utils.ts', 'src/lib/auth.ts'];
 
     // Act
-    const output = formatGlobResult({ paths: ['.'], files });
+    const output = formatFindFilesResult({ paths: ['.'], files });
 
     // Assert
     expect(output).toBe(
@@ -37,7 +37,7 @@ describe('formatGlobResult', () => {
     ];
 
     // Act
-    const output = formatGlobResult({ paths: ['foo'], files });
+    const output = formatFindFilesResult({ paths: ['foo'], files });
 
     // Assert
     expect(output).toBe(
@@ -56,12 +56,12 @@ describe('formatGlobResult', () => {
   });
 
   it('formats empty results without extra tree lines', () => {
-    expect(formatGlobResult({ paths: ['.'], files: [] })).toBe('found=0');
+    expect(formatFindFilesResult({ paths: ['.'], files: [] })).toBe('found=0');
   });
 
   it('merges multiple search paths into one tree', () => {
     expect(
-      formatGlobResult({
+      formatFindFilesResult({
         paths: ['foo/bar/project1', 'foo/bar/project2'],
         files: [
           'foo/bar/project1/src/app/page.tsx',
@@ -86,7 +86,7 @@ describe('formatGlobResult', () => {
 
   it('formats absolute paths', () => {
     expect(
-      formatGlobResult({
+      formatFindFilesResult({
         paths: ['/tmp/test/git-repo'],
         files: ['/tmp/test/git-repo/ignored/ignored.txt', '/tmp/test/git-repo/src/visible.txt'],
       })
@@ -95,7 +95,7 @@ describe('formatGlobResult', () => {
 
   it('deduplicates normalized file paths', () => {
     expect(
-      formatGlobResult({
+      formatFindFilesResult({
         paths: ['foo', 'foo/bar'],
         files: ['foo/bar/a.txt', './foo/bar/a.txt', 'foo/bar/b.txt'],
       })
@@ -103,7 +103,7 @@ describe('formatGlobResult', () => {
   });
 
   it('adds a footer when more files are available', () => {
-    expect(formatGlobResult({ paths: ['.'], files: ['src/index.ts'], limited: true })).toBe(
+    expect(formatFindFilesResult({ paths: ['.'], files: ['src/index.ts'], limited: true })).toBe(
       lines('found=1', 'src/index.ts', '[more files available]')
     );
   });

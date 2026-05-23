@@ -5,7 +5,7 @@ import {
   defaultConfig,
   limitSchema,
   maxCharsPerMatchSchema,
-  type GlobToolConfig,
+  type FindFilesToolConfig,
   type GrepToolConfig,
   type LoadedConfig,
   type PartialPiToolboxConfig,
@@ -28,7 +28,7 @@ export function loadConfig(cwd: string): LoadedConfig {
 function cloneDefaultConfig(): PiToolboxConfig {
   return {
     ...defaultConfig,
-    glob: { ...defaultConfig.glob },
+    findFiles: { ...defaultConfig.findFiles },
     grep: { ...defaultConfig.grep },
   };
 }
@@ -41,8 +41,8 @@ function mergeConfig(
 ) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
 
-  mergeSection(source, 'glob', configPath, errors, (section, sectionName) => {
-    mergeGlobConfig(target.glob, section, sectionName, configPath, errors);
+  mergeSection(source, 'findFiles', configPath, errors, (section, sectionName) => {
+    mergeFindFilesConfig(target.findFiles, section, sectionName, configPath, errors);
   });
 
   mergeSection(source, 'grep', configPath, errors, (section, sectionName) => {
@@ -50,8 +50,8 @@ function mergeConfig(
   });
 }
 
-function mergeGlobConfig(
-  target: GlobToolConfig,
+function mergeFindFilesConfig(
+  target: FindFilesToolConfig,
   source: Record<string, unknown>,
   label: string,
   configPath: string,

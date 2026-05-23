@@ -15,8 +15,8 @@ describe('string list utilities', () => {
 
   it('throws for required lists without non-empty values', () => {
     expect(() =>
-      normalizeRequiredStringList([' ', ''], { name: 'patterns', toolName: 'glob' })
-    ).toThrow('glob failed: patterns must contain at least one non-empty string');
+      normalizeRequiredStringList([' ', ''], { name: 'patterns', toolName: 'find_files' })
+    ).toThrow('find_files failed: patterns must contain at least one non-empty string');
   });
 
   it('returns fallback values for optional empty lists', () => {

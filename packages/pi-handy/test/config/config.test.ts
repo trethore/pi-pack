@@ -31,9 +31,7 @@ describe('pi-handy config', () => {
       config: {
         enabled: true,
         thinkingLevel: { enabled: true },
-        switchWorkspace: { enabled: true },
         showSysprompt: { enabled: true },
-        updatePi: { enabled: true },
       },
       errors: [],
     });
@@ -44,32 +42,11 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "switchWorkspace": { "enabled": false }, "showSysprompt": { "enabled": false }, "updatePi": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false } }'
     );
     writeProjectConfig(
       projectDirectory,
-      '{ "enabled": true, "switchWorkspace": { "enabled": true } }'
-    );
-
-    // Act
-    const loadedConfig = loadConfig(projectDirectory);
-
-    // Assert
-    expect(loadedConfig.config).toEqual({
-      enabled: true,
-      thinkingLevel: { enabled: false },
-      switchWorkspace: { enabled: true },
-      showSysprompt: { enabled: false },
-      updatePi: { enabled: false },
-    });
-  });
-
-  it('reports invalid fields and keeps previous values', () => {
-    // Arrange
-    const projectDirectory = makeTempProject();
-    writeProjectConfig(
-      projectDirectory,
-      '{ "enabled": "yes", "thinkingLevel": false, "switchWorkspace": false, "showSysprompt": false, "updatePi": false }'
+      '{ "enabled": true, "thinkingLevel": { "enabled": true } }'
     );
 
     // Act
@@ -79,16 +56,31 @@ describe('pi-handy config', () => {
     expect(loadedConfig.config).toEqual({
       enabled: true,
       thinkingLevel: { enabled: true },
-      switchWorkspace: { enabled: true },
+      showSysprompt: { enabled: false },
+    });
+  });
+
+  it('reports invalid fields and keeps previous values', () => {
+    // Arrange
+    const projectDirectory = makeTempProject();
+    writeProjectConfig(
+      projectDirectory,
+      '{ "enabled": "yes", "thinkingLevel": false, "showSysprompt": false }'
+    );
+
+    // Act
+    const loadedConfig = loadConfig(projectDirectory);
+
+    // Assert
+    expect(loadedConfig.config).toEqual({
+      enabled: true,
+      thinkingLevel: { enabled: true },
       showSysprompt: { enabled: true },
-      updatePi: { enabled: true },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
-      expect.stringContaining('invalid switchWorkspace value'),
       expect.stringContaining('invalid showSysprompt value'),
-      expect.stringContaining('invalid updatePi value'),
     ]);
   });
 });

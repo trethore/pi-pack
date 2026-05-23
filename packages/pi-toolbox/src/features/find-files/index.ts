@@ -1,8 +1,8 @@
 import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
 
-import type { GlobToolConfig } from '#src/config/schema.js';
-import { countGlobFiles, formatGlobResult } from '#src/features/glob/format.js';
+import type { FindFilesToolConfig } from '#src/config/schema.js';
+import { countFindFiles, formatFindFilesResult } from '#src/features/find-files/format.js';
 import { formatStringList, normalizeOptionalStringList } from '#src/utils/string-list.js';
 import {
   assertSearchPaths,
@@ -14,14 +14,14 @@ import {
   renderTextResult,
 } from '#src/utils/tool-definition.js';
 import {
-  runRipgrepGlob,
-  type RipgrepGlobResult,
-  type RunRipgrepGlobOptions,
-} from '#src/features/glob/ripgrep.js';
+  runRipgrepFindFiles,
+  type RipgrepFindFilesResult,
+  type RunRipgrepFindFilesOptions,
+} from '#src/features/find-files/ripgrep.js';
 
-const GLOB_TOOL_DEFINITION = readGlobDefinition();
+const FIND_FILES_TOOL_DEFINITION = readFindFilesDefinition();
 
-interface GlobParameters {
+interface FindFilesParameters {
   patterns?: string[];
   paths?: string[];
   limit?: number;
@@ -30,21 +30,23 @@ interface GlobParameters {
   visibleOnly?: boolean;
 }
 
-interface PreparedGlobParameters extends Required<Omit<GlobParameters, 'depth' | 'patterns'>> {
+interface PreparedFindFilesParameters extends Required<
+  Omit<FindFilesParameters, 'depth' | 'patterns'>
+> {
   patterns: string[];
   depth?: number;
 }
 
-interface GlobDefinition {
+interface FindFilesDefinition {
   name: string;
   label: string;
   description: string;
   promptSnippet: string;
   promptGuidelines: string[];
-  parameters: GlobParametersJsonSchema;
+  parameters: FindFilesParametersJsonSchema;
 }
 
-interface GlobParametersJsonSchema {
+interface FindFilesParametersJsonSchema {
   type: 'object';
   additionalProperties: boolean;
   required?: string[];
@@ -58,45 +60,48 @@ interface GlobParametersJsonSchema {
   };
 }
 
-type GlobParametersSchema = ReturnType<typeof createGlobParametersSchema>;
-type GlobRunner = (options: RunRipgrepGlobOptions) => Promise<RipgrepGlobResult>;
+type FindFilesParametersSchema = ReturnType<typeof createFindFilesParametersSchema>;
+type FindFilesRunner = (options: RunRipgrepFindFilesOptions) => Promise<RipgrepFindFilesResult>;
 
-export interface GlobToolDetails {
+export interface FindFilesToolDetails {
   paths: string[];
   count: number;
   limited: boolean;
 }
 
-export interface GlobToolOptions {
+export interface FindFilesToolOptions {
   cwd?: string;
-  runner?: GlobRunner;
+  runner?: FindFilesRunner;
 }
 
-export function registerGlobTool(pi: ExtensionAPI, config: { glob: GlobToolConfig }): void {
-  if (!config.glob.enabled) return;
-  pi.registerTool(createGlobToolDefinition(config.glob));
-  registerZeroCountToolResultError(pi, GLOB_TOOL_DEFINITION.name);
+export function registerFindFilesTool(
+  pi: ExtensionAPI,
+  config: { findFiles: FindFilesToolConfig }
+): void {
+  if (!config.findFiles.enabled) return;
+  pi.registerTool(createFindFilesToolDefinition(config.findFiles));
+  registerZeroCountToolResultError(pi, FIND_FILES_TOOL_DEFINITION.name);
 }
 
-export function createGlobToolDefinition(
-  config: GlobToolConfig,
-  options: GlobToolOptions = {}
-): ToolDefinition<GlobParametersSchema, GlobToolDetails | undefined> {
+export function createFindFilesToolDefinition(
+  config: FindFilesToolConfig,
+  options: FindFilesToolOptions = {}
+): ToolDefinition<FindFilesParametersSchema, FindFilesToolDetails | undefined> {
   const cwd = options.cwd ?? process.cwd();
-  const runner = options.runner ?? runRipgrepGlob;
-  const parameters = createGlobParametersSchema(config.defaultLimit);
+  const runner = options.runner ?? runRipgrepFindFiles;
+  const parameters = createFindFilesParametersSchema(config.defaultLimit);
 
   return {
-    name: GLOB_TOOL_DEFINITION.name,
-    label: GLOB_TOOL_DEFINITION.label,
-    description: GLOB_TOOL_DEFINITION.description,
-    promptSnippet: GLOB_TOOL_DEFINITION.promptSnippet,
-    promptGuidelines: GLOB_TOOL_DEFINITION.promptGuidelines,
+    name: FIND_FILES_TOOL_DEFINITION.name,
+    label: FIND_FILES_TOOL_DEFINITION.label,
+    description: FIND_FILES_TOOL_DEFINITION.description,
+    promptSnippet: FIND_FILES_TOOL_DEFINITION.promptSnippet,
+    promptGuidelines: FIND_FILES_TOOL_DEFINITION.promptGuidelines,
     parameters,
     async execute(_toolCallId, params, signal) {
-      const preparedParams = prepareGlobParameters(params, config);
+      const preparedParams = prepareFindFilesParameters(params, config);
       await assertSearchPaths(cwd, preparedParams.paths, {
-        toolName: 'glob',
+        toolName: FIND_FILES_TOOL_DEFINITION.name,
         requireDirectory: true,
       });
 
@@ -111,13 +116,13 @@ export function createGlobToolDefinition(
         signal,
       });
 
-      const count = countGlobFiles(result.files);
+      const count = countFindFiles(result.files);
 
       return {
         content: [
           {
             type: 'text',
-            text: formatGlobResult({
+            text: formatFindFilesResult({
               paths: preparedParams.paths,
               files: result.files,
               limited: result.limited,
@@ -132,7 +137,7 @@ export function createGlobToolDefinition(
       };
     },
     renderCall(args, theme, context) {
-      return renderTextCall(args, theme, context, formatGlobCall);
+      return renderTextCall(args, theme, context, formatFindFilesCall);
     },
     renderResult(result, options, theme, context) {
       return renderTextResult(result, options, theme, context);
@@ -140,27 +145,29 @@ export function createGlobToolDefinition(
   };
 }
 
-function readGlobDefinition(): GlobDefinition {
-  return readJsonDefinition(new URL('glob-definition.json', import.meta.url));
+function readFindFilesDefinition(): FindFilesDefinition {
+  return readJsonDefinition(new URL('find-files-definition.json', import.meta.url));
 }
 
-function createGlobParametersSchema(defaultLimit: number) {
-  const parameters = cloneParametersSchema(GLOB_TOOL_DEFINITION.parameters);
+function createFindFilesParametersSchema(defaultLimit: number) {
+  const parameters = cloneParametersSchema(FIND_FILES_TOOL_DEFINITION.parameters);
   parameters.properties.limit.description = parameters.properties.limit.description.replace(
     '{{defaultLimit}}',
     String(defaultLimit)
   );
-  return Type.Unsafe<GlobParameters>(parameters);
+  return Type.Unsafe<FindFilesParameters>(parameters);
 }
 
-function cloneParametersSchema(parameters: GlobParametersJsonSchema): GlobParametersJsonSchema {
+function cloneParametersSchema(
+  parameters: FindFilesParametersJsonSchema
+): FindFilesParametersJsonSchema {
   return cloneJsonSchema(parameters);
 }
 
-function prepareGlobParameters(
-  params: GlobParameters,
-  config: GlobToolConfig
-): PreparedGlobParameters {
+function prepareFindFilesParameters(
+  params: FindFilesParameters,
+  config: FindFilesToolConfig
+): PreparedFindFilesParameters {
   return {
     patterns: normalizeOptionalStringList(params.patterns, []),
     paths: normalizeOptionalStringList(params.paths, ['.']),
@@ -171,19 +178,19 @@ function prepareGlobParameters(
   };
 }
 
-function formatGlobCall(args: GlobParameters | undefined, theme: Theme): string {
+function formatFindFilesCall(args: FindFilesParameters | undefined, theme: Theme): string {
   const patterns = formatStringList(args?.patterns, '...');
   const searchPaths = formatStringList(args?.paths, '.');
-  const flags = formatGlobFlags(args);
+  const flags = formatFindFilesFlags(args);
   return formatToolCall(theme, {
-    toolName: 'glob',
+    toolName: FIND_FILES_TOOL_DEFINITION.name,
     query: patterns,
     paths: searchPaths,
     flags,
   });
 }
 
-function formatGlobFlags(args: GlobParameters | undefined): string {
+function formatFindFilesFlags(args: FindFilesParameters | undefined): string {
   const flags: string[] = [];
   if (args?.limit !== undefined) flags.push(`limit ${args.limit}`);
   if (args?.depth !== undefined) flags.push(`depth ${args.depth}`);

@@ -14,7 +14,7 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 ```jsonc
 {
   "enabled": true,
-  "glob": {
+  "findFiles": {
     "enabled": true,
     "defaultLimit": 100,
   },
@@ -30,15 +30,15 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 
 ## Features
 
-### Glob tool
+### Find files tool
 
-Registers `glob`, a low-token file discovery tool powered by `rg --files`.
+Registers `find_files`, a low-token file discovery tool powered by `rg --files`.
 
 Arguments:
 
-- `patterns`: optional glob pattern(s) passed to `rg -g`; use `!` for exclusions; omitted for no glob filters
-- `paths`: directories to search in, defaults to cwd
-- `limit`: maximum files to return, defaults to `glob.defaultLimit`, minimum `1`, maximum `1000`
+- `patterns`: optional ripgrep-style glob filters passed with `-g`; prefix with `!` for exclusions; omitted to return all discovered files
+- `paths`: search root directories, defaults to cwd
+- `limit`: maximum files to return, defaults to `findFiles.defaultLimit`, minimum `1`, maximum `1000`
 - `depth`: maximum directory traversal depth relative to each search path, passed as `--max-depth`; omitted for unlimited traversal, minimum `1`
 - `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
 - `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
@@ -50,9 +50,9 @@ found=4
 src/
   index.ts
   agent/
-    glob.ts
+    find-files.ts
     tools.ts
-test/glob.test.ts
+test/find-files.test.ts
 [more files available]
 ```
 
@@ -80,14 +80,14 @@ Example output:
 matches=5 files=2
 
 src/agent/tools.ts
-12: export const globTool = ...
+12: export const findFilesTool = ...
 18: export const grepTool = ...
 25: very long line clipped by maxCharsPerMatch
 [more matches in this file]
 
 src/index.ts
 4: import { grepTool } from "./agent/tools"
-9: tools: [globTool, grepTool]
+9: tools: [findFilesTool, grepTool]
 
 [more matches available]
 ```

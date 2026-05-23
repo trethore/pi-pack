@@ -27,7 +27,7 @@ export function loadStandardMcpServers(
   return { servers, errors };
 }
 
-export function getStandardMcpConfigPaths(
+function getStandardMcpConfigPaths(
   cwd: string,
   includeGlobal: boolean,
   includeProject: boolean

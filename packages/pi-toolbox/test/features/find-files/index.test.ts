@@ -5,41 +5,44 @@ import path from 'node:path';
 import type { Component } from '@earendil-works/pi-tui';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGlobToolDefinition, registerGlobTool } from '#pi-toolbox/features/glob/index.js';
+import {
+  createFindFilesToolDefinition,
+  registerFindFilesTool,
+} from '#pi-toolbox/features/find-files/index.js';
 
 const RENDER_WIDTH = 240;
 
-describe('glob tool', () => {
+describe('find_files tool', () => {
   it('does not register when disabled', () => {
     // Arrange
     const pi = createPi();
 
     // Act
-    registerGlobTool(pi.extensionApi, { glob: { enabled: false, defaultLimit: 100 } });
+    registerFindFilesTool(pi.extensionApi, { findFiles: { enabled: false, defaultLimit: 100 } });
 
     // Assert
     expect(pi.tools).toEqual([]);
   });
 
-  it('registers the glob tool when enabled', () => {
+  it('registers the find_files tool when enabled', () => {
     // Arrange
     const pi = createPi();
 
     // Act
-    registerGlobTool(pi.extensionApi, { glob: { enabled: true, defaultLimit: 100 } });
+    registerFindFilesTool(pi.extensionApi, { findFiles: { enabled: true, defaultLimit: 100 } });
 
     // Assert
-    expect(pi.tools.map((tool) => tool.name)).toEqual(['glob']);
+    expect(pi.tools.map((tool) => tool.name)).toEqual(['find_files']);
   });
 
-  it('marks zero-result glob calls as errors for shell rendering', () => {
+  it('marks zero-result find_files calls as errors for shell rendering', () => {
     // Arrange
     const pi = createPi();
-    registerGlobTool(pi.extensionApi, { glob: { enabled: true, defaultLimit: 100 } });
+    registerFindFilesTool(pi.extensionApi, { findFiles: { enabled: true, defaultLimit: 100 } });
 
     // Act
     const result = pi.handlers.tool_result?.({
-      toolName: 'glob',
+      toolName: 'find_files',
       details: { paths: ['.'], count: 0, limited: false },
     });
 
@@ -49,7 +52,7 @@ describe('glob tool', () => {
 
   it('defines optional patterns, limit, and depth in the tool schema', () => {
     // Arrange and act
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 42 });
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 42 });
     const parameters = tool.parameters as never as {
       required?: string[];
       properties: {
@@ -62,7 +65,7 @@ describe('glob tool', () => {
     // Assert
     expect(parameters.required).toBeUndefined();
     expect(parameters.properties.patterns.description).toBe(
-      'Optional glob pattern(s) used to match files. Each pattern is passed as `-g <pattern>`; use `!` for exclusions. If omitted, no glob filters are applied.'
+      'Optional ripgrep-style glob filter(s) passed with `-g`. Prefix with `!` to exclude. If omitted, all discovered files are returned.'
     );
     expect(parameters.properties.limit.description).toBe(
       'Maximum number of files to return. If omitted, the default limit is 42.'
@@ -83,7 +86,10 @@ describe('glob tool', () => {
       files: ['src/index.ts'],
       limited: false,
     }));
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 42 }, { cwd, runner });
+    const tool = createFindFilesToolDefinition(
+      { enabled: true, defaultLimit: 42 },
+      { cwd, runner }
+    );
 
     // Act
     const result = await tool.execute(
@@ -123,7 +129,10 @@ src/index.ts`,
       files: ['src/index.ts', './src/index.ts', 'README.md'],
       limited: false,
     }));
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
+    const tool = createFindFilesToolDefinition(
+      { enabled: true, defaultLimit: 100 },
+      { cwd, runner }
+    );
 
     // Act
     const result = await tool.execute(
@@ -153,7 +162,10 @@ src/index.ts`,
       files: ['packages/pi-toolbox/src/index.ts'],
       limited: true,
     }));
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
+    const tool = createFindFilesToolDefinition(
+      { enabled: true, defaultLimit: 100 },
+      { cwd, runner }
+    );
 
     // Act
     const result = await tool.execute(
@@ -198,7 +210,10 @@ packages/pi-toolbox/src/index.ts
     const absoluteSearchPath = path.join(cwd, 'absolute-package');
     mkdirSync(absoluteSearchPath, { recursive: true });
     const runner = vi.fn(async () => ({ files: ['src/index.ts'], limited: false }));
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
+    const tool = createFindFilesToolDefinition(
+      { enabled: true, defaultLimit: 100 },
+      { cwd, runner }
+    );
 
     // Act
     const result = await tool.execute(
@@ -220,7 +235,7 @@ src/index.ts`,
 
   it('renders active call flags', () => {
     // Arrange
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
 
     // Act
     const rendered = renderComponent(
@@ -246,7 +261,7 @@ src/index.ts`,
 
   it('renders collapsed results with an expansion hint', () => {
     // Arrange
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
     const output = Array.from({ length: 25 }, (_value, index) => `line ${index + 1}`).join('\n');
 
     // Act
@@ -272,7 +287,7 @@ src/index.ts`,
 
   it('renders expanded results with the full output returned to the model', () => {
     // Arrange
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
     const output = ['paths=. count=2', 'src/', '  index.ts'].join('\n');
 
     // Act
@@ -297,7 +312,7 @@ src/index.ts`,
 
   it('renders zero-result and failed result text with the output style', () => {
     // Arrange
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 });
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
 
     // Act
     const zeroResult = renderComponent(
@@ -314,7 +329,7 @@ src/index.ts`,
     const failedResult = renderComponent(
       tool.renderResult?.(
         {
-          content: [{ type: 'text', text: 'glob failed: rg executable not found' }],
+          content: [{ type: 'text', text: 'find_files failed: rg executable not found' }],
           details: undefined,
         },
         { expanded: false, isPartial: false },
@@ -325,14 +340,16 @@ src/index.ts`,
 
     // Assert
     expect(zeroResult).toContain('<toolOutput>paths=. count=0</toolOutput>');
-    expect(failedResult).toContain('<toolOutput>glob failed: rg executable not found</toolOutput>');
+    expect(failedResult).toContain(
+      '<toolOutput>find_files failed: rg executable not found</toolOutput>'
+    );
   });
 
   it('fails when the search path is not a directory', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'file.txt'), 'content');
-    const tool = createGlobToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd });
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd });
 
     // Act and assert
     await expect(
@@ -395,10 +412,10 @@ function createPi() {
       on(event: string, handler: (event: unknown) => unknown) {
         state.handlers[event] = handler;
       },
-    } as unknown as Parameters<typeof registerGlobTool>[0],
+    } as unknown as Parameters<typeof registerFindFilesTool>[0],
   };
 }
 
 function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-glob-test-'));
+  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-find-files-test-'));
 }

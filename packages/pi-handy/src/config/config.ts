@@ -11,12 +11,7 @@ import {
 type FeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
 
 const EXTENSION_NAME = 'pi-handy';
-const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = [
-  'thinkingLevel',
-  'switchWorkspace',
-  'showSysprompt',
-  'updatePi',
-];
+const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = ['thinkingLevel', 'showSysprompt'];
 const { mergeEnabledField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string): LoadedConfig {
@@ -33,9 +28,7 @@ function cloneDefaultConfig(): PiHandyConfig {
   return {
     ...defaultConfig,
     thinkingLevel: { ...defaultConfig.thinkingLevel },
-    switchWorkspace: { ...defaultConfig.switchWorkspace },
     showSysprompt: { ...defaultConfig.showSysprompt },
-    updatePi: { ...defaultConfig.updatePi },
   };
 }
 
