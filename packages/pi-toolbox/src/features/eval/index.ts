@@ -50,6 +50,7 @@ export function createEvalToolDefinition(
           code: preparedParams.code,
           runtime: preparedParams.runtime,
           timeoutMs: preparedParams.timeoutMs,
+          inheritEnv: preparedParams.inheritEnv,
           signal,
           onOutput: (currentOutput) => output.update(currentOutput),
         });

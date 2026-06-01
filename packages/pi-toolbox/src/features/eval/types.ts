@@ -8,6 +8,7 @@ export interface EvalParameters {
   code: string;
   timeoutMs?: number;
   path?: string;
+  inheritEnv?: boolean;
 }
 
 export interface PreparedEvalParameters {
@@ -16,6 +17,7 @@ export interface PreparedEvalParameters {
   timeoutMs: number;
   cwd: string;
   runtime: RuntimeConfig;
+  inheritEnv: boolean;
 }
 
 export interface EvalDefinition {
@@ -36,6 +38,7 @@ export interface EvalParametersJsonSchema {
     code: Record<string, unknown>;
     timeoutMs: { description: string; maximum?: number } & Record<string, unknown>;
     path: Record<string, unknown>;
+    inheritEnv: Record<string, unknown>;
   };
 }
 

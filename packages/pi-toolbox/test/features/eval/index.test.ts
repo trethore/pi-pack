@@ -1,10 +1,12 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { describe, expect, it, vi } from 'vitest';
 
 import { createEvalToolDefinition, registerEvalTool } from '#pi-toolbox/features/eval/index.js';
 import { runEval } from '#pi-toolbox/features/eval/runner.js';
+import { lines } from '#test/utils/lines.js';
 import {
   createPi,
   createRenderContext,
@@ -94,6 +96,7 @@ describe('eval tool', () => {
           language: { enum: string[]; description: string };
           timeoutMs: { maximum: number; description: string };
           path: { description: string };
+          inheritEnv: { description: string };
         };
       }
     ).properties;
@@ -107,6 +110,9 @@ describe('eval tool', () => {
     );
     expect(properties.path.description).toBe(
       'Path where the code should run. Supports both relative and absolute paths. If omitted, the current working directory is used.'
+    );
+    expect(properties.inheritEnv.description).toBe(
+      'Whether to inherit the caller environment. If omitted, defaults to false.'
     );
   });
 
@@ -156,6 +162,7 @@ describe('eval tool', () => {
       code: 'console.log("ok")',
       runtime: DEFAULT_EVAL_CONFIG.node,
       timeoutMs: 5000,
+      inheritEnv: false,
       signal: undefined,
       onOutput: expect.any(Function),
     });
@@ -169,7 +176,7 @@ describe('eval tool', () => {
     });
   });
 
-  it('resolves path relative to the tool cwd and forwards it to the runner', async () => {
+  it('resolves path and inheritEnv relative to the tool cwd and forwards them to the runner', async () => {
     // Arrange
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'nested'));
@@ -184,14 +191,16 @@ describe('eval tool', () => {
     // Act
     await tool.execute(
       'call-id',
-      { language: 'node', code: 'console.log(process.cwd())', path: 'nested' },
+      { language: 'node', code: 'console.log(process.cwd())', path: 'nested', inheritEnv: true },
       undefined,
       undefined,
       {} as never
     );
 
     // Assert
-    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ cwd: path.join(cwd, 'nested') }));
+    expect(runner).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: path.join(cwd, 'nested'), inheritEnv: true })
+    );
   });
 
   it('fails when path does not exist', async () => {
@@ -274,14 +283,20 @@ describe('eval tool', () => {
     expect(runner).not.toHaveBeenCalled();
   });
 
-  it('renders active call timeout and path', () => {
+  it('renders active call timeout, path, and inherited environment', () => {
     // Arrange
     const tool = createEvalToolDefinition(DEFAULT_EVAL_CONFIG);
 
     // Act
     const rendered = renderComponent(
       tool.renderCall?.(
-        { language: 'node', code: 'console.log(1)', timeoutMs: 500, path: 'src' },
+        {
+          language: 'node',
+          code: 'console.log(1)',
+          timeoutMs: 500,
+          path: 'src',
+          inheritEnv: true,
+        },
         createTheme(),
         createRenderContext(false)
       )
@@ -289,7 +304,7 @@ describe('eval tool', () => {
 
     // Assert
     expect(rendered).toContain(
-      '<toolTitle>$ node console.log(1)</toolTitle><muted> (timeout 500ms, in src)</muted>'
+      '<toolTitle>$ node <eval></toolTitle><muted> (timeout 500ms, in src, inheritEnv)</muted>'
     );
   });
 
@@ -312,7 +327,7 @@ describe('eval tool', () => {
 
     // Assert
     expect(rendered).toContain(
-      '<toolTitle>$ node console.log(1)</toolTitle><muted> (timeout 500ms)</muted>'
+      '<toolTitle>$ node <eval></toolTitle><muted> (timeout 500ms)</muted>'
     );
   });
 });
@@ -381,6 +396,88 @@ describe('eval runner', () => {
     expect(result.output).toContain('stderr text');
   });
 
+  it('does not inherit environment variables by default', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+
+    // Act
+    const result = await withEnvVar('PI_TOOLBOX_EVAL_TEST_VAR', 'secret', () =>
+      runEval({
+        cwd,
+        language: 'node',
+        code: 'console.log(process.env.PI_TOOLBOX_EVAL_TEST_VAR ?? "missing")',
+        runtime: DEFAULT_EVAL_CONFIG.node,
+        timeoutMs: 5000,
+      })
+    );
+
+    // Assert
+    expect(result.exitCode).toBe(0);
+    expect(result.output.trim()).toBe('missing');
+  });
+
+  it('inherits environment variables when requested', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+
+    // Act
+    const result = await withEnvVar('PI_TOOLBOX_EVAL_TEST_VAR', 'secret', () =>
+      runEval({
+        cwd,
+        language: 'node',
+        code: 'console.log(process.env.PI_TOOLBOX_EVAL_TEST_VAR ?? "missing")',
+        runtime: DEFAULT_EVAL_CONFIG.node,
+        timeoutMs: 5000,
+        inheritEnv: true,
+      })
+    );
+
+    // Assert
+    expect(result.exitCode).toBe(0);
+    expect(result.output.trim()).toBe('secret');
+  });
+
+  it('terminates subprocesses when timed out', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const childCode = lines(
+      "const { writeFileSync } = require('node:fs');",
+      "process.on('SIGTERM', () => {});",
+      "writeFileSync('child-ready', String(process.pid));",
+      'setInterval(() => {}, 1000);'
+    );
+    const evalCode = lines(
+      "import { spawn } from 'node:child_process';",
+      "import { existsSync, readFileSync } from 'node:fs';",
+      "import { setTimeout as delay } from 'node:timers/promises';",
+      '',
+      `const childCode = ${JSON.stringify(childCode)};`,
+      "spawn(process.execPath, ['-e', childCode], { stdio: 'ignore' });",
+      "while (!existsSync('child-ready')) await delay(10);",
+      "console.log(readFileSync('child-ready', 'utf8'));",
+      'setInterval(() => {}, 1000);'
+    );
+
+    // Act
+    const result = await runEval({
+      cwd,
+      language: 'node',
+      code: evalCode,
+      runtime: DEFAULT_EVAL_CONFIG.node,
+      timeoutMs: 500,
+    });
+    const childPid = Number(result.output.trim());
+
+    // Assert
+    expect(result.timedOut).toBe(true);
+    expect(Number.isInteger(childPid)).toBe(true);
+    try {
+      await waitForProcessExit(childPid);
+    } finally {
+      killProcessIfAlive(childPid);
+    }
+  });
+
   it('times out and returns partial output', async () => {
     // Arrange
     const cwd = makeTempDir();
@@ -399,6 +496,48 @@ describe('eval runner', () => {
     expect(result.timedOut).toBe(true);
   });
 });
+
+async function withEnvVar<T>(key: string, value: string, callback: () => Promise<T>): Promise<T> {
+  const previousValue = process.env[key];
+  process.env[key] = value;
+
+  try {
+    return await callback();
+  } finally {
+    if (previousValue === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = previousValue;
+    }
+  }
+}
+
+async function waitForProcessExit(pid: number): Promise<void> {
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline) {
+    if (!isProcessAlive(pid)) return;
+    await delay(25);
+  }
+
+  throw new Error(`expected process ${pid} to exit`);
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function killProcessIfAlive(pid: number): void {
+  try {
+    process.kill(pid, 'SIGKILL');
+  } catch {
+    return;
+  }
+}
 
 function makeTempDir(): string {
   const cwd = makePrefixedTempDir('pi-toolbox-eval-test-');

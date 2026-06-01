@@ -19,6 +19,7 @@ export function prepareEvalParameters(
     timeoutMs: resolveTimeoutMs(params.timeoutMs, config),
     cwd: resolveCwd(params.path, baseCwd),
     runtime,
+    inheritEnv: params.inheritEnv ?? false,
   };
 }
 

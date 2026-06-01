@@ -5,7 +5,8 @@
   "promptSnippet": "Run Node.js or Python snippets easily without shell quoting",
   "promptGuidelines": [
     "Use `eval` for executing code snippets in supported runtimes like Node.js or Python.",
-    "The `language` argument must be one of the available configured languages."
+    "The `language` argument must be one of the available configured languages.",
+    "By default, eval does not inherit environment variables; set `inheritEnv` only when the snippet needs the caller environment."
   ],
   "parameters": {
     "type": "object",
@@ -29,6 +30,10 @@
       "path": {
         "type": "string",
         "description": "Path where the code should run. Supports both relative and absolute paths. If omitted, the current working directory is used."
+      },
+      "inheritEnv": {
+        "type": "boolean",
+        "description": "Whether to inherit the caller environment. If omitted, defaults to false."
       }
     }
   }
