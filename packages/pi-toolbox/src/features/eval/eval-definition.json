@@ -1,7 +1,7 @@
 {
   "name": "eval",
   "label": "eval",
-  "description": "Execute code in a configured runtime and return stdout and stderr. Available languages: {{availableLanguages}}. Default timeout: {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}",
+  "description": "Execute code in a configured runtime. Returns stdout and stderr. Available languages: {{availableLanguages}}. Default timeout: {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}",
   "promptSnippet": "Execute code in a configured runtime and return stdout and stderr.",
   "promptGuidelines": [
     "Use `eval` for executing code snippets in supported runtimes like Node.js or Python.",
