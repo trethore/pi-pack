@@ -78,10 +78,10 @@ async function assertEvalCwd(cwd: string): Promise<void> {
   try {
     stats = await stat(cwd);
   } catch (error) {
-    throw new Error(`eval failed: cwd does not exist: ${cwd}`, { cause: error });
+    throw new Error(`eval failed: path does not exist: ${cwd}`, { cause: error });
   }
 
   if (!stats.isDirectory()) {
-    throw new Error(`eval failed: cwd is not a directory: ${cwd}`);
+    throw new Error(`eval failed: path is not a directory: ${cwd}`);
   }
 }

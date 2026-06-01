@@ -93,7 +93,7 @@ describe('eval tool', () => {
         properties: {
           language: { enum: string[]; description: string };
           timeoutMs: { maximum: number; description: string };
-          cwd: { description: string };
+          path: { description: string };
         };
       }
     ).properties;
@@ -105,8 +105,8 @@ describe('eval tool', () => {
     expect(properties.timeoutMs.description).toBe(
       'Timeout in milliseconds. If omitted, defaults to 1234ms. Maximum timeout: 5000ms.'
     );
-    expect(properties.cwd.description).toBe(
-      'Working directory for the subprocess. Relative paths are resolved from the current workspace. If omitted, uses the current workspace.'
+    expect(properties.path.description).toBe(
+      'Path where the code should run. Supports both relative and absolute paths. If omitted, the current working directory is used.'
     );
   });
 
@@ -169,7 +169,7 @@ describe('eval tool', () => {
     });
   });
 
-  it('resolves cwd relative to the tool cwd and forwards it to the runner', async () => {
+  it('resolves path relative to the tool cwd and forwards it to the runner', async () => {
     // Arrange
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'nested'));
@@ -184,7 +184,7 @@ describe('eval tool', () => {
     // Act
     await tool.execute(
       'call-id',
-      { language: 'node', code: 'console.log(process.cwd())', cwd: 'nested' },
+      { language: 'node', code: 'console.log(process.cwd())', path: 'nested' },
       undefined,
       undefined,
       {} as never
@@ -194,7 +194,7 @@ describe('eval tool', () => {
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ cwd: path.join(cwd, 'nested') }));
   });
 
-  it('fails when cwd does not exist', async () => {
+  it('fails when path does not exist', async () => {
     // Arrange
     const cwd = makeTempDir();
     const runner = vi.fn(async () => ({
@@ -209,12 +209,12 @@ describe('eval tool', () => {
     await expect(
       tool.execute(
         'call-id',
-        { language: 'node', code: 'console.log(1)', cwd: 'missing' },
+        { language: 'node', code: 'console.log(1)', path: 'missing' },
         undefined,
         undefined,
         {} as never
       )
-    ).rejects.toThrow('eval failed: cwd does not exist');
+    ).rejects.toThrow('eval failed: path does not exist');
     expect(runner).not.toHaveBeenCalled();
   });
 
@@ -274,14 +274,14 @@ describe('eval tool', () => {
     expect(runner).not.toHaveBeenCalled();
   });
 
-  it('renders active call timeout', () => {
+  it('renders active call timeout and path', () => {
     // Arrange
     const tool = createEvalToolDefinition(DEFAULT_EVAL_CONFIG);
 
     // Act
     const rendered = renderComponent(
       tool.renderCall?.(
-        { language: 'node', code: 'console.log(1)', timeoutMs: 500, cwd: 'src' },
+        { language: 'node', code: 'console.log(1)', timeoutMs: 500, path: 'src' },
         createTheme(),
         createRenderContext(false)
       )
@@ -289,7 +289,30 @@ describe('eval tool', () => {
 
     // Assert
     expect(rendered).toContain(
-      '<toolTitle>eval node</toolTitle><toolOutput> in src</toolOutput><muted> (timeout 500ms)</muted>'
+      '<toolTitle>$ node console.log(1)</toolTitle><muted> (timeout 500ms, in src)</muted>'
+    );
+  });
+
+  it.each([
+    ['omitted path', undefined],
+    ['current path', '.'],
+    ['empty path', ''],
+  ])('omits path from active call when path is %s', (_name, evalPath) => {
+    // Arrange
+    const tool = createEvalToolDefinition(DEFAULT_EVAL_CONFIG);
+
+    // Act
+    const rendered = renderComponent(
+      tool.renderCall?.(
+        { language: 'node', code: 'console.log(1)', timeoutMs: 500, path: evalPath },
+        createTheme(),
+        createRenderContext(false)
+      )
+    );
+
+    // Assert
+    expect(rendered).toContain(
+      '<toolTitle>$ node console.log(1)</toolTitle><muted> (timeout 500ms)</muted>'
     );
   });
 });
@@ -337,6 +360,25 @@ describe('eval runner', () => {
     expect(result.exitCode).toBe(0);
     expect(result.output.trim()).toBe('42');
     expect(result.timedOut).toBe(false);
+  });
+
+  it('combines stdout and stderr in output', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+
+    // Act
+    const result = await runEval({
+      cwd,
+      language: 'node',
+      code: 'console.log("stdout text"); console.error("stderr text");',
+      runtime: DEFAULT_EVAL_CONFIG.node,
+      timeoutMs: 5000,
+    });
+
+    // Assert
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('stdout text');
+    expect(result.output).toContain('stderr text');
   });
 
   it('times out and returns partial output', async () => {

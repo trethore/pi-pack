@@ -43,10 +43,26 @@ export async function formatEvalResult(
 
 export function formatEvalCall(args: EvalParameters | undefined, theme: Theme): string {
   const language = args?.language ?? '...';
-  const timeout =
-    args?.timeoutMs === undefined ? '' : theme.fg('muted', ` (timeout ${args.timeoutMs}ms)`);
-  const cwd = args?.cwd === undefined ? '' : theme.fg('toolOutput', ` in ${args.cwd}`);
-  return theme.fg('toolTitle', theme.bold(`eval ${language}`)) + cwd + timeout;
+  const code = formatEvalCallCode(args?.code);
+  const suffix = formatEvalCallSuffix(args);
+  return theme.fg('toolTitle', theme.bold(`$ ${language}${code}`)) + theme.fg('muted', suffix);
+}
+
+function formatEvalCallCode(code: string | undefined): string {
+  if (code === undefined) return '';
+  const trimmedCode = code.trim();
+  return ` ${trimmedCode.length > 0 ? trimmedCode : '...'}`;
+}
+
+function formatEvalCallSuffix(args: EvalParameters | undefined): string {
+  const parts: string[] = [];
+  if (args?.timeoutMs !== undefined) parts.push(`timeout ${args.timeoutMs}ms`);
+  if (isDisplayPath(args?.path)) parts.push(`in ${args.path}`);
+  return parts.length === 0 ? '' : ` (${parts.join(', ')})`;
+}
+
+function isDisplayPath(evalPath: string | undefined): evalPath is string {
+  return evalPath !== undefined && evalPath.length > 0 && evalPath !== '.';
 }
 
 function formatEvalOutput(

@@ -1,14 +1,11 @@
 {
   "name": "eval",
   "label": "eval",
-  "description": "Run code snippets in a configured runtime using a temporary file. Available languages: {{availableLanguages}}. Default timeout: {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}",
-  "promptSnippet": "Run Node.js or Python snippets without shell quoting",
+  "description": "Run code in a configured runtime. Available languages: {{availableLanguages}}. Default timeout: {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}",
+  "promptSnippet": "Run Node.js or Python snippets easily without shell quoting",
   "promptGuidelines": [
-    "Use eval for language-specific experiments when a shell pipeline is not needed.",
-    "The language argument must be one of the available configured languages.",
-    "Each call runs in a fresh subprocess from a temporary file; there is no persistent REPL/session state.",
-    "Temporary code files are removed after execution.",
-    "Use bash instead for package-manager commands, project scripts, git, and shell pipelines."
+    "Use `eval` for executing code snippets in supported runtimes like Node.js or Python.",
+    "The `language` argument must be one of the available configured languages."
   ],
   "parameters": {
     "type": "object",
@@ -22,16 +19,16 @@
       },
       "code": {
         "type": "string",
-        "description": "Code to write to a temporary file and execute. The temp file is removed after execution."
+        "description": "Code to execute."
       },
       "timeoutMs": {
         "type": "integer",
         "minimum": 1,
         "description": "Timeout in milliseconds. If omitted, defaults to {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}"
       },
-      "cwd": {
+      "path": {
         "type": "string",
-        "description": "Working directory for the subprocess. Relative paths are resolved from the current workspace. If omitted, uses the current workspace."
+        "description": "Path where the code should run. Supports both relative and absolute paths. If omitted, the current working directory is used."
       }
     }
   }

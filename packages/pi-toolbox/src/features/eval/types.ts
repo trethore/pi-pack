@@ -7,7 +7,7 @@ export interface EvalParameters {
   language: EvalLanguage;
   code: string;
   timeoutMs?: number;
-  cwd?: string;
+  path?: string;
 }
 
 export interface PreparedEvalParameters {
@@ -35,7 +35,7 @@ export interface EvalParametersJsonSchema {
     language: { enum: string[]; description: string } & Record<string, unknown>;
     code: Record<string, unknown>;
     timeoutMs: { description: string; maximum?: number } & Record<string, unknown>;
-    cwd: Record<string, unknown>;
+    path: Record<string, unknown>;
   };
 }
 

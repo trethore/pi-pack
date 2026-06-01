@@ -17,13 +17,13 @@ export function prepareEvalParameters(
     language: params.language,
     code: params.code,
     timeoutMs: resolveTimeoutMs(params.timeoutMs, config),
-    cwd: resolveCwd(params.cwd, baseCwd),
+    cwd: resolveCwd(params.path, baseCwd),
     runtime,
   };
 }
 
-function resolveCwd(cwd: string | undefined, baseCwd: string): string {
-  return path.resolve(baseCwd, cwd ?? '.');
+function resolveCwd(evalPath: string | undefined, baseCwd: string): string {
+  return path.resolve(baseCwd, evalPath ?? '.');
 }
 
 function resolveTimeoutMs(timeoutMs: number | undefined, config: EvalToolConfig): number {
