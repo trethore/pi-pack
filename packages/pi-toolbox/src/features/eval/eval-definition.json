@@ -1,0 +1,38 @@
+{
+  "name": "eval",
+  "label": "eval",
+  "description": "Run code snippets in a configured runtime using a temporary file. Available languages: {{availableLanguages}}. Default timeout: {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}",
+  "promptSnippet": "Run Node.js or Python snippets without shell quoting",
+  "promptGuidelines": [
+    "Use eval for language-specific experiments when a shell pipeline is not needed.",
+    "The language argument must be one of the available configured languages.",
+    "Each call runs in a fresh subprocess from a temporary file; there is no persistent REPL/session state.",
+    "Temporary code files are removed after execution.",
+    "Use bash instead for package-manager commands, project scripts, git, and shell pipelines."
+  ],
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["language", "code"],
+    "properties": {
+      "language": {
+        "type": "string",
+        "enum": ["node", "python"],
+        "description": "Runtime to execute the code with. Available configured languages: {{availableLanguages}}."
+      },
+      "code": {
+        "type": "string",
+        "description": "Code to write to a temporary file and execute. The temp file is removed after execution."
+      },
+      "timeoutMs": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Timeout in milliseconds. If omitted, defaults to {{defaultTimeoutMs}}ms.{{maxTimeoutDescription}}"
+      },
+      "cwd": {
+        "type": "string",
+        "description": "Working directory for the subprocess. Relative paths are resolved from the current workspace. If omitted, uses the current workspace."
+      }
+    }
+  }
+}

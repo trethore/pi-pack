@@ -2,6 +2,24 @@
   // Master switch for pi-toolbox.
   "enabled": true,
 
+  // eval tool for Node.js and Python snippets.
+  "eval": {
+    "enabled": true,
+    "defaultTimeoutMs": 10000,
+    // Optional. If omitted, tool-call timeouts are uncapped except by backend/global limits.
+    // "maxTimeoutMs": 60000,
+    "node": {
+      "enabled": true,
+      "command": "node",
+      "args": []
+    },
+    "python": {
+      "enabled": true,
+      "command": "python3",
+      "args": []
+    }
+  },
+
   // find_files tool powered by rg --files.
   "findFiles": {
     "enabled": true,

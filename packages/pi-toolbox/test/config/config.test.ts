@@ -22,6 +22,12 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
+      eval: {
+        enabled: true,
+        defaultTimeoutMs: 10_000,
+        node: { enabled: true, command: 'node', args: [] },
+        python: { enabled: true, command: 'python3', args: [] },
+      },
       findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
@@ -33,6 +39,11 @@ describe('loadConfig', () => {
     writeGlobalConfig(
       homeDir,
       JSON.stringify({
+        eval: {
+          defaultTimeoutMs: 20_000,
+          maxTimeoutMs: 30_000,
+          node: { command: '/usr/bin/node', args: ['--no-warnings'] },
+        },
         findFiles: { enabled: false, defaultLimit: 50 },
         grep: { defaultLimit: 25, defaultLimitPerFile: 3 },
       })
@@ -41,7 +52,10 @@ describe('loadConfig', () => {
     const cwd = makeTempDir();
     writeProjectConfig(
       cwd,
-      JSON.stringify({ grep: { defaultLimit: 300, defaultMaxCharsPerMatch: 500 } })
+      JSON.stringify({
+        eval: { python: { enabled: false, command: 'python' } },
+        grep: { defaultLimit: 300, defaultMaxCharsPerMatch: 500 },
+      })
     );
 
     // Act
@@ -51,6 +65,13 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
+      eval: {
+        enabled: true,
+        defaultTimeoutMs: 20_000,
+        maxTimeoutMs: 30_000,
+        node: { enabled: true, command: '/usr/bin/node', args: ['--no-warnings'] },
+        python: { enabled: false, command: 'python', args: [] },
+      },
       findFiles: { enabled: false, defaultLimit: 50 },
       grep: {
         enabled: true,
@@ -69,6 +90,13 @@ describe('loadConfig', () => {
       cwd,
       JSON.stringify({
         enabled: 'yes',
+        eval: {
+          enabled: 'yes',
+          defaultTimeoutMs: 0,
+          maxTimeoutMs: 3_600_001,
+          node: { enabled: 'yes', command: '', args: ['--ok', 1] },
+          python: 'python3',
+        },
         findFiles: { enabled: 'yes', defaultLimit: 1001 },
         grep: {
           enabled: 'yes',
@@ -85,11 +113,24 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.config).toEqual({
       enabled: true,
+      eval: {
+        enabled: true,
+        defaultTimeoutMs: 10_000,
+        node: { enabled: true, command: 'node', args: [] },
+        python: { enabled: true, command: 'python3', args: [] },
+      },
       findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
+      expect.stringContaining('invalid eval.enabled value'),
+      expect.stringContaining('invalid eval.defaultTimeoutMs value'),
+      expect.stringContaining('invalid eval.maxTimeoutMs value'),
+      expect.stringContaining('invalid eval.node.enabled value'),
+      expect.stringContaining('invalid eval.node.command value'),
+      expect.stringContaining('invalid eval.node.args value'),
+      expect.stringContaining('invalid python value'),
       expect.stringContaining('invalid findFiles.enabled value'),
       expect.stringContaining('invalid findFiles.defaultLimit value'),
       expect.stringContaining('invalid grep.enabled value'),
