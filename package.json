@@ -42,7 +42,7 @@
     "install:local:pi-toolbox": "pi install -l ./packages/pi-toolbox"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.74.0 <1"
+    "@earendil-works/pi-coding-agent": ">=0.78.0 <1"
   },
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",
@@ -66,5 +66,10 @@
     "extensions": [
       "packages/*/src/index.ts"
     ]
+  },
+  "allowScripts": {
+    "@google/genai@1.52.0": true,
+    "protobufjs@7.5.9": true,
+    "protobufjs@7.5.8": true
   }
 }
