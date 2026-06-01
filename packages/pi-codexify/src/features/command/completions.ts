@@ -1,7 +1,11 @@
 import type { AutocompleteItem } from '@earendil-works/pi-tui';
 
 import type { PiCodexifyConfig } from '#src/config/schema.js';
-import { codexAccountActions, parseCodexAccountAction } from '#src/features/accounts/index.js';
+import {
+  codexAccountActions,
+  getSavedCodexAccountNames,
+  parseCodexAccountAction,
+} from '#src/features/accounts/index.js';
 
 interface CompletionCommand {
   name: string;
@@ -15,34 +19,73 @@ type CompletionState = {
   currentToken: string;
 };
 
-export function getCodexifyArgumentCompletions(
+type CompletionOptions = {
+  accountProfilePath?: string;
+};
+
+type CompletionItemOptions = {
+  appendNeedsMoreArgs?: boolean;
+};
+
+export async function getCodexifyArgumentCompletions(
   prefix: string,
   config: PiCodexifyConfig,
-  commands: readonly CompletionCommand[]
-): AutocompleteItem[] | null {
+  commands: readonly CompletionCommand[],
+  options: CompletionOptions = {}
+): Promise<AutocompleteItem[] | null> {
   const state = parseCompletionState(prefix);
 
   if (state.path.length === 0) {
     return buildCompletionItems(state, getRootCompletionCandidates(config, commands), commands);
   }
 
-  if (state.path.length === 1 && state.path[0] === 'verbosity' && config.codex.enabled) {
+  const directCompletions = getDirectArgumentCompletions(state, config, commands);
+  if (directCompletions) return directCompletions;
+  if (!config.account.enabled) return null;
+
+  return getAccountNameCompletions(state, commands, options);
+}
+
+function getDirectArgumentCompletions(
+  state: CompletionState,
+  config: PiCodexifyConfig,
+  commands: readonly CompletionCommand[]
+): AutocompleteItem[] | null {
+  if (state.path.length !== 1) return null;
+
+  const command = state.path[0];
+
+  if (command === 'verbosity' && config.codex.enabled) {
     return buildCompletionItems(state, ['low', 'medium', 'high', 'off'], commands);
   }
 
-  if (
-    state.path.length === 1 &&
-    isReasoningSummaryCommand(state.path[0], commands) &&
-    config.codex.enabled
-  ) {
+  if (isReasoningSummaryCommand(command, commands) && config.codex.enabled) {
     return buildCompletionItems(state, ['auto', 'concise', 'detailed', 'off'], commands);
   }
 
-  if (state.path.length === 1 && state.path[0] === 'account') {
+  if (command === 'account' && config.account.enabled) {
     return buildCompletionItems(state, codexAccountActions, commands);
   }
 
   return null;
+}
+
+async function getAccountNameCompletions(
+  state: CompletionState,
+  commands: readonly CompletionCommand[],
+  options: CompletionOptions
+): Promise<AutocompleteItem[] | null> {
+  if (state.path.length !== 2 || state.path[0] !== 'account') return null;
+  if (!hasAccountNameCompletion(state)) return null;
+
+  try {
+    const accountNames = await getSavedCodexAccountNames({
+      profilePath: options.accountProfilePath,
+    });
+    return buildCompletionItems(state, accountNames, commands, { appendNeedsMoreArgs: false });
+  } catch {
+    return null;
+  }
 }
 
 export function splitArgs(args: string): string[] {
@@ -77,19 +120,25 @@ function parseCompletionState(prefix: string): CompletionState {
 function buildCompletionItems(
   state: CompletionState,
   candidates: readonly string[],
-  commands: readonly CompletionCommand[]
+  commands: readonly CompletionCommand[],
+  options: CompletionItemOptions = {}
 ): AutocompleteItem[] | null {
   const items = candidates
     .filter((candidate) => candidate.startsWith(state.currentToken))
     .map((candidate) => ({
-      value: [...state.path, formatCompletionToken(candidate, commands)].join(' '),
+      value: [...state.path, formatCompletionToken(candidate, commands, options)].join(' '),
       label: candidate,
     }));
 
   return items.length > 0 ? items : null;
 }
 
-function formatCompletionToken(candidate: string, commands: readonly CompletionCommand[]): string {
+function formatCompletionToken(
+  candidate: string,
+  commands: readonly CompletionCommand[],
+  options: CompletionItemOptions
+): string {
+  if (options.appendNeedsMoreArgs === false) return candidate;
   return candidateNeedsMoreArgs(candidate, commands) ? `${candidate} ` : candidate;
 }
 
@@ -101,6 +150,11 @@ function candidateNeedsMoreArgs(
     findCommand(candidate, commands)?.needsMoreArgs === true ||
     parseCodexAccountAction(candidate) != null
   );
+}
+
+function hasAccountNameCompletion(state: CompletionState): boolean {
+  const action = parseCodexAccountAction(state.path[1]);
+  return action === 'use' || action === 'delete';
 }
 
 function isReasoningSummaryCommand(

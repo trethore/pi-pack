@@ -196,6 +196,13 @@ export async function buildCodexAccountListMessage(
   ].join('\n');
 }
 
+export async function getSavedCodexAccountNames(
+  options: CodexAccountOptions = {}
+): Promise<string[]> {
+  const profiles = await loadProfiles(options.profilePath);
+  return Object.keys(profiles.accounts);
+}
+
 async function buildCurrentCodexAccountMessage(options: CodexAccountOptions = {}): Promise<string> {
   const profiles = await loadProfiles(options.profilePath);
   if (!profiles.active) return 'No active Codex account profile.';
