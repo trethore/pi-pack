@@ -70,7 +70,7 @@ Example output:
 [exitCode=0, duration=45ms]
 ```
 
-Temporary code files are removed after execution.
+Temporary code files are removed after execution. When output exceeds the display limit, the result keeps only the tail in memory and reports a temporary full-output file path; that output file is retained for inspection.
 
 ### Find files tool
 

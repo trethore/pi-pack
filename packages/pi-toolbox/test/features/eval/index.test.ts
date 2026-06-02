@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createEvalToolDefinition, registerEvalTool } from '#pi-toolbox/features/eval/index.js';
 import { runEval } from '#pi-toolbox/features/eval/runner.js';
+import { StreamingEvalOutput } from '#pi-toolbox/features/eval/streaming-output.js';
 import { lines } from '#test/utils/lines.js';
 import {
   createPi,
@@ -367,6 +368,66 @@ describe('eval tool', () => {
   });
 });
 
+describe('streaming eval output', () => {
+  it('emits an initial update and throttles subsequent output updates', async () => {
+    // Arrange
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+
+    try {
+      const onUpdate = vi.fn();
+      const output = new StreamingEvalOutput(onUpdate);
+
+      // Act
+      output.update('first');
+      output.update('second');
+
+      // Assert
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate.mock.calls[0]?.[0]).toEqual({
+        content: [],
+        details: { exitCode: null, timedOut: false, durationMs: 0 },
+      });
+      expect(onUpdate.mock.calls[1]?.[0]?.content).toEqual([{ type: 'text', text: 'first' }]);
+
+      await vi.advanceTimersByTimeAsync(100);
+      expect(onUpdate).toHaveBeenCalledTimes(3);
+      expect(onUpdate.mock.calls[2]?.[0]?.content).toEqual([{ type: 'text', text: 'second' }]);
+
+      output.close();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('truncates streaming updates and clears pending updates when closed', async () => {
+    // Arrange
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+
+    try {
+      const onUpdate = vi.fn();
+      const output = new StreamingEvalOutput(onUpdate);
+      const largeOutput = 'a'.repeat(DEFAULT_MAX_BYTES + 4096);
+
+      // Act
+      output.update(largeOutput);
+      output.update('pending');
+      output.close();
+      await vi.advanceTimersByTimeAsync(100);
+
+      // Assert
+      const streamedContent = onUpdate.mock.calls[1]?.[0]?.content[0];
+      expect(streamedContent?.type).toBe('text');
+      const streamedText = streamedContent?.type === 'text' ? streamedContent.text : '';
+      expect(Buffer.byteLength(streamedText, 'utf8')).toBeLessThanOrEqual(DEFAULT_MAX_BYTES);
+      expect(onUpdate).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('eval runner', () => {
   it('runs node code from a temporary file and removes it after execution', async () => {
     // Arrange
@@ -496,6 +557,57 @@ describe('eval runner', () => {
     expect(result.output.trim()).toBe('secret');
   });
 
+  it('rejects without running code when pre-aborted', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const abortController = new AbortController();
+    abortController.abort();
+
+    // Act and assert
+    await expect(
+      runEval({
+        cwd,
+        language: 'node',
+        code: 'console.log("should not run")',
+        runtime: DEFAULT_EVAL_CONFIG.node,
+        timeoutMs: 5000,
+        signal: abortController.signal,
+      })
+    ).rejects.toThrow('eval aborted');
+  });
+
+  it('rejects and terminates the subprocess when aborted during execution', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const abortController = new AbortController();
+    const evalCode = lines(
+      "import { writeFileSync } from 'node:fs';",
+      "writeFileSync('eval-ready', String(process.pid));",
+      'setInterval(() => {}, 1000);'
+    );
+
+    // Act
+    const result = runEval({
+      cwd,
+      language: 'node',
+      code: evalCode,
+      runtime: DEFAULT_EVAL_CONFIG.node,
+      timeoutMs: 5000,
+      signal: abortController.signal,
+    });
+    await waitForFile(path.join(cwd, 'eval-ready'));
+    const evalPid = Number(readText(path.join(cwd, 'eval-ready')));
+    abortController.abort();
+
+    // Assert
+    await expect(result).rejects.toThrow('eval aborted');
+    try {
+      await waitForProcessExit(evalPid);
+    } finally {
+      killProcessIfAlive(evalPid);
+    }
+  });
+
   it('terminates subprocesses when timed out', async () => {
     // Arrange
     const cwd = makeTempDir();
@@ -569,6 +681,20 @@ async function withEnvVar<T>(key: string, value: string, callback: () => Promise
       process.env[key] = previousValue;
     }
   }
+}
+
+async function waitForFile(filePath: string): Promise<void> {
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline) {
+    if (existsSync(filePath)) return;
+    await delay(25);
+  }
+
+  throw new Error(`expected file to exist: ${filePath}`);
+}
+
+function readText(filePath: string): string {
+  return readFileSync(filePath, 'utf8');
 }
 
 async function waitForProcessExit(pid: number): Promise<void> {

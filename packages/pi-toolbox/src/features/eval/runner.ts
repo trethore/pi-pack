@@ -96,6 +96,21 @@ async function runEvalFile(
     let processTreeTermination: ProcessTreeTermination | undefined;
     let settled = false;
 
+    const killChild = () => {
+      if (child.pid === undefined) return;
+      processTreeTermination = terminateProcessTree(child.pid);
+    };
+
+    const abort = () => {
+      aborted = true;
+      killChild();
+    };
+
+    if (options.signal) {
+      options.signal.addEventListener('abort', abort, { once: true });
+      if (options.signal.aborted) abort();
+    }
+
     const timeoutHandle = setTimeout(() => {
       timedOut = true;
       killChild();
@@ -112,16 +127,6 @@ async function runEvalFile(
       }
       if (options.signal) options.signal.removeEventListener('abort', abort);
       callback();
-    };
-
-    const killChild = () => {
-      if (child.pid === undefined) return;
-      processTreeTermination = terminateProcessTree(child.pid);
-    };
-
-    const abort = () => {
-      aborted = true;
-      killChild();
     };
 
     const pauseOutputStreams = () => {
@@ -169,8 +174,6 @@ async function runEvalFile(
         }, reject);
       });
     });
-
-    if (options.signal) options.signal.addEventListener('abort', abort, { once: true });
   });
 }
 
@@ -232,14 +235,7 @@ interface ProcessTreeTermination {
 }
 
 function terminateProcessTree(pid: number): ProcessTreeTermination {
-  if (process.platform === 'win32') {
-    const child = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], {
-      stdio: 'ignore',
-      windowsHide: true,
-    });
-    child.on('error', noop);
-    return { cancel: noop, force: noop };
-  }
+  if (process.platform === 'win32') return terminateWindowsProcessTree(pid);
 
   try {
     process.kill(-pid, 'SIGTERM');
@@ -261,6 +257,34 @@ function terminateProcessTree(pid: number): ProcessTreeTermination {
   };
   const forceKill = setTimeout(force, 500);
   forceKill.unref();
+
+  return { cancel: () => clearTimeout(forceKill), force };
+}
+
+function terminateWindowsProcessTree(pid: number): ProcessTreeTermination {
+  let forced = false;
+  const force = () => {
+    if (forced) return;
+
+    forced = true;
+    clearTimeout(forceKill);
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      return;
+    }
+  };
+  const forceKill = setTimeout(force, 500);
+  forceKill.unref();
+
+  const child = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], {
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+  child.on('error', force);
+  child.on('exit', (exitCode) => {
+    if (exitCode !== 0) force();
+  });
 
   return { cancel: () => clearTimeout(forceKill), force };
 }
