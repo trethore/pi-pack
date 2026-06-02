@@ -3,7 +3,6 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import type {
-  ExtensionAPI,
   Theme,
   ToolDefinition,
   ToolRenderResultOptions,
@@ -11,11 +10,7 @@ import type {
 import { Text } from '@earendil-works/pi-tui';
 import type { Static, TSchema } from 'typebox';
 
-import {
-  formatTextToolResult,
-  hasZeroCountDetails,
-  type TextToolResult,
-} from '#src/utils/tool-results.js';
+import { formatTextToolResult, type TextToolResult } from '#src/utils/tool-results.js';
 
 interface TextRenderContext {
   lastComponent?: unknown;
@@ -62,14 +57,6 @@ export function createTextToolDefinition<TParameters extends TSchema, TDetails>(
       return renderTextResult(result, resultOptions, theme, context);
     },
   };
-}
-
-export function registerZeroCountToolResultError(pi: ExtensionAPI, toolName: string): void {
-  pi.on('tool_result', (event) => {
-    if (event.toolName !== toolName || !hasZeroCountDetails(event.details)) return;
-
-    return { isError: true };
-  });
 }
 
 function renderTextCall<TArgs>(

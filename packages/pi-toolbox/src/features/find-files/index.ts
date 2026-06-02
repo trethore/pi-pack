@@ -10,7 +10,6 @@ import {
   createTextToolDefinition,
   formatToolCall,
   readJsonDefinition,
-  registerZeroCountToolResultError,
 } from '#src/utils/tool-definition.js';
 import {
   runRipgrepFindFiles,
@@ -79,7 +78,6 @@ export function registerFindFilesTool(
 ): void {
   if (!config.findFiles.enabled) return;
   pi.registerTool(createFindFilesToolDefinition(config.findFiles));
-  registerZeroCountToolResultError(pi, FIND_FILES_TOOL_DEFINITION.name);
 }
 
 export function createFindFilesToolDefinition(

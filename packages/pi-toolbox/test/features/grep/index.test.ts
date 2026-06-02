@@ -41,21 +41,6 @@ describe('grep tool', () => {
     expect(pi.tools.map((tool) => tool.name)).toEqual(['grep']);
   });
 
-  it('marks zero-result grep calls as errors for shell rendering', () => {
-    // Arrange
-    const pi = createPi();
-    registerGrepTool(pi.extensionApi, { grep: DEFAULT_GREP_CONFIG });
-
-    // Act
-    const result = pi.handlers.tool_result?.({
-      toolName: 'grep',
-      details: { count: 0, files: 0, limited: false },
-    });
-
-    // Assert
-    expect(result).toEqual({ isError: true });
-  });
-
   it('injects configured defaults and defines depth in the tool schema', () => {
     // Arrange and act
     const tool = createGrepToolDefinition({

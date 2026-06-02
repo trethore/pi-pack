@@ -15,7 +15,6 @@ import {
   createTextToolDefinition,
   formatToolCall,
   readJsonDefinition,
-  registerZeroCountToolResultError,
 } from '#src/utils/tool-definition.js';
 import {
   runRipgrepGrep,
@@ -85,7 +84,6 @@ export interface GrepToolOptions {
 export function registerGrepTool(pi: ExtensionAPI, config: { grep: GrepToolConfig }): void {
   if (!config.grep.enabled) return;
   pi.registerTool(createGrepToolDefinition(config.grep));
-  registerZeroCountToolResultError(pi, GREP_TOOL_DEFINITION.name);
 }
 
 export function createGrepToolDefinition(

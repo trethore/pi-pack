@@ -39,21 +39,6 @@ describe('find_files tool', () => {
     expect(pi.tools.map((tool) => tool.name)).toEqual(['find_files']);
   });
 
-  it('marks zero-result find_files calls as errors for shell rendering', () => {
-    // Arrange
-    const pi = createPi();
-    registerFindFilesTool(pi.extensionApi, { findFiles: { enabled: true, defaultLimit: 100 } });
-
-    // Act
-    const result = pi.handlers.tool_result?.({
-      toolName: 'find_files',
-      details: { paths: ['.'], count: 0, limited: false },
-    });
-
-    // Assert
-    expect(result).toEqual({ isError: true });
-  });
-
   it('defines optional patterns, limit, and depth in the tool schema', () => {
     // Arrange and act
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 42 });

@@ -32,15 +32,6 @@ export function formatTextToolResult(
   return text;
 }
 
-export function hasZeroCountDetails(details: unknown): boolean {
-  return (
-    typeof details === 'object' &&
-    details !== null &&
-    'count' in details &&
-    (details as { count: unknown }).count === 0
-  );
-}
-
 function getTextOutput(result: TextToolResult): string {
   return result.content
     .filter((item) => item.type === 'text' && item.text !== undefined)
