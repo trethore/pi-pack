@@ -42,8 +42,17 @@ Tests should be easy to scan and understand. Follow these guidelines:
 
 ## Verification
 
-To verify changes, run the following command:
+To verify changes:
 
 ```bash
-set -o pipefail; { npm run typecheck && npm run lint && npm run test && npm run format; } 2>&1 | tail -n 50.
+npm run format      # format code
+npm run typecheck   # check types
+npm run lint        # find linting issues
+npm run test        # run tests
+```
+
+Or you can run the following command to run all checks and tests at once:
+
+```bash
+set -o pipefail; { npm run format && npm run typecheck && npm run lint && npm run test; } 2>&1 | tail -n 50.
 ```
