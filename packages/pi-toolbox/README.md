@@ -47,7 +47,7 @@ Arguments:
 - `language`: configured runtime to use; currently `node` or `python` when enabled
 - `code`: code to write to a temporary file and execute
 - `timeoutMs`: timeout in milliseconds, defaults to `eval.defaultTimeoutMs`; capped by `eval.maxTimeoutMs` when configured
-- `cwd`: working directory for the subprocess; relative paths are resolved from the current workspace
+- `path`: working directory for the subprocess; relative paths are resolved from the current workspace
 
 Runtime mapping is config-driven:
 
@@ -59,7 +59,7 @@ Example calls:
 ```jsonc
 { "language": "node", "code": "console.log(await Promise.resolve(42))" }
 { "language": "python", "code": "print(sum([1, 2, 3]))", "timeoutMs": 5000 }
-{ "language": "node", "code": "console.log(process.cwd())", "cwd": "packages/pi-toolbox" }
+{ "language": "node", "code": "console.log(process.cwd())", "path": "packages/pi-toolbox" }
 ```
 
 Example output:

@@ -1,7 +1,8 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
+import { DEFAULT_MAX_BYTES } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createEvalToolDefinition, registerEvalTool } from '#pi-toolbox/features/eval/index.js';
@@ -256,6 +257,40 @@ describe('eval tool', () => {
     );
   });
 
+  it('formats captured truncated output with the full output path', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const runner = vi.fn(async () => ({
+      output: 'tail\n',
+      exitCode: 0,
+      timedOut: false,
+      durationMs: 25,
+      outputTruncated: true,
+      outputBytes: DEFAULT_MAX_BYTES + 10,
+      outputLines: 1,
+      fullOutputPath: '/tmp/pi-eval-output-test/output.txt',
+    }));
+    const tool = createEvalToolDefinition(DEFAULT_EVAL_CONFIG, { cwd, runner });
+
+    // Act
+    const result = await tool.execute(
+      'call-id',
+      { language: 'node', code: 'console.log("large")' },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    const textContent = result.content[0];
+    expect(textContent?.type).toBe('text');
+    const text = textContent?.type === 'text' ? textContent.text : '';
+    expect(text).toContain('tail');
+    expect(text).toContain('Showing last');
+    expect(text).toContain('Full output: /tmp/pi-eval-output-test/output.txt');
+    expect(result.details.fullOutputPath).toBe('/tmp/pi-eval-output-test/output.txt');
+  });
+
   it('fails when the language is disabled', async () => {
     // Arrange
     const cwd = makeTempDir();
@@ -394,6 +429,30 @@ describe('eval runner', () => {
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('stdout text');
     expect(result.output).toContain('stderr text');
+  });
+
+  it('spills large output to a file and keeps bounded output in memory', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const outputBytes = DEFAULT_MAX_BYTES + 4096;
+
+    // Act
+    const result = await runEval({
+      cwd,
+      language: 'node',
+      code: `process.stdout.write('a'.repeat(${outputBytes}))`,
+      runtime: DEFAULT_EVAL_CONFIG.node,
+      timeoutMs: 5000,
+    });
+
+    // Assert
+    expect(result.exitCode).toBe(0);
+    expect(result.outputTruncated).toBe(true);
+    expect(result.outputBytes).toBe(outputBytes);
+    expect(Buffer.byteLength(result.output, 'utf8')).toBeLessThanOrEqual(DEFAULT_MAX_BYTES);
+    expect(result.fullOutputPath).toBeDefined();
+    expect(existsSync(result.fullOutputPath ?? '')).toBe(true);
+    expect(statSync(result.fullOutputPath ?? '').size).toBe(outputBytes);
   });
 
   it('does not inherit environment variables by default', async () => {

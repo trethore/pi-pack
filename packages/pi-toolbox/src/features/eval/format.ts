@@ -25,6 +25,8 @@ export async function formatEvalResult(
   result: RunEvalResult,
   timeoutMs: number
 ): Promise<FormattedEvalResult> {
+  if (result.outputTruncated === true) return formatCapturedEvalResult(result, timeoutMs);
+
   const truncation = truncateTail(result.output, {
     maxLines: DEFAULT_MAX_LINES,
     maxBytes: DEFAULT_MAX_BYTES,
@@ -60,6 +62,42 @@ function isDisplayPath(evalPath: string | undefined): evalPath is string {
   return evalPath !== undefined && evalPath.length > 0 && evalPath !== '.';
 }
 
+function formatCapturedEvalResult(result: RunEvalResult, timeoutMs: number): FormattedEvalResult {
+  const truncation = createCapturedTruncation(result);
+  const outputText = formatCapturedEvalOutput(truncation, result.fullOutputPath);
+  const status = formatEvalStatus(result, timeoutMs);
+  const text = outputText ? `${outputText}\n\n${status}` : status;
+
+  return {
+    text,
+    truncation,
+    fullOutputPath: result.fullOutputPath,
+  };
+}
+
+function createCapturedTruncation(result: RunEvalResult): TruncationResult {
+  const tailTruncation = truncateTail(result.output, {
+    maxLines: DEFAULT_MAX_LINES,
+    maxBytes: DEFAULT_MAX_BYTES,
+  });
+
+  return {
+    ...tailTruncation,
+    truncated: true,
+    totalLines: result.outputLines ?? tailTruncation.totalLines,
+    totalBytes: result.outputBytes ?? tailTruncation.totalBytes,
+  };
+}
+
+function formatCapturedEvalOutput(
+  truncation: TruncationResult,
+  fullOutputPath: string | undefined
+): string {
+  const content = truncation.content.trimEnd();
+  const footer = formatCapturedTruncationFooter(truncation, fullOutputPath);
+  return content ? `${content}\n\n${footer}` : footer;
+}
+
 function formatEvalOutput(
   output: string,
   truncation: TruncationResult,
@@ -68,6 +106,13 @@ function formatEvalOutput(
   if (!truncation.truncated) return output.trimEnd();
 
   return `${truncation.content.trimEnd()}\n\n${formatTruncationFooter(output, truncation, fullOutputPath)}`;
+}
+
+function formatCapturedTruncationFooter(
+  truncation: TruncationResult,
+  fullOutputPath: string | undefined
+): string {
+  return formatTailTruncationFooter(truncation, truncation.totalBytes, fullOutputPath);
 }
 
 function formatTruncationFooter(
@@ -80,7 +125,11 @@ function formatTruncationFooter(
   const location = fullOutputPath ? ` Full output: ${fullOutputPath}` : '';
 
   if (truncation.lastLinePartial) {
-    return `[Showing last ${formatSize(truncation.outputBytes)} of output (${formatSize(Buffer.byteLength(output, 'utf8'))} total).${location}]`;
+    return formatTailTruncationFooter(
+      truncation,
+      Buffer.byteLength(output, 'utf8'),
+      fullOutputPath
+    );
   }
 
   if (truncation.truncatedBy === 'lines') {
@@ -88,6 +137,15 @@ function formatTruncationFooter(
   }
 
   return `[Showing lines ${startLine}-${endLine} of ${truncation.totalLines} (${formatSize(DEFAULT_MAX_BYTES)} limit).${location}]`;
+}
+
+function formatTailTruncationFooter(
+  truncation: TruncationResult,
+  totalBytes: number,
+  fullOutputPath: string | undefined
+): string {
+  const location = fullOutputPath ? ` Full output: ${fullOutputPath}` : '';
+  return `[Showing last ${formatSize(truncation.outputBytes)} of output (${formatSize(totalBytes)} total).${location}]`;
 }
 
 function formatEvalStatus(result: RunEvalResult, timeoutMs: number): string {
