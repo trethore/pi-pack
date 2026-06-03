@@ -1,8 +1,8 @@
 import path from 'node:path';
 import type { ExecOptions, ExecResult } from '@earendil-works/pi-coding-agent';
 import type { PiPromptCommandConfig } from '#src/config/schema.js';
-import { parseCommandLine } from '#src/features/prompt-command/command-line.js';
-import { resolvePermission } from '#src/features/prompt-command/permissions.js';
+import { parseCommandLine } from '#src/prompt-command/command-line.js';
+import { resolvePermission } from '#src/prompt-command/permissions.js';
 
 const PLACEHOLDER_PATTERN = /!`([^`\r\n]+)`/g;
 

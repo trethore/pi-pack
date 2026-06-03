@@ -1,7 +1,7 @@
 import type { ExecOptions, ExecResult } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 import type { PiPromptCommandConfig } from '#pi-prompt-command/config/schema.js';
-import { replaceCommandPlaceholders } from '#pi-prompt-command/features/prompt-command/placeholder.js';
+import { replaceCommandPlaceholders } from '#pi-prompt-command/prompt-command/placeholder.js';
 
 const baseConfig: PiPromptCommandConfig = {
   enabled: true,

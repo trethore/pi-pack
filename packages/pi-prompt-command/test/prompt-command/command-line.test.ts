@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCommandLine } from '#pi-prompt-command/features/prompt-command/command-line.js';
+import { parseCommandLine } from '#pi-prompt-command/prompt-command/command-line.js';
 
 describe('parseCommandLine', () => {
   it('parses executable and quoted arguments', () => {

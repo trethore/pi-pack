@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { PiPromptCommandConfig } from '#src/config/schema.js';
-import { replaceCommandPlaceholders } from '#src/features/prompt-command/placeholder.js';
+import { replaceCommandPlaceholders } from '#src/prompt-command/placeholder.js';
 
 interface TextContentBlock {
   type: string;

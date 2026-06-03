@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolvePermission } from '#pi-prompt-command/features/prompt-command/permissions.js';
+import { resolvePermission } from '#pi-prompt-command/prompt-command/permissions.js';
 
 describe('resolvePermission', () => {
   it.each([
