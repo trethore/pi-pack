@@ -6,15 +6,10 @@ import {
 } from '@trethore/pi-shared/features/registry.js';
 import { loadConfig } from '#src/config/config.js';
 import type { PiToolboxConfig } from '#src/config/schema.js';
-import { registerEvalTool } from '#src/features/eval/index.js';
 import { registerFindFilesTool } from '#src/features/find-files/index.js';
 import { registerGrepTool } from '#src/features/grep/index.js';
 
 const FEATURES: readonly ExtensionFeature<PiToolboxConfig>[] = [
-  {
-    isEnabled: (config) => config.enabled && config.eval.enabled,
-    register: registerEvalTool,
-  },
   {
     isEnabled: (config) => config.enabled && config.findFiles.enabled,
     register: registerFindFilesTool,

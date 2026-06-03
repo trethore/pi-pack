@@ -14,14 +14,6 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 ```jsonc
 {
   "enabled": true,
-  "eval": {
-    "enabled": true,
-    "defaultTimeoutMs": 10000,
-    // Optional. If omitted, tool-call timeouts are uncapped except by backend/global limits.
-    // "maxTimeoutMs": 60000,
-    "node": { "enabled": true, "command": "node", "args": [] },
-    "python": { "enabled": true, "command": "python3", "args": [] },
-  },
   "findFiles": {
     "enabled": true,
     "defaultLimit": 100,
@@ -37,40 +29,6 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 ```
 
 ## Features
-
-### Eval tool
-
-Registers `eval`, a code execution tool that writes code to a temporary file and runs it in a configured subprocess runtime.
-
-Arguments:
-
-- `language`: configured runtime to use; currently `node` or `python` when enabled
-- `code`: code to write to a temporary file and execute
-- `timeoutMs`: timeout in milliseconds, defaults to `eval.defaultTimeoutMs`; capped by `eval.maxTimeoutMs` when configured
-- `path`: working directory for the subprocess; relative paths are resolved from the current workspace
-
-Runtime mapping is config-driven:
-
-- `node` uses `eval.node.command` with `eval.node.args`, then appends the temp `.mjs` file path
-- `python` uses `eval.python.command` with `eval.python.args`, then appends the temp `.py` file path
-
-Example calls:
-
-```jsonc
-{ "language": "node", "code": "console.log(await Promise.resolve(42))" }
-{ "language": "python", "code": "print(sum([1, 2, 3]))", "timeoutMs": 5000 }
-{ "language": "node", "code": "console.log(process.cwd())", "path": "packages/pi-toolbox" }
-```
-
-Example output:
-
-```text
-42
-
-[exitCode=0, duration=45ms]
-```
-
-Temporary code files are removed after execution. When output exceeds the display limit, the result keeps only the tail in memory and reports a temporary full-output file path; that output file is retained for inspection.
 
 ### Find files tool
 
@@ -144,7 +102,7 @@ matches=5 files=2
 src/agent/tools.ts
 12: export const findFilesTool = ...
 18: export const grepTool = ...
-25: very long line clipped by maxCharsPerMatch, once it hits the char limit, it just ends: abcdefabcdefabcd
+25: very long line clipped by maxCharsPerMatch, once it hits the char limit, it ends: abcdefabcdefabcd
 [more matches in this file]
 
 src/index.ts
