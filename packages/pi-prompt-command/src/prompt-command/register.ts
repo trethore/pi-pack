@@ -1,4 +1,5 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import path from 'node:path';
+import type { ExtensionAPI, ToolResultEvent } from '@earendil-works/pi-coding-agent';
 import type { PiPromptCommandConfig } from '#src/config/schema.js';
 import { replaceCommandPlaceholders } from '#src/prompt-command/placeholder.js';
 
@@ -7,19 +8,42 @@ interface TextContentBlock {
   text?: string;
 }
 
+interface SessionLike {
+  getSessionId(): string;
+  getBranch(): Array<{ type: string }>;
+}
+
 type MutableMessage = Record<string, unknown>;
 
 export function registerPromptCommand(pi: ExtensionAPI, config: PiPromptCommandConfig) {
   const commandCache = new Map<string, Promise<string>>();
   const messageCache = new Map<string, string>();
+  const systemPromptCache = new Map<string, string>();
+  const skillPathsBySession = new Map<string, Set<string>>();
   let pendingExpandedMessage = false;
 
   pi.on('input', (event) => {
     pendingExpandedMessage = shouldProcessExpandedInput(event.text, config);
   });
 
+  pi.on('session_shutdown', () => {
+    commandCache.clear();
+    messageCache.clear();
+    systemPromptCache.clear();
+    skillPathsBySession.clear();
+  });
+
   pi.on('before_agent_start', async (event, ctx) => {
     commandCache.clear();
+
+    const sessionId = ctx.sessionManager.getSessionId();
+    rememberSkillPaths(skillPathsBySession, sessionId, event.systemPromptOptions.skills);
+
+    if (systemPromptCache.has(sessionId)) {
+      return { systemPrompt: systemPromptCache.get(sessionId)! };
+    }
+    if (!isFirstAgentTurn(ctx.sessionManager)) return;
+
     const systemPrompt = await processSystemPrompt(event.systemPrompt, event.systemPromptOptions, {
       executor: pi,
       config,
@@ -29,6 +53,7 @@ export function registerPromptCommand(pi: ExtensionAPI, config: PiPromptCommandC
     });
 
     if (systemPrompt === event.systemPrompt) return;
+    systemPromptCache.set(sessionId, systemPrompt);
     return { systemPrompt };
   });
 
@@ -50,6 +75,27 @@ export function registerPromptCommand(pi: ExtensionAPI, config: PiPromptCommandC
     if (messages === originalMessages) return;
     return { messages: messages as unknown as typeof event.messages };
   });
+
+  pi.on(
+    'tool_result',
+    async (event, ctx): Promise<{ content: ToolResultEvent['content'] } | undefined> => {
+      if (!config.surfaces.skills || event.toolName !== 'read' || event.isError) return;
+
+      const skillPaths = skillPathsBySession.get(ctx.sessionManager.getSessionId());
+      if (!skillPaths || !isSkillRead(event.input.path, skillPaths, ctx.cwd)) return;
+
+      const content = await replaceContentText(event.content, {
+        executor: pi,
+        config,
+        cwd: ctx.cwd,
+        signal: ctx.signal,
+        cache: commandCache,
+      });
+
+      if (content === event.content) return;
+      return { content };
+    }
+  );
 }
 
 async function processSystemPrompt(
@@ -163,6 +209,53 @@ async function processUserText(
   });
   options.messageCache.set(cacheKey, processed);
   return processed;
+}
+
+async function replaceContentText(
+  content: ToolResultEvent['content'],
+  options: Parameters<typeof replaceCommandPlaceholders>[1]
+): Promise<ToolResultEvent['content']> {
+  let changed = false;
+  const replaced = await Promise.all(
+    content.map(async (block) => {
+      if (!isTextContentBlock(block) || block.text === undefined) return block;
+
+      const text = await replaceCommandPlaceholders(block.text, options);
+      if (text === block.text) return block;
+
+      changed = true;
+      return { ...block, text };
+    })
+  );
+
+  return changed ? replaced : content;
+}
+
+function rememberSkillPaths(
+  skillPathsBySession: Map<string, Set<string>>,
+  sessionId: string,
+  skills: Array<{ filePath: string }> | undefined
+) {
+  if (!skills) return;
+  skillPathsBySession.set(sessionId, new Set(skills.map((skill) => path.resolve(skill.filePath))));
+}
+
+function isFirstAgentTurn(sessionManager: SessionLike): boolean {
+  return !sessionManager.getBranch().some((entry) => isContextEntry(entry.type));
+}
+
+function isContextEntry(type: string): boolean {
+  return (
+    type === 'message' ||
+    type === 'custom_message' ||
+    type === 'compaction' ||
+    type === 'branch_summary'
+  );
+}
+
+function isSkillRead(inputPath: unknown, skillPaths: Set<string>, cwd: string): boolean {
+  if (typeof inputPath !== 'string') return false;
+  return skillPaths.has(path.resolve(cwd, inputPath));
 }
 
 function shouldProcessExpandedInput(text: string, config: PiPromptCommandConfig): boolean {
