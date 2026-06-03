@@ -50,15 +50,15 @@ Commands are parsed into an executable plus arguments and run without a shell. S
 
 ### Surfaces
 
-Supported surfaces:
+| Surface           | Sources                                                | When commands run                                                | Default  |
+| ----------------- | ------------------------------------------------------ | ---------------------------------------------------------------- | -------- |
+| `system`          | `.pi/SYSTEM.md`, `~/.pi/agent/SYSTEM.md`               | First LLM turn of the session, then cached                       | Enabled  |
+| `appendSystem`    | `.pi/APPEND_SYSTEM.md`, `~/.pi/agent/APPEND_SYSTEM.md` | First LLM turn of the session, then cached                       | Enabled  |
+| `promptTemplates` | Expanded slash prompt templates                        | On `/command` invocation                                         | Enabled  |
+| `contextFiles`    | `AGENTS.md`, `CLAUDE.md` context files                 | First LLM turn of the session, then cached                       | Disabled |
+| `skills`          | `/skill:name` expansions and model-read skill files    | On `/skill:name` invocation or when the model reads a skill file | Disabled |
 
-- `system`: `.pi/SYSTEM.md` and `~/.pi/agent/SYSTEM.md`
-- `appendSystem`: `.pi/APPEND_SYSTEM.md` and `~/.pi/agent/APPEND_SYSTEM.md`
-- `promptTemplates`: expanded slash prompt templates
-- `contextFiles`: `AGENTS.md` and `CLAUDE.md` context files
-- `skills`: explicit `/skill:name` expansions
-
-Default enabled surfaces are `system`, `appendSystem`, and `promptTemplates`. Context files and skills default to disabled.
+System prompt surfaces are lazy: commands do not run when Pi launches, only when the session first sends work to the model.
 
 ### Permissions
 
