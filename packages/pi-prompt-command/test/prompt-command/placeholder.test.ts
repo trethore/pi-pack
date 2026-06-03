@@ -79,10 +79,10 @@ describe('replaceCommandPlaceholders', () => {
     expect(executor.exec).toHaveBeenCalledOnce();
   });
 
-  it('truncates long output', async () => {
+  it('truncates long output without splitting utf8 characters', async () => {
     // Arrange
-    const config = { ...baseConfig, maxOutputBytes: 3 };
-    const executor = makeExecutor({ stdout: 'abcdef', stderr: '', code: 0, killed: false });
+    const config = { ...baseConfig, maxOutputBytes: 4 };
+    const executor = makeExecutor({ stdout: 'ééé', stderr: '', code: 0, killed: false });
 
     // Act
     const result = await replaceCommandPlaceholders('!`npm test`', {
@@ -93,7 +93,44 @@ describe('replaceCommandPlaceholders', () => {
     });
 
     // Assert
-    expect(result).toBe('abc\n[pi-prompt-command: output truncated to 3 bytes]');
+    expect(result).toBe('éé\n[pi-prompt-command: output truncated to 4 bytes]');
+  });
+
+  it('formats executor failures instead of aborting all replacements', async () => {
+    // Arrange
+    const executor = {
+      exec: vi.fn(() => Promise.reject(new Error('spawn failed'))),
+    };
+
+    // Act
+    const result = await replaceCommandPlaceholders('!`npm test`', {
+      config: baseConfig,
+      executor,
+      cwd: '/repo',
+      cache: new Map(),
+    });
+
+    // Assert
+    expect(result).toBe('[pi-prompt-command: command failed: spawn failed]');
+  });
+
+  it('propagates abort errors', async () => {
+    // Arrange
+    const abortError = new Error('aborted');
+    abortError.name = 'AbortError';
+    const executor = {
+      exec: vi.fn(() => Promise.reject(abortError)),
+    };
+
+    // Act / Assert
+    await expect(
+      replaceCommandPlaceholders('!`npm test`', {
+        config: baseConfig,
+        executor,
+        cwd: '/repo',
+        cache: new Map(),
+      })
+    ).rejects.toBe(abortError);
   });
 });
 

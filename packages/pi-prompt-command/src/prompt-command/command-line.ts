@@ -1,6 +1,16 @@
 const SHELL_CONTROL_TOKENS = new Set(['&&', '||', ';', '|', '<', '>', '>>', '2>', '2>>', '&']);
 const SHELL_CONTROL_CHARS = /[;&|<>]/;
 
+type Quote = 'single' | 'double';
+
+interface TokenizerState {
+  tokens: string[];
+  token: string;
+  quote?: Quote;
+  escaping: boolean;
+  tokenStarted: boolean;
+}
+
 export interface ParsedCommandLine {
   command: string;
   args: string[];
@@ -16,7 +26,7 @@ export function parseCommandLine(input: string): CommandLineParseResult {
   if (!tokensResult.ok) return tokensResult;
 
   const tokens = tokensResult.tokens;
-  if (tokens.length === 0) return { ok: false, error: 'empty command' };
+  if (tokens.length === 0 || tokens[0].length === 0) return { ok: false, error: 'empty command' };
 
   const unsupportedToken = tokens.find((token) => isUnsupportedShellToken(token));
   if (unsupportedToken) {
@@ -39,67 +49,83 @@ export function parseCommandLine(input: string): CommandLineParseResult {
 function tokenizeCommandLine(
   input: string
 ): { ok: true; tokens: string[] } | { ok: false; error: string } {
-  const tokens: string[] = [];
-  let token = '';
-  let quote: 'single' | 'double' | undefined;
-  let escaping = false;
+  const state: TokenizerState = {
+    tokens: [],
+    token: '',
+    escaping: false,
+    tokenStarted: false,
+  };
 
   for (const char of input) {
-    if (escaping) {
-      token += char;
-      escaping = false;
-      continue;
-    }
-
-    if (char === '\\' && quote !== 'single') {
-      escaping = true;
-      continue;
-    }
-
-    const result = consumeCommandChar(char, quote, token, tokens);
-    quote = result.quote;
-    token = result.token;
+    consumeCommandChar(char, state);
   }
 
-  if (escaping) token += '\\';
-  if (quote) return { ok: false, error: `unterminated ${quote} quote` };
-  if (token.length > 0) tokens.push(token);
+  if (state.escaping) state.token += '\\';
+  if (state.quote) return { ok: false, error: `unterminated ${state.quote} quote` };
+  pushCurrentToken(state);
 
-  return { ok: true, tokens };
+  return { ok: true, tokens: state.tokens };
 }
 
-function consumeCommandChar(
-  char: string,
-  quote: 'single' | 'double' | undefined,
-  token: string,
-  tokens: string[]
-): { quote: 'single' | 'double' | undefined; token: string } {
-  if (!quote) return consumeUnquotedCommandChar(char, token, tokens);
-  return consumeQuotedCommandChar(char, quote, token);
+function consumeCommandChar(char: string, state: TokenizerState) {
+  if (state.escaping) {
+    state.token += char;
+    state.escaping = false;
+    state.tokenStarted = true;
+    return;
+  }
+
+  if (char === '\\' && state.quote !== 'single') {
+    state.escaping = true;
+    state.tokenStarted = true;
+    return;
+  }
+
+  if (!state.quote) {
+    consumeUnquotedCommandChar(char, state);
+    return;
+  }
+
+  consumeQuotedCommandChar(char, state);
 }
 
-function consumeUnquotedCommandChar(
-  char: string,
-  token: string,
-  tokens: string[]
-): { quote: 'single' | 'double' | undefined; token: string } {
+function consumeUnquotedCommandChar(char: string, state: TokenizerState) {
   if (/\s/.test(char)) {
-    if (token.length > 0) tokens.push(token);
-    return { quote: undefined, token: '' };
+    pushCurrentToken(state);
+    return;
   }
-  if (char === "'") return { quote: 'single', token };
-  if (char === '"') return { quote: 'double', token };
-  return { quote: undefined, token: token + char };
+  if (char === "'") {
+    state.quote = 'single';
+    state.tokenStarted = true;
+    return;
+  }
+  if (char === '"') {
+    state.quote = 'double';
+    state.tokenStarted = true;
+    return;
+  }
+  state.token += char;
+  state.tokenStarted = true;
 }
 
-function consumeQuotedCommandChar(
-  char: string,
-  quote: 'single' | 'double',
-  token: string
-): { quote: 'single' | 'double' | undefined; token: string } {
-  if (quote === 'single' && char === "'") return { quote: undefined, token };
-  if (quote === 'double' && char === '"') return { quote: undefined, token };
-  return { quote, token: token + char };
+function consumeQuotedCommandChar(char: string, state: TokenizerState) {
+  if (state.quote === 'single' && char === "'") {
+    state.quote = undefined;
+    return;
+  }
+  if (state.quote === 'double' && char === '"') {
+    state.quote = undefined;
+    return;
+  }
+  state.token += char;
+  state.tokenStarted = true;
+}
+
+function pushCurrentToken(state: TokenizerState) {
+  if (!state.tokenStarted) return;
+  state.tokens.push(state.token);
+  state.token = '';
+  state.tokenStarted = false;
 }
 
 function isUnsupportedShellToken(token: string): boolean {
@@ -107,5 +133,5 @@ function isUnsupportedShellToken(token: string): boolean {
 }
 
 function quoteTokenForPattern(token: string): string {
-  return /\s/.test(token) ? JSON.stringify(token) : token;
+  return token.length === 0 || /\s/.test(token) ? JSON.stringify(token) : token;
 }

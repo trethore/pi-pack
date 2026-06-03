@@ -28,6 +28,29 @@ describe('parseCommandLine', () => {
     }
   );
 
+  it('preserves empty quoted arguments', () => {
+    // Act
+    const result = parseCommandLine('printf "" "hello"');
+
+    // Assert
+    expect(result).toEqual({
+      ok: true,
+      commandLine: {
+        command: 'printf',
+        args: ['', 'hello'],
+        normalized: 'printf "" hello',
+      },
+    });
+  });
+
+  it('rejects empty quoted command names', () => {
+    // Act
+    const result = parseCommandLine('"" arg');
+
+    // Assert
+    expect(result).toEqual({ ok: false, error: 'empty command' });
+  });
+
   it('rejects unterminated quotes', () => {
     // Act
     const result = parseCommandLine('npm run "test');

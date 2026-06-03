@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { ExecOptions, ExecResult } from '@earendil-works/pi-coding-agent';
+import { getErrorMessage } from '@trethore/pi-shared/error.js';
 import type { PiPromptCommandConfig } from '#src/config/schema.js';
 import { parseCommandLine } from '#src/prompt-command/command-line.js';
 import { resolvePermission } from '#src/prompt-command/permissions.js';
@@ -68,15 +69,20 @@ async function executeCommand(
   args: string[],
   options: ReplaceCommandPlaceholdersOptions
 ): Promise<string> {
-  const result = await options.executor.exec(command, args, {
-    cwd: resolveExecutionCwd(options.cwd, options.config.cwd),
-    timeout: options.config.timeoutMs,
-    signal: options.signal,
-  });
+  try {
+    const result = await options.executor.exec(command, args, {
+      cwd: resolveExecutionCwd(options.cwd, options.config.cwd),
+      timeout: options.config.timeoutMs,
+      signal: options.signal,
+    });
 
-  const output = limitOutput(result.stdout + result.stderr, options.config.maxOutputBytes);
-  if (result.killed) return output + formatPromptCommandError('command was killed');
-  return output;
+    const output = limitOutput(result.stdout + result.stderr, options.config.maxOutputBytes);
+    if (result.killed) return output + formatPromptCommandError('command was killed');
+    return output;
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    return formatPromptCommandError(`command failed: ${getErrorMessage(error)}`);
+  }
 }
 
 function resolveExecutionCwd(baseCwd: string, configuredCwd: string | undefined): string {
@@ -88,7 +94,25 @@ function limitOutput(output: string, maxBytes: number): string {
   const bytes = Buffer.byteLength(output, 'utf8');
   if (bytes <= maxBytes) return output;
 
-  return `${Buffer.from(output, 'utf8').subarray(0, maxBytes).toString('utf8')}\n[pi-prompt-command: output truncated to ${maxBytes} bytes]`;
+  return `${truncateUtf8(output, maxBytes)}\n[pi-prompt-command: output truncated to ${maxBytes} bytes]`;
+}
+
+function truncateUtf8(output: string, maxBytes: number): string {
+  let bytes = 0;
+  let result = '';
+
+  for (const char of output) {
+    const charBytes = Buffer.byteLength(char, 'utf8');
+    if (bytes + charBytes > maxBytes) break;
+    bytes += charBytes;
+    result += char;
+  }
+
+  return result;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
 }
 
 function formatPromptCommandError(message: string): string {
