@@ -12,7 +12,6 @@ pi-pack/                         # You are here!
     pi-cut/
     pi-codexify/
     pi-handy/
-    pi-prompt-command/
     pi-tiny-mcp/
     pi-toolbox/
     pi-shared/                   # Shared utilities and types for Pi extensions
