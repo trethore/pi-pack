@@ -1,19 +1,34 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type { CommandDiagnostic } from '#src/core/diagnostics.js';
+import { formatCommandDiagnostic } from '#src/core/diagnostics.js';
+
+export interface CommandTemplateDiagnosticReporter {
+  reportDiagnostic(diagnostic: CommandDiagnostic): void;
+}
 
 export function registerCommandTemplateDiagnostics(
   pi: ExtensionAPI,
-  getDiagnostics: () => readonly string[]
-): void {
+  getDiagnostics: () => readonly CommandDiagnostic[]
+): CommandTemplateDiagnosticReporter {
   const reported = new Set<string>();
+  let latestContext: ExtensionContext | undefined;
 
-  const report = (ctx: ExtensionContext) => {
-    for (const diagnostic of getDiagnostics()) {
-      if (reported.has(diagnostic)) continue;
-      reported.add(diagnostic);
-      ctx.ui.notify(diagnostic, 'warning');
-    }
+  const reportDiagnostic = (diagnostic: CommandDiagnostic) => {
+    if (!latestContext) return;
+
+    const message = formatCommandDiagnostic(diagnostic);
+    if (reported.has(message)) return;
+    reported.add(message);
+    latestContext.ui.notify(message, diagnostic.severity);
   };
 
-  pi.on('session_start', (_event, ctx) => report(ctx));
-  pi.on('before_agent_start', (_event, ctx) => report(ctx));
+  const reportAll = (ctx: ExtensionContext) => {
+    latestContext = ctx;
+    for (const diagnostic of getDiagnostics()) reportDiagnostic(diagnostic);
+  };
+
+  pi.on('session_start', (_event, ctx) => reportAll(ctx));
+  pi.on('before_agent_start', (_event, ctx) => reportAll(ctx));
+
+  return { reportDiagnostic };
 }

@@ -10,11 +10,13 @@ export type TemplateSurface =
 
 export type ExecutionCwd = 'workspace' | 'extension' | string;
 
+export type TemplateCommand = string | string[];
+
 export interface PiCommandTemplateConfig {
   enabled: boolean;
   surfaces: SurfaceConfig;
   execution: ExecutionConfig;
-  templates: Record<string, string>;
+  templates: Record<string, TemplateCommand>;
 }
 
 export type SurfaceConfig = Record<TemplateSurface, boolean>;
@@ -73,7 +75,12 @@ export const positiveIntegerSchema = defineConfigSchema(
 
 export const cwdSchema = defineConfigSchema(z.string().min(1), 'expected non-empty string');
 
+export const templateCommandSchema = z.union([
+  z.string(),
+  z.tuple([z.string().min(1)]).rest(z.string()),
+]);
+
 export const templatesSchema = defineConfigSchema(
-  z.record(z.string().regex(/^[A-Za-z0-9_-]+$/), z.string()),
-  'expected object mapping template names to command strings; names may contain letters, digits, underscores, and hyphens'
+  z.record(z.string().regex(/^[A-Za-z0-9_-]+$/), templateCommandSchema),
+  'expected object mapping template names to command strings or non-empty string arrays; names may contain letters, digits, underscores, and hyphens'
 );

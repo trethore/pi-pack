@@ -22,7 +22,7 @@ type AgentSessionPrototype = {
 };
 
 export interface UnsafePatchState {
-  transformer?: UnsafeContentTransformer;
+  transformers: Map<string, UnsafeContentTransformer>;
   originals: {
     getSystemPrompt?: ResourceLoaderPrototype['getSystemPrompt'];
     getAppendSystemPrompt?: ResourceLoaderPrototype['getAppendSystemPrompt'];
@@ -36,17 +36,38 @@ export interface UnsafePatchState {
 
 const PATCH_STATE_KEY = Symbol.for('trethore.pi-command-template.patch-state');
 
+type LegacyUnsafePatchState = Omit<UnsafePatchState, 'transformers'> & {
+  transformer?: UnsafeContentTransformer;
+  transformers?: Map<string, UnsafeContentTransformer>;
+};
+
 type GlobalWithPatchState = typeof globalThis & {
-  [PATCH_STATE_KEY]?: UnsafePatchState;
+  [PATCH_STATE_KEY]?: LegacyUnsafePatchState;
 };
 
 export function getUnsafePatchState(): UnsafePatchState {
   const global = globalThis as GlobalWithPatchState;
   global[PATCH_STATE_KEY] ??= {
+    transformers: new Map(),
     originals: {},
     installed: new Set(),
   };
-  return global[PATCH_STATE_KEY];
+
+  const state = global[PATCH_STATE_KEY];
+  state.transformers ??= new Map();
+  if (state.transformer) {
+    state.transformers.set('legacy', state.transformer);
+    delete state.transformer;
+  }
+  return state as UnsafePatchState;
+}
+
+export function transformUnsafeContent(input: UnsafeTransformInput): string {
+  let content = input.content;
+  for (const transformer of getUnsafePatchState().transformers.values()) {
+    content = transformer({ ...input, content });
+  }
+  return content;
 }
 
 export type { AgentSessionPrototype, ResourceLoaderPrototype };

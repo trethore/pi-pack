@@ -19,11 +19,20 @@ export function checkUnsafeCompatibility(): CompatibilityCheckResult {
     errors.push('pi-command-template: incompatible Pi internals; AgentSession is unavailable.');
   }
 
-  if (!VERSION.startsWith('0.78.')) {
+  if (!isSupportedPiVersion(VERSION)) {
     warnings.push(
-      `pi-command-template: tested against Pi 0.78.x; current Pi version is ${VERSION}.`
+      `pi-command-template: declared support is Pi >=0.78.0 <1; current Pi version is ${VERSION}.`
     );
   }
 
   return { warnings, errors };
+}
+
+function isSupportedPiVersion(version: string): boolean {
+  const match = /^(\d+)\.(\d+)\.(\d+)/.exec(version);
+  if (!match) return false;
+
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  return major === 0 && minor >= 78;
 }

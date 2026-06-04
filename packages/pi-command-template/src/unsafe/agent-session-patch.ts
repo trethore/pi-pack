@@ -1,5 +1,9 @@
 import { AgentSession } from '@earendil-works/pi-coding-agent';
-import { getUnsafePatchState, type AgentSessionPrototype } from '#src/unsafe/patch-state.js';
+import {
+  getUnsafePatchState,
+  transformUnsafeContent,
+  type AgentSessionPrototype,
+} from '#src/unsafe/patch-state.js';
 
 export function installAgentSessionPatch(): string[] {
   const warnings: string[] = [];
@@ -17,7 +21,7 @@ export function installAgentSessionPatch(): string[] {
     state.originals.expandSkillCommand = prototype._expandSkillCommand;
     prototype._expandSkillCommand = function (text: string) {
       const expanded = state.originals.expandSkillCommand?.call(this, text) ?? text;
-      return state.transformer?.({ surface: 'skillInvocation', content: expanded }) ?? expanded;
+      return transformUnsafeContent({ surface: 'skillInvocation', content: expanded });
     };
     state.installed.add('AgentSession._expandSkillCommand');
   }

@@ -13,17 +13,19 @@ export function createCommandTemplateRenderer(
   const cache = new CommandCache(options);
 
   return {
-    render: (content: string, _context: RenderContext) => renderCommandTemplates(content, cache),
+    render: (content: string, context: RenderContext) =>
+      renderCommandTemplates(content, cache, context),
     getDiagnostics: () => cache.getDiagnostics(),
   };
 }
 
 export function renderCommandTemplates(
   content: string,
-  cache: Pick<CommandCache, 'getOutput'>
+  cache: Pick<CommandCache, 'getOutput'>,
+  context?: RenderContext
 ): string {
   return content.replaceAll(TEMPLATE_PATTERN, (match, name: string) => {
-    const output = cache.getOutput(name);
+    const output = cache.getOutput(name, context);
     return output === undefined ? match : output;
   });
 }

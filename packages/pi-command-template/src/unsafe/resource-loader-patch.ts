@@ -1,6 +1,7 @@
 import { DefaultResourceLoader } from '@earendil-works/pi-coding-agent';
 import {
   getUnsafePatchState,
+  transformUnsafeContent,
   type ResourceLoaderPrototype,
   type UnsafePatchState,
 } from '#src/unsafe/patch-state.js';
@@ -22,119 +23,145 @@ function installSystemPromptPatch(
   state: UnsafePatchState,
   prototype: ResourceLoaderPrototype
 ): string | undefined {
-  if (typeof prototype.getSystemPrompt !== 'function') {
-    return 'pi-command-template: DefaultResourceLoader.getSystemPrompt unavailable; SYSTEM.md templates disabled.';
-  }
-  if (state.installed.has('DefaultResourceLoader.getSystemPrompt')) return;
-
-  state.originals.getSystemPrompt = prototype.getSystemPrompt;
-  prototype.getSystemPrompt = function () {
-    const value = state.originals.getSystemPrompt?.call(this);
-    if (value === undefined) return;
-    return state.transformer?.({ surface: 'system', content: value }) ?? value;
-  };
-  state.installed.add('DefaultResourceLoader.getSystemPrompt');
+  return installPrototypePatch({
+    state,
+    prototype,
+    method: 'getSystemPrompt',
+    warning:
+      'pi-command-template: DefaultResourceLoader.getSystemPrompt unavailable; SYSTEM.md templates disabled.',
+    patch: (original) =>
+      function (this: unknown) {
+        const value = original.call(this);
+        if (value === undefined) return;
+        return transformUnsafeContent({ surface: 'system', content: value });
+      },
+  });
 }
 
 function installAppendSystemPromptPatch(
   state: UnsafePatchState,
   prototype: ResourceLoaderPrototype
 ): string | undefined {
-  if (typeof prototype.getAppendSystemPrompt !== 'function') {
-    return 'pi-command-template: DefaultResourceLoader.getAppendSystemPrompt unavailable; APPEND_SYSTEM.md templates disabled.';
-  }
-  if (state.installed.has('DefaultResourceLoader.getAppendSystemPrompt')) return;
-
-  state.originals.getAppendSystemPrompt = prototype.getAppendSystemPrompt;
-  prototype.getAppendSystemPrompt = function () {
-    const values = state.originals.getAppendSystemPrompt?.call(this) ?? [];
-    return values.map(
-      (content) => state.transformer?.({ surface: 'appendSystem', content }) ?? content
-    );
-  };
-  state.installed.add('DefaultResourceLoader.getAppendSystemPrompt');
+  return installPrototypePatch({
+    state,
+    prototype,
+    method: 'getAppendSystemPrompt',
+    warning:
+      'pi-command-template: DefaultResourceLoader.getAppendSystemPrompt unavailable; APPEND_SYSTEM.md templates disabled.',
+    patch: (original) =>
+      function (this: unknown) {
+        const values = original.call(this) ?? [];
+        return values.map((content) =>
+          transformUnsafeContent({ surface: 'appendSystem', content })
+        );
+      },
+  });
 }
 
 function installAgentsFilesPatch(
   state: UnsafePatchState,
   prototype: ResourceLoaderPrototype
 ): string | undefined {
-  if (typeof prototype.getAgentsFiles !== 'function') {
-    return 'pi-command-template: DefaultResourceLoader.getAgentsFiles unavailable; AGENTS.md/CLAUDE.md templates disabled.';
-  }
-  if (state.installed.has('DefaultResourceLoader.getAgentsFiles')) return;
-
-  state.originals.getAgentsFiles = prototype.getAgentsFiles;
-  prototype.getAgentsFiles = function () {
-    const result = state.originals.getAgentsFiles?.call(this) ?? { agentsFiles: [] };
-    return {
-      ...result,
-      agentsFiles: result.agentsFiles.map((file) => ({
-        ...file,
-        content:
-          state.transformer?.({
-            surface: 'contextFiles',
-            content: file.content,
-            path: file.path,
-          }) ?? file.content,
-      })),
-    };
-  };
-  state.installed.add('DefaultResourceLoader.getAgentsFiles');
+  return installPrototypePatch({
+    state,
+    prototype,
+    method: 'getAgentsFiles',
+    warning:
+      'pi-command-template: DefaultResourceLoader.getAgentsFiles unavailable; AGENTS.md/CLAUDE.md templates disabled.',
+    patch: (original) =>
+      function (this: unknown) {
+        const result = original.call(this) ?? { agentsFiles: [] };
+        return {
+          ...result,
+          agentsFiles: result.agentsFiles.map((file) => ({
+            ...file,
+            content: transformUnsafeContent({
+              surface: 'contextFiles',
+              content: file.content,
+              path: file.path,
+            }),
+          })),
+        };
+      },
+  });
 }
 
 function installPromptsPatch(
   state: UnsafePatchState,
   prototype: ResourceLoaderPrototype
 ): string | undefined {
-  if (typeof prototype.getPrompts !== 'function') {
-    return 'pi-command-template: DefaultResourceLoader.getPrompts unavailable; prompt template templates disabled.';
-  }
-  if (state.installed.has('DefaultResourceLoader.getPrompts')) return;
-
-  state.originals.getPrompts = prototype.getPrompts;
-  prototype.getPrompts = function () {
-    const result = state.originals.getPrompts?.call(this) ?? { prompts: [], diagnostics: [] };
-    return {
-      ...result,
-      prompts: result.prompts.map((prompt) => ({
-        ...prompt,
-        content:
-          state.transformer?.({
-            surface: 'promptTemplates',
-            content: prompt.content,
-            path: prompt.filePath,
-          }) ?? prompt.content,
-      })),
-    };
-  };
-  state.installed.add('DefaultResourceLoader.getPrompts');
+  return installPrototypePatch({
+    state,
+    prototype,
+    method: 'getPrompts',
+    warning:
+      'pi-command-template: DefaultResourceLoader.getPrompts unavailable; prompt template templates disabled.',
+    patch: (original) =>
+      function (this: unknown) {
+        const result = original.call(this) ?? { prompts: [], diagnostics: [] };
+        return {
+          ...result,
+          prompts: result.prompts.map((prompt) => ({
+            ...prompt,
+            content: transformUnsafeContent({
+              surface: 'promptTemplates',
+              content: prompt.content,
+              path: prompt.filePath,
+            }),
+          })),
+        };
+      },
+  });
 }
 
 function installSkillsPatch(
   state: UnsafePatchState,
   prototype: ResourceLoaderPrototype
 ): string | undefined {
-  if (typeof prototype.getSkills !== 'function') {
-    return 'pi-command-template: DefaultResourceLoader.getSkills unavailable; skill metadata templates disabled.';
-  }
-  if (state.installed.has('DefaultResourceLoader.getSkills')) return;
+  return installPrototypePatch({
+    state,
+    prototype,
+    method: 'getSkills',
+    warning:
+      'pi-command-template: DefaultResourceLoader.getSkills unavailable; skill metadata templates disabled.',
+    patch: (original) =>
+      function (this: unknown) {
+        const result = original.call(this) ?? { skills: [], diagnostics: [] };
+        return {
+          ...result,
+          skills: result.skills.map((skill) => ({
+            ...skill,
+            description: transformUnsafeContent({
+              surface: 'skills',
+              content: skill.description,
+              path: skill.filePath,
+            }),
+          })),
+        };
+      },
+  });
+}
 
-  state.originals.getSkills = prototype.getSkills;
-  prototype.getSkills = function () {
-    const result = state.originals.getSkills?.call(this) ?? { skills: [], diagnostics: [] };
-    return {
-      ...result,
-      skills: result.skills.map((skill) => ({
-        ...skill,
-        description:
-          state.transformer?.({
-            surface: 'skills',
-            content: skill.description,
-            path: skill.filePath,
-          }) ?? skill.description,
-      })),
-    };
-  };
-  state.installed.add('DefaultResourceLoader.getSkills');
+interface PrototypePatchOptions<TMethod extends keyof ResourceLoaderPrototype> {
+  state: UnsafePatchState;
+  prototype: ResourceLoaderPrototype;
+  method: TMethod;
+  warning: string;
+  patch(
+    original: NonNullable<ResourceLoaderPrototype[TMethod]>
+  ): NonNullable<ResourceLoaderPrototype[TMethod]>;
+}
+
+function installPrototypePatch<TMethod extends keyof ResourceLoaderPrototype>(
+  options: PrototypePatchOptions<TMethod>
+): string | undefined {
+  const original = options.prototype[options.method];
+  if (typeof original !== 'function') return options.warning;
+
+  const key = `DefaultResourceLoader.${String(options.method)}`;
+  if (options.state.installed.has(key)) return;
+
+  options.state.originals[options.method] = original;
+  options.prototype[options.method] = options.patch(original as NonNullable<typeof original>);
+  options.state.installed.add(key);
 }

@@ -30,6 +30,7 @@ Project config overrides global config. See [`pi-command-template.example.jsonc`
   "templates": {
     "osname": ". /etc/os-release && printf '%s\\n' \"$PRETTY_NAME\"",
     "git-branch": "git branch --show-current",
+    "node-version": ["node", "--version"],
   },
 }
 ```
@@ -64,6 +65,8 @@ Output is `stdout + stderr`, with one trailing line ending removed. If output ex
 
 - `true`: run the command string through the shell. This supports pipes, redirects, `$VARIABLES`, `&&`, and shell builtins.
 - `false`: parse the command string into a direct executable plus arguments. This avoids shell syntax and is useful for file-style commands such as `node --version`.
+
+Template commands can also be arrays such as `["node", "--version"]`. Array commands always run directly as executable + arguments and are the preferred form when `shell` features are not needed.
 
 ## Unsafe internals notice
 

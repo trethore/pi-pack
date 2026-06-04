@@ -1,9 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import type { PiCommandTemplateConfig } from '#src/config/schema.js';
+import path from 'node:path';
+import type { PiCommandTemplateConfig, TemplateCommand } from '#src/config/schema.js';
+import type { CommandDiagnostic } from '#src/core/diagnostics.js';
+import type { RenderContext } from '#src/core/types.js';
 
 export interface CommandRunResult {
   output: string;
-  diagnostics: string[];
+  diagnostics: CommandDiagnostic[];
 }
 
 interface RunCommandOptions {
@@ -11,11 +14,12 @@ interface RunCommandOptions {
   workspaceCwd: string;
   extensionCwd: string;
   name: string;
-  command: string;
+  command: TemplateCommand;
+  context?: RenderContext;
 }
 
 export function runTemplateCommand(options: RunCommandOptions): CommandRunResult {
-  const diagnostics: string[] = [];
+  const diagnostics: CommandDiagnostic[] = [];
   const cwd = resolveExecutionCwd(
     options.config.execution.cwd,
     options.workspaceCwd,
@@ -23,15 +27,13 @@ export function runTemplateCommand(options: RunCommandOptions): CommandRunResult
   );
   const spawnOptions = {
     cwd,
-    shell: options.config.execution.shell,
+    shell: typeof options.command === 'string' && options.config.execution.shell,
     encoding: 'utf8' as const,
     timeout: options.config.execution.timeoutMs,
     maxBuffer: Math.max(options.config.execution.maxOutputChars * 4, 1024),
   };
 
-  const result = options.config.execution.shell
-    ? spawnSync(options.command, spawnOptions)
-    : spawnDirect(options.command, spawnOptions);
+  const result = runSpawnCommand(options.command, spawnOptions);
 
   const stdout = typeof result.stdout === 'string' ? result.stdout : '';
   const stderr = typeof result.stderr === 'string' ? result.stderr : '';
@@ -39,38 +41,59 @@ export function runTemplateCommand(options: RunCommandOptions): CommandRunResult
 
   if (result.error) {
     diagnostics.push(
-      `pi-command-template command {{${options.name}}} failed: ${result.error.message}`
+      createCommandDiagnostic(
+        options,
+        `pi-command-template command {{${options.name}}} failed: ${result.error.message}`
+      )
     );
     if (output.length === 0) output = `[pi-command-template error: ${result.error.message}]`;
   }
 
   if (result.status !== null && result.status !== 0) {
     diagnostics.push(
-      `pi-command-template command {{${options.name}}} exited with status ${result.status}.`
+      createCommandDiagnostic(
+        options,
+        `pi-command-template command {{${options.name}}} exited with status ${result.status}.`
+      )
     );
   }
 
   if (result.signal) {
     diagnostics.push(
-      `pi-command-template command {{${options.name}}} terminated by signal ${result.signal}.`
+      createCommandDiagnostic(
+        options,
+        `pi-command-template command {{${options.name}}} terminated by signal ${result.signal}.`
+      )
     );
   }
 
   if (output.length > options.config.execution.maxOutputChars) {
     output = output.slice(0, options.config.execution.maxOutputChars);
     diagnostics.push(
-      `pi-command-template command {{${options.name}}} output truncated to ${options.config.execution.maxOutputChars} characters.`
+      createCommandDiagnostic(
+        options,
+        `pi-command-template command {{${options.name}}} output truncated to ${options.config.execution.maxOutputChars} characters.`
+      )
     );
   }
 
   return { output, diagnostics };
 }
 
-function spawnDirect(
-  command: string,
+function runSpawnCommand(
+  command: TemplateCommand,
   options: Parameters<typeof spawnSync>[2]
 ): ReturnType<typeof spawnSync> {
-  const args = parseCommandArgs(command);
+  if (Array.isArray(command)) return spawnDirect(command, options);
+  if (options?.shell) return spawnSync(command, options);
+  return spawnDirect(parseCommandArgs(command), options);
+}
+
+function spawnDirect(
+  command: string[],
+  options: Parameters<typeof spawnSync>[2]
+): ReturnType<typeof spawnSync> {
+  const args = [...command];
   const file = args.shift();
   if (!file) {
     return {
@@ -89,7 +112,17 @@ function spawnDirect(
 function resolveExecutionCwd(value: string, workspaceCwd: string, extensionCwd: string): string {
   if (value === 'workspace') return workspaceCwd;
   if (value === 'extension') return extensionCwd;
-  return value;
+  return path.isAbsolute(value) ? value : path.resolve(workspaceCwd, value);
+}
+
+function createCommandDiagnostic(options: RunCommandOptions, message: string): CommandDiagnostic {
+  return {
+    severity: 'warning',
+    template: options.name,
+    surface: options.context?.surface,
+    path: options.context?.path,
+    message,
+  };
 }
 
 interface ParseState {

@@ -10,11 +10,14 @@ export interface UnsafePatchInstallResult {
   errors: string[];
 }
 
-export function disableUnsafePiCommandTemplatePatch(): void {
-  getUnsafePatchState().transformer = undefined;
+export function disableUnsafePiCommandTemplatePatch(id: string): void {
+  const state = getUnsafePatchState();
+  state.transformers.delete('legacy');
+  state.transformers.delete(id);
 }
 
 export function installUnsafePiCommandTemplatePatch(
+  id: string,
   transformer: UnsafeContentTransformer
 ): UnsafePatchInstallResult {
   const compatibility = checkUnsafeCompatibility();
@@ -25,15 +28,18 @@ export function installUnsafePiCommandTemplatePatch(
     return { installed: false, warnings, errors };
   }
 
-  const state = getUnsafePatchState();
-  state.transformer = transformer;
-
   try {
     warnings.push(...installResourceLoaderPatch(), ...installAgentSessionPatch());
   } catch (error) {
     errors.push(
       `pi-command-template: failed to install unsafe Pi internals patch: ${error instanceof Error ? error.message : String(error)}`
     );
+  }
+
+  if (errors.length === 0) {
+    const state = getUnsafePatchState();
+    state.transformers.delete('legacy');
+    state.transformers.set(id, transformer);
   }
 
   return { installed: errors.length === 0, warnings, errors };

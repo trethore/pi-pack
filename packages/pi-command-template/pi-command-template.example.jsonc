@@ -32,9 +32,10 @@
 
   // Template name -> command. Use {{osname}}, {{git-branch}}, etc. in prompt files.
   // Commands run once per extension load/reload and output is stdout + stderr.
+  // Use string commands for shell syntax, or string arrays for direct executable + args.
   "templates": {
     "osname": ". /etc/os-release && printf '%s\\n' \"$PRETTY_NAME\"",
     "git-branch": "git branch --show-current",
-    "node-version": "node --version"
+    "node-version": ["node", "--version"]
   }
 }
