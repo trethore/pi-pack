@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["packages/**/*.ts", "scripts/**/*.ts", "eslint.config.js"]
+  "include": ["packages/**/*.ts", "scripts/**/*.ts", "test/**/*.ts", "eslint.config.js"]
 }
