@@ -1,0 +1,40 @@
+{
+  // Master switch for the extension.
+  "enabled": true,
+
+  // Choose which Pi resources should support {{template}} replacement.
+  "surfaces": {
+    // .pi/SYSTEM.md or ~/.pi/agent/SYSTEM.md
+    "system": true,
+    // .pi/APPEND_SYSTEM.md or ~/.pi/agent/APPEND_SYSTEM.md
+    "appendSystem": true,
+    // AGENTS.md / CLAUDE.md context files discovered by Pi.
+    "contextFiles": true,
+    // Prompt templates loaded from Pi prompt template locations.
+    "promptTemplates": true,
+    // Skill descriptions and explicit /skill:name invocation content.
+    "skills": true
+  },
+
+  // How template commands are executed.
+  "execution": {
+    // Kill commands that run longer than this many milliseconds.
+    "timeoutMs": 3000,
+    // Maximum characters inserted for one template output.
+    "maxOutputChars": 20000,
+    // Run commands from the workspace cwd. Use "extension" for this package dir,
+    // or any absolute/relative path string for a custom cwd.
+    "cwd": "workspace",
+    // true: run command strings through the shell, enabling pipes, redirects,
+    // variables, &&, and shell builtins. false: execute as file + arguments.
+    "shell": true
+  },
+
+  // Template name -> command. Use {{osname}}, {{git-branch}}, etc. in prompt files.
+  // Commands run once per extension load/reload and output is stdout + stderr.
+  "templates": {
+    "osname": ". /etc/os-release && printf '%s\\n' \"$PRETTY_NAME\"",
+    "git-branch": "git branch --show-current",
+    "node-version": "node --version"
+  }
+}
