@@ -11,6 +11,7 @@ pi-pack/                         # You are here!
   packages/                      # Workspace packages for Pi extensions
     pi-cut/
     pi-codexify/
+    pi-command-template/
     pi-handy/
     pi-tiny-mcp/
     pi-toolbox/
