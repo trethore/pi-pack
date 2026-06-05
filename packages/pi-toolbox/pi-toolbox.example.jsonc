@@ -15,10 +15,5 @@
     // Omit defaultLimitPerFile for no per-file default limit.
     // "defaultLimitPerFile": 30,
     "defaultMaxCharsPerMatch": 200
-  },
-
-  // Override edit with extra options like edits[].replaceAll.
-  "customEdit": {
-    "enabled": true
   }
 }

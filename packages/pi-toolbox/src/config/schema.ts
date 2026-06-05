@@ -5,7 +5,6 @@ export interface PiToolboxConfig {
   enabled: boolean;
   findFiles: FindFilesToolConfig;
   grep: GrepToolConfig;
-  customEdit: CustomEditToolConfig;
 }
 
 export interface FindFilesToolConfig extends EnabledConfig {
@@ -18,8 +17,6 @@ export interface GrepToolConfig extends EnabledConfig {
   defaultMaxCharsPerMatch: number;
 }
 
-export type CustomEditToolConfig = EnabledConfig;
-
 export type PartialPiToolboxConfig = Partial<{
   enabled: unknown;
   findFiles: Partial<{
@@ -31,9 +28,6 @@ export type PartialPiToolboxConfig = Partial<{
     defaultLimit: unknown;
     defaultLimitPerFile: unknown;
     defaultMaxCharsPerMatch: unknown;
-  }>;
-  customEdit: Partial<{
-    enabled: unknown;
   }>;
 }>;
 
@@ -59,8 +53,5 @@ export const defaultConfig: PiToolboxConfig = {
     enabled: true,
     defaultLimit: 200,
     defaultMaxCharsPerMatch: 200,
-  },
-  customEdit: {
-    enabled: true,
   },
 };

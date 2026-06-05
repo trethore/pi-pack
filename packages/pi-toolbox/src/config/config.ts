@@ -30,7 +30,6 @@ function cloneDefaultConfig(): PiToolboxConfig {
     ...defaultConfig,
     findFiles: { ...defaultConfig.findFiles },
     grep: { ...defaultConfig.grep },
-    customEdit: { ...defaultConfig.customEdit },
   };
 }
 
@@ -48,10 +47,6 @@ function mergeConfig(
 
   mergeSection(source, 'grep', configPath, errors, (section, sectionName) => {
     mergeGrepConfig(target.grep, section, sectionName, configPath, errors);
-  });
-
-  mergeSection(source, 'customEdit', configPath, errors, (section, sectionName) => {
-    mergeEnabledField(target.customEdit, section, `${sectionName}.enabled`, configPath, errors);
   });
 }
 
