@@ -25,6 +25,9 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
     // "defaultLimitPerFile": 30,
     "defaultMaxCharsPerMatch": 200,
   },
+  "customEdit": {
+    "enabled": true,
+  },
 }
 ```
 
@@ -113,3 +116,20 @@ src/index.ts
 ```
 
 When more matches exist beyond `limit`, the output ends with `[more matches available]`. When more matches exist beyond `limitPerFile`, the file section ends with `[more matches in this file]`. Long matching lines are clipped to `maxCharsPerMatch` without an extra marker.
+
+### Custom edit tool
+
+Overrides Pi's built-in `edit` tool with an extended schema. It keeps the built-in behavior unless an edit entry sets `replaceAll: true`.
+
+Additional edit entry argument:
+
+- `replaceAll`: replace every exact non-overlapping occurrence of `oldText`; defaults to `false`
+
+Example call:
+
+```jsonc
+{
+  "path": "src/file.ts",
+  "edits": [{ "oldText": "1_000", "newText": "1000", "replaceAll": true }],
+}
+```

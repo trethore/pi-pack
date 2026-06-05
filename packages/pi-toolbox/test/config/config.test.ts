@@ -24,6 +24,7 @@ describe('loadConfig', () => {
       enabled: true,
       findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+      customEdit: { enabled: true },
     });
   });
 
@@ -35,6 +36,7 @@ describe('loadConfig', () => {
       JSON.stringify({
         findFiles: { enabled: false, defaultLimit: 50 },
         grep: { defaultLimit: 25, defaultLimitPerFile: 3 },
+        customEdit: { enabled: false },
       })
     );
     const { loadConfig } = await importConfigWithHome(homeDir);
@@ -60,6 +62,7 @@ describe('loadConfig', () => {
         defaultLimitPerFile: 3,
         defaultMaxCharsPerMatch: 500,
       },
+      customEdit: { enabled: false },
     });
   });
 
@@ -78,6 +81,7 @@ describe('loadConfig', () => {
           defaultLimitPerFile: 1001,
           defaultMaxCharsPerMatch: 99,
         },
+        customEdit: { enabled: 'yes' },
       })
     );
 
@@ -89,6 +93,7 @@ describe('loadConfig', () => {
       enabled: true,
       findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+      customEdit: { enabled: true },
     });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
@@ -98,6 +103,7 @@ describe('loadConfig', () => {
       expect.stringContaining('invalid grep.defaultLimit value'),
       expect.stringContaining('invalid grep.defaultLimitPerFile value'),
       expect.stringContaining('invalid grep.defaultMaxCharsPerMatch value'),
+      expect.stringContaining('invalid customEdit.enabled value'),
     ]);
   });
 

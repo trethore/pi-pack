@@ -1,0 +1,32 @@
+{
+  "name": "edit",
+  "label": "edit",
+  "description": "Edit a single file using exact text replacement, with optional replaceAll for repeated exact matches.",
+  "promptSnippet": "Edit files by exact replacement",
+  "promptGuidelines": [
+    "Use edit for precise file changes when you know the exact text to replace.",
+    "Use one edit call with multiple edits[] entries for separate changes in one file.",
+    "Use edits[].replaceAll for repeated exact replacements in one file instead of bash or many edit entries."
+  ],
+  "replaceAllParameter": {
+    "type": "boolean",
+    "description": "Replace every exact non-overlapping occurrence of oldText. If omitted or false, oldText must match exactly one unique region."
+  },
+  "messages": {
+    "success": "Successfully replaced {{count}} block(s) in {{path}}."
+  },
+  "errors": {
+    "invalidInput": "Edit tool input is invalid. edits must contain at least one replacement.",
+    "couldNotEditFile": "Could not edit file: {{path}}. {{error}}.",
+    "notFoundSingle": "Could not find the exact text in {{path}}. The old text must match exactly including all whitespace and newlines.",
+    "notFoundMulti": "Could not find edits[{{index}}] in {{path}}. The oldText must match exactly including all whitespace and newlines.",
+    "duplicateSingle": "Found {{occurrences}} occurrences of the text in {{path}}. The text must be unique. Please provide more context to make it unique.",
+    "duplicateMulti": "Found {{occurrences}} occurrences of edits[{{index}}] in {{path}}. Each oldText must be unique. Please provide more context to make it unique.",
+    "emptyOldTextSingle": "oldText must not be empty in {{path}}.",
+    "emptyOldTextMulti": "edits[{{index}}].oldText must not be empty in {{path}}.",
+    "noChangeSingle": "No changes made to {{path}}. The replacement produced identical content. This might indicate an issue with special characters or the text not existing as expected.",
+    "noChangeMulti": "No changes made to {{path}}. The replacements produced identical content.",
+    "overlap": "edits[{{previousIndex}}] and edits[{{currentIndex}}] overlap in {{path}}. Merge them into one edit or target disjoint regions.",
+    "aborted": "Operation aborted"
+  }
+}
