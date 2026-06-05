@@ -20,6 +20,9 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "showSysprompt": {
     "enabled": true,
   },
+  "timeTaken": {
+    "enabled": true,
+  },
 }
 ```
 
@@ -47,4 +50,15 @@ Examples:
 /showsysprompt
 /showsysprompt prompt
 /showsysprompt tools
+```
+
+### Time taken notification
+
+Shows a notification when the agent finishes and the prompt returns to the user.
+
+Examples:
+
+```text
+Took 42s
+Took 1m5s
 ```

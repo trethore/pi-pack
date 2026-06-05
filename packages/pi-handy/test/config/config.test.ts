@@ -32,6 +32,7 @@ describe('pi-handy config', () => {
         enabled: true,
         thinkingLevel: { enabled: true },
         showSysprompt: { enabled: true },
+        timeTaken: { enabled: true },
       },
       errors: [],
     });
@@ -42,7 +43,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false }, "timeTaken": { "enabled": false } }'
     );
     writeProjectConfig(
       projectDirectory,
@@ -57,6 +58,7 @@ describe('pi-handy config', () => {
       enabled: true,
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: false },
+      timeTaken: { enabled: false },
     });
   });
 
@@ -65,7 +67,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeProjectConfig(
       projectDirectory,
-      '{ "enabled": "yes", "thinkingLevel": false, "showSysprompt": false }'
+      '{ "enabled": "yes", "thinkingLevel": false, "showSysprompt": false, "timeTaken": false }'
     );
 
     // Act
@@ -76,11 +78,13 @@ describe('pi-handy config', () => {
       enabled: true,
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: true },
+      timeTaken: { enabled: true },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
       expect.stringContaining('invalid showSysprompt value'),
+      expect.stringContaining('invalid timeTaken value'),
     ]);
   });
 });
