@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { Text } from '@earendil-works/pi-tui';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -34,6 +35,22 @@ describe('custom edit tool', () => {
 
     // Assert
     expect(pi.tools.map((tool) => tool.name)).toEqual(['edit']);
+  });
+
+  it('keeps the original edit prompting with replaceAll additions', () => {
+    // Arrange and act
+    const tool = createCustomEditToolDefinition(DEFAULT_CUSTOM_EDIT_CONFIG);
+
+    // Assert
+    expect(tool.description).toContain('Every edits[].oldText must match a unique');
+    expect(tool.description).toContain('unless edits[].replaceAll is true');
+    expect(tool.promptGuidelines).toEqual([
+      'Use edit for precise changes (edits[].oldText must match exactly)',
+      'When changing multiple separate locations in one file, use one edit call with multiple entries in edits[] instead of multiple edit calls',
+      'Each edits[].oldText is matched against the original file, not after earlier edits are applied. Do not emit overlapping or nested edits. Merge nearby changes into one edit.',
+      'Keep edits[].oldText as small as possible while still being unique in the file, unless edits[].replaceAll is true. Do not pad with large unchanged regions.',
+      'Use edits[].replaceAll only when the same exact oldText must be replaced at every non-overlapping occurrence in the file.',
+    ]);
   });
 
   it('adds replaceAll to the edit schema', () => {
@@ -102,6 +119,10 @@ describe('custom edit tool', () => {
     expect(result.content).toEqual([
       { type: 'text', text: `Successfully replaced 3 block(s) in ${filePath}.` },
     ]);
+    expect(result.details?.diff).toContain('-1 foo bar foo baz foo');
+    expect(result.details?.diff).toContain('+1 qux bar qux baz qux');
+    expect(result.details?.patch).toContain(`--- ${filePath}`);
+    expect(result.details?.firstChangedLine).toBe(1);
   });
 
   it('supports mixed unique and replaceAll edits matched against the original file', () => {
@@ -119,7 +140,11 @@ describe('custom edit tool', () => {
     );
 
     // Assert
-    expect(result).toEqual({ newContent: 'FOO\nBAR\nFOO\nbaz\n', replacementCount: 3 });
+    expect(result).toEqual({
+      baseContent: originalContent,
+      newContent: 'FOO\nBAR\nFOO\nbaz\n',
+      replacementCount: 3,
+    });
   });
 
   it('preserves CRLF line endings and BOM when using replaceAll', async () => {
@@ -172,6 +197,28 @@ describe('custom edit tool', () => {
     expect(fileContent).toBe('c c');
   });
 
+  it('adds a replaceAll hint to the invocation when replaceAll is true', () => {
+    // Arrange
+    const baseTool = createBaseTool({ execute: vi.fn() });
+    const tool = createCustomEditToolDefinition(DEFAULT_CUSTOM_EDIT_CONFIG, { baseTool });
+
+    // Act
+    const component = tool.renderCall?.(
+      {
+        path: '../../../../../../../tmp/pi-edit-tool-stress.IhceMQ/sample/src/config.json',
+        edits: [{ oldText: 'enabled', newText: 'active', replaceAll: true }],
+      },
+      createTheme() as never,
+      { cwd: process.cwd(), lastComponent: undefined } as never
+    );
+
+    // Assert
+    expect(component).toBeInstanceOf(Text);
+    expect((component as Text).render(200).join('\n')).toContain(
+      'edit ../../../../../../../tmp/pi-edit-tool-stress.IhceMQ/sample/src/config.json (replaceAll)'
+    );
+  });
+
   it('keeps the existing duplicate error when replaceAll is omitted', () => {
     // Arrange, act, assert
     expect(() =>
@@ -207,6 +254,13 @@ describe('custom edit tool', () => {
 
 function makeTempDir(): string {
   return makePrefixedTempDir('pi-toolbox-custom-edit-test-');
+}
+
+function createTheme() {
+  return {
+    bold: (text: string) => text,
+    fg: (_color: string, text: string) => text,
+  };
 }
 
 function createBaseTool(options: { execute: ReturnType<typeof vi.fn> }) {

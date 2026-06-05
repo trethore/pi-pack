@@ -14,6 +14,8 @@ import { CUSTOM_EDIT_DEFINITION } from '#src/features/custom-edit/definition.js'
 import {
   applyCustomEdits,
   detectLineEnding,
+  generateDiffString,
+  generateUnifiedPatch,
   normalizeToLF,
   restoreLineEndings,
   stripBom,
@@ -73,6 +75,8 @@ export function createCustomEditToolDefinition(
       }
 
       const result = await executeReplaceAllEdit(params, cwd, operations, signal);
+      const diffResult = generateDiffString(result.baseContent, result.newContent);
+      const patch = generateUnifiedPatch(params.path, result.baseContent, result.newContent);
       return {
         content: [
           {
@@ -83,7 +87,7 @@ export function createCustomEditToolDefinition(
             }),
           },
         ],
-        details: undefined,
+        details: { diff: diffResult.diff, patch, firstChangedLine: diffResult.firstChangedLine },
       };
     },
     renderCall(args, theme, context) {
@@ -97,7 +101,7 @@ export function createCustomEditToolDefinition(
         ? path.relative(context.cwd, path.resolve(context.cwd, args.path))
         : '';
       text.setText(
-        `${theme.fg('toolTitle', theme.bold('edit'))} ${theme.fg('toolOutput', pathDisplay)}`
+        `${theme.fg('toolTitle', theme.bold('edit'))} ${theme.fg('toolOutput', pathDisplay)} ${theme.fg('muted', '(replaceAll)')}`
       );
       return text;
     },
@@ -109,7 +113,7 @@ export async function executeReplaceAllEdit(
   cwd: string,
   operations: EditOperations = defaultOperations,
   signal?: AbortSignal
-): Promise<{ replacementCount: number }> {
+): Promise<{ baseContent: string; newContent: string; replacementCount: number }> {
   if (!Array.isArray(params.edits) || params.edits.length === 0) throw getInvalidInputError();
 
   const absolutePath = path.resolve(cwd, params.path);
@@ -131,7 +135,7 @@ export async function executeReplaceAllEdit(
     const { bom, text: content } = stripBom(rawContent);
     const lineEnding = detectLineEnding(content);
     const normalizedContent = normalizeToLF(content);
-    const { newContent, replacementCount } = applyCustomEdits(
+    const { baseContent, newContent, replacementCount } = applyCustomEdits(
       normalizedContent,
       params.edits,
       params.path
@@ -141,7 +145,7 @@ export async function executeReplaceAllEdit(
     await operations.writeFile(absolutePath, finalContent);
     throwIfAborted(signal);
 
-    return { replacementCount };
+    return { baseContent, newContent, replacementCount };
   });
 }
 
