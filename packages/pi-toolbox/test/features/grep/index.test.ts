@@ -293,7 +293,7 @@ src/index.ts
 
     // Assert
     expect(rendered).toContain(
-      '<toolOutput> (limit 20, limit/file 2, depth 2, chars 120, globs *.ts, noIgnore, visibleOnly)</toolOutput>'
+      '<toolOutput> (limit 20, limit/file 2, depth 2, chars 120, globs [*.ts], noIgnore, visibleOnly)</toolOutput>'
     );
   });
 

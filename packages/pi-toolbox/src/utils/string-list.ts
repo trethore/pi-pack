@@ -34,5 +34,5 @@ export function formatOptionalStringListFlag(
   values: readonly string[] | undefined
 ): string | undefined {
   const normalized = normalizeStringList(values);
-  return normalized.length === 0 ? undefined : `${label} ${normalized.join(',')}`;
+  return normalized.length === 0 ? undefined : `${label} [${normalized.join(',')}]`;
 }

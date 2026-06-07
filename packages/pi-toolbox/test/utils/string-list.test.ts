@@ -26,7 +26,7 @@ describe('string list utilities', () => {
   it('formats lists and optional list flags', () => {
     expect(formatStringList([' src ', 'test'], '.')).toBe('src,test');
     expect(formatStringList([], '.')).toBe('.');
-    expect(formatOptionalStringListFlag('globs', ['*.ts', ''])).toBe('globs *.ts');
+    expect(formatOptionalStringListFlag('globs', ['*.ts', ''])).toBe('globs [*.ts]');
     expect(formatOptionalStringListFlag('globs', [])).toBeUndefined();
   });
 });
