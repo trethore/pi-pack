@@ -20,6 +20,11 @@ describe('resolveToolConfig', () => {
       minSavedTokens: 40,
       savingsMode: 'or',
     });
+    expect(config.newLinesFolding).toEqual({
+      enabled: true,
+      minNewLines: 10,
+      foldTo: 5,
+    });
     expect(config.lineTruncation.enabled).toBe(true);
   });
 
@@ -45,6 +50,7 @@ describe('resolveToolConfig', () => {
     // Assert
     for (const config of configs) {
       expect(config.repetitionFolding.enabled).toBe(false);
+      expect(config.newLinesFolding.enabled).toBe(false);
       expect(config.lineTruncation.enabled).toBe(false);
     }
   });
@@ -63,6 +69,7 @@ describe('resolveToolConfig', () => {
             minSavedLines: 0,
             savingsMode: 'and' as const,
           },
+          newLinesFolding: { enabled: true, minNewLines: 3, foldTo: 2 },
           lineTruncation: { enabled: true, maxChars: 10 },
         },
       ],
@@ -82,6 +89,7 @@ describe('resolveToolConfig', () => {
       minSavedTokens: 40,
       savingsMode: 'and',
     });
+    expect(config.newLinesFolding).toEqual({ enabled: true, minNewLines: 3, foldTo: 2 });
     expect(config.lineTruncation).toEqual({ enabled: true, maxChars: 10 });
   });
 });

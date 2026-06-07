@@ -22,6 +22,14 @@
     "savingsMode": "or"
   },
 
+  // Fold large consecutive newline runs to a smaller fixed newline count.
+  // minNewLines and foldTo must be integers >= 2, with foldTo <= minNewLines.
+  "newLinesFolding": {
+    "enabled": true,
+    "minNewLines": 10,
+    "foldTo": 5
+  },
+
   // Truncate individual text tool-output lines after maxChars characters.
   // maxChars must be an integer >= 1.
   "lineTruncation": {
@@ -31,8 +39,8 @@
 
   // Optional per-tool overrides. Selectors are JavaScript regex strings; "*" means all tools.
   // Use anchors for exact matches, such as "^read$". Unanchored selectors match substrings.
-  // Defaults before overrides: terminalCleanup only runs on bash; repetitionFolding and
-  // lineTruncation do not run on edit/write.
+  // Defaults before overrides: terminalCleanup only runs on bash; repetitionFolding,
+  // newLinesFolding, and lineTruncation do not run on edit/write.
   // Tools rules can override those defaults.
   // Global tools rules are inherited by project config because rules are appended, not replaced.
   // Overrides are applied in order after the global config, so the last matching entry wins.

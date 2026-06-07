@@ -2,6 +2,7 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { PiCutConfig, ResolvedToolConfig } from '#src/config/schema.js';
 import { resolveToolConfig } from '#src/config/tool-config.js';
 import { truncateLines } from '#src/features/line-truncation/truncate-lines.js';
+import { foldNewLines } from '#src/features/new-lines-folding/fold-new-lines.js';
 import { foldRepeatedOutput } from '#src/features/repetition-folding/fold-repeated-output.js';
 import { cleanTerminalOutput } from '#src/features/terminal-cleanup/clean-terminal-output.js';
 import { transformTextContent } from '#src/shared/content.js';
@@ -25,6 +26,10 @@ function transformToolResultText(text: string, config: ResolvedToolConfig): stri
 
   if (config.terminalCleanup.enabled) {
     transformedText = cleanTerminalOutput(transformedText, config.terminalCleanup);
+  }
+
+  if (config.newLinesFolding.enabled) {
+    transformedText = foldNewLines(transformedText, config.newLinesFolding);
   }
 
   if (config.repetitionFolding.enabled) {

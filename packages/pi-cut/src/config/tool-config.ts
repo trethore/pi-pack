@@ -5,6 +5,7 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
     enabled: config.enabled,
     terminalCleanup: { ...config.terminalCleanup },
     repetitionFolding: { ...config.repetitionFolding },
+    newLinesFolding: { ...config.newLinesFolding },
     lineTruncation: { ...config.lineTruncation },
   };
 
@@ -18,6 +19,7 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
     });
     applyStrategyOverride(resolvedConfig.terminalCleanup, override.terminalCleanup);
     applyStrategyOverride(resolvedConfig.repetitionFolding, override.repetitionFolding);
+    applyStrategyOverride(resolvedConfig.newLinesFolding, override.newLinesFolding);
     applyStrategyOverride(resolvedConfig.lineTruncation, override.lineTruncation);
   }
 
@@ -31,6 +33,7 @@ function applyDefaultToolBehavior(config: ResolvedToolConfig, toolName: string) 
 
   if (toolName === 'edit' || toolName === 'write') {
     config.repetitionFolding.enabled = false;
+    config.newLinesFolding.enabled = false;
     config.lineTruncation.enabled = false;
   }
 }

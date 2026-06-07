@@ -8,6 +8,7 @@ import {
   type PiCutConfig,
 } from '#src/config/schema.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
+import { mergeNewLinesFoldingFields } from '#src/config/sections/new-lines-folding.js';
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
 import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanup.js';
 import { mergeToolOverrides } from '#src/config/tool-overrides.js';
@@ -28,6 +29,7 @@ function cloneDefaultConfig(): PiCutConfig {
     ...defaultConfig,
     terminalCleanup: { ...defaultConfig.terminalCleanup },
     repetitionFolding: { ...defaultConfig.repetitionFolding },
+    newLinesFolding: { ...defaultConfig.newLinesFolding },
     lineTruncation: { ...defaultConfig.lineTruncation },
     tools: [],
   };
@@ -52,6 +54,9 @@ function mergeConfig(
       configPath,
       errors
     );
+  });
+  mergeSection(source, 'newLinesFolding', configPath, errors, (section, sectionName) => {
+    mergeNewLinesFoldingFields(target.newLinesFolding, section, sectionName, configPath, errors);
   });
   mergeSection(source, 'lineTruncation', configPath, errors, (section, sectionName) => {
     mergeLineTruncationFields(target.lineTruncation, section, sectionName, configPath, errors);

@@ -37,6 +37,48 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([expect.stringContaining('lineTruncation.maxChars value')]);
   });
 
+  it('rejects new lines folding minNewLines below 2', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { minNewLines: 1 } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.newLinesFolding.minNewLines).toBe(10);
+    expect(loaded.errors).toEqual([expect.stringContaining('newLinesFolding.minNewLines value')]);
+  });
+
+  it('rejects new lines folding foldTo below 2', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { foldTo: 1 } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.newLinesFolding.foldTo).toBe(5);
+    expect(loaded.errors).toEqual([expect.stringContaining('newLinesFolding.foldTo value')]);
+  });
+
+  it('rejects new lines folding foldTo above minNewLines', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { minNewLines: 3, foldTo: 4 } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.newLinesFolding).toEqual({ enabled: true, minNewLines: 10, foldTo: 5 });
+    expect(loaded.errors).toEqual([expect.stringContaining('foldTo <= minNewLines')]);
+  });
+
   it('loads repetition folding defaults', async () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
@@ -53,6 +95,23 @@ describe('loadConfig', () => {
       minSavedLines: 3,
       minSavedTokens: 40,
       savingsMode: 'or',
+    });
+  });
+
+  it('loads new lines folding defaults', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.newLinesFolding).toEqual({
+      enabled: true,
+      minNewLines: 10,
+      foldTo: 5,
     });
   });
 
@@ -86,6 +145,27 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.terminalCleanup.trimTrailingWhitespace).toBe(false);
+  });
+
+  it('merges project new lines folding config', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({ newLinesFolding: { enabled: false, minNewLines: 4, foldTo: 2 } })
+    );
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.newLinesFolding).toEqual({
+      enabled: false,
+      minNewLines: 4,
+      foldTo: 2,
+    });
   });
 
   it('rejects invalid terminal cleanup trimTrailingWhitespace values', async () => {
@@ -147,6 +227,39 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.config.repetitionFolding.savingsMode).toBe('or');
     expect(loaded.errors).toEqual([expect.stringContaining('repetitionFolding.savingsMode value')]);
+  });
+
+  it('loads new lines folding tool overrides', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({
+        tools: [
+          {
+            selector: 'write',
+            newLinesFolding: {
+              enabled: true,
+              minNewLines: 3,
+              foldTo: 2,
+            },
+          },
+        ],
+      })
+    );
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.tools).toHaveLength(1);
+    expect(loaded.config.tools[0].newLinesFolding).toEqual({
+      enabled: true,
+      minNewLines: 3,
+      foldTo: 2,
+    });
   });
 
   it('loads repetition folding tool overrides', async () => {

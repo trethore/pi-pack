@@ -27,6 +27,11 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "minSavedTokens": 40,
     "savingsMode": "or",
   },
+  "newLinesFolding": {
+    "enabled": true,
+    "minNewLines": 10,
+    "foldTo": 5,
+  },
   "lineTruncation": {
     "enabled": true,
     "maxChars": 2000,
@@ -54,6 +59,7 @@ Tool override rules:
 - Default tool behavior is applied before `tools` rules:
   - `terminalCleanup` runs on `bash` only.
   - `repetitionFolding` does not run on `edit` or `write`.
+  - `newLinesFolding` does not run on `edit` or `write`.
   - `lineTruncation` does not run on `edit` or `write`.
 - `tools` rules can override these defaults.
 - Rules are applied from top to bottom.
@@ -97,6 +103,27 @@ becomes:
 line A
 line B
 [previous block of 2 lines repeated x2]
+```
+
+### New lines folding
+
+When enabled, consecutive newline runs are folded when they contain at least `minNewLines` newlines. The run is replaced with exactly `foldTo` newlines. Both values must be integers greater than or equal to 2, and `foldTo` must be less than or equal to `minNewLines`.
+
+```text
+before
+
+
+
+after
+```
+
+with `minNewLines: 3` and `foldTo: 2` becomes:
+
+```text
+before
+
+
+after
 ```
 
 ### Line truncation

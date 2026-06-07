@@ -3,13 +3,18 @@ import type { EnabledConfig } from '@trethore/pi-shared/config/schema.js';
 
 const DEFAULT_MAX_CHARS = 2000;
 export const MIN_REPEATS = 2;
+export const MIN_NEW_LINES = 2;
 const DEFAULT_MIN_SAVED_LINES = 3;
 const DEFAULT_MIN_SAVED_TOKENS = 40;
 const DEFAULT_SAVINGS_MODE: SavingsMode = 'or';
+const DEFAULT_MIN_NEW_LINES = 10;
+const DEFAULT_FOLD_TO_NEW_LINES = 5;
+
 export interface PiCutConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
   repetitionFolding: RepetitionFoldingConfig;
+  newLinesFolding: NewLinesFoldingConfig;
   lineTruncation: LineTruncationConfig;
   tools: ToolOverrideConfig[];
 }
@@ -18,6 +23,7 @@ export interface ResolvedToolConfig {
   enabled: boolean;
   terminalCleanup: TerminalCleanupConfig;
   repetitionFolding: RepetitionFoldingConfig;
+  newLinesFolding: NewLinesFoldingConfig;
   lineTruncation: LineTruncationConfig;
 }
 
@@ -26,6 +32,7 @@ export interface ToolOverrideConfig {
   enabled?: boolean;
   terminalCleanup?: Partial<TerminalCleanupConfig>;
   repetitionFolding?: PartialRepetitionFoldingConfig;
+  newLinesFolding?: Partial<NewLinesFoldingConfig>;
   lineTruncation?: Partial<LineTruncationConfig>;
 }
 
@@ -42,6 +49,11 @@ export interface RepetitionFoldingConfig extends EnabledConfig {
   minSavedLines: number;
   minSavedTokens: number;
   savingsMode: SavingsMode;
+}
+
+export interface NewLinesFoldingConfig extends EnabledConfig {
+  minNewLines: number;
+  foldTo: number;
 }
 
 export interface LineTruncationConfig extends EnabledConfig {
@@ -72,6 +84,7 @@ export type PartialPiCutConfig = Partial<{
   enabled: unknown;
   terminalCleanup: PartialTerminalCleanupConfig;
   repetitionFolding: unknown;
+  newLinesFolding: unknown;
   lineTruncation: PartialLineTruncationConfig;
   tools: unknown;
 }>;
@@ -92,6 +105,11 @@ export const defaultConfig: PiCutConfig = {
     minSavedLines: DEFAULT_MIN_SAVED_LINES,
     minSavedTokens: DEFAULT_MIN_SAVED_TOKENS,
     savingsMode: DEFAULT_SAVINGS_MODE,
+  },
+  newLinesFolding: {
+    enabled: true,
+    minNewLines: DEFAULT_MIN_NEW_LINES,
+    foldTo: DEFAULT_FOLD_TO_NEW_LINES,
   },
   lineTruncation: {
     enabled: true,

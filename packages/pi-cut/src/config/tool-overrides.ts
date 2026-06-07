@@ -2,6 +2,7 @@ import { isRecord } from '@trethore/pi-shared/object.js';
 import { hasFields, mergeField, type ConfigFieldMerger } from '#src/config/merge.js';
 import type {
   LineTruncationConfig,
+  NewLinesFoldingConfig,
   PartialPiCutConfig,
   PartialRepetitionFoldingConfig,
   PiCutConfig,
@@ -9,6 +10,7 @@ import type {
   ToolOverrideConfig,
 } from '#src/config/schema.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
+import { mergeNewLinesFoldingFields } from '#src/config/sections/new-lines-folding.js';
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
 import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanup.js';
 import { booleanSchema, toolSelectorSchema } from '#src/config/validation.js';
@@ -82,6 +84,16 @@ function parseToolOverride(
   );
   if (repetitionFolding) override.repetitionFolding = repetitionFolding;
 
+  const newLinesFolding = parseStrategyOverride<NewLinesFoldingConfig>(
+    source,
+    'newLinesFolding',
+    configName,
+    configPath,
+    errors,
+    mergeNewLinesFoldingFields
+  );
+  if (newLinesFolding) override.newLinesFolding = newLinesFolding;
+
   const lineTruncation = parseStrategyOverride<LineTruncationConfig>(
     source,
     'lineTruncation',
@@ -148,6 +160,7 @@ function hasToolOverrideFields(override: ToolOverrideConfig): boolean {
     override.enabled !== undefined ||
     override.terminalCleanup !== undefined ||
     override.repetitionFolding !== undefined ||
+    override.newLinesFolding !== undefined ||
     override.lineTruncation !== undefined
   );
 }
