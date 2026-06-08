@@ -1,8 +1,6 @@
 import type { McpContent, McpResourceContent } from '#src/core/types.js';
 
-type ContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'image'; data: string; mimeType: string };
+type ContentBlock = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
 
 type TransformableContent = McpContent | McpResourceContent;
 
@@ -17,8 +15,7 @@ export function transformMcpContent(content: TransformableContent[] | undefined)
     if (item.type === 'image') return toImageContent(item);
     if (item.type === 'resource') return toTextContent(formatEmbeddedResourceContent(item));
     if (item.type === 'resource_link') return toTextContent(formatResourceLink(item));
-    if (item.type === 'audio')
-      return toTextContent(`[Audio content: ${item.mimeType ?? 'audio/*'}]`);
+    if (item.type === 'audio') return toTextContent(`[Audio content: ${item.mimeType ?? 'audio/*'}]`);
     return toTextContent(JSON.stringify(item));
   });
 }
@@ -56,10 +53,7 @@ function formatResourcePayload(item: McpResourceContent): string {
   if (item.text !== undefined) return [...lines, item.text].join('\n');
   if (item.blob !== undefined) {
     const size = Buffer.byteLength(item.blob, 'base64');
-    return [
-      ...lines,
-      `[Binary resource: ${item.mimeType ?? 'application/octet-stream'}, ${size} bytes]`,
-    ].join('\n');
+    return [...lines, `[Binary resource: ${item.mimeType ?? 'application/octet-stream'}, ${size} bytes]`].join('\n');
   }
   return [...lines, '(empty resource)'].join('\n');
 }

@@ -10,8 +10,7 @@ const WEB_SEARCH_PARAMETERS = Type.Unsafe<Record<string, never>>({
 });
 
 const WEB_SEARCH_MULTIMODAL_CONTENT_TYPES = ['text', 'image'] as const;
-const WEB_SEARCH_UNSUPPORTED_MESSAGE =
-  'web_search is only available with the openai-codex provider';
+const WEB_SEARCH_UNSUPPORTED_MESSAGE = 'web_search is only available with the openai-codex provider';
 const WEB_SEARCH_LOCAL_EXECUTION_MESSAGE =
   'web_search is a native openai-codex provider tool and should not execute locally';
 
@@ -54,8 +53,7 @@ function createWebSearchTool(): ToolDefinition<typeof WEB_SEARCH_PARAMETERS> {
     name: 'web_search',
     label: 'Web Search',
     description: 'Search the web for current or external information.',
-    promptSnippet:
-      'Use web_search when the task requires up-to-date facts, external sources, or broader context.',
+    promptSnippet: 'Use web_search when the task requires up-to-date facts, external sources, or broader context.',
     promptGuidelines: ['Do not use web_search for repository-local questions.'],
     parameters: WEB_SEARCH_PARAMETERS,
     prepareArguments: () => ({}),
@@ -68,10 +66,7 @@ function createWebSearchTool(): ToolDefinition<typeof WEB_SEARCH_PARAMETERS> {
   };
 }
 
-function rewriteNativeWebSearchTool(
-  payload: unknown,
-  model: Pick<Model<Api>, 'provider' | 'id'> | undefined
-): unknown {
+function rewriteNativeWebSearchTool(payload: unknown, model: Pick<Model<Api>, 'provider' | 'id'> | undefined): unknown {
   if (!isRecord(payload) || !Array.isArray(payload.tools)) return payload;
 
   let rewritten = false;
@@ -124,9 +119,7 @@ function supportsNativeWebSearch(
   return (model?.provider ?? '').toLowerCase() === 'openai-codex';
 }
 
-function supportsMultimodalNativeWebSearch(
-  model: Pick<Model<Api>, 'provider' | 'id'> | undefined
-): boolean {
+function supportsMultimodalNativeWebSearch(model: Pick<Model<Api>, 'provider' | 'id'> | undefined): boolean {
   if (!supportsNativeWebSearch(model)) return false;
   return !model.id.toLowerCase().includes('spark');
 }

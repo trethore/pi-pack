@@ -27,37 +27,24 @@ export function loadStandardMcpServers(
   return { servers, errors };
 }
 
-function getStandardMcpConfigPaths(
-  cwd: string,
-  includeGlobal: boolean,
-  includeProject: boolean
-): string[] {
+function getStandardMcpConfigPaths(cwd: string, includeGlobal: boolean, includeProject: boolean): string[] {
   const paths: string[] = [];
   if (includeGlobal) paths.push(path.join(homedir(), '.config', 'mcp', 'mcp.json'));
   if (includeProject) paths.push(path.join(cwd, '.mcp.json'));
   return paths;
 }
 
-function readStandardMcpServers(
-  configPath: string,
-  errors: string[]
-): Record<string, ServerConfig> {
+function readStandardMcpServers(configPath: string, errors: string[]): Record<string, ServerConfig> {
   if (!existsSync(configPath)) return {};
 
-  const parsed = readJsoncConfigFile<Record<string, unknown>>(
-    configPath,
-    'pi-tiny-mcp standard MCP',
-    errors
-  );
+  const parsed = readJsoncConfigFile<Record<string, unknown>>(configPath, 'pi-tiny-mcp standard MCP', errors);
   if (!parsed) return {};
   if (!isRecord(parsed.mcpServers)) return {};
 
   const servers: Record<string, ServerConfig> = {};
   for (const [serverName, value] of Object.entries(parsed.mcpServers)) {
     if (!isRecord(value)) {
-      errors.push(
-        `pi-tiny-mcp ignored MCP server ${serverName} in ${configPath}; expected object.`
-      );
+      errors.push(`pi-tiny-mcp ignored MCP server ${serverName} in ${configPath}; expected object.`);
       continue;
     }
     servers[serverName] = normalizeStandardServer(value);
@@ -81,9 +68,7 @@ function normalizeStandardServer(value: Record<string, unknown>): ServerConfig {
 }
 
 function asStringArray(value: unknown): string[] | undefined {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string')
-    ? value
-    : undefined;
+  return Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : undefined;
 }
 
 function asStringRecord(value: unknown): Record<string, string> | undefined {

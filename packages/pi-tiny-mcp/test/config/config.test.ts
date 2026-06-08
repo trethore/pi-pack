@@ -70,10 +70,7 @@ describe('loadConfig', () => {
     // Arrange
     const { loadConfig } = await importConfigWithHome(makeTempDir());
     const cwd = makeTempDir();
-    writeFileSync(
-      path.join(cwd, '.mcp.json'),
-      JSON.stringify({ mcpServers: { ignored: { command: 'npx' } } })
-    );
+    writeFileSync(path.join(cwd, '.mcp.json'), JSON.stringify({ mcpServers: { ignored: { command: 'npx' } } }));
     writeProjectConfig(cwd, JSON.stringify({ sources: { standardProject: false } }));
 
     // Act

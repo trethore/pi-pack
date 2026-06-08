@@ -126,8 +126,7 @@ function makeCandidate(
   const ending = context.lines[startIndex + repeatedLineCount - 1]?.ending ?? '';
   const marker = makeMarker(lineCount, repeatCount, ending);
   const savedLines = lineCount * (repeatCount - 1) - 1;
-  const savedChars =
-    countRawChars(context, startIndex + lineCount, repeatedLineCount - lineCount) - marker.length;
+  const savedChars = countRawChars(context, startIndex + lineCount, repeatedLineCount - lineCount) - marker.length;
   const savedTokens = estimateTokens(savedChars);
 
   return { lineCount, repeatCount, savedLines, savedTokens, marker };
@@ -137,24 +136,15 @@ function countRawChars(context: FoldingContext, startIndex: number, lineCount: n
   return context.rawCharOffsets[startIndex + lineCount] - context.rawCharOffsets[startIndex];
 }
 
-function countNonEmptyLines(
-  context: FoldingContext,
-  startIndex: number,
-  lineCount: number
-): number {
-  return (
-    context.nonEmptyLineOffsets[startIndex + lineCount] - context.nonEmptyLineOffsets[startIndex]
-  );
+function countNonEmptyLines(context: FoldingContext, startIndex: number, lineCount: number): number {
+  return context.nonEmptyLineOffsets[startIndex + lineCount] - context.nonEmptyLineOffsets[startIndex];
 }
 
 function estimateTokens(chars: number): number {
   return Math.max(0, Math.ceil(chars / CHARS_PER_TOKEN));
 }
 
-function passesSavingsChecks(
-  candidate: RepetitionCandidate,
-  config: RepetitionFoldingConfig
-): boolean {
+function passesSavingsChecks(candidate: RepetitionCandidate, config: RepetitionFoldingConfig): boolean {
   if (candidate.savedTokens <= 0) return false;
 
   const savedLinesCheck = getSavingsCheck(config.minSavedLines, candidate.savedLines);

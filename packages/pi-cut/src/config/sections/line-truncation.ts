@@ -10,15 +10,7 @@ export function mergeLineTruncationFields(
   errors: string[]
 ) {
   mergeEnabledField(target, source, `${configName}.enabled`, configPath, errors);
-  mergeField(
-    source,
-    'maxChars',
-    `${configName}.maxChars`,
-    positiveIntegerSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.maxChars = value;
-    }
-  );
+  mergeField(source, 'maxChars', `${configName}.maxChars`, positiveIntegerSchema, configPath, errors, (value) => {
+    target.maxChars = value;
+  });
 }

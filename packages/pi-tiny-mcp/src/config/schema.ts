@@ -87,10 +87,7 @@ export const toolPrefixSchema = defineConfigSchema(
   'expected one of "server", "short", "none"'
 );
 
-export const serverAuthSchema = defineConfigSchema(
-  z.enum(['bearer', 'oauth']),
-  'expected one of "bearer", "oauth"'
-);
+export const serverAuthSchema = defineConfigSchema(z.enum(['bearer', 'oauth']), 'expected one of "bearer", "oauth"');
 
 export const stringSchema = defineConfigSchema(z.string(), 'expected string');
 

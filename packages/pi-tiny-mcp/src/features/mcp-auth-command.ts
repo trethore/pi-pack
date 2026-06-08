@@ -2,10 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-a
 
 import type { TinyMcpRuntime } from '#src/core/runtime.js';
 
-export function registerMcpAuthCommand(
-  pi: ExtensionAPI,
-  getRuntime: () => Promise<TinyMcpRuntime>
-): void {
+export function registerMcpAuthCommand(pi: ExtensionAPI, getRuntime: () => Promise<TinyMcpRuntime>): void {
   pi.registerCommand('mcp-auth', {
     description: 'Authorize an OAuth MCP server',
     handler: async (args, ctx) => {

@@ -3,20 +3,16 @@ import { transformExpandedSkillContent } from '#src/unsafe/agent-session-patch.j
 
 describe('transformExpandedSkillContent', () => {
   it('does not transform normal user prompts', () => {
-    const output = transformExpandedSkillContent(
-      'hello {{python-version}}',
-      'hello {{python-version}}',
-      (content) => content.replaceAll('{{python-version}}', '3.14.5')
+    const output = transformExpandedSkillContent('hello {{python-version}}', 'hello {{python-version}}', (content) =>
+      content.replaceAll('{{python-version}}', '3.14.5')
     );
 
     expect(output).toBe('hello {{python-version}}');
   });
 
   it('transforms expanded skill content', () => {
-    const output = transformExpandedSkillContent(
-      '/skill:test',
-      '<skill>{{python-version}}</skill>',
-      (content) => content.replaceAll('{{python-version}}', '3.14.5')
+    const output = transformExpandedSkillContent('/skill:test', '<skill>{{python-version}}</skill>', (content) =>
+      content.replaceAll('{{python-version}}', '3.14.5')
     );
 
     expect(output).toBe('<skill>3.14.5</skill>');

@@ -1,8 +1,4 @@
-import type {
-  AgentToolResult,
-  ExtensionAPI,
-  ToolDefinition,
-} from '@earendil-works/pi-coding-agent';
+import type { AgentToolResult, ExtensionAPI, ToolDefinition } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
 
 import type { PiTinyMcpConfig } from '#src/config/schema.js';
@@ -42,8 +38,7 @@ function createProxyToolDefinition(
     name: config.proxyTool.name,
     label: 'MCP',
     description: buildProxyDescription(config),
-    promptSnippet:
-      'Search, inspect, connect, and call configured MCP server tools through one compact gateway.',
+    promptSnippet: 'Search, inspect, connect, and call configured MCP server tools through one compact gateway.',
     parameters: createProxyParametersSchema(),
     async execute(_toolCallId, params) {
       const runtime = await getRuntime();
@@ -117,10 +112,7 @@ async function refreshAllServers(runtime: TinyMcpRuntime): Promise<ProxyToolResu
   return refreshResult(results);
 }
 
-async function refreshOneServer(
-  runtime: TinyMcpRuntime,
-  serverName: string
-): Promise<ProxyToolResult> {
+async function refreshOneServer(runtime: TinyMcpRuntime, serverName: string): Promise<ProxyToolResult> {
   if (!runtime.hasServer(serverName)) return serverNotFoundResult(serverName, 'refresh');
 
   const result = await runtime.refreshServer(serverName);
@@ -142,10 +134,7 @@ function refreshResult(results: RefreshResult[]): ProxyToolResult {
   };
 }
 
-async function executeConnect(
-  runtime: TinyMcpRuntime,
-  serverName: string
-): Promise<ProxyToolResult> {
+async function executeConnect(runtime: TinyMcpRuntime, serverName: string): Promise<ProxyToolResult> {
   if (!runtime.hasServer(serverName)) return serverNotFoundResult(serverName, 'connect');
 
   try {
@@ -156,30 +145,18 @@ async function executeConnect(
 
   const tools = runtime.listTools(serverName);
   return {
-    content: [
-      { type: 'text', text: `Connected to ${serverName}. ${tools.length} tools available.` },
-    ],
+    content: [{ type: 'text', text: `Connected to ${serverName}. ${tools.length} tools available.` }],
     details: { mode: 'connect', server: serverName, toolCount: tools.length },
   };
 }
 
-function executeDescribe(
-  runtime: TinyMcpRuntime,
-  config: PiTinyMcpConfig,
-  toolName: string
-): ProxyToolResult {
+function executeDescribe(runtime: TinyMcpRuntime, config: PiTinyMcpConfig, toolName: string): ProxyToolResult {
   const tool = runtime.describeTool(toolName);
   if (!tool) return toolNotFoundResult(toolName, 'describe');
 
-  const lines = [
-    tool.name,
-    `Server: ${tool.serverName}`,
-    '',
-    tool.description || '(no description)',
-  ];
+  const lines = [tool.name, `Server: ${tool.serverName}`, '', tool.description || '(no description)'];
   if (tool.resourceUri) lines.push('', `Resource: ${tool.resourceUri}`, 'No parameters required.');
-  else if (config.proxyTool.includeSchemasInSearch)
-    lines.push('', 'Parameters:', formatSchema(tool.inputSchema));
+  else if (config.proxyTool.includeSchemasInSearch) lines.push('', 'Parameters:', formatSchema(tool.inputSchema));
 
   return {
     content: [{ type: 'text', text: lines.join('\n').trim() }],
@@ -187,11 +164,7 @@ function executeDescribe(
   };
 }
 
-function executeSearch(
-  runtime: TinyMcpRuntime,
-  config: PiTinyMcpConfig,
-  query: string
-): ProxyToolResult {
+function executeSearch(runtime: TinyMcpRuntime, config: PiTinyMcpConfig, query: string): ProxyToolResult {
   const matches = runtime.searchTools(query);
   const text =
     matches.length === 0
@@ -226,10 +199,7 @@ function toolNotFoundResult(toolName: string, mode: 'call' | 'describe'): ProxyT
   );
 }
 
-function serverNotFoundResult(
-  serverName: string,
-  mode: 'connect' | 'list' | 'refresh'
-): ProxyToolResult {
+function serverNotFoundResult(serverName: string, mode: 'connect' | 'list' | 'refresh'): ProxyToolResult {
   return errorResult(
     mode,
     'server_not_found',
@@ -261,12 +231,7 @@ function serverFailureResult(
   );
 }
 
-function errorResult(
-  mode: string,
-  error: string,
-  text: string,
-  details: Record<string, unknown>
-): ProxyToolResult {
+function errorResult(mode: string, error: string, text: string, details: Record<string, unknown>): ProxyToolResult {
   return {
     content: [{ type: 'text', text }],
     details: { mode, error, ...details },
@@ -308,8 +273,7 @@ function getStatusMarker(status: string): string {
 function formatToolSummary(tool: ToolMetadata, config?: PiTinyMcpConfig): string {
   const lines = [tool.name, `  Server: ${tool.serverName}`];
   if (tool.description) lines.push(`  ${tool.description}`);
-  if (config?.proxyTool.includeSchemasInSearch && !tool.resourceUri)
-    lines.push(formatSchema(tool.inputSchema, '  '));
+  if (config?.proxyTool.includeSchemasInSearch && !tool.resourceUri) lines.push(formatSchema(tool.inputSchema, '  '));
   return lines.join('\n');
 }
 
@@ -319,8 +283,7 @@ function getErrorMessage(error: unknown): string {
 
 function buildProxyDescription(config: PiTinyMcpConfig): string {
   const serverNames = Object.keys(config.servers);
-  const serverSummary =
-    serverNames.length > 0 ? `\nConfigured servers: ${serverNames.join(', ')}` : '';
+  const serverSummary = serverNames.length > 0 ? `\nConfigured servers: ${serverNames.join(', ')}` : '';
   return `MCP gateway. Use one compact tool to discover and call configured MCP server tools.${serverSummary}\n\nModes: no args=status, server=list, search=find tools, describe=show schema, connect=start server, refresh=refresh metadata, tool+args=call tool. Args must be a JSON object string.`;
 }
 
@@ -328,18 +291,12 @@ function createProxyParametersSchema() {
   return Type.Object({
     server: Type.Optional(Type.String({ description: 'List cached tools for a server.' })),
     search: Type.Optional(Type.String({ description: 'Search MCP tools by name or description.' })),
-    describe: Type.Optional(
-      Type.String({ description: 'Show details and input schema for one MCP tool.' })
-    ),
-    connect: Type.Optional(
-      Type.String({ description: 'Connect to a server and refresh its cached tool metadata.' })
-    ),
+    describe: Type.Optional(Type.String({ description: 'Show details and input schema for one MCP tool.' })),
+    connect: Type.Optional(Type.String({ description: 'Connect to a server and refresh its cached tool metadata.' })),
     refresh: Type.Optional(
       Type.String({ description: 'Refresh metadata for a server, or use "all" for every server.' })
     ),
     tool: Type.Optional(Type.String({ description: 'Call an MCP tool by displayed tool name.' })),
-    args: Type.Optional(
-      Type.String({ description: 'JSON object string passed as MCP tool arguments.' })
-    ),
+    args: Type.Optional(Type.String({ description: 'JSON object string passed as MCP tool arguments.' })),
   });
 }

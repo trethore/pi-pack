@@ -143,9 +143,7 @@ describe('runtime and feature tests', () => {
     await expect(runtime.connectServer('github')).rejects.toThrow('spawn ENOENT');
 
     // Assert
-    expect(runtime.getStatus()).toEqual([
-      { name: 'github', status: 'failed', toolCount: 0, error: 'spawn ENOENT' },
-    ]);
+    expect(runtime.getStatus()).toEqual([{ name: 'github', status: 'failed', toolCount: 0, error: 'spawn ENOENT' }]);
   });
 });
 
@@ -160,9 +158,7 @@ async function importCacheWithHome(homeDir: string) {
 
 type RegisteredTool = Parameters<ExtensionAPI['registerTool']>[0];
 
-async function createRegisteredProxyTool(
-  runtime: Record<string, unknown>
-): Promise<RegisteredTool> {
+async function createRegisteredProxyTool(runtime: Record<string, unknown>): Promise<RegisteredTool> {
   const { registerProxyTool } = await import('#pi-tiny-mcp/features/proxy-tool.js');
   let registeredTool: RegisteredTool | undefined;
   const pi = {
@@ -171,11 +167,7 @@ async function createRegisteredProxyTool(
     },
   } as Pick<ExtensionAPI, 'registerTool'> as ExtensionAPI;
 
-  registerProxyTool(
-    pi,
-    createConfig({ servers: { github: { command: 'npx' } } }),
-    async () => runtime as never
-  );
+  registerProxyTool(pi, createConfig({ servers: { github: { command: 'npx' } } }), async () => runtime as never);
   if (!registeredTool) throw new Error('proxy tool was not registered');
   return registeredTool;
 }

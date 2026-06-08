@@ -66,11 +66,7 @@ describe('time taken feature', () => {
   it('resets the timer between runs', () => {
     // Arrange
     const dateNow = vi.spyOn(Date, 'now');
-    dateNow
-      .mockReturnValueOnce(1000)
-      .mockReturnValueOnce(2000)
-      .mockReturnValueOnce(10_000)
-      .mockReturnValueOnce(75_000);
+    dateNow.mockReturnValueOnce(1000).mockReturnValueOnce(2000).mockReturnValueOnce(10_000).mockReturnValueOnce(75_000);
     const piApi = createPiApi();
     registerTimeTakenFeature(piApi.extensionApi);
 

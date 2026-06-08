@@ -44,32 +44,16 @@ function mergeConfig(
 
   mergeSection(source, 'surfaces', configPath, errors, (section, sectionName) => {
     for (const surfaceName of surfaceNames) {
-      mergeField(
-        section,
-        surfaceName,
-        `${sectionName}.${surfaceName}`,
-        booleanSchema,
-        configPath,
-        errors,
-        (value) => {
-          target.surfaces[surfaceName] = value;
-        }
-      );
+      mergeField(section, surfaceName, `${sectionName}.${surfaceName}`, booleanSchema, configPath, errors, (value) => {
+        target.surfaces[surfaceName] = value;
+      });
     }
   });
 
   mergeSection(source, 'execution', configPath, errors, (section, sectionName) => {
-    mergeField(
-      section,
-      'timeoutMs',
-      `${sectionName}.timeoutMs`,
-      positiveIntegerSchema,
-      configPath,
-      errors,
-      (value) => {
-        target.execution.timeoutMs = value;
-      }
-    );
+    mergeField(section, 'timeoutMs', `${sectionName}.timeoutMs`, positiveIntegerSchema, configPath, errors, (value) => {
+      target.execution.timeoutMs = value;
+    });
     mergeField(
       section,
       'maxOutputChars',
@@ -84,17 +68,9 @@ function mergeConfig(
     mergeField(section, 'cwd', `${sectionName}.cwd`, cwdSchema, configPath, errors, (value) => {
       target.execution.cwd = value;
     });
-    mergeField(
-      section,
-      'shell',
-      `${sectionName}.shell`,
-      booleanSchema,
-      configPath,
-      errors,
-      (value) => {
-        target.execution.shell = value;
-      }
-    );
+    mergeField(section, 'shell', `${sectionName}.shell`, booleanSchema, configPath, errors, (value) => {
+      target.execution.shell = value;
+    });
   });
 
   mergeField(source, 'templates', 'templates', templatesSchema, configPath, errors, (value) => {

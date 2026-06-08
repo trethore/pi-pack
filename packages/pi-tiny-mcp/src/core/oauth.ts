@@ -2,11 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import {
-  auth,
-  type OAuthClientProvider,
-  type OAuthDiscoveryState,
-} from '@modelcontextprotocol/sdk/client/auth.js';
+import { auth, type OAuthClientProvider, type OAuthDiscoveryState } from '@modelcontextprotocol/sdk/client/auth.js';
 import type {
   OAuthClientInformationMixed,
   OAuthClientMetadata,
@@ -46,8 +42,7 @@ export async function authorizeOAuthServer(
   authorizationCode?: string,
   state?: string
 ): Promise<OAuthAuthorizationResult> {
-  if (definition.auth !== 'oauth')
-    throw new Error(`MCP server "${serverName}" does not use OAuth.`);
+  if (definition.auth !== 'oauth') throw new Error(`MCP server "${serverName}" does not use OAuth.`);
   if (!definition.url) throw new Error(`MCP OAuth server "${serverName}" has no url.`);
 
   const provider = createOAuthProvider(serverName);
@@ -140,8 +135,7 @@ export class PiTinyMcpOAuthProvider implements OAuthClientProvider {
 
   codeVerifier(): string {
     const verifier = this.store.getServer(this.serverName).codeVerifier;
-    if (!verifier)
-      throw new Error(`No pending OAuth authorization for MCP server "${this.serverName}".`);
+    if (!verifier) throw new Error(`No pending OAuth authorization for MCP server "${this.serverName}".`);
     return verifier;
   }
 

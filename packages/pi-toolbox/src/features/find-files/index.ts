@@ -28,9 +28,7 @@ interface FindFilesParameters {
   visibleOnly?: boolean;
 }
 
-interface PreparedFindFilesParameters extends Required<
-  Omit<FindFilesParameters, 'depth' | 'patterns'>
-> {
+interface PreparedFindFilesParameters extends Required<Omit<FindFilesParameters, 'depth' | 'patterns'>> {
   patterns: string[];
   depth?: number;
 }
@@ -72,10 +70,7 @@ export interface FindFilesToolOptions {
   runner?: FindFilesRunner;
 }
 
-export function registerFindFilesTool(
-  pi: ExtensionAPI,
-  config: { findFiles: FindFilesToolConfig }
-): void {
+export function registerFindFilesTool(pi: ExtensionAPI, config: { findFiles: FindFilesToolConfig }): void {
   if (!config.findFiles.enabled) return;
   pi.registerTool(createFindFilesToolDefinition(config.findFiles));
 }
@@ -146,9 +141,7 @@ function createFindFilesParametersSchema(defaultLimit: number) {
   return Type.Unsafe<FindFilesParameters>(parameters);
 }
 
-function cloneParametersSchema(
-  parameters: FindFilesParametersJsonSchema
-): FindFilesParametersJsonSchema {
+function cloneParametersSchema(parameters: FindFilesParametersJsonSchema): FindFilesParametersJsonSchema {
   return cloneJsonSchema(parameters);
 }
 

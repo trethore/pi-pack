@@ -30,14 +30,9 @@ describe('codexify command completions', () => {
     await saveCurrentCodexAccount(ctx, 'work', { profilePath });
 
     // Act
-    const completions = await getCodexifyArgumentCompletions(
-      'account use w',
-      defaultConfig,
-      commands,
-      {
-        accountProfilePath: profilePath,
-      }
-    );
+    const completions = await getCodexifyArgumentCompletions('account use w', defaultConfig, commands, {
+      accountProfilePath: profilePath,
+    });
 
     // Assert
     expect(completions).toEqual([{ value: 'account use work', label: 'work' }]);
@@ -51,12 +46,9 @@ describe('codexify command completions', () => {
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
-    const completions = await getCodexifyArgumentCompletions(
-      'account delete ',
-      defaultConfig,
-      commands,
-      { accountProfilePath: profilePath }
-    );
+    const completions = await getCodexifyArgumentCompletions('account delete ', defaultConfig, commands, {
+      accountProfilePath: profilePath,
+    });
 
     // Assert
     expect(completions).toEqual([{ value: 'account delete personal', label: 'personal' }]);
@@ -70,12 +62,9 @@ describe('codexify command completions', () => {
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
-    const completions = await getCodexifyArgumentCompletions(
-      'account save p',
-      defaultConfig,
-      commands,
-      { accountProfilePath: profilePath }
-    );
+    const completions = await getCodexifyArgumentCompletions('account save p', defaultConfig, commands, {
+      accountProfilePath: profilePath,
+    });
 
     // Assert
     expect(completions).toBeNull();
@@ -112,8 +101,5 @@ function createCredential(label: string) {
 }
 
 function makeProfilePath(): string {
-  return path.join(
-    mkdtempSync(path.join(tmpdir(), 'pi-codexify-completions-test-')),
-    'accounts.json'
-  );
+  return path.join(mkdtempSync(path.join(tmpdir(), 'pi-codexify-completions-test-')), 'accounts.json');
 }

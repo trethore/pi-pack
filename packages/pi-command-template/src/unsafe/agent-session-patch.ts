@@ -1,9 +1,5 @@
 import { AgentSession } from '@earendil-works/pi-coding-agent';
-import {
-  getUnsafePatchState,
-  transformUnsafeContent,
-  type AgentSessionPrototype,
-} from '#src/unsafe/patch-state.js';
+import { getUnsafePatchState, transformUnsafeContent, type AgentSessionPrototype } from '#src/unsafe/patch-state.js';
 
 export function transformExpandedSkillContent(
   originalText: string,

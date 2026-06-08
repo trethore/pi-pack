@@ -51,13 +51,7 @@ describe('resource tool metadata', () => {
     ];
 
     // Act
-    const excludedByBaseName = buildToolMetadata(
-      [],
-      resources,
-      { excludeTools: ['get_readme'] },
-      'docs',
-      'server'
-    );
+    const excludedByBaseName = buildToolMetadata([], resources, { excludeTools: ['get_readme'] }, 'docs', 'server');
     const excludedByPrefixedName = buildToolMetadata(
       [],
       resources,

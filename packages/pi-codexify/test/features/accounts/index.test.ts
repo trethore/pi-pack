@@ -106,9 +106,9 @@ describe('codex account profiles', () => {
     ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
 
     // Act and assert
-    await expect(
-      saveCurrentCodexAccount(ctx, 'bad/name', { profilePath: makeProfilePath() })
-    ).rejects.toThrow('Codex account names may only contain');
+    await expect(saveCurrentCodexAccount(ctx, 'bad/name', { profilePath: makeProfilePath() })).rejects.toThrow(
+      'Codex account names may only contain'
+    );
   });
 });
 

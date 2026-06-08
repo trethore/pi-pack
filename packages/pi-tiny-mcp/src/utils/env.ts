@@ -7,9 +7,7 @@ export function interpolateEnvVars(value: string): string {
     .replaceAll(/\$env:(\w+)/g, (_, name: string) => process.env[name] ?? '');
 }
 
-export function interpolateEnvRecord(
-  values: Record<string, string> | undefined
-): Record<string, string> | undefined {
+export function interpolateEnvRecord(values: Record<string, string> | undefined): Record<string, string> | undefined {
   if (!values) return undefined;
 
   const resolved: Record<string, string> = {};

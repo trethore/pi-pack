@@ -26,10 +26,7 @@ export type ConfigFieldMerger<T extends object> = (
   errors: string[]
 ) => void;
 
-export function defineConfigSchema<T>(
-  schema: z.ZodType<T>,
-  expected: string
-): ConfigValueSchema<T> {
+export function defineConfigSchema<T>(schema: z.ZodType<T>, expected: string): ConfigValueSchema<T> {
   return {
     expected,
     safeParse: (value) => schema.safeParse(value),
@@ -103,9 +100,7 @@ function makeMergeSection(extensionName: string) {
     if (value === undefined) return;
 
     if (!isRecord(value)) {
-      errors.push(
-        `${extensionName} config ignored invalid ${field} value in ${configPath}; expected object.`
-      );
+      errors.push(`${extensionName} config ignored invalid ${field} value in ${configPath}; expected object.`);
       return;
     }
 

@@ -45,10 +45,7 @@ describe('pi-handy config', () => {
       globalConfigPath,
       '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false }, "timeTaken": { "enabled": false } }'
     );
-    writeProjectConfig(
-      projectDirectory,
-      '{ "enabled": true, "thinkingLevel": { "enabled": true } }'
-    );
+    writeProjectConfig(projectDirectory, '{ "enabled": true, "thinkingLevel": { "enabled": true } }');
 
     // Act
     const loadedConfig = loadConfig(projectDirectory);

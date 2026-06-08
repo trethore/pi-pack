@@ -70,10 +70,7 @@ describe('ripgrep grep runner', () => {
     const cwd = makeTempDir();
     mkdirSync(path.join(cwd, 'root', 'nested', 'deep'), { recursive: true });
     writeFileSync(path.join(cwd, 'root', 'nested', 'child.txt'), 'needle child\n');
-    writeFileSync(
-      path.join(cwd, 'root', 'nested', 'deep', 'grandchild.txt'),
-      'needle grandchild\n'
-    );
+    writeFileSync(path.join(cwd, 'root', 'nested', 'deep', 'grandchild.txt'), 'needle grandchild\n');
 
     // Act
     const result = await runRipgrepGrep({
@@ -114,9 +111,7 @@ describe('ripgrep grep runner', () => {
     });
 
     // Assert
-    expect(result.matches).toEqual([
-      { file: 'nested/deep/target.txt', line: 1, text: 'needle target' },
-    ]);
+    expect(result.matches).toEqual([{ file: 'nested/deep/target.txt', line: 1, text: 'needle target' }]);
   });
 
   it('sorts matches by path before applying the collection limit', async () => {

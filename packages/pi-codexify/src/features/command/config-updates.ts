@@ -29,11 +29,7 @@ export function resolveConfigScope(): ConfigScope {
   return existsSync(PROJECT_CONFIG_PATH) ? 'project' : 'global';
 }
 
-export function buildConfigUpdateMessage(
-  label: string,
-  value: CodexControlValue,
-  scope: ConfigScope
-): string {
+export function buildConfigUpdateMessage(label: string, value: CodexControlValue, scope: ConfigScope): string {
   const scopeLabel = scope === 'project' ? 'project config' : 'global config';
   const displayedValue = value === 'off' ? 'off' : value;
   return `${label} set to ${displayedValue} in ${scopeLabel}.`;

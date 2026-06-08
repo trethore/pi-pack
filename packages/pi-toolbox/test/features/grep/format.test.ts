@@ -47,9 +47,7 @@ describe('formatGrepResult', () => {
     });
 
     // Assert
-    expect(result).toBe(
-      lines('matches=4 files=2', '', 'a.txt', '1: a1', '2: a2', '', 'b.txt', '1: b1', '2: b2')
-    );
+    expect(result).toBe(lines('matches=4 files=2', '', 'a.txt', '1: a1', '2: a2', '', 'b.txt', '1: b1', '2: b2'));
   });
 
   it('deduplicates matches returned through overlapping search paths', () => {
@@ -101,15 +99,7 @@ describe('formatGrepResult', () => {
 
     // Assert
     expect(result).toBe(
-      lines(
-        'matches=2 files=2',
-        '',
-        'tmp/project/src/a.ts',
-        '1: tmp match',
-        '',
-        'u/project/src/a.ts',
-        '1: home match'
-      )
+      lines('matches=2 files=2', '', 'tmp/project/src/a.ts', '1: tmp match', '', 'u/project/src/a.ts', '1: home match')
     );
   });
 
@@ -133,14 +123,7 @@ describe('formatGrepResult', () => {
 
     // Assert
     expect(result).toBe(
-      lines(
-        'matches=2 files=1',
-        '',
-        'src/index.ts',
-        '1: first',
-        '2: second',
-        '[more matches in this file]'
-      )
+      lines('matches=2 files=1', '', 'src/index.ts', '1: first', '2: second', '[more matches in this file]')
     );
   });
 

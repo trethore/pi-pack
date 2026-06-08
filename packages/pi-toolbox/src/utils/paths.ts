@@ -15,17 +15,13 @@ export function formatRipgrepPaths(paths: readonly string[]): string[] {
   return paths.length === 1 && paths[0] === '.' ? [] : [...paths];
 }
 
-export function createCompactPathFormatter(
-  searchPaths: readonly string[]
-): (value: string) => string {
+export function createCompactPathFormatter(searchPaths: readonly string[]): (value: string) => string {
   const formatParts = createCompactPathPartsFormatter(searchPaths);
 
   return (value: string) => formatParts(value).displayPath;
 }
 
-function createCompactPathPartsFormatter(
-  searchPaths: readonly string[]
-): (value: string) => CompactPathParts {
+function createCompactPathPartsFormatter(searchPaths: readonly string[]): (value: string) => CompactPathParts {
   const roots = createCompactRoots(searchPaths);
   const includeRootLabels = roots.length > 1;
 
@@ -50,11 +46,7 @@ export function toResolvedDisplayPath(cwd: string, value: string): string {
   return toDisplayPath(path.resolve(cwd, value));
 }
 
-function formatRootedCompactPath(
-  root: CompactRoot,
-  relativePath: string,
-  includeRootLabel: boolean
-): CompactPathParts {
+function formatRootedCompactPath(root: CompactRoot, relativePath: string, includeRootLabel: boolean): CompactPathParts {
   if (relativePath === '') return formatExactRootPath(root, includeRootLabel);
   if (!includeRootLabel || !root.label || root.label === '.') {
     return { relativePath, displayPath: relativePath };

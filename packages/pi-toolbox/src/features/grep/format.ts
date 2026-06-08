@@ -32,10 +32,7 @@ export function formatGrepDisplay(display: GrepDisplay): string {
 
   if (display.matches.length === 0) return formatWithGlobalFooter(header, display);
 
-  return formatWithGlobalFooter(
-    [header, '', ...formatFiles(files, display.perFileLimitedFiles)].join('\n'),
-    display
-  );
+  return formatWithGlobalFooter([header, '', ...formatFiles(files, display.perFileLimitedFiles)].join('\n'), display);
 }
 
 export function createGrepDisplay(options: GrepFormatOptions): GrepDisplay {
@@ -122,21 +119,13 @@ function formatFiles(files: Map<string, GrepMatch[]>, perFileLimitedFiles: Set<s
   const lines: string[] = [];
 
   for (const [file, matches] of files) {
-    lines.push(
-      ...(lines.length > 0 ? [''] : []),
-      file,
-      ...formatFileMatches(file, matches, perFileLimitedFiles)
-    );
+    lines.push(...(lines.length > 0 ? [''] : []), file, ...formatFileMatches(file, matches, perFileLimitedFiles));
   }
 
   return lines;
 }
 
-function formatFileMatches(
-  file: string,
-  matches: GrepMatch[],
-  perFileLimitedFiles: Set<string>
-): string[] {
+function formatFileMatches(file: string, matches: GrepMatch[], perFileLimitedFiles: Set<string>): string[] {
   const lines = matches.map((match) => formatMatch(match));
   return [...lines, ...(perFileLimitedFiles.has(file) ? ['[more matches in this file]'] : [])];
 }

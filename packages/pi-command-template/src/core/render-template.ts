@@ -1,20 +1,13 @@
 import { CommandCache } from '#src/core/command-cache.js';
-import type {
-  CommandTemplateRenderer,
-  CommandRunnerOptions,
-  RenderContext,
-} from '#src/core/types.js';
+import type { CommandTemplateRenderer, CommandRunnerOptions, RenderContext } from '#src/core/types.js';
 
 const TEMPLATE_PATTERN = /\{\{\s*([A-Za-z0-9_-]+)\s*\}\}/g;
 
-export function createCommandTemplateRenderer(
-  options: CommandRunnerOptions
-): CommandTemplateRenderer {
+export function createCommandTemplateRenderer(options: CommandRunnerOptions): CommandTemplateRenderer {
   const cache = new CommandCache(options);
 
   return {
-    render: (content: string, context: RenderContext) =>
-      renderCommandTemplates(content, cache, context),
+    render: (content: string, context: RenderContext) => renderCommandTemplates(content, cache, context),
     getDiagnostics: () => cache.getDiagnostics(),
   };
 }

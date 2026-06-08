@@ -9,10 +9,7 @@ import {
 } from '#src/config/schema.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
 
-type SupportedCodexControlApi =
-  | 'openai-responses'
-  | 'openai-codex-responses'
-  | 'azure-openai-responses';
+type SupportedCodexControlApi = 'openai-responses' | 'openai-codex-responses' | 'azure-openai-responses';
 
 type MutableJsonObject = Record<string, unknown>;
 
@@ -28,10 +25,7 @@ export interface CodexControlsController {
   updateReasoningSummary(value: CodexReasoningSummary | undefined): void;
 }
 
-export function registerCodexControls(
-  pi: ExtensionAPI,
-  config: CodexControlsConfig
-): CodexControlsController {
+export function registerCodexControls(pi: ExtensionAPI, config: CodexControlsConfig): CodexControlsController {
   let activeConfig = config;
 
   pi.on('before_provider_request', (event, ctx) => {
@@ -66,9 +60,7 @@ export function parseCodexVerbosity(value: string): CodexVerbosity | 'off' | und
   return undefined;
 }
 
-export function parseCodexReasoningSummary(
-  value: string
-): CodexReasoningSummary | 'off' | undefined {
+export function parseCodexReasoningSummary(value: string): CodexReasoningSummary | 'off' | undefined {
   if (value === 'off') return 'off';
   if (codexReasoningSummaryValues.includes(value as CodexReasoningSummary)) {
     return value as CodexReasoningSummary;
@@ -103,9 +95,7 @@ function supportsVerbosityControl(model: Pick<Model<Api>, 'api'> | undefined): b
   return supportsCodexControls(model);
 }
 
-function supportsReasoningSummaryControl(
-  model: Pick<Model<Api>, 'api' | 'reasoning'> | undefined
-): boolean {
+function supportsReasoningSummaryControl(model: Pick<Model<Api>, 'api' | 'reasoning'> | undefined): boolean {
   return supportsCodexControls(model) && model?.reasoning === true;
 }
 
@@ -116,19 +106,14 @@ function patchRequestPayload(
 ): unknown {
   if (!isRecord(payload)) return payload;
 
-  const withVerbosity = supportsVerbosityControl(model)
-    ? patchPayloadVerbosity(payload, config.verbosity)
-    : payload;
+  const withVerbosity = supportsVerbosityControl(model) ? patchPayloadVerbosity(payload, config.verbosity) : payload;
 
   return supportsReasoningSummaryControl(model)
     ? patchPayloadReasoningSummary(withVerbosity, config.reasoningSummary)
     : withVerbosity;
 }
 
-function patchPayloadVerbosity(
-  payload: MutableJsonObject,
-  verbosity: CodexVerbosity | undefined
-): MutableJsonObject {
+function patchPayloadVerbosity(payload: MutableJsonObject, verbosity: CodexVerbosity | undefined): MutableJsonObject {
   if (!verbosity) return payload;
 
   const text = isRecord(payload.text) ? payload.text : {};

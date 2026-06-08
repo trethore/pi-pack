@@ -23,17 +23,9 @@ export function mergeNewLinesFoldingFields(
       nextConfig.minNewLines = value;
     }
   );
-  mergeField(
-    source,
-    'foldTo',
-    `${configName}.foldTo`,
-    atLeastTwoIntegerSchema,
-    configPath,
-    errors,
-    (value) => {
-      nextConfig.foldTo = value;
-    }
-  );
+  mergeField(source, 'foldTo', `${configName}.foldTo`, atLeastTwoIntegerSchema, configPath, errors, (value) => {
+    nextConfig.foldTo = value;
+  });
 
   if (
     nextConfig.minNewLines !== undefined &&

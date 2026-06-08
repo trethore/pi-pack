@@ -10,9 +10,7 @@ export function checkUnsafeCompatibility(): CompatibilityCheckResult {
   const errors: string[] = [];
 
   if (!DefaultResourceLoader?.prototype) {
-    errors.push(
-      'pi-command-template: incompatible Pi internals; DefaultResourceLoader is unavailable.'
-    );
+    errors.push('pi-command-template: incompatible Pi internals; DefaultResourceLoader is unavailable.');
   }
 
   if (!AgentSession?.prototype) {
@@ -20,9 +18,7 @@ export function checkUnsafeCompatibility(): CompatibilityCheckResult {
   }
 
   if (!isSupportedPiVersion(VERSION)) {
-    warnings.push(
-      `pi-command-template: declared support is Pi >=0.78.0 <1; current Pi version is ${VERSION}.`
-    );
+    warnings.push(`pi-command-template: declared support is Pi >=0.78.0 <1; current Pi version is ${VERSION}.`);
   }
 
   return { warnings, errors };

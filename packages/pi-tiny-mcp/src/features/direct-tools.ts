@@ -3,11 +3,7 @@ import { Type, type TSchema } from 'typebox';
 import { isRecord } from '@trethore/pi-shared/object.js';
 
 import type { PiTinyMcpConfig, ServerConfig } from '#src/config/schema.js';
-import {
-  isServerCacheValid,
-  loadMetadataCache,
-  type MetadataCache,
-} from '#src/core/metadata-cache.js';
+import { isServerCacheValid, loadMetadataCache, type MetadataCache } from '#src/core/metadata-cache.js';
 import type { TinyMcpRuntime } from '#src/core/runtime.js';
 import type { ToolMetadata } from '#src/core/types.js';
 

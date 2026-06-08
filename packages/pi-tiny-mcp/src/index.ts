@@ -24,8 +24,7 @@ export default function piTinyMcp(pi: ExtensionAPI) {
 
   pi.on('session_start', async (_event, _ctx: ExtensionContext) => {
     const runtime = await runtimeController.restart();
-    if (runtime)
-      registerDirectTools(pi, loadedConfig.config, runtime, runtimeController.getRuntime);
+    if (runtime) registerDirectTools(pi, loadedConfig.config, runtime, runtimeController.getRuntime);
   });
 
   pi.on('session_shutdown', async () => {

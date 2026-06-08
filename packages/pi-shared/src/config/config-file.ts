@@ -23,11 +23,7 @@ export function loadJsoncExtensionConfig<TConfig, TPartialConfig extends Record<
   const config = options.createDefaultConfig();
 
   for (const configPath of options.getConfigPaths(options.cwd)) {
-    const parsedConfig = readJsoncConfigFile<TPartialConfig>(
-      configPath,
-      options.extensionName,
-      errors
-    );
+    const parsedConfig = readJsoncConfigFile<TPartialConfig>(configPath, options.extensionName, errors);
     if (parsedConfig) options.mergeConfig(config, parsedConfig, configPath, errors);
   }
 
@@ -61,13 +57,7 @@ export function readJsoncConfigFile<T extends Record<string, unknown>>(
   return parsed as T;
 }
 
-function formatParseErrors(
-  extensionName: string,
-  configPath: string,
-  parseErrors: ParseError[]
-): string {
-  const messages = parseErrors.map(
-    (error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`
-  );
+function formatParseErrors(extensionName: string, configPath: string, parseErrors: ParseError[]): string {
+  const messages = parseErrors.map((error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`);
   return `${extensionName} config ignored: ${configPath} has JSONC parse errors: ${messages.join(', ')}.`;
 }

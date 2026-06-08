@@ -33,12 +33,7 @@ function cloneDefaultConfig(): PiToolboxConfig {
   };
 }
 
-function mergeConfig(
-  target: PiToolboxConfig,
-  source: PartialPiToolboxConfig,
-  configPath: string,
-  errors: string[]
-) {
+function mergeConfig(target: PiToolboxConfig, source: PartialPiToolboxConfig, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   mergeSection(source, 'findFiles', configPath, errors, (section, sectionName) => {
@@ -101,15 +96,7 @@ function mergeDefaultLimit(
   configPath: string,
   errors: string[]
 ) {
-  mergeField(
-    source,
-    'defaultLimit',
-    `${label}.defaultLimit`,
-    limitSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.defaultLimit = value;
-    }
-  );
+  mergeField(source, 'defaultLimit', `${label}.defaultLimit`, limitSchema, configPath, errors, (value) => {
+    target.defaultLimit = value;
+  });
 }

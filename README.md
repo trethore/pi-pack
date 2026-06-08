@@ -10,6 +10,7 @@ Monorepo for the pi extensions I develop.
 - [pi-handy](./packages/pi-handy): Handy features.
 - [pi-tiny-mcp](./packages/pi-tiny-mcp): Tiny and token-efficient MCP adapter.
 - [pi-toolbox](./packages/pi-toolbox): Various and useful tools.
+- [pi-toolmask](./packages/pi-toolmask): Disable pi tools with wildcard masks.
 
 ## License
 

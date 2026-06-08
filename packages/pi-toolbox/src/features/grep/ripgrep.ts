@@ -70,9 +70,7 @@ function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
     'never',
     '--sort',
     'path',
-    ...(options.limitPerFile === undefined
-      ? []
-      : ['--max-count', String(options.limitPerFile + 1)]),
+    ...(options.limitPerFile === undefined ? [] : ['--max-count', String(options.limitPerFile + 1)]),
     ...formatRipgrepSearchFilterArgs({
       depth: options.depth,
       globs: options.globs,
@@ -117,10 +115,7 @@ function formatMatchKey(cwd: string, match: RipgrepGrepMatch): string {
   return `${toResolvedDisplayPath(cwd, match.file)}\0${match.line}\0${match.text}`;
 }
 
-export function parseRipgrepMatchLine(
-  line: string,
-  maxCharsPerMatch: number
-): RipgrepGrepMatch | undefined {
+export function parseRipgrepMatchLine(line: string, maxCharsPerMatch: number): RipgrepGrepMatch | undefined {
   const event = parseRipgrepEvent(line);
   if (!isRipgrepJsonMatch(event)) return undefined;
 

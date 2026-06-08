@@ -4,10 +4,7 @@ import { clearMetadataCache } from '#src/core/metadata-cache.js';
 import { countFailedRefreshResults, formatRefreshResults } from '#src/core/refresh-results.js';
 import type { TinyMcpRuntime } from '#src/core/runtime.js';
 
-export function registerMcpCommand(
-  pi: ExtensionAPI,
-  getRuntime: () => Promise<TinyMcpRuntime>
-): void {
+export function registerMcpCommand(pi: ExtensionAPI, getRuntime: () => Promise<TinyMcpRuntime>): void {
   pi.registerCommand('mcp', {
     description: 'Show MCP server status and manage MCP cache/connections',
     handler: async (args, ctx) => {
@@ -25,11 +22,7 @@ async function handleMcpCommand(
 
   if (subcommand === 'cache' && target === 'clear') {
     clearMetadataCache();
-    notify(
-      ctx,
-      'pi-tiny-mcp cache cleared. Restart Pi or reconnect servers to rebuild metadata.',
-      'info'
-    );
+    notify(ctx, 'pi-tiny-mcp cache cleared. Restart Pi or reconnect servers to rebuild metadata.', 'info');
     return;
   }
 
@@ -54,19 +47,13 @@ async function handleMcpCommand(
   showStatus(ctx, runtime);
 }
 
-async function refreshMetadata(
-  ctx: ExtensionContext,
-  runtime: TinyMcpRuntime,
-  serverName?: string
-): Promise<void> {
+async function refreshMetadata(ctx: ExtensionContext, runtime: TinyMcpRuntime, serverName?: string): Promise<void> {
   if (serverName && !runtime.hasServer(serverName)) {
     notify(ctx, `pi-tiny-mcp: server "${serverName}" is not configured.`, 'error');
     return;
   }
 
-  const results = serverName
-    ? [await runtime.refreshServer(serverName)]
-    : await runtime.refreshAllServers();
+  const results = serverName ? [await runtime.refreshServer(serverName)] : await runtime.refreshAllServers();
   const failedCount = countFailedRefreshResults(results);
   const level = failedCount > 0 ? 'warning' : 'info';
   notify(ctx, formatRefreshResults(results), level);

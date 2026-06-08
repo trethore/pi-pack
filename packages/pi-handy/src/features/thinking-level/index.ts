@@ -98,10 +98,7 @@ function isLevelSupportedByModel(model: ThinkingModel, level: ThinkingLevel): bo
   return true;
 }
 
-function buildCurrentThinkingLevelMessage(
-  currentLevel: ThinkingLevel,
-  availableLevels: ThinkingLevel[]
-): string {
+function buildCurrentThinkingLevelMessage(currentLevel: ThinkingLevel, availableLevels: ThinkingLevel[]): string {
   return `Current thinking level: ${currentLevel}. Available levels: ${availableLevels.join(', ')}.`;
 }
 

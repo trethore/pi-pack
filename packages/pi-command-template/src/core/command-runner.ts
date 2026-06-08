@@ -20,11 +20,7 @@ interface RunCommandOptions {
 
 export function runTemplateCommand(options: RunCommandOptions): CommandRunResult {
   const diagnostics: CommandDiagnostic[] = [];
-  const cwd = resolveExecutionCwd(
-    options.config.execution.cwd,
-    options.workspaceCwd,
-    options.extensionCwd
-  );
+  const cwd = resolveExecutionCwd(options.config.execution.cwd, options.workspaceCwd, options.extensionCwd);
   const spawnOptions = {
     cwd,
     shell: typeof options.command === 'string' && options.config.execution.shell,
@@ -89,10 +85,7 @@ function runSpawnCommand(
   return spawnDirect(parseCommandArgs(command), options);
 }
 
-function spawnDirect(
-  command: string[],
-  options: Parameters<typeof spawnSync>[2]
-): ReturnType<typeof spawnSync> {
+function spawnDirect(command: string[], options: Parameters<typeof spawnSync>[2]): ReturnType<typeof spawnSync> {
   const args = [...command];
   const file = args.shift();
   if (!file) {

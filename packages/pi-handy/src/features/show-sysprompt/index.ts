@@ -42,11 +42,7 @@ export function registerShowSyspromptCommand(pi: ExtensionAPI) {
   pi.on('context', (event) => ({
     messages: event.messages.filter(
       (message) =>
-        !(
-          message.role === 'custom' &&
-          'customType' in message &&
-          HIDDEN_MESSAGE_TYPES.has(message.customType)
-        )
+        !(message.role === 'custom' && 'customType' in message && HIDDEN_MESSAGE_TYPES.has(message.customType))
     ),
   }));
 }
@@ -141,11 +137,7 @@ function formatCollapsibleMessage(title: string, content: string, expanded: bool
   const expansionKey = formatKeybindingText('app.tools.expand');
   const header = expanded
     ? formatMessageHeader(title, `${expansionKey} to collapse`, theme)
-    : formatMessageHeader(
-        title,
-        `${countLines(displayContent)} lines, ${expansionKey} to expand`,
-        theme
-      );
+    : formatMessageHeader(title, `${countLines(displayContent)} lines, ${expansionKey} to expand`, theme);
   return formatMessageBox(expanded ? `${header}\n\n${displayContent}` : header, theme);
 }
 
@@ -170,14 +162,10 @@ function countLines(content: string) {
 function formatSchemaType(schema: TSchema | undefined): string {
   if (!schema) return 'any';
   if ('const' in schema) return JSON.stringify((schema as TLiteral).const);
-  if ('enum' in schema)
-    return (schema as TEnum).enum.map((value) => JSON.stringify(value)).join(' | ');
-  if ('anyOf' in schema)
-    return (schema as TUnion).anyOf.map((item) => formatSchemaType(item)).join(' | ');
+  if ('enum' in schema) return (schema as TEnum).enum.map((value) => JSON.stringify(value)).join(' | ');
+  if ('anyOf' in schema) return (schema as TUnion).anyOf.map((item) => formatSchemaType(item)).join(' | ');
   if ('oneOf' in schema) {
-    return (schema as TSchema & { oneOf: TSchema[] }).oneOf
-      .map((item) => formatSchemaType(item))
-      .join(' | ');
+    return (schema as TSchema & { oneOf: TSchema[] }).oneOf.map((item) => formatSchemaType(item)).join(' | ');
   }
   if ('items' in schema) return `${formatSchemaType((schema as TArray).items)}[]`;
   if ('type' in schema) {

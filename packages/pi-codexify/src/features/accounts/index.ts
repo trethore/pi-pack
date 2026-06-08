@@ -51,10 +51,7 @@ export function registerCodexAccountSync(pi: ExtensionAPI): void {
   });
 }
 
-export async function handleCodexAccountCommand(
-  parts: readonly string[],
-  ctx: ExtensionCommandContext
-): Promise<void> {
+export async function handleCodexAccountCommand(parts: readonly string[], ctx: ExtensionCommandContext): Promise<void> {
   const action = parseCodexAccountAction(parts[1]);
 
   if (!action) {
@@ -150,10 +147,7 @@ export async function useCodexAccount(
   await saveProfiles(profiles, options.profilePath);
 }
 
-export async function deleteCodexAccount(
-  name: string,
-  options: CodexAccountOptions = {}
-): Promise<void> {
+export async function deleteCodexAccount(name: string, options: CodexAccountOptions = {}): Promise<void> {
   const accountName = requireAccountName(name);
   const profiles = await loadProfiles(options.profilePath);
 
@@ -166,10 +160,7 @@ export async function deleteCodexAccount(
   await saveProfiles(profiles, options.profilePath);
 }
 
-export async function syncActiveCodexAccount(
-  ctx: CodexAuthContext,
-  options: CodexAccountOptions = {}
-): Promise<void> {
+export async function syncActiveCodexAccount(ctx: CodexAuthContext, options: CodexAccountOptions = {}): Promise<void> {
   const profiles = await loadProfiles(options.profilePath);
   if (!profiles.active || !profiles.accounts[profiles.active]) return;
 
@@ -182,9 +173,7 @@ export async function syncActiveCodexAccount(
   await saveProfiles(profiles, options.profilePath);
 }
 
-export async function buildCodexAccountListMessage(
-  options: CodexAccountOptions = {}
-): Promise<string> {
+export async function buildCodexAccountListMessage(options: CodexAccountOptions = {}): Promise<string> {
   const profiles = await loadProfiles(options.profilePath);
   const names = Object.keys(profiles.accounts);
 
@@ -196,9 +185,7 @@ export async function buildCodexAccountListMessage(
   ].join('\n');
 }
 
-export async function getSavedCodexAccountNames(
-  options: CodexAccountOptions = {}
-): Promise<string[]> {
+export async function getSavedCodexAccountNames(options: CodexAccountOptions = {}): Promise<string[]> {
   const profiles = await loadProfiles(options.profilePath);
   return Object.keys(profiles.accounts);
 }
@@ -231,9 +218,7 @@ function getCurrentCodexCredential(
   if (isOpenAICodexCredential(credential)) return credential;
   if (options.allowMissing) return undefined;
 
-  throw new Error(
-    `No active ${CODEX_PROVIDER} OAuth credential. Use /login ${CODEX_PROVIDER} first.`
-  );
+  throw new Error(`No active ${CODEX_PROVIDER} OAuth credential. Use /login ${CODEX_PROVIDER} first.`);
 }
 
 function isOpenAICodexCredential(credential: unknown): credential is OpenAICodexCredential {
@@ -293,9 +278,7 @@ function requireAccountName(name: string): string {
   const accountName = normalizeAccountName(name);
   if (!accountName) throw new Error('Missing Codex account name.');
   if (!/^[a-zA-Z0-9._-]+$/.test(accountName)) {
-    throw new Error(
-      'Codex account names may only contain letters, numbers, dots, underscores, and dashes.'
-    );
+    throw new Error('Codex account names may only contain letters, numbers, dots, underscores, and dashes.');
   }
   return accountName;
 }
@@ -320,15 +303,11 @@ function normalizeProfiles(value: unknown): CodexAccountProfiles {
     if (isOpenAICodexCredential(credential)) normalizedAccounts[name] = credential;
   }
 
-  const active =
-    typeof value.active === 'string' && normalizedAccounts[value.active] ? value.active : undefined;
+  const active = typeof value.active === 'string' && normalizedAccounts[value.active] ? value.active : undefined;
   return { active, accounts: normalizedAccounts };
 }
 
-async function saveProfiles(
-  profiles: CodexAccountProfiles,
-  profilePath = DEFAULT_PROFILE_PATH
-): Promise<void> {
+async function saveProfiles(profiles: CodexAccountProfiles, profilePath = DEFAULT_PROFILE_PATH): Promise<void> {
   await fs.mkdir(path.dirname(profilePath), { recursive: true });
   await fs.writeFile(profilePath, `${JSON.stringify(profiles, null, 2)}\n`, {
     encoding: 'utf8',

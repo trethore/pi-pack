@@ -12,9 +12,7 @@ export function registerToolResultPipeline(pi: ExtensionAPI, config: PiCutConfig
     const toolConfig = resolveToolConfig(config, event.toolName);
     if (!toolConfig.enabled) return;
 
-    const content = transformTextContent(event.content, (text) =>
-      transformToolResultText(text, toolConfig)
-    );
+    const content = transformTextContent(event.content, (text) => transformToolResultText(text, toolConfig));
     if (content === event.content) return;
 
     return { content };

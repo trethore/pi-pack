@@ -93,10 +93,7 @@ export function splitArgs(args: string): string[] {
   return trimmed ? trimmed.split(/\s+/) : [];
 }
 
-function getRootCompletionCandidates(
-  config: PiCodexifyConfig,
-  commands: readonly CompletionCommand[]
-): string[] {
+function getRootCompletionCandidates(config: PiCodexifyConfig, commands: readonly CompletionCommand[]): string[] {
   return commands.filter((command) => command.isAvailable(config)).map((command) => command.name);
 }
 
@@ -142,14 +139,8 @@ function formatCompletionToken(
   return candidateNeedsMoreArgs(candidate, commands) ? `${candidate} ` : candidate;
 }
 
-function candidateNeedsMoreArgs(
-  candidate: string,
-  commands: readonly CompletionCommand[]
-): boolean {
-  return (
-    findCommand(candidate, commands)?.needsMoreArgs === true ||
-    parseCodexAccountAction(candidate) != null
-  );
+function candidateNeedsMoreArgs(candidate: string, commands: readonly CompletionCommand[]): boolean {
+  return findCommand(candidate, commands)?.needsMoreArgs === true || parseCodexAccountAction(candidate) != null;
 }
 
 function hasAccountNameCompletion(state: CompletionState): boolean {
@@ -157,18 +148,10 @@ function hasAccountNameCompletion(state: CompletionState): boolean {
   return action === 'use' || action === 'delete';
 }
 
-function isReasoningSummaryCommand(
-  command: string,
-  commands: readonly CompletionCommand[]
-): boolean {
+function isReasoningSummaryCommand(command: string, commands: readonly CompletionCommand[]): boolean {
   return findCommand(command, commands)?.name === 'reasoning-summary';
 }
 
-function findCommand(
-  commandName: string,
-  commands: readonly CompletionCommand[]
-): CompletionCommand | undefined {
-  return commands.find(
-    (command) => command.name === commandName || command.aliases?.includes(commandName)
-  );
+function findCommand(commandName: string, commands: readonly CompletionCommand[]): CompletionCommand | undefined {
+  return commands.find((command) => command.name === commandName || command.aliases?.includes(commandName));
 }

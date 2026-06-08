@@ -33,12 +33,7 @@ function cloneDefaultConfig(): PiCodexifyConfig {
   };
 }
 
-function mergeConfig(
-  target: PiCodexifyConfig,
-  source: PartialPiCodexifyConfig,
-  configPath: string,
-  errors: string[]
-) {
+function mergeConfig(target: PiCodexifyConfig, source: PartialPiCodexifyConfig, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   mergeSection(source, 'codex', configPath, errors, (section, sectionName) => {
@@ -63,17 +58,9 @@ function mergeCodexFields(
   errors: string[]
 ) {
   mergeEnabledField(target.codex, source, `${configName}.enabled`, configPath, errors);
-  mergeField(
-    source,
-    'verbosity',
-    `${configName}.verbosity`,
-    codexVerbositySchema,
-    configPath,
-    errors,
-    (value) => {
-      target.codex.verbosity = value ?? undefined;
-    }
-  );
+  mergeField(source, 'verbosity', `${configName}.verbosity`, codexVerbositySchema, configPath, errors, (value) => {
+    target.codex.verbosity = value ?? undefined;
+  });
   mergeField(
     source,
     'reasoningSummary',

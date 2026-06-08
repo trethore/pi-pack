@@ -1,7 +1,4 @@
-const OSC_SEQUENCE_PATTERN = new RegExp(
-  String.raw`\u001B\][^\u0007\u001B]*(?:\u0007|\u001B\\)`,
-  'g'
-);
+const OSC_SEQUENCE_PATTERN = new RegExp(String.raw`\u001B\][^\u0007\u001B]*(?:\u0007|\u001B\\)`, 'g');
 const ANSI_SEQUENCE_PATTERN = new RegExp(
   String.raw`[\u001B\u009B][[\]\()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))`,
   'g'
@@ -54,9 +51,7 @@ function collapseCarriageReturns(text: string): string {
     const bodyWithPossibleCarriageReturn = hasNewline ? segment.slice(0, -1) : segment;
     const newline = hasNewline ? '\n' : '';
     const hasCrLfEnding = bodyWithPossibleCarriageReturn.endsWith('\r');
-    const body = hasCrLfEnding
-      ? bodyWithPossibleCarriageReturn.slice(0, -1)
-      : bodyWithPossibleCarriageReturn;
+    const body = hasCrLfEnding ? bodyWithPossibleCarriageReturn.slice(0, -1) : bodyWithPossibleCarriageReturn;
     const crLfPrefix = hasCrLfEnding ? '\r' : '';
     const lastCarriageReturnIndex = body.lastIndexOf('\r');
 

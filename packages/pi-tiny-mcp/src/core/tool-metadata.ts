@@ -27,10 +27,7 @@ export function findToolByName(
   return undefined;
 }
 
-function findToolInList(
-  metadata: readonly ToolMetadata[] | undefined,
-  toolName: string
-): ToolMetadata | undefined {
+function findToolInList(metadata: readonly ToolMetadata[] | undefined, toolName: string): ToolMetadata | undefined {
   if (!metadata) return undefined;
   const exact = metadata.find((tool) => tool.name === toolName);
   if (exact) return exact;
@@ -44,9 +41,7 @@ export function formatSchema(schema: unknown, indent = '  '): string {
 
   const objectSchema = schema as Record<string, unknown>;
   if (objectSchema.type !== 'object' || !isRecord(objectSchema.properties)) {
-    return objectSchema.type
-      ? `${indent}(${String(objectSchema.type)})`
-      : `${indent}(complex schema)`;
+    return objectSchema.type ? `${indent}(${String(objectSchema.type)})` : `${indent}(complex schema)`;
   }
 
   return formatObjectProperties(objectSchema.properties, objectSchema.required, indent);
@@ -59,9 +54,7 @@ function buildMcpToolMetadata(
   prefix: ToolPrefix
 ): ToolMetadata[] {
   return tools
-    .filter(
-      (tool) => tool.name && !isToolExcluded(tool.name, serverName, prefix, definition.excludeTools)
-    )
+    .filter((tool) => tool.name && !isToolExcluded(tool.name, serverName, prefix, definition.excludeTools))
     .map((tool) => ({
       name: formatToolName(tool.name, serverName, prefix),
       originalName: tool.name,
@@ -82,9 +75,7 @@ function buildResourceToolMetadata(
   return resources
     .filter((resource) => resource.name && resource.uri)
     .map((resource) => ({ resource, baseName: `get_${resourceNameToToolName(resource.name)}` }))
-    .filter(
-      ({ baseName }) => !isToolExcluded(baseName, serverName, prefix, definition.excludeTools)
-    )
+    .filter(({ baseName }) => !isToolExcluded(baseName, serverName, prefix, definition.excludeTools))
     .map(({ resource, baseName }) => ({
       name: formatToolName(baseName, serverName, prefix),
       originalName: baseName,
@@ -114,11 +105,7 @@ function uniquifyToolNames(metadata: ToolMetadata[]): ToolMetadata[] {
   });
 }
 
-function createUniqueToolName(
-  tool: ToolMetadata,
-  duplicateIndex: number,
-  usedNames: ReadonlySet<string>
-): string {
+function createUniqueToolName(tool: ToolMetadata, duplicateIndex: number, usedNames: ReadonlySet<string>): string {
   const preferredSuffix = tool.resourceUri ? resourceUriToToolSuffix(tool.resourceUri) : '';
   const suffixes = [preferredSuffix, String(duplicateIndex)].filter(Boolean);
 
@@ -137,11 +124,7 @@ function toolNameKey(name: string): string {
   return name.replaceAll('-', '_');
 }
 
-function formatObjectProperties(
-  properties: Record<string, unknown>,
-  requiredValue: unknown,
-  indent: string
-): string {
+function formatObjectProperties(properties: Record<string, unknown>, requiredValue: unknown, indent: string): string {
   const required = Array.isArray(requiredValue) ? requiredValue : [];
   const lines = Object.entries(properties).map(([name, propertySchema]) =>
     formatProperty(name, propertySchema, required.includes(name), indent)
@@ -162,8 +145,7 @@ function formatProperty(name: string, schema: unknown, required: boolean, indent
 }
 
 function getPropertyTypeName(schema: Record<string, unknown>): string {
-  if (Array.isArray(schema.enum))
-    return `enum: ${schema.enum.map((value) => JSON.stringify(value)).join(', ')}`;
+  if (Array.isArray(schema.enum)) return `enum: ${schema.enum.map((value) => JSON.stringify(value)).join(', ')}`;
   if (Array.isArray(schema.type)) return schema.type.join(' | ');
   if (schema.type) return String(schema.type);
   if (schema.anyOf || schema.oneOf) return 'union';

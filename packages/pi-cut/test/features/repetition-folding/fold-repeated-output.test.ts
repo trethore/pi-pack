@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  MAX_FOLDING_LINES,
-  foldRepeatedOutput,
-} from '#pi-cut/features/repetition-folding/fold-repeated-output.js';
+import { MAX_FOLDING_LINES, foldRepeatedOutput } from '#pi-cut/features/repetition-folding/fold-repeated-output.js';
 
 const defaultConfig = {
   enabled: true,

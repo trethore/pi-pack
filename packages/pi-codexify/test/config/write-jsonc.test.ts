@@ -34,17 +34,10 @@ describe('updateJsoncFile', () => {
   it('removes configured empty parent objects after deleting values', async () => {
     // Arrange
     const filePath = path.join(makeTempDir(), 'pi-codexify.jsonc');
-    writeFileSync(
-      filePath,
-      '{\n  "codex": {\n    "verbosity": "low"\n  },\n  "enabled": true\n}\n'
-    );
+    writeFileSync(filePath, '{\n  "codex": {\n    "verbosity": "low"\n  },\n  "enabled": true\n}\n');
 
     // Act
-    await updateJsoncFile(
-      filePath,
-      [{ path: ['codex', 'verbosity'], value: undefined }],
-      [['codex']]
-    );
+    await updateJsoncFile(filePath, [{ path: ['codex', 'verbosity'], value: undefined }], [['codex']]);
 
     // Assert
     expect(readFileSync(filePath, 'utf8')).toBe(`{

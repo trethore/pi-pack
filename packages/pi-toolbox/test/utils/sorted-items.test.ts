@@ -20,8 +20,6 @@ describe('sortedItems', () => {
   });
 
   it('accepts generic iterables', () => {
-    expect(
-      sortedItems(new Set(['b', 'a', 'c']), (left, right) => left.localeCompare(right))
-    ).toEqual(['a', 'b', 'c']);
+    expect(sortedItems(new Set(['b', 'a', 'c']), (left, right) => left.localeCompare(right))).toEqual(['a', 'b', 'c']);
   });
 });

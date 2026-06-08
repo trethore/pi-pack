@@ -19,16 +19,12 @@ export function installResourceLoaderPatch(): string[] {
   return warnings.flatMap((warning) => (warning ? [warning] : []));
 }
 
-function installSystemPromptPatch(
-  state: UnsafePatchState,
-  prototype: ResourceLoaderPrototype
-): string | undefined {
+function installSystemPromptPatch(state: UnsafePatchState, prototype: ResourceLoaderPrototype): string | undefined {
   return installPrototypePatch({
     state,
     prototype,
     method: 'getSystemPrompt',
-    warning:
-      'pi-command-template: DefaultResourceLoader.getSystemPrompt unavailable; SYSTEM.md templates disabled.',
+    warning: 'pi-command-template: DefaultResourceLoader.getSystemPrompt unavailable; SYSTEM.md templates disabled.',
     patch: (original) =>
       function (this: unknown) {
         const value = original.call(this);
@@ -51,17 +47,12 @@ function installAppendSystemPromptPatch(
     patch: (original) =>
       function (this: unknown) {
         const values = original.call(this) ?? [];
-        return values.map((content) =>
-          transformUnsafeContent({ surface: 'appendSystem', content })
-        );
+        return values.map((content) => transformUnsafeContent({ surface: 'appendSystem', content }));
       },
   });
 }
 
-function installAgentsFilesPatch(
-  state: UnsafePatchState,
-  prototype: ResourceLoaderPrototype
-): string | undefined {
+function installAgentsFilesPatch(state: UnsafePatchState, prototype: ResourceLoaderPrototype): string | undefined {
   return installPrototypePatch({
     state,
     prototype,
@@ -86,16 +77,12 @@ function installAgentsFilesPatch(
   });
 }
 
-function installPromptsPatch(
-  state: UnsafePatchState,
-  prototype: ResourceLoaderPrototype
-): string | undefined {
+function installPromptsPatch(state: UnsafePatchState, prototype: ResourceLoaderPrototype): string | undefined {
   return installPrototypePatch({
     state,
     prototype,
     method: 'getPrompts',
-    warning:
-      'pi-command-template: DefaultResourceLoader.getPrompts unavailable; prompt template templates disabled.',
+    warning: 'pi-command-template: DefaultResourceLoader.getPrompts unavailable; prompt template templates disabled.',
     patch: (original) =>
       function (this: unknown) {
         const result = original.call(this) ?? { prompts: [], diagnostics: [] };
@@ -114,16 +101,12 @@ function installPromptsPatch(
   });
 }
 
-function installSkillsPatch(
-  state: UnsafePatchState,
-  prototype: ResourceLoaderPrototype
-): string | undefined {
+function installSkillsPatch(state: UnsafePatchState, prototype: ResourceLoaderPrototype): string | undefined {
   return installPrototypePatch({
     state,
     prototype,
     method: 'getSkills',
-    warning:
-      'pi-command-template: DefaultResourceLoader.getSkills unavailable; skill metadata templates disabled.',
+    warning: 'pi-command-template: DefaultResourceLoader.getSkills unavailable; skill metadata templates disabled.',
     patch: (original) =>
       function (this: unknown) {
         const result = original.call(this) ?? { skills: [], diagnostics: [] };
@@ -147,9 +130,7 @@ interface PrototypePatchOptions<TMethod extends keyof ResourceLoaderPrototype> {
   prototype: ResourceLoaderPrototype;
   method: TMethod;
   warning: string;
-  patch(
-    original: NonNullable<ResourceLoaderPrototype[TMethod]>
-  ): NonNullable<ResourceLoaderPrototype[TMethod]>;
+  patch(original: NonNullable<ResourceLoaderPrototype[TMethod]>): NonNullable<ResourceLoaderPrototype[TMethod]>;
 }
 
 function installPrototypePatch<TMethod extends keyof ResourceLoaderPrototype>(

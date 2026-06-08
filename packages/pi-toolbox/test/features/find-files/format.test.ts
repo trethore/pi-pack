@@ -13,16 +13,7 @@ describe('formatFindFilesResult', () => {
 
     // Assert
     expect(output).toBe(
-      lines(
-        'found=4',
-        'src/',
-        '  app/',
-        '    layout.tsx',
-        '    page.tsx',
-        '  lib/',
-        '    auth.ts',
-        '    utils.ts'
-      )
+      lines('found=4', 'src/', '  app/', '    layout.tsx', '    page.tsx', '  lib/', '    auth.ts', '    utils.ts')
     );
   });
 

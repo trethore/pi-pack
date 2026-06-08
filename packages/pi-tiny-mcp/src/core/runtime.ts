@@ -13,13 +13,7 @@ import {
 import { authorizeOAuthServer, type OAuthAuthorizationResult } from '#src/core/oauth.js';
 import { McpServerManager } from '#src/core/server-manager.js';
 import { buildToolMetadata, findToolByName } from '#src/core/tool-metadata.js';
-import type {
-  McpContent,
-  McpResource,
-  McpResourceContent,
-  McpTool,
-  ToolMetadata,
-} from '#src/core/types.js';
+import type { McpContent, McpResource, McpResourceContent, McpTool, ToolMetadata } from '#src/core/types.js';
 import { parallelLimit } from '#src/utils/concurrency.js';
 
 export interface ServerStatus {
@@ -51,10 +45,7 @@ export class TinyMcpRuntime {
 
   async start(): Promise<void> {
     for (const [name, definition] of Object.entries(this.config.servers)) {
-      this.lifecycle.registerServer(
-        name,
-        withDefaultLifecycle(definition, this.config.lifecycle.defaultMode)
-      );
+      this.lifecycle.registerServer(name, withDefaultLifecycle(definition, this.config.lifecycle.defaultMode));
     }
 
     await this.connectStartupServers();
@@ -129,10 +120,7 @@ export class TinyMcpRuntime {
     );
   }
 
-  async callTool(
-    toolName: string,
-    argsJson: string | undefined
-  ): Promise<AgentToolResult<Record<string, unknown>>> {
+  async callTool(toolName: string, argsJson: string | undefined): Promise<AgentToolResult<Record<string, unknown>>> {
     return this.callToolWithArgs(toolName, parseArgsJson(argsJson));
   }
 
@@ -141,8 +129,7 @@ export class TinyMcpRuntime {
     args: Record<string, unknown>
   ): Promise<AgentToolResult<Record<string, unknown>>> {
     const tool = this.describeTool(toolName);
-    if (!tool)
-      throw new Error(`MCP tool "${toolName}" not found. Use mcp({ search: "..." }) first.`);
+    if (!tool) throw new Error(`MCP tool "${toolName}" not found. Use mcp({ search: "..." }) first.`);
 
     await this.connectServer(tool.serverName);
     if (tool.resourceUri) return this.readResource(tool);
@@ -187,17 +174,13 @@ export class TinyMcpRuntime {
       return lifecycle === 'eager' || lifecycle === 'keep-alive';
     });
 
-    await parallelLimit(
-      startupServers,
-      this.config.lifecycle.startupConcurrency,
-      async ([name]) => {
-        try {
-          await this.connectServer(name);
-        } catch (error) {
-          this.failures.set(name, getErrorMessage(error));
-        }
+    await parallelLimit(startupServers, this.config.lifecycle.startupConcurrency, async ([name]) => {
+      try {
+        await this.connectServer(name);
+      } catch (error) {
+        this.failures.set(name, getErrorMessage(error));
       }
-    );
+    });
   }
 
   private getServerDefinition(serverName: string): ServerConfig {
@@ -237,9 +220,7 @@ export class TinyMcpRuntime {
     this.setServerMetadata(serverName, connection.tools, connection.resources, definition);
   }
 
-  private async readResource(
-    tool: ToolMetadata
-  ): Promise<AgentToolResult<Record<string, unknown>>> {
+  private async readResource(tool: ToolMetadata): Promise<AgentToolResult<Record<string, unknown>>> {
     if (!tool.resourceUri) throw new Error(`MCP tool "${tool.name}" is not a resource tool.`);
     const result = await this.manager.readResource(tool.serverName, tool.resourceUri);
     const contents = result.contents as McpResourceContent[];
@@ -257,18 +238,12 @@ export class TinyMcpRuntime {
   }
 }
 
-function withDefaultLifecycle(
-  definition: ServerConfig,
-  defaultMode: ServerConfig['lifecycle']
-): ServerConfig {
+function withDefaultLifecycle(definition: ServerConfig, defaultMode: ServerConfig['lifecycle']): ServerConfig {
   return { ...definition, lifecycle: definition.lifecycle ?? defaultMode };
 }
 
 function isSearchMatch(tool: ToolMetadata, lowerQuery: string): boolean {
-  return (
-    tool.name.toLowerCase().includes(lowerQuery) ||
-    tool.description.toLowerCase().includes(lowerQuery)
-  );
+  return tool.name.toLowerCase().includes(lowerQuery) || tool.description.toLowerCase().includes(lowerQuery);
 }
 
 function parseArgsJson(argsJson: string | undefined): Record<string, unknown> {
@@ -280,15 +255,9 @@ function parseArgsJson(argsJson: string | undefined): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-function formatMcpCallResult(
-  result: unknown,
-  tool: ToolMetadata
-): AgentToolResult<Record<string, unknown>> {
-  const resultRecord =
-    result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
-  const content = Array.isArray(resultRecord.content)
-    ? (resultRecord.content as McpContent[])
-    : undefined;
+function formatMcpCallResult(result: unknown, tool: ToolMetadata): AgentToolResult<Record<string, unknown>> {
+  const resultRecord = result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
+  const content = Array.isArray(resultRecord.content) ? (resultRecord.content as McpContent[]) : undefined;
   return {
     content: transformMcpContent(content),
     details: { mode: 'call', server: tool.serverName, tool: tool.name, raw: result },

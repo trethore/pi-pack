@@ -8,10 +8,7 @@ import { loadConfig } from '#src/config/config.js';
 import type { PiCodexifyConfig } from '#src/config/schema.js';
 import { registerCodexifyCommand } from '#src/features/command/index.js';
 import { registerCodexAccountSync } from '#src/features/accounts/index.js';
-import {
-  type CodexControlsController,
-  registerCodexControls,
-} from '#src/features/codex-controls/index.js';
+import { type CodexControlsController, registerCodexControls } from '#src/features/codex-controls/index.js';
 import { registerWebSearch } from '#src/features/web-search/index.js';
 
 interface CodexifyRuntime {

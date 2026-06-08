@@ -10,17 +10,9 @@ export function mergeTerminalCleanupFields(
   errors: string[]
 ) {
   mergeEnabledField(target, source, `${configName}.enabled`, configPath, errors);
-  mergeField(
-    source,
-    'stripAnsi',
-    `${configName}.stripAnsi`,
-    booleanSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.stripAnsi = value;
-    }
-  );
+  mergeField(source, 'stripAnsi', `${configName}.stripAnsi`, booleanSchema, configPath, errors, (value) => {
+    target.stripAnsi = value;
+  });
   mergeField(
     source,
     'collapseCarriageReturns',

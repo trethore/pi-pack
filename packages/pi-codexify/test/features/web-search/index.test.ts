@@ -6,10 +6,7 @@ type TestModel = {
   provider: string;
   id: string;
 };
-type Handler = (
-  event: { model?: TestModel; payload?: unknown },
-  ctx: { model?: TestModel }
-) => unknown;
+type Handler = (event: { model?: TestModel; payload?: unknown }, ctx: { model?: TestModel }) => unknown;
 type RegisteredTool = {
   name: string;
   execute: (
@@ -151,10 +148,7 @@ function createPi(initialActiveTools: string[] = []) {
       return state.activeTools;
     },
     get handlerCount() {
-      return [...handlers.values()].reduce(
-        (count, eventHandlers) => count + eventHandlers.length,
-        0
-      );
+      return [...handlers.values()].reduce((count, eventHandlers) => count + eventHandlers.length, 0);
     },
     extensionApi: {
       registerTool(tool: RegisteredTool) {
@@ -183,11 +177,7 @@ function createPi(initialActiveTools: string[] = []) {
     },
   };
 
-  function emit(
-    eventName: string,
-    event: { model?: TestModel; payload?: unknown },
-    ctx: { model?: TestModel }
-  ) {
+  function emit(eventName: string, event: { model?: TestModel; payload?: unknown }, ctx: { model?: TestModel }) {
     return handlers.get(eventName)?.at(-1)?.(event, ctx);
   }
 

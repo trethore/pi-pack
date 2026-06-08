@@ -23,8 +23,7 @@ export function registerCodexifyCommand(
 ) {
   pi.registerCommand('codexify', {
     description: 'Control Codex payload options and inspect Codex usage',
-    getArgumentCompletions: (prefix) =>
-      getCodexifyArgumentCompletions(prefix, config, CODEXIFY_COMMANDS),
+    getArgumentCompletions: (prefix) => getCodexifyArgumentCompletions(prefix, config, CODEXIFY_COMMANDS),
     handler: async (args, ctx) => {
       await handleCodexifyCommand(args, ctx, config, codexControls);
     },
@@ -119,15 +118,10 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
 ];
 
 function findCodexifyCommand(commandName: string): CodexifyCommand | undefined {
-  return CODEXIFY_COMMANDS.find(
-    (command) => command.name === commandName || command.aliases?.includes(commandName)
-  );
+  return CODEXIFY_COMMANDS.find((command) => command.name === commandName || command.aliases?.includes(commandName));
 }
 
-async function handleUsageCommand(
-  ctx: ExtensionCommandContext,
-  config: PiCodexifyConfig
-): Promise<void> {
+async function handleUsageCommand(ctx: ExtensionCommandContext, config: PiCodexifyConfig): Promise<void> {
   if (!config.usage.enabled) {
     ctx.ui.notify('codexify usage is disabled in pi-codexify.jsonc.', 'warning');
     return;
@@ -236,9 +230,7 @@ function buildStatusMessage(
   return lines.join('\n');
 }
 
-function getCodexControls(
-  codexControls: CodexControlsController | undefined
-): CodexControlsController {
+function getCodexControls(codexControls: CodexControlsController | undefined): CodexControlsController {
   if (codexControls) return codexControls;
   throw new Error('codex controls are not registered');
 }

@@ -1,12 +1,7 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { getConfigPaths } from '#src/config/locations.js';
 import { mergeEnabledField, mergeSection } from '#src/config/merge.js';
-import {
-  defaultConfig,
-  type LoadedConfig,
-  type PartialPiCutConfig,
-  type PiCutConfig,
-} from '#src/config/schema.js';
+import { defaultConfig, type LoadedConfig, type PartialPiCutConfig, type PiCutConfig } from '#src/config/schema.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
 import { mergeNewLinesFoldingFields } from '#src/config/sections/new-lines-folding.js';
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
@@ -35,25 +30,14 @@ function cloneDefaultConfig(): PiCutConfig {
   };
 }
 
-function mergeConfig(
-  target: PiCutConfig,
-  source: PartialPiCutConfig,
-  configPath: string,
-  errors: string[]
-) {
+function mergeConfig(target: PiCutConfig, source: PartialPiCutConfig, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   mergeSection(source, 'terminalCleanup', configPath, errors, (section, sectionName) => {
     mergeTerminalCleanupFields(target.terminalCleanup, section, sectionName, configPath, errors);
   });
   mergeSection(source, 'repetitionFolding', configPath, errors, (section, sectionName) => {
-    mergeRepetitionFoldingFields(
-      target.repetitionFolding,
-      section,
-      sectionName,
-      configPath,
-      errors
-    );
+    mergeRepetitionFoldingFields(target.repetitionFolding, section, sectionName, configPath, errors);
   });
   mergeSection(source, 'newLinesFolding', configPath, errors, (section, sectionName) => {
     mergeNewLinesFoldingFields(target.newLinesFolding, section, sectionName, configPath, errors);

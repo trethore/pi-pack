@@ -16,11 +16,7 @@ import {
   formatToolCall,
   readJsonDefinition,
 } from '#src/utils/tool-definition.js';
-import {
-  runRipgrepGrep,
-  type RipgrepGrepResult,
-  type RunRipgrepGrepOptions,
-} from '#src/features/grep/ripgrep.js';
+import { runRipgrepGrep, type RipgrepGrepResult, type RunRipgrepGrepOptions } from '#src/features/grep/ripgrep.js';
 
 const GREP_TOOL_DEFINITION = readGrepDefinition();
 
@@ -150,16 +146,14 @@ function createGrepParametersSchema(config: GrepToolConfig) {
     '{{defaultLimit}}',
     String(config.defaultLimit)
   );
-  parameters.properties.limitPerFile.description =
-    parameters.properties.limitPerFile.description.replace(
-      '{{defaultLimitPerFile}}',
-      formatDefaultLimitPerFileValue(config.defaultLimitPerFile)
-    );
-  parameters.properties.maxCharsPerMatch.description =
-    parameters.properties.maxCharsPerMatch.description.replace(
-      '{{defaultMaxCharsPerMatch}}',
-      String(config.defaultMaxCharsPerMatch)
-    );
+  parameters.properties.limitPerFile.description = parameters.properties.limitPerFile.description.replace(
+    '{{defaultLimitPerFile}}',
+    formatDefaultLimitPerFileValue(config.defaultLimitPerFile)
+  );
+  parameters.properties.maxCharsPerMatch.description = parameters.properties.maxCharsPerMatch.description.replace(
+    '{{defaultMaxCharsPerMatch}}',
+    String(config.defaultMaxCharsPerMatch)
+  );
   return Type.Unsafe<GrepParameters>(parameters);
 }
 
@@ -171,10 +165,7 @@ function formatDefaultLimitPerFileValue(defaultLimitPerFile: number | undefined)
   return defaultLimitPerFile === undefined ? 'no per-file limit' : String(defaultLimitPerFile);
 }
 
-function prepareGrepParameters(
-  params: GrepParameters,
-  config: GrepToolConfig
-): PreparedGrepParameters {
+function prepareGrepParameters(params: GrepParameters, config: GrepToolConfig): PreparedGrepParameters {
   return {
     regexes: normalizeRequiredStringList(params.regexes, {
       name: 'regexes',

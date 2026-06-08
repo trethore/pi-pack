@@ -31,9 +31,7 @@ export function mergeToolOverrides(
   for (const [index, toolOverride] of source.tools.entries()) {
     const configName = `tools[${index}]`;
     if (!isRecord(toolOverride)) {
-      errors.push(
-        `pi-cut config ignored invalid ${configName} value in ${configPath}; expected object.`
-      );
+      errors.push(`pi-cut config ignored invalid ${configName} value in ${configPath}; expected object.`);
       continue;
     }
 
@@ -52,17 +50,9 @@ function parseToolOverride(
   if (!selector) return undefined;
 
   const override: ToolOverrideConfig = { selector };
-  mergeField(
-    source,
-    'enabled',
-    `${configName}.enabled`,
-    booleanSchema,
-    configPath,
-    errors,
-    (value) => {
-      override.enabled = value;
-    }
-  );
+  mergeField(source, 'enabled', `${configName}.enabled`, booleanSchema, configPath, errors, (value) => {
+    override.enabled = value;
+  });
 
   const terminalCleanup = parseStrategyOverride<TerminalCleanupConfig>(
     source,
@@ -120,9 +110,7 @@ function parseStrategyOverride<T extends object>(
 
   const strategyConfigName = `${configName}.${field}`;
   if (!isRecord(value)) {
-    errors.push(
-      `pi-cut config ignored invalid ${strategyConfigName} value in ${configPath}; expected object.`
-    );
+    errors.push(`pi-cut config ignored invalid ${strategyConfigName} value in ${configPath}; expected object.`);
     return undefined;
   }
 
@@ -139,18 +127,14 @@ function parseToolSelector(
 ): RegExp | undefined {
   const parsedSelector = toolSelectorSchema.safeParse(selector);
   if (!parsedSelector.success) {
-    errors.push(
-      `pi-cut config ignored invalid ${configName}.selector value in ${configPath}; expected string.`
-    );
+    errors.push(`pi-cut config ignored invalid ${configName}.selector value in ${configPath}; expected string.`);
     return undefined;
   }
 
   try {
     return new RegExp(parsedSelector.data === '*' ? '.*' : parsedSelector.data);
   } catch (error) {
-    errors.push(
-      `pi-cut config ignored invalid ${configName}.selector regex in ${configPath}: ${String(error)}.`
-    );
+    errors.push(`pi-cut config ignored invalid ${configName}.selector regex in ${configPath}: ${String(error)}.`);
     return undefined;
   }
 }

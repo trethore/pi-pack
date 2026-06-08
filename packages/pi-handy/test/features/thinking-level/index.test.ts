@@ -10,9 +10,7 @@ import {
 type TestModel = {
   id: string;
   reasoning?: boolean;
-  thinkingLevelMap?: Partial<
-    Record<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh', string | null>
-  >;
+  thinkingLevelMap?: Partial<Record<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh', string | null>>;
 };
 
 describe('thinking level command', () => {
@@ -127,9 +125,7 @@ describe('thinking level command', () => {
 
     // Assert
     expect(piApi.setLevels).toEqual(['high']);
-    expect(commandContext.notifications).toEqual([
-      { message: 'Thinking level: high', type: 'info' },
-    ]);
+    expect(commandContext.notifications).toEqual([{ message: 'Thinking level: high', type: 'info' }]);
   });
 
   it('shows current level when called without arguments', () => {
@@ -144,8 +140,7 @@ describe('thinking level command', () => {
     expect(piApi.setLevels).toEqual([]);
     expect(commandContext.notifications).toEqual([
       {
-        message:
-          'Current thinking level: medium. Available levels: off, minimal, low, medium, high.',
+        message: 'Current thinking level: medium. Available levels: off, minimal, low, medium, high.',
         type: 'info',
       },
     ]);
@@ -161,9 +156,7 @@ describe('thinking level command', () => {
 
     // Assert
     expect(piApi.setLevels).toEqual([]);
-    expect(commandContext.notifications).toEqual([
-      { message: 'Usage: /thinkinglevel off', type: 'warning' },
-    ]);
+    expect(commandContext.notifications).toEqual([{ message: 'Usage: /thinkinglevel off', type: 'warning' }]);
   });
 
   it('uses the latest session/model event for command argument completions', () => {
@@ -220,9 +213,7 @@ function createCommandContext(model: TestModel) {
 
 function createRegisteredCommandApi() {
   type Handler = (event: { model?: TestModel }, ctx: { model?: TestModel }) => void;
-  type Command = Parameters<
-    Parameters<typeof registerThinkingLevelCommand>[0]['registerCommand']
-  >[1];
+  type Command = Parameters<Parameters<typeof registerThinkingLevelCommand>[0]['registerCommand']>[1];
 
   const handlers = new Map<string, Handler>();
   let command: Command | undefined;

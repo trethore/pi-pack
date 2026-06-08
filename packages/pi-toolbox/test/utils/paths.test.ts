@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  createCompactPathFormatter,
-  formatRipgrepPaths,
-  toDisplayPath,
-  toPosixPath,
-} from '#pi-toolbox/utils/paths.js';
+import { createCompactPathFormatter, formatRipgrepPaths, toDisplayPath, toPosixPath } from '#pi-toolbox/utils/paths.js';
 
 describe('path utilities', () => {
   it('omits the default current directory path from ripgrep args', () => {

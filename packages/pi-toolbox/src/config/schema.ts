@@ -33,10 +33,7 @@ export type PartialPiToolboxConfig = Partial<{
 
 export type LoadedConfig = LoadedExtensionConfig<PiToolboxConfig>;
 
-export const limitSchema = defineConfigSchema(
-  z.number().int().min(1).max(1000),
-  'expected integer between 1 and 1000'
-);
+export const limitSchema = defineConfigSchema(z.number().int().min(1).max(1000), 'expected integer between 1 and 1000');
 
 export const maxCharsPerMatchSchema = defineConfigSchema(
   z.number().int().min(100).max(2000),

@@ -118,9 +118,7 @@ export function computeServerHash(definition: ServerConfig): string {
     headers: interpolateEnvRecord(definition.headers),
     auth: definition.auth,
     bearerToken: definition.bearerToken ? interpolateEnvVars(definition.bearerToken) : undefined,
-    bearerTokenEnv: definition.bearerTokenEnv
-      ? interpolateEnvVars(definition.bearerTokenEnv)
-      : undefined,
+    bearerTokenEnv: definition.bearerTokenEnv ? interpolateEnvVars(definition.bearerTokenEnv) : undefined,
     exposeResources: definition.exposeResources,
     excludeTools: definition.excludeTools,
   };

@@ -17,9 +17,7 @@ export interface RunRipgrepLinesOptions<T> {
   formatItemKey?: (item: T) => string;
 }
 
-export function runRipgrepLines<T>(
-  options: RunRipgrepLinesOptions<T>
-): Promise<RipgrepLinesResult<T>> {
+export function runRipgrepLines<T>(options: RunRipgrepLinesOptions<T>): Promise<RipgrepLinesResult<T>> {
   return new Promise((resolve, reject) => {
     if (options.signal?.aborted) {
       reject(new Error('Operation aborted'));

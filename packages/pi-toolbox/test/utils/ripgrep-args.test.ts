@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatRipgrepSearchArgs,
-  formatRipgrepSearchFilterArgs,
-} from '#pi-toolbox/utils/ripgrep-args.js';
+import { formatRipgrepSearchArgs, formatRipgrepSearchFilterArgs } from '#pi-toolbox/utils/ripgrep-args.js';
 
 describe('ripgrep arg utilities', () => {
   it('formats shared search flags in a stable order', () => {

@@ -151,10 +151,7 @@ describe('loadConfig', () => {
     // Arrange
     const { loadConfig } = await importConfigWithEmptyHome();
     const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({ newLinesFolding: { enabled: false, minNewLines: 4, foldTo: 2 } })
-    );
+    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { enabled: false, minNewLines: 4, foldTo: 2 } }));
 
     // Act
     const loaded = loadConfig(cwd);
@@ -179,9 +176,7 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.config.terminalCleanup.trimTrailingWhitespace).toBe(true);
-    expect(loaded.errors).toEqual([
-      expect.stringContaining('terminalCleanup.trimTrailingWhitespace value'),
-    ]);
+    expect(loaded.errors).toEqual([expect.stringContaining('terminalCleanup.trimTrailingWhitespace value')]);
   });
 
   it('merges project repetition folding config', async () => {

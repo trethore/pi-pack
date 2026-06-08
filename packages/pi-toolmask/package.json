@@ -1,0 +1,29 @@
+{
+  "name": "@trethore/pi-toolmask",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Disable pi tools with wildcard masks.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "tools"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.78.0 <1"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-toolmask/*": "./src/*",
+    "#test/*": "./test/*"
+  },
+  "dependencies": {
+    "@trethore/pi-shared": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

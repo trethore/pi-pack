@@ -2,11 +2,7 @@ import { readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-import type {
-  Theme,
-  ToolDefinition,
-  ToolRenderResultOptions,
-} from '@earendil-works/pi-coding-agent';
+import type { Theme, ToolDefinition, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
 import { Text } from '@earendil-works/pi-tui';
 import type { Static, TSchema } from 'typebox';
 
@@ -82,9 +78,7 @@ export async function assertSearchPaths(
   searchPaths: readonly string[],
   options: { toolName: string; requireDirectory?: boolean }
 ): Promise<void> {
-  await Promise.all(
-    searchPaths.map((searchPath) => assertSearchPath(resolveSearchPath(cwd, searchPath), options))
-  );
+  await Promise.all(searchPaths.map((searchPath) => assertSearchPath(resolveSearchPath(cwd, searchPath), options)));
 }
 
 export function formatToolCall(

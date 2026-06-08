@@ -32,6 +32,7 @@
     "dev:pi-command-template": "pi -e ./packages/pi-command-template",
     "dev:pi-tiny-mcp": "pi -e ./packages/pi-tiny-mcp",
     "dev:pi-toolbox": "pi -e ./packages/pi-toolbox",
+    "dev:pi-toolmask": "pi -e ./packages/pi-toolmask",
     "install:global": "pi install .",
     "install:local": "pi install -l .",
     "install:global:pi-cut": "pi install ./packages/pi-cut",
@@ -45,7 +46,9 @@
     "install:global:pi-tiny-mcp": "pi install ./packages/pi-tiny-mcp",
     "install:local:pi-tiny-mcp": "pi install -l ./packages/pi-tiny-mcp",
     "install:global:pi-toolbox": "pi install ./packages/pi-toolbox",
-    "install:local:pi-toolbox": "pi install -l ./packages/pi-toolbox"
+    "install:local:pi-toolbox": "pi install -l ./packages/pi-toolbox",
+    "install:global:pi-toolmask": "pi install ./packages/pi-toolmask",
+    "install:local:pi-toolmask": "pi install -l ./packages/pi-toolmask"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.78.0 <1"
@@ -56,7 +59,8 @@
     "#pi-handy/*": "./packages/pi-handy/src/*",
     "#pi-command-template/*": "./packages/pi-command-template/src/*",
     "#pi-tiny-mcp/*": "./packages/pi-tiny-mcp/src/*",
-    "#pi-toolbox/*": "./packages/pi-toolbox/src/*"
+    "#pi-toolbox/*": "./packages/pi-toolbox/src/*",
+    "#pi-toolmask/*": "./packages/pi-toolmask/src/*"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "latest",

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  disableUnsafePiCommandTemplatePatch,
-  installUnsafePiCommandTemplatePatch,
-} from '#src/unsafe/index.js';
+import { disableUnsafePiCommandTemplatePatch, installUnsafePiCommandTemplatePatch } from '#src/unsafe/index.js';
 import { getUnsafePatchState, transformUnsafeContent } from '#src/unsafe/patch-state.js';
 
 describe('unsafe patch state', () => {
@@ -15,9 +12,7 @@ describe('unsafe patch state', () => {
     installUnsafePiCommandTemplatePatch(firstId, ({ content }) => `${content} first`);
     installUnsafePiCommandTemplatePatch(secondId, ({ content }) => `${content} second`);
 
-    expect(transformUnsafeContent({ surface: 'system', content: 'value' })).toBe(
-      'value first second'
-    );
+    expect(transformUnsafeContent({ surface: 'system', content: 'value' })).toBe('value first second');
 
     disableUnsafePiCommandTemplatePatch(firstId);
 

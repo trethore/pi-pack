@@ -9,9 +9,7 @@ export function normalizeRequiredStringList(
 ): string[] {
   const normalized = normalizeStringList(values);
   if (normalized.length === 0) {
-    throw new Error(
-      `${options.toolName} failed: ${options.name} must contain at least one non-empty string`
-    );
+    throw new Error(`${options.toolName} failed: ${options.name} must contain at least one non-empty string`);
   }
   return normalized;
 }
@@ -29,10 +27,7 @@ export function formatStringList(values: readonly string[] | undefined, fallback
   return normalized.length > 0 ? normalized.join(',') : fallback;
 }
 
-export function formatOptionalStringListFlag(
-  label: string,
-  values: readonly string[] | undefined
-): string | undefined {
+export function formatOptionalStringListFlag(label: string, values: readonly string[] | undefined): string | undefined {
   const normalized = normalizeStringList(values);
   return normalized.length === 0 ? undefined : `${label} [${normalized.join(',')}]`;
 }

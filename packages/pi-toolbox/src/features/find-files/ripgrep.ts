@@ -18,9 +18,7 @@ export interface RipgrepFindFilesResult {
   limited: boolean;
 }
 
-export async function runRipgrepFindFiles(
-  options: RunRipgrepFindFilesOptions
-): Promise<RipgrepFindFilesResult> {
+export async function runRipgrepFindFiles(options: RunRipgrepFindFilesOptions): Promise<RipgrepFindFilesResult> {
   const result = await runRipgrepLines({
     toolName: 'find_files',
     cwd: options.cwd,

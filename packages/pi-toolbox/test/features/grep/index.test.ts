@@ -167,9 +167,9 @@ src/index.ts
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
 
     // Act and assert
-    await expect(
-      tool.execute('call-id', { regexes: [' ', ''] }, undefined, undefined, {} as never)
-    ).rejects.toThrow('grep failed: regexes must contain at least one non-empty string');
+    await expect(tool.execute('call-id', { regexes: [' ', ''] }, undefined, undefined, {} as never)).rejects.toThrow(
+      'grep failed: regexes must contain at least one non-empty string'
+    );
     expect(runner).not.toHaveBeenCalled();
   });
 
@@ -225,13 +225,7 @@ src/index.ts
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
 
     // Act
-    await tool.execute(
-      'call-id',
-      { regexes: ['needle'], paths: ['file.txt'] },
-      undefined,
-      undefined,
-      {} as never
-    );
+    await tool.execute('call-id', { regexes: ['needle'], paths: ['file.txt'] }, undefined, undefined, {} as never);
 
     // Assert
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ paths: ['file.txt'] }));
@@ -330,13 +324,7 @@ src/index.ts
 
     // Act and assert
     await expect(
-      tool.execute(
-        'call-id',
-        { regexes: ['needle'], paths: ['missing'] },
-        undefined,
-        undefined,
-        {} as never
-      )
+      tool.execute('call-id', { regexes: ['needle'], paths: ['missing'] }, undefined, undefined, {} as never)
     ).rejects.toThrow('search path does not exist');
   });
 });

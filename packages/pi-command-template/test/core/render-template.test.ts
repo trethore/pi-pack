@@ -3,10 +3,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { defaultConfig } from '#src/config/schema.js';
-import {
-  createCommandTemplateRenderer,
-  renderCommandTemplates,
-} from '#src/core/render-template.js';
+import { createCommandTemplateRenderer, renderCommandTemplates } from '#src/core/render-template.js';
 
 describe('renderCommandTemplates', () => {
   it('replaces configured template placeholders', () => {

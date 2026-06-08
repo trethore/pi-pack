@@ -1,7 +1,4 @@
-import {
-  UnauthorizedError,
-  type OAuthClientProvider,
-} from '@modelcontextprotocol/sdk/client/auth.js';
+import { UnauthorizedError, type OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -12,12 +9,7 @@ import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ServerConfig } from '#src/config/schema.js';
 import { createOAuthProvider } from '#src/core/oauth.js';
 import type { McpResource, McpTool, ServerConnection } from '#src/core/types.js';
-import {
-  interpolateEnvRecord,
-  interpolateEnvVars,
-  resolveConfigPath,
-  resolveProcessEnv,
-} from '#src/utils/env.js';
+import { interpolateEnvRecord, interpolateEnvVars, resolveConfigPath, resolveProcessEnv } from '#src/utils/env.js';
 
 export class McpServerManager {
   private readonly connections = new Map<string, ServerConnection>();
@@ -80,10 +72,7 @@ export class McpServerManager {
     return Date.now() - connection.lastUsedAt > timeoutMs;
   }
 
-  private async createConnection(
-    name: string,
-    definition: ServerConfig
-  ): Promise<ServerConnection> {
+  private async createConnection(name: string, definition: ServerConfig): Promise<ServerConnection> {
     if (definition.url) return this.createHttpConnection(name, definition);
     if (definition.command) {
       return createStartedConnection(name, definition, createStdioTransport(definition));
@@ -91,31 +80,19 @@ export class McpServerManager {
     throw new Error(`MCP server "${name}" has no command or url`);
   }
 
-  private async createHttpConnection(
-    name: string,
-    definition: ServerConfig
-  ): Promise<ServerConnection> {
+  private async createHttpConnection(name: string, definition: ServerConfig): Promise<ServerConnection> {
     const url = createServerUrl(definition);
     const headers = createHttpHeaders(definition);
     const authProvider = definition.auth === 'oauth' ? createOAuthProvider(name) : undefined;
 
     try {
-      return await createStartedConnection(
-        name,
-        definition,
-        createStreamableHttpTransport(url, headers, authProvider)
-      );
+      return await createStartedConnection(name, definition, createStreamableHttpTransport(url, headers, authProvider));
     } catch (streamableError) {
-      if (streamableError instanceof UnauthorizedError)
-        throw createUnauthorizedError(name, definition);
+      if (streamableError instanceof UnauthorizedError) throw createUnauthorizedError(name, definition);
       if (!shouldTrySseFallback(streamableError)) throw streamableError;
 
       try {
-        return await createStartedConnection(
-          name,
-          definition,
-          createSseTransport(url, headers, authProvider)
-        );
+        return await createStartedConnection(name, definition, createSseTransport(url, headers, authProvider));
       } catch (sseError) {
         if (sseError instanceof UnauthorizedError) throw createUnauthorizedError(name, definition);
         throw new Error(
@@ -134,10 +111,7 @@ export class McpServerManager {
     return connection;
   }
 
-  private async runWithUsageTracking<T>(
-    name: string,
-    run: (connection: ServerConnection) => Promise<T>
-  ): Promise<T> {
+  private async runWithUsageTracking<T>(name: string, run: (connection: ServerConnection) => Promise<T>): Promise<T> {
     const connection = this.getConnectedConnection(name);
     connection.inFlight += 1;
     connection.lastUsedAt = Date.now();
@@ -246,8 +220,7 @@ function createUnauthorizedError(serverName: string, definition: ServerConfig): 
 }
 
 function shouldTrySseFallback(error: unknown): boolean {
-  const code =
-    typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
   return code === 404 || code === 405;
 }
 
@@ -264,10 +237,7 @@ async function createStartedConnection(
 
   try {
     await client.connect(transport);
-    const [tools, resources] = await Promise.all([
-      fetchAllTools(client),
-      fetchAllResources(client),
-    ]);
+    const [tools, resources] = await Promise.all([fetchAllTools(client), fetchAllResources(client)]);
     return createConnection(definition, client, transport, tools, resources);
   } catch (error) {
     await client.close().catch(() => {});

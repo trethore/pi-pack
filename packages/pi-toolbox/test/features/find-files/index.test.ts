@@ -3,10 +3,7 @@ import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  createFindFilesToolDefinition,
-  registerFindFilesTool,
-} from '#pi-toolbox/features/find-files/index.js';
+import { createFindFilesToolDefinition, registerFindFilesTool } from '#pi-toolbox/features/find-files/index.js';
 
 import {
   createPi,
@@ -75,10 +72,7 @@ describe('find_files tool', () => {
       files: ['src/index.ts'],
       limited: false,
     }));
-    const tool = createFindFilesToolDefinition(
-      { enabled: true, defaultLimit: 42 },
-      { cwd, runner }
-    );
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 42 }, { cwd, runner });
 
     // Act
     const result = await tool.execute(
@@ -114,19 +108,10 @@ src/index.ts`,
     // Arrange
     const cwd = makeTempDir();
     const runner = vi.fn(async () => ({ files: [], limited: false }));
-    const tool = createFindFilesToolDefinition(
-      { enabled: true, defaultLimit: 100 },
-      { cwd, runner }
-    );
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
 
     // Act
-    await tool.execute(
-      'call-id',
-      { patterns: [' ', ''], paths: [' '] },
-      undefined,
-      undefined,
-      {} as never
-    );
+    await tool.execute('call-id', { patterns: [' ', ''], paths: [' '] }, undefined, undefined, {} as never);
 
     // Assert
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ patterns: [], paths: ['.'] }));
@@ -140,10 +125,7 @@ src/index.ts`,
       files: ['src/index.ts', './src/index.ts', 'README.md'],
       limited: false,
     }));
-    const tool = createFindFilesToolDefinition(
-      { enabled: true, defaultLimit: 100 },
-      { cwd, runner }
-    );
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
 
     // Act
     const result = await tool.execute(
@@ -173,10 +155,7 @@ src/index.ts`,
       files: ['packages/pi-toolbox/src/index.ts'],
       limited: true,
     }));
-    const tool = createFindFilesToolDefinition(
-      { enabled: true, defaultLimit: 100 },
-      { cwd, runner }
-    );
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
 
     // Act
     const result = await tool.execute(
@@ -221,10 +200,7 @@ pi-toolbox/src/index.ts
     const absoluteSearchPath = path.join(cwd, 'absolute-package');
     mkdirSync(absoluteSearchPath, { recursive: true });
     const runner = vi.fn(async () => ({ files: ['src/index.ts'], limited: false }));
-    const tool = createFindFilesToolDefinition(
-      { enabled: true, defaultLimit: 100 },
-      { cwd, runner }
-    );
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd, runner });
 
     // Act
     const result = await tool.execute(
@@ -265,9 +241,7 @@ src/index.ts`,
     );
 
     // Assert
-    expect(rendered).toContain(
-      '<toolOutput> (limit 20, depth 2, noIgnore, visibleOnly)</toolOutput>'
-    );
+    expect(rendered).toContain('<toolOutput> (limit 20, depth 2, noIgnore, visibleOnly)</toolOutput>');
   });
 
   it('renders collapsed results with an expansion hint', () => {
@@ -351,9 +325,7 @@ src/index.ts`,
 
     // Assert
     expect(zeroResult).toContain('<toolOutput>paths=. count=0</toolOutput>');
-    expect(failedResult).toContain(
-      '<toolOutput>find_files failed: rg executable not found</toolOutput>'
-    );
+    expect(failedResult).toContain('<toolOutput>find_files failed: rg executable not found</toolOutput>');
   });
 
   it('fails when the search path is not a directory', async () => {
@@ -364,13 +336,7 @@ src/index.ts`,
 
     // Act and assert
     await expect(
-      tool.execute(
-        'call-id',
-        { patterns: ['**/*.ts'], paths: ['file.txt'] },
-        undefined,
-        undefined,
-        {} as never
-      )
+      tool.execute('call-id', { patterns: ['**/*.ts'], paths: ['file.txt'] }, undefined, undefined, {} as never)
     ).rejects.toThrow('search path is not a directory');
   });
 });

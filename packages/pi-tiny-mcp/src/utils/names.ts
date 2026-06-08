@@ -3,9 +3,7 @@ import type { ToolPrefix } from '#src/config/schema.js';
 export function formatToolName(toolName: string, serverName: string, prefix: ToolPrefix): string {
   if (prefix === 'none') return toolName;
 
-  const normalizedServerName = normalizeName(
-    prefix === 'short' ? stripMcpSuffix(serverName) : serverName
-  );
+  const normalizedServerName = normalizeName(prefix === 'short' ? stripMcpSuffix(serverName) : serverName);
   return `${normalizedServerName}_${toolName}`;
 }
 

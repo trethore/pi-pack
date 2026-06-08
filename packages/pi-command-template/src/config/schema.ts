@@ -1,12 +1,7 @@
 import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
 
-export type TemplateSurface =
-  | 'system'
-  | 'appendSystem'
-  | 'contextFiles'
-  | 'promptTemplates'
-  | 'skills';
+export type TemplateSurface = 'system' | 'appendSystem' | 'contextFiles' | 'promptTemplates' | 'skills';
 
 export type ExecutionCwd = 'workspace' | 'extension' | string;
 
@@ -68,17 +63,11 @@ export const surfaceNames = [
   'skills',
 ] as const satisfies readonly TemplateSurface[];
 
-export const positiveIntegerSchema = defineConfigSchema(
-  z.number().int().positive(),
-  'expected positive integer'
-);
+export const positiveIntegerSchema = defineConfigSchema(z.number().int().positive(), 'expected positive integer');
 
 export const cwdSchema = defineConfigSchema(z.string().min(1), 'expected non-empty string');
 
-export const templateCommandSchema = z.union([
-  z.string(),
-  z.tuple([z.string().min(1)]).rest(z.string()),
-]);
+export const templateCommandSchema = z.union([z.string(), z.tuple([z.string().min(1)]).rest(z.string())]);
 
 export const templatesSchema = defineConfigSchema(
   z.record(z.string().regex(/^[A-Za-z0-9_-]+$/), templateCommandSchema),

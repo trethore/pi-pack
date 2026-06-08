@@ -69,10 +69,7 @@ describe('loadConfig', () => {
   it('uses null codex control values to disable inherited verbosity and reasoning summary', async () => {
     // Arrange
     const homeDir = makeTempDir();
-    writeGlobalConfig(
-      homeDir,
-      JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed' } })
-    );
+    writeGlobalConfig(homeDir, JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed' } }));
     const { loadConfig } = await importConfigWithHome(homeDir);
     const cwd = makeTempDir();
     writeProjectConfig(cwd, JSON.stringify({ codex: { verbosity: null, reasoningSummary: null } }));

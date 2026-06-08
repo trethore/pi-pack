@@ -1,0 +1,17 @@
+{
+  // Enable pi-toolmask.
+  "enabled": true,
+
+  // Disable matching active tool names.
+  // Use "*" to disable every tool.
+  // Prefix a mask with "!" to keep matching tools enabled.
+  // Example: ["*", "!read"] disables everything except read.
+  // Matching is case-sensitive.
+  "masks": ["bash", "write", "edit"],
+
+  // Reapply masks before each agent run so tools registered or re-enabled later are masked too.
+  "enforceBeforeAgentStart": true,
+
+  // Show a notification when tools are disabled.
+  "notify": false
+}

@@ -16,22 +16,16 @@ export function registerCommandTemplate(pi: ExtensionAPI, config: PiCommandTempl
     extensionCwd,
     onDiagnostic: reportDiagnostic,
   });
-  const installResult = installUnsafePiCommandTemplatePatch(
-    extensionCwd,
-    ({ surface, content, path }) => {
-      if (!isSurfaceEnabled(config, surface)) return content;
-      return renderer.render(content, { surface, path });
-    }
-  );
+  const installResult = installUnsafePiCommandTemplatePatch(extensionCwd, ({ surface, content, path }) => {
+    if (!isSurfaceEnabled(config, surface)) return content;
+    return renderer.render(content, { surface, path });
+  });
   const startupDiagnostics = [
     ...installResult.warnings.map((message) => createStartupDiagnostic(message, 'warning')),
     ...installResult.errors.map((message) => createStartupDiagnostic(message, 'error')),
   ];
 
-  const reporter = registerCommandTemplateDiagnostics(pi, () => [
-    ...startupDiagnostics,
-    ...renderer.getDiagnostics(),
-  ]);
+  const reporter = registerCommandTemplateDiagnostics(pi, () => [...startupDiagnostics, ...renderer.getDiagnostics()]);
 
   function reportDiagnostic(diagnostic: CommandDiagnostic): void {
     reporter.reportDiagnostic(diagnostic);
@@ -42,10 +36,7 @@ export function getExtensionCwd(): string {
   return path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 }
 
-function createStartupDiagnostic(
-  message: string,
-  severity: CommandDiagnostic['severity']
-): CommandDiagnostic {
+function createStartupDiagnostic(message: string, severity: CommandDiagnostic['severity']): CommandDiagnostic {
   return { severity, message };
 }
 

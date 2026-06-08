@@ -47,9 +47,7 @@ function normalizeFiles(files: readonly string[], paths: readonly string[]): str
     if (parts.length > 0) uniqueFiles.set(displayPath, parts);
   }
 
-  return sortedItems(uniqueFiles.entries(), ([left], [right]) => left.localeCompare(right)).map(
-    ([, parts]) => parts
-  );
+  return sortedItems(uniqueFiles.entries(), ([left], [right]) => left.localeCompare(right)).map(([, parts]) => parts);
 }
 
 function splitDisplayPath(displayPath: string): string[] {
@@ -79,10 +77,7 @@ function formatChildren(node: TreeNode, depth: number): string[] {
     const compressed = compressNode(name, child);
     const indent = '  '.repeat(depth);
     const suffix = compressed.node.isFile ? '' : '/';
-    lines.push(
-      `${indent}${compressed.label}${suffix}`,
-      ...formatChildren(compressed.node, depth + 1)
-    );
+    lines.push(`${indent}${compressed.label}${suffix}`, ...formatChildren(compressed.node, depth + 1));
   }
 
   return lines;

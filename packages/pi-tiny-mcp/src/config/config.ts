@@ -62,9 +62,7 @@ function mergeServerMaps(
 function validateServerDefinitions(config: PiTinyMcpConfig, errors: string[]): void {
   for (const [serverName, definition] of Object.entries(config.servers)) {
     if (definition.command || definition.url) continue;
-    errors.push(
-      `${EXTENSION_NAME} config ignored invalid servers.${serverName}; command or url is required.`
-    );
+    errors.push(`${EXTENSION_NAME} config ignored invalid servers.${serverName}; command or url is required.`);
     delete config.servers[serverName];
   }
 }
@@ -130,16 +128,9 @@ function mergeDirectToolsConfig(
 ): void {
   mergeSection(source, 'directTools', configPath, errors, (section, label) => {
     mergeEnabledField(target.directTools, section, `${label}.enabled`, configPath, errors);
-    mergeBooleanField(
-      section,
-      'disableProxyTool',
-      `${label}.disableProxyTool`,
-      configPath,
-      errors,
-      (value) => {
-        target.directTools.disableProxyTool = value;
-      }
-    );
+    mergeBooleanField(section, 'disableProxyTool', `${label}.disableProxyTool`, configPath, errors, (value) => {
+      target.directTools.disableProxyTool = value;
+    });
   });
 }
 
@@ -172,17 +163,9 @@ function mergeLifecycleConfig(
   errors: string[]
 ): void {
   mergeSection(source, 'lifecycle', configPath, errors, (section, label) => {
-    mergeField(
-      section,
-      'defaultMode',
-      `${label}.defaultMode`,
-      lifecycleModeSchema,
-      configPath,
-      errors,
-      (value) => {
-        target.lifecycle.defaultMode = value;
-      }
-    );
+    mergeField(section, 'defaultMode', `${label}.defaultMode`, lifecycleModeSchema, configPath, errors, (value) => {
+      target.lifecycle.defaultMode = value;
+    });
     mergeField(
       section,
       'idleTimeoutMinutes',
@@ -226,17 +209,9 @@ function mergeToolNamesConfig(
   errors: string[]
 ): void {
   mergeSection(source, 'toolNames', configPath, errors, (section, label) => {
-    mergeField(
-      section,
-      'prefix',
-      `${label}.prefix`,
-      toolPrefixSchema,
-      configPath,
-      errors,
-      (value) => {
-        target.toolNames.prefix = value;
-      }
-    );
+    mergeField(section, 'prefix', `${label}.prefix`, toolPrefixSchema, configPath, errors, (value) => {
+      target.toolNames.prefix = value;
+    });
   });
 }
 
@@ -247,26 +222,12 @@ function mergeSourcesConfig(
   errors: string[]
 ): void {
   mergeSection(source, 'sources', configPath, errors, (section, label) => {
-    mergeBooleanField(
-      section,
-      'standardGlobal',
-      `${label}.standardGlobal`,
-      configPath,
-      errors,
-      (value) => {
-        target.sources.standardGlobal = value;
-      }
-    );
-    mergeBooleanField(
-      section,
-      'standardProject',
-      `${label}.standardProject`,
-      configPath,
-      errors,
-      (value) => {
-        target.sources.standardProject = value;
-      }
-    );
+    mergeBooleanField(section, 'standardGlobal', `${label}.standardGlobal`, configPath, errors, (value) => {
+      target.sources.standardGlobal = value;
+    });
+    mergeBooleanField(section, 'standardProject', `${label}.standardProject`, configPath, errors, (value) => {
+      target.sources.standardProject = value;
+    });
   });
 }
 
@@ -278,9 +239,7 @@ function mergeServersConfig(
 ): void {
   if (source.servers === undefined) return;
   if (!isRecord(source.servers)) {
-    errors.push(
-      `${EXTENSION_NAME} config ignored invalid servers value in ${configPath}; expected object.`
-    );
+    errors.push(`${EXTENSION_NAME} config ignored invalid servers value in ${configPath}; expected object.`);
     return;
   }
 
@@ -324,44 +283,21 @@ function mergeServerConfig(
   mergeStringField(source, 'url', `${label}.url`, configPath, errors, (value) => {
     next.url = value;
   });
-  mergeField(
-    source,
-    'headers',
-    `${label}.headers`,
-    stringRecordSchema,
-    configPath,
-    errors,
-    (value) => {
-      next.headers = value;
-    }
-  );
+  mergeField(source, 'headers', `${label}.headers`, stringRecordSchema, configPath, errors, (value) => {
+    next.headers = value;
+  });
   mergeField(source, 'auth', `${label}.auth`, serverAuthSchema, configPath, errors, (value) => {
     next.auth = value;
   });
   mergeStringField(source, 'bearerToken', `${label}.bearerToken`, configPath, errors, (value) => {
     next.bearerToken = value;
   });
-  mergeStringField(
-    source,
-    'bearerTokenEnv',
-    `${label}.bearerTokenEnv`,
-    configPath,
-    errors,
-    (value) => {
-      next.bearerTokenEnv = value;
-    }
-  );
-  mergeField(
-    source,
-    'lifecycle',
-    `${label}.lifecycle`,
-    lifecycleModeSchema,
-    configPath,
-    errors,
-    (value) => {
-      next.lifecycle = value;
-    }
-  );
+  mergeStringField(source, 'bearerTokenEnv', `${label}.bearerTokenEnv`, configPath, errors, (value) => {
+    next.bearerTokenEnv = value;
+  });
+  mergeField(source, 'lifecycle', `${label}.lifecycle`, lifecycleModeSchema, configPath, errors, (value) => {
+    next.lifecycle = value;
+  });
   mergeField(
     source,
     'idleTimeoutMinutes',
@@ -373,30 +309,15 @@ function mergeServerConfig(
       next.idleTimeoutMinutes = value;
     }
   );
-  mergeBooleanField(
-    source,
-    'exposeResources',
-    `${label}.exposeResources`,
-    configPath,
-    errors,
-    (value) => {
-      next.exposeResources = value;
-    }
-  );
+  mergeBooleanField(source, 'exposeResources', `${label}.exposeResources`, configPath, errors, (value) => {
+    next.exposeResources = value;
+  });
   mergeBooleanField(source, 'directTools', `${label}.directTools`, configPath, errors, (value) => {
     next.directTools = value;
   });
-  mergeField(
-    source,
-    'excludeTools',
-    `${label}.excludeTools`,
-    stringArraySchema,
-    configPath,
-    errors,
-    (value) => {
-      next.excludeTools = value;
-    }
-  );
+  mergeField(source, 'excludeTools', `${label}.excludeTools`, stringArraySchema, configPath, errors, (value) => {
+    next.excludeTools = value;
+  });
   mergeBooleanField(source, 'debug', `${label}.debug`, configPath, errors, (value) => {
     next.debug = value;
   });

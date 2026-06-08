@@ -23,10 +23,7 @@ export function formatTextToolResult(
   let text = `\n${displayLines.map((line) => theme.fg('toolOutput', line)).join('\n')}`;
 
   if (remaining > 0) {
-    text += theme.fg(
-      'muted',
-      `\n... (${remaining} more lines, ${formatKeybindingText('app.tools.expand')} to expand)`
-    );
+    text += theme.fg('muted', `\n... (${remaining} more lines, ${formatKeybindingText('app.tools.expand')} to expand)`);
   }
 
   return text;

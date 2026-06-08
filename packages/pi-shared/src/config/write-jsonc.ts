@@ -71,9 +71,7 @@ function detectIndentation(text: string): { insertSpaces: boolean; tabSize: numb
   return { insertSpaces: true, tabSize: Math.max(indentation.length, 1) };
 }
 
-function sortLongestPathsFirst(
-  paths: readonly (readonly string[])[]
-): readonly (readonly string[])[] {
+function sortLongestPathsFirst(paths: readonly (readonly string[])[]): readonly (readonly string[])[] {
   return [...paths].sort((left, right) => right.length - left.length);
 }
 

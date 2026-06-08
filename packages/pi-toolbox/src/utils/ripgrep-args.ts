@@ -1,9 +1,6 @@
 import { formatRipgrepPaths } from '#src/utils/paths.js';
 import { formatRipgrepDepthArgs } from '#src/utils/ripgrep-depth.js';
-import {
-  formatRipgrepExclusionGlobArgs,
-  formatRipgrepHiddenArgs,
-} from '#src/utils/ripgrep-visibility.js';
+import { formatRipgrepExclusionGlobArgs, formatRipgrepHiddenArgs } from '#src/utils/ripgrep-visibility.js';
 
 export interface RipgrepSearchFilterArgsOptions {
   depth?: number;

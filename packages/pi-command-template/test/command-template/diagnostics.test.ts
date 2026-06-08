@@ -39,10 +39,7 @@ describe('registerCommandTemplateDiagnostics', () => {
     const diagnostics: CommandDiagnostic[] = [{ severity: 'warning', message: 'startup warning' }];
     const messages: Array<{ message: string; severity: 'warning' | 'error' }> = [];
     const { handlers, pi } = createFakePi();
-    const reporter = registerCommandTemplateDiagnostics(
-      pi as unknown as ExtensionAPI,
-      () => diagnostics
-    );
+    const reporter = registerCommandTemplateDiagnostics(pi as unknown as ExtensionAPI, () => diagnostics);
     const context = createFakeContext(messages);
 
     handlers[0]?.handler({}, context);
@@ -64,10 +61,7 @@ describe('registerCommandTemplateDiagnostics', () => {
     const diagnostics: CommandDiagnostic[] = [];
     const messages: Array<{ message: string; severity: 'warning' | 'error' }> = [];
     const { handlers, pi } = createFakePi();
-    const reporter = registerCommandTemplateDiagnostics(
-      pi as unknown as ExtensionAPI,
-      () => diagnostics
-    );
+    const reporter = registerCommandTemplateDiagnostics(pi as unknown as ExtensionAPI, () => diagnostics);
     const earlyDiagnostic: CommandDiagnostic = { severity: 'warning', message: 'early warning' };
 
     diagnostics.push(earlyDiagnostic);
