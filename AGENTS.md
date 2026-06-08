@@ -15,6 +15,7 @@ pi-pack/                         # You are here!
     pi-handy/
     pi-tiny-mcp/
     pi-toolbox/
+    pi-toolmask/
     pi-shared/                   # Shared utilities and types for Pi extensions
   references/                    # Reference source code and documentation; do not modify
     pi-mono/                     # Pi-mono source code and docs

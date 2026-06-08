@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 import type { PiToolmaskConfig } from '#src/config/schema.js';
-import { isNegatedWildcardPattern, matchesAnyWildcardPattern, stripWildcardNegation } from '#src/core/wildcard.js';
+import { createWildcardMatcher, isNegatedWildcardPattern, stripWildcardNegation } from '#src/core/wildcard.js';
 
 export interface ToolmaskResult {
   activeTools: string[];
@@ -15,9 +15,19 @@ export function applyToolmask(
   config: PiToolmaskConfig
 ): ToolmaskResult {
   const activeTools = pi.getActiveTools();
-  const maskedTools = activeTools.filter((toolName) => isToolMasked(toolName, config.masks));
-  const nextActiveTools = activeTools.filter((toolName) => !maskedTools.includes(toolName));
-  const changed = nextActiveTools.length !== activeTools.length;
+  const isToolMasked = createToolmaskMatcher(config.masks);
+  const nextActiveTools: string[] = [];
+  const maskedTools: string[] = [];
+
+  for (const toolName of activeTools) {
+    if (isToolMasked(toolName)) {
+      maskedTools.push(toolName);
+    } else {
+      nextActiveTools.push(toolName);
+    }
+  }
+
+  const changed = maskedTools.length > 0;
 
   if (changed) {
     pi.setActiveTools(nextActiveTools);
@@ -26,11 +36,20 @@ export function applyToolmask(
   return { activeTools, nextActiveTools, maskedTools, changed };
 }
 
-function isToolMasked(toolName: string, masks: readonly string[]): boolean {
-  const positiveMasks = masks.filter((mask) => !isNegatedWildcardPattern(mask));
-  const negativeMasks = masks
-    .filter((mask) => isNegatedWildcardPattern(mask))
-    .map((mask) => stripWildcardNegation(mask));
+function createToolmaskMatcher(masks: readonly string[]): (toolName: string) => boolean {
+  const positiveMasks: string[] = [];
+  const negativeMasks: string[] = [];
 
-  return matchesAnyWildcardPattern(toolName, positiveMasks) && !matchesAnyWildcardPattern(toolName, negativeMasks);
+  for (const mask of masks) {
+    if (isNegatedWildcardPattern(mask)) {
+      negativeMasks.push(stripWildcardNegation(mask));
+    } else {
+      positiveMasks.push(mask);
+    }
+  }
+
+  const matchesPositiveMask = createWildcardMatcher(positiveMasks);
+  const matchesNegativeMask = createWildcardMatcher(negativeMasks);
+
+  return (toolName) => matchesPositiveMask(toolName) && !matchesNegativeMask(toolName);
 }
