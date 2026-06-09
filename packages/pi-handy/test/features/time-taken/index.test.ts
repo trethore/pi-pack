@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { formatTimeTaken, registerTimeTakenFeature } from '#pi-handy/features/time-taken/index.js';
+import { formatGreyTimeTaken, formatTimeTaken, registerTimeTakenFeature } from '#pi-handy/features/time-taken/index.js';
 
 describe('time taken feature', () => {
   afterEach(() => {
@@ -19,7 +19,11 @@ describe('time taken feature', () => {
     expect(formatTimeTaken(elapsedMs)).toBe(expectedMessage);
   });
 
-  it('notifies elapsed time when the agent ends', () => {
+  it('formats elapsed time in grey', () => {
+    expect(formatGreyTimeTaken(6500)).toBe('\u001B[90mTook 7s\u001B[39m');
+  });
+
+  it('appends elapsed time to the final assistant message', () => {
     // Arrange
     const dateNow = vi.spyOn(Date, 'now');
     dateNow.mockReturnValueOnce(1000).mockReturnValueOnce(6500);
@@ -28,13 +32,15 @@ describe('time taken feature', () => {
 
     // Act
     piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: true });
+    const result = piApi.emitMessageEnd(createAssistantMessage('Done'));
 
     // Assert
-    expect(piApi.notifications).toEqual([{ message: 'Took 6s', type: 'info' }]);
+    expect(result?.message).toEqual(
+      createAssistantMessage('Done', [{ type: 'text', text: '\u001B[90mTook 6s\u001B[39m' }])
+    );
   });
 
-  it('does not notify before the agent ends', () => {
+  it('does not append elapsed time before the assistant message ends', () => {
     // Arrange
     const dateNow = vi.spyOn(Date, 'now');
     dateNow.mockReturnValue(1000);
@@ -45,10 +51,25 @@ describe('time taken feature', () => {
     piApi.emitAgentStart();
 
     // Assert
-    expect(piApi.notifications).toEqual([]);
+    expect(piApi.emitMessageEnd(createAssistantMessage('Done'))?.message.content).toEqual([
+      { type: 'text', text: 'Done' },
+      { type: 'text', text: '\u001B[90mTook 0s\u001B[39m' },
+    ]);
   });
 
-  it('does not notify without UI', () => {
+  it('does not append without an agent start', () => {
+    // Arrange
+    const piApi = createPiApi();
+    registerTimeTakenFeature(piApi.extensionApi);
+
+    // Act
+    const result = piApi.emitMessageEnd(createAssistantMessage('Done'));
+
+    // Assert
+    expect(result).toBeUndefined();
+  });
+
+  it('does not append to tool-use assistant messages', () => {
     // Arrange
     const dateNow = vi.spyOn(Date, 'now');
     dateNow.mockReturnValueOnce(1000).mockReturnValueOnce(6500);
@@ -57,10 +78,10 @@ describe('time taken feature', () => {
 
     // Act
     piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: false });
+    const result = piApi.emitMessageEnd(createAssistantMessage('Calling tool', [], 'toolUse'));
 
     // Assert
-    expect(piApi.notifications).toEqual([]);
+    expect(result).toBeUndefined();
   });
 
   it('resets the timer between runs', () => {
@@ -72,32 +93,40 @@ describe('time taken feature', () => {
 
     // Act
     piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: true });
+    const firstResult = piApi.emitMessageEnd(createAssistantMessage('First'));
     piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: true });
+    const secondResult = piApi.emitMessageEnd(createAssistantMessage('Second'));
 
     // Assert
-    expect(piApi.notifications).toEqual([
-      { message: 'Took 1s', type: 'info' },
-      { message: 'Took 1m5s', type: 'info' },
+    expect(firstResult?.message.content).toEqual([
+      { type: 'text', text: 'First' },
+      { type: 'text', text: '\u001B[90mTook 1s\u001B[39m' },
+    ]);
+    expect(secondResult?.message.content).toEqual([
+      { type: 'text', text: 'Second' },
+      { type: 'text', text: '\u001B[90mTook 1m5s\u001B[39m' },
     ]);
   });
 });
 
 type AgentStartHandler = () => void;
-type AgentEndHandler = (
-  event: { type: 'agent_end'; messages: [] },
-  ctx: { hasUI: boolean; ui: { notify(message: string, type?: string): void } }
-) => void;
+type MessageEndHandler = (event: {
+  type: 'message_end';
+  message: AssistantMessage;
+}) => { message: AssistantMessage } | undefined;
+
+type AssistantMessage = {
+  role: 'assistant';
+  content: Array<{ type: string; text?: string }>;
+  stopReason: string;
+};
 
 function createPiApi() {
-  const handlers = new Map<string, AgentStartHandler | AgentEndHandler>();
-  const notifications: Array<{ message: string; type: string | undefined }> = [];
+  const handlers = new Map<string, AgentStartHandler | MessageEndHandler>();
 
   return {
-    notifications,
     extensionApi: {
-      on(eventName: string, handler: AgentStartHandler | AgentEndHandler) {
+      on(eventName: string, handler: AgentStartHandler | MessageEndHandler) {
         handlers.set(eventName, handler);
       },
     } as unknown as Parameters<typeof registerTimeTakenFeature>[0],
@@ -105,19 +134,21 @@ function createPiApi() {
       const handler = handlers.get('agent_start') as AgentStartHandler | undefined;
       handler?.();
     },
-    emitAgentEnd(options: { hasUI: boolean }) {
-      const handler = handlers.get('agent_end') as AgentEndHandler | undefined;
-      handler?.(
-        { type: 'agent_end', messages: [] },
-        {
-          hasUI: options.hasUI,
-          ui: {
-            notify(message: string, type?: string) {
-              notifications.push({ message, type });
-            },
-          },
-        }
-      );
+    emitMessageEnd(message: AssistantMessage) {
+      const handler = handlers.get('message_end') as MessageEndHandler | undefined;
+      return handler?.({ type: 'message_end', message });
     },
+  };
+}
+
+function createAssistantMessage(
+  text: string,
+  extraContent: AssistantMessage['content'] = [],
+  stopReason = 'stop'
+): AssistantMessage {
+  return {
+    role: 'assistant',
+    content: [{ type: 'text', text }, ...extraContent],
+    stopReason,
   };
 }
