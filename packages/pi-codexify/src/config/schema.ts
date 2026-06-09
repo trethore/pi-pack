@@ -8,6 +8,7 @@ import {
 
 export type CodexVerbosity = 'low' | 'medium' | 'high';
 export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed';
+export type OpenAICompactionReasoning = 'current' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
 export interface PiCodexifyConfig {
   enabled: boolean;
@@ -15,6 +16,7 @@ export interface PiCodexifyConfig {
   usage: CodexUsageConfig;
   account: CodexAccountConfig;
   webSearch: WebSearchConfig;
+  openaiCompaction: OpenAICompactionConfig;
 }
 
 export interface CodexControlsConfig extends EnabledConfig {
@@ -28,6 +30,11 @@ type CodexAccountConfig = EnabledConfig;
 
 type WebSearchConfig = EnabledConfig;
 
+export interface OpenAICompactionConfig extends EnabledConfig {
+  model: string;
+  reasoning: OpenAICompactionReasoning;
+}
+
 export type PartialPiCodexifyConfig = Partial<{
   enabled: unknown;
   codex: Partial<{
@@ -38,6 +45,11 @@ export type PartialPiCodexifyConfig = Partial<{
   usage: PartialEnabledConfig;
   account: PartialEnabledConfig;
   webSearch: PartialEnabledConfig;
+  openaiCompaction: Partial<{
+    enabled: unknown;
+    model: unknown;
+    reasoning: unknown;
+  }>;
 }>;
 
 export type LoadedConfig = LoadedExtensionConfig<PiCodexifyConfig>;
@@ -56,10 +68,16 @@ export const defaultConfig: PiCodexifyConfig = {
   webSearch: {
     enabled: true,
   },
+  openaiCompaction: {
+    enabled: false,
+    model: 'gpt-5.5',
+    reasoning: 'current',
+  },
 };
 
 export const codexVerbosityValues = ['low', 'medium', 'high'] as const;
 export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed'] as const;
+export const openaiCompactionReasoningValues = ['current', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const;
 
 export const codexVerbositySchema = defineConfigSchema(
   z.enum(codexVerbosityValues).nullable(),
@@ -68,4 +86,9 @@ export const codexVerbositySchema = defineConfigSchema(
 export const codexReasoningSummarySchema = defineConfigSchema(
   z.enum(codexReasoningSummaryValues).nullable(),
   'expected auto, concise, detailed, or null'
+);
+export const openaiCompactionModelSchema = defineConfigSchema(z.string().min(1), 'expected a non-empty string');
+export const openaiCompactionReasoningSchema = defineConfigSchema(
+  z.enum(openaiCompactionReasoningValues),
+  'expected current, minimal, low, medium, high, or xhigh'
 );

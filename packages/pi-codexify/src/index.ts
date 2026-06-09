@@ -10,9 +10,11 @@ import { registerCodexifyCommand } from '#src/features/command/index.js';
 import { registerCodexAccountSync } from '#src/features/accounts/index.js';
 import { type CodexControlsController, registerCodexControls } from '#src/features/codex-controls/index.js';
 import { registerWebSearch } from '#src/features/web-search/index.js';
+import { type OpenAICompactionController, registerOpenAICompaction } from '#src/features/openai-compaction/index.js';
 
 interface CodexifyRuntime {
   codexControls?: CodexControlsController;
+  openAICompaction?: OpenAICompactionController;
 }
 
 const FEATURES: readonly ContextualExtensionFeature<PiCodexifyConfig, CodexifyRuntime>[] = [
@@ -37,7 +39,13 @@ const FEATURES: readonly ContextualExtensionFeature<PiCodexifyConfig, CodexifyRu
   {
     isEnabled: (config) => config.enabled,
     register(pi, config, runtime) {
-      registerCodexifyCommand(pi, config, runtime.codexControls);
+      runtime.openAICompaction = registerOpenAICompaction(pi, config.openaiCompaction);
+    },
+  },
+  {
+    isEnabled: (config) => config.enabled,
+    register(pi, config, runtime) {
+      registerCodexifyCommand(pi, config, runtime.codexControls, runtime.openAICompaction);
     },
   },
 ];

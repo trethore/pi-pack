@@ -10,6 +10,7 @@ Codex-focused controls.
 - Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
 - Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
+- Adds opt-in OpenAI native Responses compaction for `openai` / `openai-responses` models.
 
 ## Commands
 
@@ -24,6 +25,9 @@ Codex-focused controls.
 /codexify account delete <name>
 /codexify verbosity low|medium|high|off
 /codexify reasoning-summary auto|concise|detailed|off
+/codexify compaction on|off
+/codexify compaction model <model>
+/codexify compaction reasoning current|minimal|low|medium|high|xhigh
 ```
 
 Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.
@@ -50,3 +54,5 @@ Supported config locations:
 Project config overrides global config.
 
 See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc).
+
+`openaiCompaction.enabled` defaults to `false`. When enabled, Pi's compaction hook calls OpenAI's native compact endpoint and stores the opaque compacted window in the session compaction entry. Later OpenAI Responses requests replay that native compacted window. If native compaction fails, Pi fallback compaction runs where safe.

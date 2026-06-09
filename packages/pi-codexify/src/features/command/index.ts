@@ -8,24 +8,31 @@ import {
   parseCodexReasoningSummary,
   parseCodexVerbosity,
 } from '#src/features/codex-controls/index.js';
+import {
+  buildOpenAICompactionStatusMessage,
+  type OpenAICompactionController,
+  parseOpenAICompactionReasoning,
+} from '#src/features/openai-compaction/index.js';
 import { notifyCodexUsage } from '#src/features/usage/index.js';
 import {
   buildConfigUpdateMessage,
   resolveConfigScope,
   updateCodexControlConfig,
+  updateOpenAICompactionConfig,
 } from '#src/features/command/config-updates.js';
 import { getCodexifyArgumentCompletions, splitArgs } from '#src/features/command/completions.js';
 
 export function registerCodexifyCommand(
   pi: ExtensionAPI,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
+  codexControls: CodexControlsController | undefined,
+  openAICompaction: OpenAICompactionController | undefined
 ) {
   pi.registerCommand('codexify', {
     description: 'Control Codex payload options and inspect Codex usage',
     getArgumentCompletions: (prefix) => getCodexifyArgumentCompletions(prefix, config, CODEXIFY_COMMANDS),
     handler: async (args, ctx) => {
-      await handleCodexifyCommand(args, ctx, config, codexControls);
+      await handleCodexifyCommand(args, ctx, config, codexControls, openAICompaction);
     },
   });
 }
@@ -34,7 +41,8 @@ async function handleCodexifyCommand(
   args: string,
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
+  codexControls: CodexControlsController | undefined,
+  openAICompaction: OpenAICompactionController | undefined
 ): Promise<void> {
   const parts = splitArgs(args);
   const commandName = parts[0] ?? 'help';
@@ -45,7 +53,7 @@ async function handleCodexifyCommand(
     return;
   }
 
-  await command.handle(parts, ctx, config, codexControls);
+  await command.handle(parts, ctx, config, codexControls, openAICompaction);
 }
 
 interface CodexifyCommand {
@@ -58,7 +66,8 @@ interface CodexifyCommand {
     parts: readonly string[],
     ctx: ExtensionCommandContext,
     config: PiCodexifyConfig,
-    codexControls: CodexControlsController | undefined
+    codexControls: CodexControlsController | undefined,
+    openAICompaction: OpenAICompactionController | undefined
   ): Promise<void> | void;
 }
 
@@ -94,6 +103,15 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     isAvailable: (config) => config.account.enabled,
     async handle(parts, ctx, config) {
       await handleAccountCommand(parts, ctx, config);
+    },
+  },
+  {
+    name: 'compaction',
+    usage: '/codexify compaction on|off|model <model>|reasoning current|minimal|low|medium|high|xhigh',
+    needsMoreArgs: true,
+    isAvailable: () => true,
+    async handle(parts, ctx, config, _codexControls, openAICompaction) {
+      await handleCompactionCommand(parts, ctx, config, openAICompaction);
     },
   },
   {
@@ -141,6 +159,103 @@ async function handleAccountCommand(
   }
 
   await handleCodexAccountCommand(parts, ctx);
+}
+
+async function handleCompactionCommand(
+  parts: readonly string[],
+  ctx: ExtensionCommandContext,
+  _config: PiCodexifyConfig,
+  openAICompaction: OpenAICompactionController | undefined
+): Promise<void> {
+  const controller = getOpenAICompaction(openAICompaction);
+  const action = parts[1];
+
+  if (action === undefined) {
+    ctx.ui.notify(buildOpenAICompactionStatusMessage(controller.getConfig(), ctx.model), 'info');
+    return;
+  }
+
+  try {
+    const handled = await handleCompactionAction(action, parts[2], ctx, controller);
+    if (!handled) {
+      ctx.ui.notify(
+        'Usage: /codexify compaction on|off|model <model>|reasoning current|minimal|low|medium|high|xhigh',
+        'warning'
+      );
+    }
+  } catch (error) {
+    ctx.ui.notify(`codexify compaction failed: ${getErrorMessage(error)}`, 'error');
+  }
+}
+
+async function handleCompactionAction(
+  action: string,
+  value: string | undefined,
+  ctx: ExtensionCommandContext,
+  controller: OpenAICompactionController
+): Promise<boolean> {
+  if (action === 'on' || action === 'off') {
+    await updateCompactionEnabled(action, ctx, controller);
+    return true;
+  }
+
+  if (action === 'model') {
+    await updateCompactionModel(value, ctx, controller);
+    return true;
+  }
+
+  if (action === 'reasoning') {
+    await updateCompactionReasoning(value, ctx, controller);
+    return true;
+  }
+
+  return false;
+}
+
+async function updateCompactionEnabled(
+  action: 'on' | 'off',
+  ctx: ExtensionCommandContext,
+  controller: OpenAICompactionController
+): Promise<void> {
+  const scope = resolveConfigScope();
+  const enabled = action === 'on';
+  await updateOpenAICompactionConfig(scope, 'enabled', enabled);
+  controller.updateEnabled(enabled);
+  ctx.ui.notify(buildConfigUpdateMessage('OpenAI compaction', action, scope), 'info');
+}
+
+async function updateCompactionModel(
+  value: string | undefined,
+  ctx: ExtensionCommandContext,
+  controller: OpenAICompactionController
+): Promise<void> {
+  const model = value?.trim();
+  if (!model) {
+    ctx.ui.notify('Usage: /codexify compaction model <model>', 'warning');
+    return;
+  }
+
+  const scope = resolveConfigScope();
+  await updateOpenAICompactionConfig(scope, 'model', model);
+  controller.updateModel(model);
+  ctx.ui.notify(buildConfigUpdateMessage('OpenAI compaction model', model, scope), 'info');
+}
+
+async function updateCompactionReasoning(
+  value: string | undefined,
+  ctx: ExtensionCommandContext,
+  controller: OpenAICompactionController
+): Promise<void> {
+  const reasoning = value ? parseOpenAICompactionReasoning(value) : undefined;
+  if (!reasoning) {
+    ctx.ui.notify('Usage: /codexify compaction reasoning current|minimal|low|medium|high|xhigh', 'warning');
+    return;
+  }
+
+  const scope = resolveConfigScope();
+  await updateOpenAICompactionConfig(scope, 'reasoning', reasoning);
+  controller.updateReasoning(reasoning);
+  ctx.ui.notify(buildConfigUpdateMessage('OpenAI compaction reasoning', reasoning, scope), 'info');
 }
 
 async function handleVerbosityCommand(
@@ -220,6 +335,7 @@ function buildStatusMessage(
     `usage command enabled: ${config.usage.enabled ? 'yes' : 'no'}`,
     `account command enabled: ${config.account.enabled ? 'yes' : 'no'}`,
     `web_search tool enabled: ${config.webSearch.enabled ? 'yes' : 'no'}`,
+    `openai compaction enabled: ${config.openaiCompaction.enabled ? 'yes' : 'no'}`,
   ];
 
   if (config.codex.enabled) {
@@ -227,12 +343,19 @@ function buildStatusMessage(
     lines.push('', buildCodexControlsStatusMessage(controls.getConfig(), ctx.model));
   }
 
+  lines.push('', buildOpenAICompactionStatusMessage(config.openaiCompaction, ctx.model));
+
   return lines.join('\n');
 }
 
 function getCodexControls(codexControls: CodexControlsController | undefined): CodexControlsController {
   if (codexControls) return codexControls;
   throw new Error('codex controls are not registered');
+}
+
+function getOpenAICompaction(openAICompaction: OpenAICompactionController | undefined): OpenAICompactionController {
+  if (openAICompaction) return openAICompaction;
+  throw new Error('openai compaction is not registered');
 }
 
 function buildUsageMessage(config: PiCodexifyConfig): string {

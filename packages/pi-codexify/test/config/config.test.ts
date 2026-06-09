@@ -26,6 +26,7 @@ describe('loadConfig', () => {
       usage: { enabled: true },
       account: { enabled: true },
       webSearch: { enabled: true },
+      openaiCompaction: { enabled: false, model: 'gpt-5.5', reasoning: 'current' },
     });
   });
 
@@ -39,6 +40,7 @@ describe('loadConfig', () => {
         usage: { enabled: false },
         account: { enabled: false },
         webSearch: { enabled: false },
+        openaiCompaction: { enabled: true, model: 'gpt-5.4-mini', reasoning: 'low' },
       })
     );
     const { loadConfig } = await importConfigWithHome(homeDir);
@@ -49,6 +51,7 @@ describe('loadConfig', () => {
         codex: { verbosity: 'high' },
         account: { enabled: true },
         webSearch: { enabled: true },
+        openaiCompaction: { model: 'gpt-5.5', reasoning: 'high' },
       })
     );
 
@@ -63,6 +66,7 @@ describe('loadConfig', () => {
       usage: { enabled: false },
       account: { enabled: true },
       webSearch: { enabled: true },
+      openaiCompaction: { enabled: true, model: 'gpt-5.5', reasoning: 'high' },
     });
   });
 
@@ -94,6 +98,7 @@ describe('loadConfig', () => {
         usage: { enabled: 'no' },
         account: { enabled: 'yes' },
         webSearch: { enabled: 'yes' },
+        openaiCompaction: { enabled: 'yes', model: '', reasoning: 'huge' },
       })
     );
 
@@ -107,8 +112,9 @@ describe('loadConfig', () => {
       usage: { enabled: true },
       account: { enabled: true },
       webSearch: { enabled: true },
+      openaiCompaction: { enabled: false, model: 'gpt-5.5', reasoning: 'current' },
     });
-    expect(loaded.errors).toHaveLength(7);
+    expect(loaded.errors).toHaveLength(10);
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid codex.enabled value'),
@@ -117,6 +123,9 @@ describe('loadConfig', () => {
       expect.stringContaining('invalid usage.enabled value'),
       expect.stringContaining('invalid account.enabled value'),
       expect.stringContaining('invalid webSearch.enabled value'),
+      expect.stringContaining('invalid openaiCompaction.enabled value'),
+      expect.stringContaining('invalid openaiCompaction.model value'),
+      expect.stringContaining('invalid openaiCompaction.reasoning value'),
     ]);
   });
 
