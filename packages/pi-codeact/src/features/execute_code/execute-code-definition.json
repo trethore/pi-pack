@@ -1,6 +1,6 @@
 {
-  "name": "exec",
-  "label": "exec",
+  "name": "execute_code",
+  "label": "execute_code",
   "description": [
     "Run TypeScript ESM code using Node.js from the current working directory. Returns stdout and stderr. If truncated, full output is saved to a temporary file.",
     "Optionally provide npm packages to make available for import in the code and/or a timeout in seconds.",
@@ -12,7 +12,7 @@
   ],
   "promptSnippet": "Run TypeScript code with programmatic tools and optional npm packages",
   "promptGuidelines": [
-    "Use `exec` to execute code with programmatic tools.",
+    "Use `execute_code` to execute code with programmatic tools.",
     "Use the `packages` argument to specify the required npm packages you will need in your code.",
     "Constrain stdout/stderr output to contain only the necessary data you need to know for the current task."
   ],
