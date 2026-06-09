@@ -6,7 +6,7 @@ import { defaultConfig, type LoadedConfig, type PartialPiHandyConfig, type PiHan
 type FeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
 
 const EXTENSION_NAME = 'pi-handy';
-const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = ['thinkingLevel', 'showSysprompt', 'timeTaken'];
+const FEATURE_CONFIG_KEYS: FeatureConfigKey[] = ['thinkingLevel', 'showSysprompt', 'dumpSessionHistory', 'timeTaken'];
 const { mergeEnabledField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string): LoadedConfig {
@@ -24,6 +24,7 @@ function cloneDefaultConfig(): PiHandyConfig {
     ...defaultConfig,
     thinkingLevel: { ...defaultConfig.thinkingLevel },
     showSysprompt: { ...defaultConfig.showSysprompt },
+    dumpSessionHistory: { ...defaultConfig.dumpSessionHistory },
     timeTaken: { ...defaultConfig.timeTaken },
   };
 }

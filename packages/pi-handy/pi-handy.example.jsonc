@@ -12,6 +12,11 @@
     "enabled": true
   },
 
+  // /dumphistory
+  "dumpSessionHistory": {
+    "enabled": true
+  },
+
   // Notify how long the agent took when it finishes.
   "timeTaken": {
     "enabled": true

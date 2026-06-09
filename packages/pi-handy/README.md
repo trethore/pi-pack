@@ -20,6 +20,9 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "showSysprompt": {
     "enabled": true,
   },
+  "dumpSessionHistory": {
+    "enabled": true,
+  },
   "timeTaken": {
     "enabled": true,
   },
@@ -51,6 +54,10 @@ Examples:
 /showsysprompt prompt
 /showsysprompt tools
 ```
+
+### Dump session history command
+
+Registers `/dumphistory` to dump the current session history to `~/.pi/agent/.session-history-<ISO-DATE>`.
 
 ### Time taken notification
 

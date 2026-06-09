@@ -3,6 +3,7 @@ import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostic
 import { registerEnabledFeatures, type ExtensionFeature } from '@trethore/pi-shared/features/registry.js';
 import { loadConfig } from '#src/config/config.js';
 import type { PiHandyConfig } from '#src/config/schema.js';
+import { registerDumpSessionHistoryCommand } from '#src/features/dump-session-history/index.js';
 import { registerShowSyspromptCommand } from '#src/features/show-sysprompt/index.js';
 import { registerThinkingLevelCommand } from '#src/features/thinking-level/index.js';
 import { registerTimeTakenFeature } from '#src/features/time-taken/index.js';
@@ -15,6 +16,10 @@ const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
     isEnabled: (config) => config.enabled && config.showSysprompt.enabled,
     register: registerShowSyspromptCommand,
+  },
+  {
+    isEnabled: (config) => config.enabled && config.dumpSessionHistory.enabled,
+    register: registerDumpSessionHistoryCommand,
   },
   {
     isEnabled: (config) => config.enabled && config.timeTaken.enabled,
