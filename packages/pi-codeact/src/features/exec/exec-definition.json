@@ -1,0 +1,36 @@
+{
+  "name": "exec",
+  "label": "exec",
+  "description": [
+    "Run TypeScript ESM code in a temporary Node.js module. Optional npm packages are installed before execution and can be imported by name.",
+    "Returns stdout and stderr only. Output is truncated to the last {{defaultMaxLines}} lines or {{defaultMaxBytes}}, whichever is hit first.",
+    "No programmatic Pi tool functions are available in this first version."
+  ],
+  "promptSnippet": "Run TypeScript code with optional npm packages",
+  "promptGuidelines": [
+    "Use exec when a task benefits from composing logic in code instead of making many small tool calls.",
+    "Print concise summaries to stdout/stderr; large output is truncated before it reaches the model."
+  ],
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["code"],
+    "properties": {
+      "packages": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string" },
+        "description": "npm package specs to install and make importable by the code, for example [\"yaml@2\", \"zod@4\"]."
+      },
+      "code": {
+        "type": "string",
+        "description": "TypeScript ESM code to run with Node.js. Top-level await and imports from requested packages are supported."
+      },
+      "timeout": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Timeout in seconds. If omitted, defaults to {{defaultTimeout}}."
+      }
+    }
+  }
+}
