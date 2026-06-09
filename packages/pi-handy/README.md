@@ -20,7 +20,7 @@ Project config overrides global config. See [`pi-handy.example.jsonc`](./pi-hand
   "showSysprompt": {
     "enabled": true,
   },
-  "dumpSessionHistory": {
+  "dumpContext": {
     "enabled": true,
   },
   "timeTaken": {
@@ -55,9 +55,9 @@ Examples:
 /showsysprompt tools
 ```
 
-### Dump session history command
+### Dump context command
 
-Registers `/dumphistory` to dump the current session history to `~/.pi/agent/.session-history-<ISO-DATE>`.
+Registers `/dumpcontext` to dump the next LLM provider request payload to `~/.pi/agent/.context-dump-<ISO-DATE>`.
 
 ### Time taken notification
 

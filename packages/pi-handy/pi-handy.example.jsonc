@@ -12,8 +12,8 @@
     "enabled": true
   },
 
-  // /dumphistory
-  "dumpSessionHistory": {
+  // /dumpcontext
+  "dumpContext": {
     "enabled": true
   },
 
