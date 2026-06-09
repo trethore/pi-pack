@@ -1,5 +1,6 @@
 import type { NativeCompactionRuntime } from '#pi-codexify/features/openai-compaction/core/runtime.js';
 import type { NativeCompactionRequestBody } from '#pi-codexify/features/openai-compaction/core/serializer.js';
+import { isRecord } from '#pi-codexify/features/openai-compaction/core/structured.js';
 
 const JSON_CONTENT_TYPE = 'application/json';
 
@@ -44,10 +45,6 @@ export type ExecuteNativeCompactionOptions = {
   request: NativeCompactionRequestBody;
   signal?: AbortSignal | undefined;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
 
 function isAbortError(error: unknown): boolean {
   return (

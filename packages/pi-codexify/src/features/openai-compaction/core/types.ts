@@ -1,4 +1,9 @@
 import type { CompactionEntry, CompactionResult } from '@earendil-works/pi-coding-agent';
+import {
+  cloneStructuredValue,
+  isRecord,
+  isStructuredValue,
+} from '#pi-codexify/features/openai-compaction/core/structured.js';
 
 export const EXTENSION_ID = 'openai-native-compaction';
 export const NATIVE_COMPACTION_STRATEGY = 'openai-native-compact-v1';
@@ -52,10 +57,6 @@ export type CreateNativeCompactionShimResultInput = {
   details: NativeCompactionDetails;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -66,42 +67,6 @@ function isFiniteNonNegativeNumber(value: unknown): value is number {
 
 function normalizeString(value: string): string {
   return value.trim();
-}
-
-function isStructuredValue(value: unknown): boolean {
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every((item) => isStructuredValue(item));
-  }
-
-  if (isRecord(value)) {
-    return Object.values(value).every((item) => isStructuredValue(item));
-  }
-
-  return false;
-}
-
-function cloneStructuredValue(value: unknown): unknown {
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => cloneStructuredValue(item));
-  }
-
-  if (isRecord(value)) {
-    const clone: Record<string, unknown> = {};
-    for (const [key, nested] of Object.entries(value)) {
-      clone[key] = cloneStructuredValue(nested);
-    }
-    return clone;
-  }
-
-  throw new Error(`Unsupported structured value: ${typeof value}`);
 }
 
 function isCompactedWindowItem(value: unknown): value is Record<string, unknown> {

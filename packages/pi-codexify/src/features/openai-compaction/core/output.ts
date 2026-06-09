@@ -1,25 +1,6 @@
+import { cloneStructuredValue, isRecord } from '#pi-codexify/features/openai-compaction/core/structured.js';
+
 const COMPACTION_ITEM_TYPES = new Set(['compaction', 'compaction_summary', 'context_compaction']);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function cloneStructuredValue(value: unknown): unknown {
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => cloneStructuredValue(item));
-  }
-  if (isRecord(value)) {
-    const clone: Record<string, unknown> = {};
-    for (const [key, nested] of Object.entries(value)) {
-      clone[key] = cloneStructuredValue(nested);
-    }
-    return clone;
-  }
-  throw new Error(`Unsupported structured compact output value: ${typeof value}`);
-}
 
 function cloneCompactedOutputItem(item: Record<string, unknown>): Record<string, unknown> | undefined {
   try {

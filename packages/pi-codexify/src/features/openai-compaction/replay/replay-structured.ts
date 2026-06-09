@@ -3,10 +3,10 @@ import type {
   ResponsesInputItem,
   ResponsesInputMessageItem,
 } from '#pi-codexify/features/openai-compaction/core/serializer.js';
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
+import {
+  cloneStructuredValue as cloneSharedStructuredValue,
+  isRecord,
+} from '#pi-codexify/features/openai-compaction/core/structured.js';
 
 export function isResponsesInputContentItem(value: unknown): value is ResponsesInputContentItem {
   if (!isRecord(value) || typeof value['type']! !== 'string') return false;
@@ -51,21 +51,7 @@ export function cloneResponsesInputMessageItem(item: ResponsesInputMessageItem):
 }
 
 export function cloneStructuredValue(value: unknown): unknown {
-  if (
-    value === undefined ||
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  )
-    return value;
-  if (Array.isArray(value)) return value.map((item) => cloneStructuredValue(item));
-  if (isRecord(value)) {
-    const clone: Record<string, unknown> = {};
-    for (const [key, nested] of Object.entries(value)) clone[key] = cloneStructuredValue(nested);
-    return clone;
-  }
-  throw new Error(`Unsupported structured value: ${typeof value}`);
+  return cloneSharedStructuredValue(value, { allowUndefined: true });
 }
 
 export function cloneOpaqueCompactedWindow(compactedWindow: readonly unknown[]): unknown[] | undefined {

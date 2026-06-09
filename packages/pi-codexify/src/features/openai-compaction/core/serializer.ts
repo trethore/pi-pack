@@ -12,6 +12,7 @@ import type {
   UserMessage,
 } from '@earendil-works/pi-ai';
 import type { ResponsesCompatibleRequestPayload } from '#pi-codexify/features/openai-compaction/core/runtime.js';
+import { isRecord } from '#pi-codexify/features/openai-compaction/core/structured.js';
 import {
   CODEX_TOOL_CALL_PROVIDERS,
   convertResponsesMessages,
@@ -122,10 +123,6 @@ export type ResponsesParityReport = {
 
 function sanitizeSurrogates(text: string): string {
   return text.replaceAll(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 let cachedBlockImagesSetting: boolean | undefined;
