@@ -7,8 +7,8 @@ Pi-pack is a monorepo for the Pi extensions I develop.
 The project is organized as follows:
 
 ```text
-pi-pack/                         # You are here!
-  packages/                      # Workspace packages for Pi extensions
+pi-pack/                              # You are here!
+  packages/                           # Workspace packages for Pi extensions
     pi-codeact/
     pi-cut/
     pi-codexify/
@@ -17,10 +17,10 @@ pi-pack/                         # You are here!
     pi-tiny-mcp/
     pi-toolbox/
     pi-toolmask/
-    pi-shared/                   # Shared utilities and types for Pi extensions
-  references/                    # Reference source code and documentation; do not modify
-    pi-mono/                     # Pi-mono source code and docs
-  scripts/                       # Development and maintenance scripts
+    pi-shared/                        # Shared utilities and types for Pi extensions
+  references/                         # Source code and documentation as references; do not modify
+    pi-mono/packages/pi-coding-agent/ # Pi-coding-agent source code and docs
+  scripts/                            # Development and maintenance scripts
   eslint.config.js
   LICENSE
   package.json
