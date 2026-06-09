@@ -3,12 +3,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { dumpProviderRequestPayload, stringifyPayload } from '#pi-handy/features/dump-context/index.js';
+import { dumpProviderPayload, stringifyPayload } from '#pi-handy/features/payload-dump/index.js';
 
-describe('dump context command', () => {
+describe('payload dump command', () => {
   it('dumps provider request payload to the agent directory', async () => {
     // Arrange
-    const outputDirectory = path.join(tmpdir(), `pi-handy-context-dump-${randomUUID()}`);
+    const outputDirectory = path.join(tmpdir(), `pi-handy-payload-dump-${randomUUID()}`);
     const payload = {
       model: 'gpt-5.5-codex',
       input: [{ role: 'user', content: [{ type: 'input_text', text: 'Hello' }] }],
@@ -16,13 +16,13 @@ describe('dump context command', () => {
     };
 
     // Act
-    const filePath = await dumpProviderRequestPayload(payload, {
+    const filePath = await dumpProviderPayload(payload, {
       now: new Date('2026-06-09T12:34:56.789Z'),
       outputDirectory,
     });
 
     // Assert
-    expect(filePath).toBe(path.join(outputDirectory, '.context-dump-2026-06-09T12:34:56.789Z'));
+    expect(filePath).toBe(path.join(outputDirectory, '.payload-dump-2026-06-09T12:34:56.789Z'));
     await expect(readFile(filePath, 'utf8')).resolves.toContain('"model": "gpt-5.5-codex"');
     await expect(readFile(filePath, 'utf8')).resolves.toContain('"tools"');
   });

@@ -32,7 +32,7 @@ describe('pi-handy config', () => {
         enabled: true,
         thinkingLevel: { enabled: true },
         showSysprompt: { enabled: true },
-        dumpContext: { enabled: true },
+        payloadDump: { enabled: true },
         timeTaken: { enabled: true },
       },
       errors: [],
@@ -44,7 +44,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false }, "dumpContext": { "enabled": false }, "timeTaken": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false }, "payloadDump": { "enabled": false }, "timeTaken": { "enabled": false } }'
     );
     writeProjectConfig(projectDirectory, '{ "enabled": true, "thinkingLevel": { "enabled": true } }');
 
@@ -56,7 +56,7 @@ describe('pi-handy config', () => {
       enabled: true,
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: false },
-      dumpContext: { enabled: false },
+      payloadDump: { enabled: false },
       timeTaken: { enabled: false },
     });
   });
@@ -66,7 +66,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeProjectConfig(
       projectDirectory,
-      '{ "enabled": "yes", "thinkingLevel": false, "showSysprompt": false, "dumpContext": false, "timeTaken": false }'
+      '{ "enabled": "yes", "thinkingLevel": false, "showSysprompt": false, "payloadDump": false, "timeTaken": false }'
     );
 
     // Act
@@ -77,14 +77,14 @@ describe('pi-handy config', () => {
       enabled: true,
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: true },
-      dumpContext: { enabled: true },
+      payloadDump: { enabled: true },
       timeTaken: { enabled: true },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid thinkingLevel value'),
       expect.stringContaining('invalid showSysprompt value'),
-      expect.stringContaining('invalid dumpContext value'),
+      expect.stringContaining('invalid payloadDump value'),
       expect.stringContaining('invalid timeTaken value'),
     ]);
   });

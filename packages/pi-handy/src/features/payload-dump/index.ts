@@ -2,16 +2,16 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getAgentDir, type ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-const CONTEXT_DUMP_FILE_PREFIX = '.context-dump-';
+const PAYLOAD_DUMP_FILE_PREFIX = '.payload-dump-';
 
-interface DumpContextState {
+interface PayloadDumpState {
   armed: boolean;
 }
 
-export function registerDumpContextCommand(pi: ExtensionAPI) {
-  const state: DumpContextState = { armed: false };
+export function registerPayloadDumpCommand(pi: ExtensionAPI) {
+  const state: PayloadDumpState = { armed: false };
 
-  pi.registerCommand('dumpcontext', {
+  pi.registerCommand('payloaddump', {
     description: 'Dump the next LLM provider request payload to ~/.pi/agent/',
     handler: async (_args, ctx) => {
       state.armed = true;
@@ -23,12 +23,12 @@ export function registerDumpContextCommand(pi: ExtensionAPI) {
     if (!state.armed) return;
 
     state.armed = false;
-    const filePath = await dumpProviderRequestPayload(event.payload);
-    ctx.ui.notify(`LLM context dumped to ${filePath}`, 'info');
+    const filePath = await dumpProviderPayload(event.payload);
+    ctx.ui.notify(`LLM payload dumped to ${filePath}`, 'info');
   });
 }
 
-export async function dumpProviderRequestPayload(
+export async function dumpProviderPayload(
   payload: unknown,
   options: { now?: Date; outputDirectory?: string } = {}
 ): Promise<string> {
@@ -37,7 +37,7 @@ export async function dumpProviderRequestPayload(
 
   const filePath = path.join(
     outputDirectory,
-    `${CONTEXT_DUMP_FILE_PREFIX}${(options.now ?? new Date()).toISOString()}`
+    `${PAYLOAD_DUMP_FILE_PREFIX}${(options.now ?? new Date()).toISOString()}`
   );
   await writeFile(filePath, `${stringifyPayload(payload)}\n`, 'utf8');
   return filePath;

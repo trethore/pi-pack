@@ -5,7 +5,7 @@ export interface PiHandyConfig {
   enabled: boolean;
   thinkingLevel: ThinkingLevelCommandConfig;
   showSysprompt: ShowSyspromptCommandConfig;
-  dumpContext: DumpContextCommandConfig;
+  payloadDump: PayloadDumpCommandConfig;
   timeTaken: TimeTakenFeatureConfig;
 }
 
@@ -13,7 +13,7 @@ type ThinkingLevelCommandConfig = EnabledConfig;
 
 type ShowSyspromptCommandConfig = EnabledConfig;
 
-type DumpContextCommandConfig = EnabledConfig;
+type PayloadDumpCommandConfig = EnabledConfig;
 
 type TimeTakenFeatureConfig = EnabledConfig;
 
@@ -21,7 +21,7 @@ export type PartialPiHandyConfig = Partial<{
   enabled: unknown;
   thinkingLevel: PartialEnabledConfig;
   showSysprompt: PartialEnabledConfig;
-  dumpContext: PartialEnabledConfig;
+  payloadDump: PartialEnabledConfig;
   timeTaken: PartialEnabledConfig;
 }>;
 
@@ -35,7 +35,7 @@ export const defaultConfig: PiHandyConfig = {
   showSysprompt: {
     enabled: true,
   },
-  dumpContext: {
+  payloadDump: {
     enabled: true,
   },
   timeTaken: {

@@ -12,8 +12,8 @@
     "enabled": true
   },
 
-  // /dumpcontext
-  "dumpContext": {
+  // /payloaddump
+  "payloadDump": {
     "enabled": true
   },
 
