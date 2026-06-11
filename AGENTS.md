@@ -19,8 +19,11 @@ pi-pack/                            # You are here!
     pi-toolmask/
     pi-shared/                      # Shared utilities and types for Pi extensions
   references/                       # Source code and documentation as references; do not modify
-    pi-mono/   
-      packages/coding-agent/
+    pi-mono/packages/
+      agent/
+      ai/
+      coding-agent/
+      tui/
   scripts/                          # Development and maintenance scripts
   eslint.config.js
   LICENSE
