@@ -1,7 +1,7 @@
 {
   "name": "apply_patch",
   "label": "apply_patch",
-  "description": "Apply a patch using a stripped-down, file-oriented diff format.",
+  "description": "Apply a patch using a simplified, file-oriented diff format. Optionally, specify a working directory to resolve relative paths.",
   "promptSnippet": "Apply add, update, delete, and move file edits from a patch",
   "promptGuidelines": [
     "Use `apply_patch` to edit file contents or file paths using the Codex apply_patch format.",
