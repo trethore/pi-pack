@@ -58,7 +58,7 @@ describe('apply_patch tool', () => {
       lines(
         'Apply a patch using a simplified, file-oriented diff format.',
         'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',
-        'Optionally, specify a working directory to resolve relative paths.'
+        'Automatically creates parent directories. Optionally, specify a working directory to resolve relative paths.'
       )
     );
   });
