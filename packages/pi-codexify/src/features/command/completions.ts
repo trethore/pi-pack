@@ -42,8 +42,6 @@ export async function getCodexifyArgumentCompletions(
   const directCompletions = getDirectArgumentCompletions(state, config, commands);
   if (directCompletions) return directCompletions;
 
-  const compactionCompletions = getCompactionArgumentCompletions(state, commands);
-  if (compactionCompletions) return compactionCompletions;
   if (!config.account.enabled) return null;
 
   return getAccountNameCompletions(state, commands, options);
@@ -68,23 +66,6 @@ function getDirectArgumentCompletions(
 
   if (command === 'account' && config.account.enabled) {
     return buildCompletionItems(state, codexAccountActions, commands);
-  }
-
-  if (command === 'compaction') {
-    return buildCompletionItems(state, ['on', 'off', 'model', 'reasoning'], commands);
-  }
-
-  return null;
-}
-
-function getCompactionArgumentCompletions(
-  state: CompletionState,
-  commands: readonly CompletionCommand[]
-): AutocompleteItem[] | null {
-  if (state.path.length === 2 && state.path[0] === 'compaction' && state.path[1] === 'reasoning') {
-    return buildCompletionItems(state, ['current', 'minimal', 'low', 'medium', 'high', 'xhigh'], commands, {
-      appendNeedsMoreArgs: false,
-    });
   }
 
   return null;
@@ -160,12 +141,7 @@ function formatCompletionToken(
 }
 
 function candidateNeedsMoreArgs(candidate: string, commands: readonly CompletionCommand[]): boolean {
-  return (
-    findCommand(candidate, commands)?.needsMoreArgs === true ||
-    parseCodexAccountAction(candidate) != null ||
-    candidate === 'model' ||
-    candidate === 'reasoning'
-  );
+  return findCommand(candidate, commands)?.needsMoreArgs === true || parseCodexAccountAction(candidate) != null;
 }
 
 function hasAccountNameCompletion(state: CompletionState): boolean {

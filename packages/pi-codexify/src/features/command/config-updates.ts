@@ -2,13 +2,11 @@ import { existsSync } from 'node:fs';
 
 import { updateJsoncFile } from '@trethore/pi-shared/config/write-jsonc.js';
 import { GLOBAL_CONFIG_PATH, PROJECT_CONFIG_PATH } from '#src/config/locations.js';
-import type { CodexReasoningSummary, CodexVerbosity, OpenAICompactionReasoning } from '#src/config/schema.js';
+import type { CodexReasoningSummary, CodexVerbosity } from '#src/config/schema.js';
 
 export type ConfigScope = 'global' | 'project';
 export type CodexControlField = 'verbosity' | 'reasoningSummary';
 export type CodexControlValue = CodexVerbosity | CodexReasoningSummary | 'off';
-export type OpenAICompactionField = 'enabled' | 'model' | 'reasoning';
-export type OpenAICompactionValue = boolean | string | OpenAICompactionReasoning;
 
 export async function updateCodexControlConfig(
   scope: ConfigScope,
@@ -27,30 +25,13 @@ export async function updateCodexControlConfig(
   );
 }
 
-export async function updateOpenAICompactionConfig(
-  scope: ConfigScope,
-  field: OpenAICompactionField,
-  value: OpenAICompactionValue
-): Promise<void> {
-  await updateJsoncFile(
-    getConfigPathForScope(scope),
-    [
-      {
-        path: ['openaiCompaction', field],
-        value,
-      },
-    ],
-    [['openaiCompaction']]
-  );
-}
-
 export function resolveConfigScope(): ConfigScope {
   return existsSync(PROJECT_CONFIG_PATH) ? 'project' : 'global';
 }
 
 export function buildConfigUpdateMessage(
   label: string,
-  value: CodexControlValue | OpenAICompactionValue | 'on' | 'off',
+  value: CodexControlValue | 'on' | 'off',
   scope: ConfigScope
 ): string {
   const scopeLabel = scope === 'project' ? 'project config' : 'global config';

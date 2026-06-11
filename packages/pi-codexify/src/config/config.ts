@@ -5,8 +5,6 @@ import {
   codexReasoningSummarySchema,
   codexVerbositySchema,
   defaultConfig,
-  openaiCompactionModelSchema,
-  openaiCompactionReasoningSchema,
   type LoadedConfig,
   type PartialPiCodexifyConfig,
   type PiCodexifyConfig,
@@ -32,7 +30,6 @@ function cloneDefaultConfig(): PiCodexifyConfig {
     usage: { ...defaultConfig.usage },
     account: { ...defaultConfig.account },
     webSearch: { ...defaultConfig.webSearch },
-    openaiCompaction: { ...defaultConfig.openaiCompaction },
   };
 }
 
@@ -50,9 +47,6 @@ function mergeConfig(target: PiCodexifyConfig, source: PartialPiCodexifyConfig, 
   });
   mergeSection(source, 'webSearch', configPath, errors, (section, sectionName) => {
     mergeEnabledField(target.webSearch, section, `${sectionName}.enabled`, configPath, errors);
-  });
-  mergeSection(source, 'openaiCompaction', configPath, errors, (section, sectionName) => {
-    mergeOpenAICompactionFields(target, section, sectionName, configPath, errors);
   });
 }
 
@@ -76,30 +70,6 @@ function mergeCodexFields(
     errors,
     (value) => {
       target.codex.reasoningSummary = value ?? undefined;
-    }
-  );
-}
-
-function mergeOpenAICompactionFields(
-  target: PiCodexifyConfig,
-  source: Record<string, unknown>,
-  configName: string,
-  configPath: string,
-  errors: string[]
-) {
-  mergeEnabledField(target.openaiCompaction, source, `${configName}.enabled`, configPath, errors);
-  mergeField(source, 'model', `${configName}.model`, openaiCompactionModelSchema, configPath, errors, (value) => {
-    target.openaiCompaction.model = value;
-  });
-  mergeField(
-    source,
-    'reasoning',
-    `${configName}.reasoning`,
-    openaiCompactionReasoningSchema,
-    configPath,
-    errors,
-    (value) => {
-      target.openaiCompaction.reasoning = value;
     }
   );
 }

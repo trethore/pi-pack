@@ -31,16 +31,5 @@
   "webSearch": {
     // Enables the native OpenAI Codex web_search tool.
     "enabled": true
-  },
-
-  "openaiCompaction": {
-    // Enables OpenAI native Responses compaction for provider "openai" and api "openai-responses".
-    "enabled": false,
-
-    // Model used for native compaction requests.
-    "model": "gpt-5.5",
-
-    // Supported values: "current", "minimal", "low", "medium", "high", "xhigh".
-    "reasoning": "current"
   }
 }
