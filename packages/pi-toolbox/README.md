@@ -14,6 +14,9 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 ```jsonc
 {
   "enabled": true,
+  "applyPatch": {
+    "enabled": true,
+  },
   "findFiles": {
     "enabled": true,
     "defaultLimit": 100,
@@ -29,6 +32,31 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 ```
 
 ## Features
+
+### Apply patch tool
+
+Registers `apply_patch`, a structured file editing tool that applies the Codex apply-patch format.
+
+Arguments:
+
+- `patch`: patch text starting with `*** Begin Patch` and ending with `*** End Patch`
+- `workdir`: optional directory used to resolve relative paths in the patch; defaults to cwd; absolute paths remain absolute
+
+Example call:
+
+```jsonc
+{
+  "workdir": "packages/pi-toolbox",
+  "patch": "*** Begin Patch\n*** Update File: README.md\n@@\n-old\n+new\n*** End Patch",
+}
+```
+
+Example output:
+
+```text
+Success. Updated the following files:
+M README.md
+```
 
 ### Find files tool
 

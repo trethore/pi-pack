@@ -22,6 +22,7 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
+      applyPatch: { enabled: true },
       findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
@@ -33,6 +34,7 @@ describe('loadConfig', () => {
     writeGlobalConfig(
       homeDir,
       JSON.stringify({
+        applyPatch: { enabled: false },
         findFiles: { enabled: false, defaultLimit: 50 },
         grep: { defaultLimit: 25, defaultLimitPerFile: 3 },
       })
@@ -53,6 +55,7 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
+      applyPatch: { enabled: false },
       findFiles: { enabled: false, defaultLimit: 50 },
       grep: {
         enabled: true,
@@ -71,6 +74,7 @@ describe('loadConfig', () => {
       cwd,
       JSON.stringify({
         enabled: 'yes',
+        applyPatch: { enabled: 'yes' },
         findFiles: { enabled: 'yes', defaultLimit: 1001 },
         grep: {
           enabled: 'yes',
@@ -87,11 +91,13 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.config).toEqual({
       enabled: true,
+      applyPatch: { enabled: true },
       findFiles: { enabled: true, defaultLimit: 100 },
       grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
     });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
+      expect.stringContaining('invalid applyPatch.enabled value'),
       expect.stringContaining('invalid findFiles.enabled value'),
       expect.stringContaining('invalid findFiles.defaultLimit value'),
       expect.stringContaining('invalid grep.enabled value'),

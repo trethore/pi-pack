@@ -1,0 +1,27 @@
+{
+  "name": "apply_patch",
+  "label": "apply_patch",
+  "description": "Apply a patch using a stripped-down, file-oriented diff format.",
+  "promptSnippet": "Apply add, update, delete, and move file edits from a patch",
+  "promptGuidelines": [
+    "Use `apply_patch` to edit file contents or file paths using the Codex apply_patch format.",
+    "The patch must start with `*** Begin Patch\n` and end with `*** End Patch\n`.",
+    "Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.",
+    "Relative paths in the patch are resolved against `workdir` when provided; otherwise, they are resolved against the current working directory. Absolute paths remain unchanged."
+  ],
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["patch"],
+    "properties": {
+      "patch": {
+        "type": "string",
+        "description": "Patch to apply. Must start with `*** Begin Patch\n` and end with `*** End Patch\n`"
+      },
+      "workdir": {
+        "type": "string",
+        "description": "Optional working directory for resolving relative paths in the patch. If omitted, paths are resolved against the current working directory."
+      }
+    }
+  }
+}

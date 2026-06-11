@@ -28,6 +28,7 @@ export function loadConfig(cwd: string): LoadedConfig {
 function cloneDefaultConfig(): PiToolboxConfig {
   return {
     ...defaultConfig,
+    applyPatch: { ...defaultConfig.applyPatch },
     findFiles: { ...defaultConfig.findFiles },
     grep: { ...defaultConfig.grep },
   };
@@ -35,6 +36,10 @@ function cloneDefaultConfig(): PiToolboxConfig {
 
 function mergeConfig(target: PiToolboxConfig, source: PartialPiToolboxConfig, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
+
+  mergeSection(source, 'applyPatch', configPath, errors, (section, sectionName) => {
+    mergeEnabledField(target.applyPatch, section, `${sectionName}.enabled`, configPath, errors);
+  });
 
   mergeSection(source, 'findFiles', configPath, errors, (section, sectionName) => {
     mergeFindFilesConfig(target.findFiles, section, sectionName, configPath, errors);

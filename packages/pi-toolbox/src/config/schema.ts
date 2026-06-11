@@ -3,9 +3,12 @@ import { defineConfigSchema, z, type EnabledConfig } from '@trethore/pi-shared/c
 
 export interface PiToolboxConfig {
   enabled: boolean;
+  applyPatch: ApplyPatchToolConfig;
   findFiles: FindFilesToolConfig;
   grep: GrepToolConfig;
 }
+
+export type ApplyPatchToolConfig = EnabledConfig;
 
 export interface FindFilesToolConfig extends EnabledConfig {
   defaultLimit: number;
@@ -19,6 +22,9 @@ export interface GrepToolConfig extends EnabledConfig {
 
 export type PartialPiToolboxConfig = Partial<{
   enabled: unknown;
+  applyPatch: Partial<{
+    enabled: unknown;
+  }>;
   findFiles: Partial<{
     enabled: unknown;
     defaultLimit: unknown;
@@ -42,6 +48,9 @@ export const maxCharsPerMatchSchema = defineConfigSchema(
 
 export const defaultConfig: PiToolboxConfig = {
   enabled: true,
+  applyPatch: {
+    enabled: true,
+  },
   findFiles: {
     enabled: true,
     defaultLimit: 100,

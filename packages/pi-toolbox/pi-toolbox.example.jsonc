@@ -2,6 +2,11 @@
   // Master switch for pi-toolbox.
   "enabled": true,
 
+  // apply_patch tool for structured file edits.
+  "applyPatch": {
+    "enabled": true
+  },
+
   // find_files tool powered by rg --files.
   "findFiles": {
     "enabled": true,
