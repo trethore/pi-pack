@@ -43,10 +43,24 @@ describe('apply_patch tool', () => {
     expect(parameters.properties.patch).toEqual(
       expect.objectContaining({
         type: 'string',
-        description: 'Patch to apply. Must start with `*** Begin Patch\n` and end with `*** End Patch\n`',
+        description: 'Patch to apply.',
       })
     );
     expect(parameters.properties.workdir.type).toBe('string');
+  });
+
+  it('joins multiline definition descriptions', () => {
+    // Arrange and act
+    const tool = createApplyPatchToolDefinition({ enabled: true });
+
+    // Assert
+    expect(tool.description).toBe(
+      lines(
+        'Apply a patch using a simplified, file-oriented diff format.',
+        'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',
+        'Optionally, specify a working directory to resolve relative paths.'
+      )
+    );
   });
 
   it('calls the runner and formats the result', async () => {

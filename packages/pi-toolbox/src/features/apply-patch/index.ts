@@ -22,10 +22,14 @@ interface ApplyPatchParameters {
 interface ApplyPatchDefinition {
   name: string;
   label: string;
-  description: string;
+  description: string | string[];
   promptSnippet: string;
   promptGuidelines: string[];
   parameters: ApplyPatchParametersJsonSchema;
+}
+
+interface NormalizedApplyPatchDefinition extends Omit<ApplyPatchDefinition, 'description'> {
+  description: string;
 }
 
 interface ApplyPatchParametersJsonSchema {
@@ -89,8 +93,12 @@ export function createApplyPatchToolDefinition(
   });
 }
 
-function readApplyPatchDefinition(): ApplyPatchDefinition {
-  return readJsonDefinition(new URL('apply-patch-definition.json', import.meta.url));
+function readApplyPatchDefinition(): NormalizedApplyPatchDefinition {
+  const definition = readJsonDefinition<ApplyPatchDefinition>(new URL('apply-patch-definition.json', import.meta.url));
+  return {
+    ...definition,
+    description: Array.isArray(definition.description) ? definition.description.join('\n') : definition.description,
+  };
 }
 
 function createApplyPatchParametersSchema() {
