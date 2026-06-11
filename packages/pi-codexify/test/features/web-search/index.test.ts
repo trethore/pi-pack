@@ -9,14 +9,20 @@ type TestModel = {
 type Handler = (event: { model?: TestModel; payload?: unknown }, ctx: { model?: TestModel }) => unknown;
 type RegisteredTool = {
   name: string;
-  execute: (
-    toolCallId: string,
-    params: Record<string, never>,
-    signal: AbortSignal,
-    onUpdate: () => void,
-    ctx: { model?: TestModel }
-  ) => Promise<unknown>;
 };
+
+const CODEX_MODEL = { provider: 'openai-codex', id: 'gpt-5-codex' } satisfies TestModel;
+const OPENAI_MODEL = { provider: 'openai', id: 'gpt-5' } satisfies TestModel;
+const NATIVE_WEB_SEARCH_TOOL = {
+  type: 'web_search',
+  external_web_access: true,
+  search_content_types: ['text', 'image'],
+};
+const SPARK_NATIVE_WEB_SEARCH_TOOL = {
+  type: 'web_search',
+  external_web_access: true,
+};
+const READ_TOOL = { type: 'function', name: 'read' };
 
 describe('web search', () => {
   it('does not register any hooks or tools when disabled', () => {
@@ -28,55 +34,52 @@ describe('web search', () => {
 
     // Assert
     expect(pi.tools).toEqual([]);
-    expect(pi.handlerCount).toBe(0);
+    expect(pi.registeredEventNames).toEqual([]);
   });
 
-  it('registers web_search and toggles it active for openai-codex models only', () => {
+  it('registers only a provider payload hook when enabled', () => {
     // Arrange
-    const pi = createPi(['read']);
-    registerWebSearch(pi.extensionApi, { enabled: true });
+    const pi = createPi();
 
     // Act
-    pi.emitSessionStart({ provider: 'openai-codex', id: 'gpt-5-codex' });
-    const activeForCodex = pi.activeTools;
-    pi.emitModelSelect({ provider: 'openai', id: 'gpt-5' });
-    const activeForOpenAI = pi.activeTools;
+    registerWebSearch(pi.extensionApi, { enabled: true });
 
     // Assert
-    expect(pi.tools.map((tool) => tool.name)).toEqual(['web_search']);
-    expect(activeForCodex).toEqual(['read', 'web_search']);
-    expect(activeForOpenAI).toEqual(['read']);
+    expect(pi.tools).toEqual([]);
+    expect(pi.registeredEventNames).toEqual(['before_provider_request']);
   });
 
-  it('rewrites registered web_search function tools into native codex web search tools', () => {
+  it('injects native codex web search after existing tools', () => {
     // Arrange
     const pi = createPi();
     registerWebSearch(pi.extensionApi, { enabled: true });
     const payload = {
       input: 'search',
-      tools: [
-        { type: 'function', name: 'web_search' },
-        { type: 'function', name: 'read' },
-      ],
+      tools: [READ_TOOL],
     };
 
     // Act
-    const rewrittenPayload = pi.emitBeforeProviderRequest(payload, {
-      provider: 'openai-codex',
-      id: 'gpt-5-codex',
-    });
+    const rewrittenPayload = pi.emitBeforeProviderRequest(payload, CODEX_MODEL);
 
     // Assert
     expect(rewrittenPayload).toEqual({
       input: 'search',
-      tools: [
-        {
-          type: 'web_search',
-          external_web_access: true,
-          search_content_types: ['text', 'image'],
-        },
-        { type: 'function', name: 'read' },
-      ],
+      tools: [READ_TOOL, NATIVE_WEB_SEARCH_TOOL],
+    });
+  });
+
+  it('injects native codex web search when the payload has no tools', () => {
+    // Arrange
+    const pi = createPi();
+    registerWebSearch(pi.extensionApi, { enabled: true });
+
+    // Act
+    const rewrittenPayload = pi.emitBeforeProviderRequest({ input: 'search' }, CODEX_MODEL);
+
+    // Assert
+    expect(rewrittenPayload).toEqual({
+      input: 'search',
+      tools: [NATIVE_WEB_SEARCH_TOOL],
     });
   });
 
@@ -87,68 +90,69 @@ describe('web search', () => {
 
     // Act
     const rewrittenPayload = pi.emitBeforeProviderRequest(
-      { tools: [{ type: 'function', name: 'web_search' }] },
+      { tools: [READ_TOOL] },
       { provider: 'openai-codex', id: 'codex-spark' }
     );
 
     // Assert
     expect(rewrittenPayload).toEqual({
-      tools: [{ type: 'web_search', external_web_access: true }],
+      tools: [READ_TOOL, SPARK_NATIVE_WEB_SEARCH_TOOL],
     });
   });
 
-  it('does not rewrite tools for non-codex providers', () => {
+  it('does not inject duplicate native web search tools', () => {
+    // Arrange
+    const pi = createPi();
+    registerWebSearch(pi.extensionApi, { enabled: true });
+    const payload = {
+      tools: [READ_TOOL, SPARK_NATIVE_WEB_SEARCH_TOOL],
+    };
+
+    // Act
+    const rewrittenPayload = pi.emitBeforeProviderRequest(payload, CODEX_MODEL);
+
+    // Assert
+    expect(rewrittenPayload).toBe(payload);
+  });
+
+  it('does not inject tools for non-codex providers', () => {
     // Arrange
     const pi = createPi();
     registerWebSearch(pi.extensionApi, { enabled: true });
 
     // Act
-    const unchangedPayload = pi.emitBeforeProviderRequest(
-      { tools: [{ type: 'function', name: 'web_search' }] },
-      { provider: 'openai', id: 'gpt-5' }
-    );
+    const unchangedPayload = pi.emitBeforeProviderRequest({ tools: [READ_TOOL] }, OPENAI_MODEL);
 
     // Assert
     expect(unchangedPayload).toBeUndefined();
   });
 
-  it('registered tool execution fails locally with provider-specific messages', async () => {
+  it('does not replace malformed tools payloads', () => {
     // Arrange
     const pi = createPi();
     registerWebSearch(pi.extensionApi, { enabled: true });
-    const tool = pi.tools[0];
-    const signal = new AbortController().signal;
+    const payload = { tools: 'invalid' };
 
-    // Act and assert
-    await expect(
-      tool.execute('call-id', {}, signal, () => {}, {
-        model: { provider: 'openai', id: 'gpt-5' },
-      })
-    ).rejects.toThrow('web_search is only available with the openai-codex provider');
-    await expect(
-      tool.execute('call-id', {}, signal, () => {}, {
-        model: { provider: 'openai-codex', id: 'gpt-5-codex' },
-      })
-    ).rejects.toThrow('web_search is a native openai-codex provider tool');
+    // Act
+    const rewrittenPayload = pi.emitBeforeProviderRequest(payload, CODEX_MODEL);
+
+    // Assert
+    expect(rewrittenPayload).toBe(payload);
   });
 });
 
-function createPi(initialActiveTools: string[] = []) {
+function createPi() {
   const handlers = new Map<string, Handler[]>();
   const state = {
     tools: [] as RegisteredTool[],
-    activeTools: [...initialActiveTools],
   };
 
   const pi = {
     get tools() {
       return state.tools;
     },
-    get activeTools() {
-      return state.activeTools;
-    },
-    get handlerCount() {
-      return [...handlers.values()].reduce((count, eventHandlers) => count + eventHandlers.length, 0);
+    get registeredEventNames() {
+      return [...handlers.keys()];
     },
     extensionApi: {
       registerTool(tool: RegisteredTool) {
@@ -159,19 +163,7 @@ function createPi(initialActiveTools: string[] = []) {
         eventHandlers.push(handler);
         handlers.set(eventName, eventHandlers);
       },
-      getActiveTools() {
-        return state.activeTools;
-      },
-      setActiveTools(activeTools: string[]) {
-        state.activeTools = activeTools;
-      },
     } as unknown as Parameters<typeof registerWebSearch>[0],
-    emitSessionStart(model: TestModel) {
-      return emit('session_start', {}, { model });
-    },
-    emitModelSelect(model: TestModel) {
-      return emit('model_select', { model }, {});
-    },
     emitBeforeProviderRequest(payload: unknown, model: TestModel) {
       return emit('before_provider_request', { payload }, { model });
     },

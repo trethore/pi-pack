@@ -219,7 +219,7 @@ function buildStatusMessage(
     `codex controls enabled: ${config.codex.enabled ? 'yes' : 'no'}`,
     `usage command enabled: ${config.usage.enabled ? 'yes' : 'no'}`,
     `account command enabled: ${config.account.enabled ? 'yes' : 'no'}`,
-    `web_search tool enabled: ${config.webSearch.enabled ? 'yes' : 'no'}`,
+    `native web_search enabled: ${config.webSearch.enabled ? 'yes' : 'no'}`,
   ];
 
   if (config.codex.enabled) {
