@@ -86,11 +86,11 @@ export function formatToolCall(
   options: { toolName: string; query: string; paths: string; flags: string }
 ): string {
   const suffix = options.flags ? theme.fg('toolOutput', ` (${options.flags})`) : '';
+  const query = options.query ? [' ', theme.fg('accent', options.query)] : [];
 
   return [
     theme.fg('toolTitle', theme.bold(options.toolName)),
-    ' ',
-    theme.fg('accent', options.query),
+    ...query,
     theme.fg('toolOutput', ` in ${options.paths}`),
     suffix,
   ].join('');

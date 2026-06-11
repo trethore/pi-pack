@@ -94,7 +94,7 @@ describe('apply_patch tool', () => {
     expect(result.content).toEqual([
       {
         type: 'text',
-        text: lines('Success. Updated the following files:', 'A created.txt', 'M modified.txt', 'D deleted.txt'),
+        text: 'Success.',
       },
     ]);
   });
@@ -126,9 +126,7 @@ describe('apply_patch tool', () => {
     const resultText = renderComponent(tool.renderResult?.(result, { expanded: true } as never, theme, renderContext));
 
     // Assert
-    expect(callText).toContain(
-      '<toolTitle>apply_patch</toolTitle> <accent>*** Add File: created.txt</accent><toolOutput> in .</toolOutput>'
-    );
+    expect(callText).toContain('<toolTitle>apply_patch</toolTitle><toolOutput> in .</toolOutput>');
     expect(resultText).toContain('<toolOutput>Success. Updated the following files:</toolOutput>');
     expect(resultText).toContain('<toolOutput>A created.txt</toolOutput>');
   });

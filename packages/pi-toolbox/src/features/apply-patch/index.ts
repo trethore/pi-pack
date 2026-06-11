@@ -1,4 +1,5 @@
-import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI, Theme, ToolDefinition, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
+import { Text } from '@earendil-works/pi-tui';
 import { Type } from 'typebox';
 
 import type { ApplyPatchToolConfig } from '#src/config/schema.js';
@@ -11,6 +12,7 @@ import {
   formatToolCall,
   readJsonDefinition,
 } from '#src/utils/tool-definition.js';
+import { formatTextToolResult } from '#src/utils/tool-results.js';
 
 const APPLY_PATCH_TOOL_DEFINITION = readApplyPatchDefinition();
 
@@ -42,6 +44,10 @@ interface ApplyPatchParametersJsonSchema {
   };
 }
 
+interface TextRenderContext {
+  lastComponent?: unknown;
+}
+
 type ApplyPatchParametersSchema = ReturnType<typeof createApplyPatchParametersSchema>;
 type ApplyPatchRunner = (options: ApplyPatchOptions) => Promise<ApplyPatchResult>;
 
@@ -67,7 +73,7 @@ export function createApplyPatchToolDefinition(
   const runner = options.runner ?? applyPatch;
   const parameters = createApplyPatchParametersSchema();
 
-  return createTextToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined>({
+  const tool = createTextToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined>({
     metadata: APPLY_PATCH_TOOL_DEFINITION,
     parameters,
     async execute(_toolCallId, params) {
@@ -77,7 +83,7 @@ export function createApplyPatchToolDefinition(
           content: [
             {
               type: 'text',
-              text: formatApplyPatchSummary(result),
+              text: 'Success.',
             },
           ],
           details: {
@@ -91,6 +97,13 @@ export function createApplyPatchToolDefinition(
     },
     formatCall: formatApplyPatchCall,
   });
+
+  return {
+    ...tool,
+    renderResult(result, resultOptions, theme, context) {
+      return renderApplyPatchResult(result, resultOptions, theme, context);
+    },
+  };
 }
 
 function readApplyPatchDefinition(): NormalizedApplyPatchDefinition {
@@ -113,25 +126,38 @@ function normalizeWorkdir(workdir: string | undefined): string | undefined {
 function formatApplyPatchCall(args: ApplyPatchParameters | undefined, theme: Theme): string {
   return formatToolCall(theme, {
     toolName: APPLY_PATCH_TOOL_DEFINITION.name,
-    query: formatPatchLabel(args?.patch),
+    query: '',
     paths: normalizeWorkdir(args?.workdir) ?? '.',
     flags: '',
   });
 }
 
-function formatPatchLabel(patch: string | undefined): string {
-  if (patch === undefined || patch.trim().length === 0) return '...';
-  const firstHunkLine = patch
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(
-      (line) =>
-        line.startsWith('*** Add File:') || line.startsWith('*** Delete File:') || line.startsWith('*** Update File:')
-    );
-  return firstHunkLine ?? 'patch';
-}
-
 function formatApplyPatchError(error: unknown): string {
   if (error instanceof InvalidPatchError || error instanceof InvalidHunkError) return formatPatchParseError(error);
   return error instanceof Error ? error.message : String(error);
+}
+
+function renderApplyPatchResult(
+  result: Awaited<ReturnType<ToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined>['execute']>>,
+  options: ToolRenderResultOptions,
+  theme: Theme,
+  context: TextRenderContext
+): Text {
+  const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
+  text.setText(formatTextToolResult(formatApplyPatchRenderResult(result), options, theme));
+  return text;
+}
+
+function formatApplyPatchRenderResult(
+  result: Awaited<ReturnType<ToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined>['execute']>>
+) {
+  if (result.details === undefined) return result;
+  return {
+    content: [
+      {
+        type: 'text',
+        text: formatApplyPatchSummary(result.details),
+      },
+    ],
+  };
 }
