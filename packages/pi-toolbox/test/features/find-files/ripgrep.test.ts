@@ -5,6 +5,12 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { runRipgrepFindFiles } from '#pi-toolbox/features/find-files/ripgrep.js';
+import {
+  writeDepthFixture,
+  writeHiddenGitFixture,
+  writeHiddenIgnoredFixture,
+  writeIndependentDepthFixture,
+} from '#test/utils/ripgrep-test-helpers.js';
 
 describe('ripgrep find_files runner', () => {
   it('discovers files with the packaged ripgrep executable', async () => {
@@ -74,10 +80,7 @@ describe('ripgrep find_files runner', () => {
   it('limits directory traversal depth relative to each search path', async () => {
     // Arrange
     const cwd = makeTempDir();
-    mkdirSync(path.join(cwd, 'nested', 'deep'), { recursive: true });
-    writeFileSync(path.join(cwd, 'root.txt'), 'root');
-    writeFileSync(path.join(cwd, 'nested', 'child.txt'), 'child');
-    writeFileSync(path.join(cwd, 'nested', 'deep', 'grandchild.txt'), 'grandchild');
+    writeDepthFixture(cwd, { root: 'root', child: 'child', grandchild: 'grandchild' });
 
     // Act
     const result = await runRipgrepFindFiles({
@@ -98,9 +101,7 @@ describe('ripgrep find_files runner', () => {
   it('applies depth independently to each search path', async () => {
     // Arrange
     const cwd = makeTempDir();
-    mkdirSync(path.join(cwd, 'root', 'nested', 'deep'), { recursive: true });
-    writeFileSync(path.join(cwd, 'root', 'nested', 'child.txt'), 'child');
-    writeFileSync(path.join(cwd, 'root', 'nested', 'deep', 'grandchild.txt'), 'grandchild');
+    writeIndependentDepthFixture(cwd, { child: 'child', grandchild: 'grandchild' });
 
     // Act
     const result = await runRipgrepFindFiles({
@@ -163,10 +164,7 @@ describe('ripgrep find_files runner', () => {
   it('includes hidden files by default while excluding git internals', async () => {
     // Arrange
     const cwd = makeTempDir();
-    mkdirSync(path.join(cwd, '.git', 'objects'), { recursive: true });
-    writeFileSync(path.join(cwd, '.env.example'), 'TOKEN=example');
-    writeFileSync(path.join(cwd, '.git', 'config'), '[core]');
-    writeFileSync(path.join(cwd, '.git', 'objects', 'object-file'), 'object');
+    writeHiddenGitFixture(cwd, { hidden: 'TOKEN=example', gitConfig: '[core]', gitObject: 'object' });
 
     // Act
     const result = await runRipgrepFindFiles({
@@ -208,9 +206,7 @@ describe('ripgrep find_files runner', () => {
   it('keeps hidden ignored files excluded when noIgnore and visibleOnly are both true', async () => {
     // Arrange
     const cwd = makeTempDir();
-    writeFileSync(path.join(cwd, '.gitignore'), 'ignored.txt\n');
-    writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
-    writeFileSync(path.join(cwd, '.env.example'), 'TOKEN=example');
+    writeHiddenIgnoredFixture(cwd, { ignored: 'ignored', hidden: 'TOKEN=example' });
 
     // Act
     const result = await runRipgrepFindFiles({

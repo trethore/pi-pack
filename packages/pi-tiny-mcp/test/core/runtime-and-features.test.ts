@@ -2,13 +2,14 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { defaultConfig, type PiTinyMcpConfig } from '#pi-tiny-mcp/config/schema.js';
 import { McpLifecycleManager } from '#pi-tiny-mcp/core/lifecycle.js';
 import { buildToolMetadata } from '#pi-tiny-mcp/core/tool-metadata.js';
 import type { McpTool } from '#pi-tiny-mcp/core/types.js';
+import { importWithHome } from '@trethore/pi-shared/test/config-test-helpers.js';
+import { createTinyMcpConfig } from '#test/utils/config-test-helpers.js';
+import { createRegisteredProxyTool, executeProxyTool } from '#test/utils/proxy-tool-test-helpers.js';
 
 describe('runtime and feature tests', () => {
   afterEach(() => {
@@ -48,7 +49,7 @@ describe('runtime and feature tests', () => {
 
     // Act
     const runtime = new TinyMcpRuntime(
-      createConfig({ servers: { github: newDefinition }, metadataCache: { enabled: true } })
+      createTinyMcpConfig({ servers: { github: newDefinition }, metadataCache: { enabled: true } })
     );
 
     // Assert
@@ -65,7 +66,7 @@ describe('runtime and feature tests', () => {
       inputSchema: { type: 'object' },
     };
     const runtime = {
-      getStatus: vi.fn(() => [{ name: 'github', status: 'cached', toolCount: 1 }]),
+      getStatus: vi.fn(() => [{ name: 'github', status: 'cached' as const, toolCount: 1 }]),
       hasServer: vi.fn((serverName: string) => serverName === 'github'),
       listTools: vi.fn(() => [toolMetadata]),
       searchTools: vi.fn(() => [toolMetadata]),
@@ -132,7 +133,7 @@ describe('runtime and feature tests', () => {
     // Arrange
     const { TinyMcpRuntime } = await import('#pi-tiny-mcp/core/runtime.js');
     const runtime = new TinyMcpRuntime(
-      createConfig({
+      createTinyMcpConfig({
         servers: { github: { command: 'missing-command' } },
         metadataCache: { enabled: false },
       })
@@ -148,50 +149,7 @@ describe('runtime and feature tests', () => {
 });
 
 async function importCacheWithHome(homeDir: string) {
-  vi.resetModules();
-  vi.doMock('node:os', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('node:os')>()),
-    homedir: () => homeDir,
-  }));
-  return import('#pi-tiny-mcp/core/metadata-cache.js');
-}
-
-type RegisteredTool = Parameters<ExtensionAPI['registerTool']>[0];
-
-async function createRegisteredProxyTool(runtime: Record<string, unknown>): Promise<RegisteredTool> {
-  const { registerProxyTool } = await import('#pi-tiny-mcp/features/proxy-tool.js');
-  let registeredTool: RegisteredTool | undefined;
-  const pi = {
-    registerTool(tool: RegisteredTool) {
-      registeredTool = tool;
-    },
-  } as Pick<ExtensionAPI, 'registerTool'> as ExtensionAPI;
-
-  registerProxyTool(pi, createConfig({ servers: { github: { command: 'npx' } } }), async () => runtime as never);
-  if (!registeredTool) throw new Error('proxy tool was not registered');
-  return registeredTool;
-}
-
-async function executeProxyTool(tool: RegisteredTool, params: Record<string, unknown>) {
-  return tool.execute('tool-call-id', params as never, undefined, undefined, undefined as never);
-}
-
-function createConfig(
-  overrides: {
-    servers?: PiTinyMcpConfig['servers'];
-    metadataCache?: Partial<PiTinyMcpConfig['metadataCache']>;
-  } = {}
-): PiTinyMcpConfig {
-  return {
-    ...defaultConfig,
-    proxyTool: { ...defaultConfig.proxyTool },
-    directTools: { ...defaultConfig.directTools },
-    metadataCache: { ...defaultConfig.metadataCache, ...overrides.metadataCache },
-    lifecycle: { ...defaultConfig.lifecycle },
-    toolNames: { ...defaultConfig.toolNames },
-    sources: { ...defaultConfig.sources },
-    servers: overrides.servers ?? {},
-  };
+  return importWithHome(homeDir, () => import('#pi-tiny-mcp/core/metadata-cache.js'));
 }
 
 async function makeTempDir(): Promise<string> {

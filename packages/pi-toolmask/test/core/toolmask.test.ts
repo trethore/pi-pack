@@ -12,11 +12,7 @@ const defaultConfig: PiToolmaskConfig = {
 
 describe('applyToolmask', () => {
   it('disables active tools matching masks', () => {
-    const calls: string[][] = [];
-    const pi = {
-      getActiveTools: () => ['read', 'bash', 'write', 'mcp_read_docs'],
-      setActiveTools: (toolNames: string[]) => calls.push(toolNames),
-    };
+    const { calls, pi } = createToolmaskPi(['read', 'bash', 'write', 'mcp_read_docs']);
 
     const result = applyToolmask(pi, { ...defaultConfig, masks: ['bash', 'mcp_*'] });
 
@@ -30,11 +26,7 @@ describe('applyToolmask', () => {
   });
 
   it('does not set active tools when nothing matches', () => {
-    const calls: string[][] = [];
-    const pi = {
-      getActiveTools: () => ['read', 'bash'],
-      setActiveTools: (toolNames: string[]) => calls.push(toolNames),
-    };
+    const { calls, pi } = createToolmaskPi(['read', 'bash']);
 
     const result = applyToolmask(pi, { ...defaultConfig, masks: ['write'] });
 
@@ -43,11 +35,7 @@ describe('applyToolmask', () => {
   });
 
   it('can disable all active tools', () => {
-    const calls: string[][] = [];
-    const pi = {
-      getActiveTools: () => ['read', 'bash'],
-      setActiveTools: (toolNames: string[]) => calls.push(toolNames),
-    };
+    const { calls, pi } = createToolmaskPi(['read', 'bash']);
 
     const result = applyToolmask(pi, { ...defaultConfig, masks: ['*'] });
 
@@ -56,11 +44,7 @@ describe('applyToolmask', () => {
   });
 
   it('keeps tools matching negated masks', () => {
-    const calls: string[][] = [];
-    const pi = {
-      getActiveTools: () => ['read', 'bash', 'write', 'edit'],
-      setActiveTools: (toolNames: string[]) => calls.push(toolNames),
-    };
+    const { calls, pi } = createToolmaskPi(['read', 'bash', 'write', 'edit']);
 
     const result = applyToolmask(pi, { ...defaultConfig, masks: ['*', '!read'] });
 
@@ -70,11 +54,7 @@ describe('applyToolmask', () => {
   });
 
   it('does not disable anything when only negated masks are configured', () => {
-    const calls: string[][] = [];
-    const pi = {
-      getActiveTools: () => ['read', 'bash'],
-      setActiveTools: (toolNames: string[]) => calls.push(toolNames),
-    };
+    const { calls, pi } = createToolmaskPi(['read', 'bash']);
 
     const result = applyToolmask(pi, { ...defaultConfig, masks: ['!read'] });
 
@@ -82,3 +62,14 @@ describe('applyToolmask', () => {
     expect(calls).toEqual([]);
   });
 });
+
+function createToolmaskPi(activeTools: string[]) {
+  const calls: string[][] = [];
+  return {
+    calls,
+    pi: {
+      getActiveTools: () => activeTools,
+      setActiveTools: (toolNames: string[]) => calls.push(toolNames),
+    },
+  };
+}

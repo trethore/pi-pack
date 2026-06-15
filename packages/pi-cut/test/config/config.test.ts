@@ -1,7 +1,12 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { createConfigTestFileHelpers, importWithHome } from '@trethore/pi-shared/test/config-test-helpers.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const { makeTempDir, writeProjectConfig } = createConfigTestFileHelpers({
+  configFileName: 'pi-cut.jsonc',
+  tempPrefix: 'pi-cut-test-',
+});
+
+type LoadedPiCutConfig = Awaited<ReturnType<typeof loadProjectConfig>>['config'];
 
 describe('loadConfig', () => {
   afterEach(() => {
@@ -9,60 +14,42 @@ describe('loadConfig', () => {
     vi.resetModules();
   });
 
-  it('rejects repetition folding minRepeats below 2', async () => {
+  it.each([
+    {
+      name: 'repetition folding minRepeats below 2',
+      projectConfig: { repetitionFolding: { minRepeats: 1 } },
+      getActual: (config: LoadedPiCutConfig) => config.repetitionFolding.minRepeats,
+      expectedValue: 2,
+      expectedError: 'repetitionFolding.minRepeats value',
+    },
+    {
+      name: 'line truncation maxChars below 1',
+      projectConfig: { lineTruncation: { maxChars: 0 } },
+      getActual: (config: LoadedPiCutConfig) => config.lineTruncation.maxChars,
+      expectedValue: 2000,
+      expectedError: 'lineTruncation.maxChars value',
+    },
+    {
+      name: 'new lines folding minNewLines below 2',
+      projectConfig: { newLinesFolding: { minNewLines: 1 } },
+      getActual: (config: LoadedPiCutConfig) => config.newLinesFolding.minNewLines,
+      expectedValue: 10,
+      expectedError: 'newLinesFolding.minNewLines value',
+    },
+    {
+      name: 'new lines folding foldTo below 2',
+      projectConfig: { newLinesFolding: { foldTo: 1 } },
+      getActual: (config: LoadedPiCutConfig) => config.newLinesFolding.foldTo,
+      expectedValue: 5,
+      expectedError: 'newLinesFolding.foldTo value',
+    },
+  ])('rejects $name', async ({ projectConfig, getActual, expectedValue, expectedError }) => {
     // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ repetitionFolding: { minRepeats: 1 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
-    expect(loaded.config.repetitionFolding.minRepeats).toBe(2);
-    expect(loaded.errors).toEqual([expect.stringContaining('repetitionFolding.minRepeats value')]);
-  });
-
-  it('rejects line truncation maxChars below 1', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ lineTruncation: { maxChars: 0 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
-    expect(loaded.config.lineTruncation.maxChars).toBe(2000);
-    expect(loaded.errors).toEqual([expect.stringContaining('lineTruncation.maxChars value')]);
-  });
-
-  it('rejects new lines folding minNewLines below 2', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { minNewLines: 1 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
-    expect(loaded.config.newLinesFolding.minNewLines).toBe(10);
-    expect(loaded.errors).toEqual([expect.stringContaining('newLinesFolding.minNewLines value')]);
-  });
-
-  it('rejects new lines folding foldTo below 2', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { foldTo: 1 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
-    expect(loaded.config.newLinesFolding.foldTo).toBe(5);
-    expect(loaded.errors).toEqual([expect.stringContaining('newLinesFolding.foldTo value')]);
+    expect(getActual(loaded.config)).toBe(expectedValue);
+    expect(loaded.errors).toEqual([expect.stringContaining(expectedError)]);
   });
 
   it('rejects new lines folding foldTo above minNewLines', async () => {
@@ -294,22 +281,12 @@ describe('loadConfig', () => {
 });
 
 async function importConfigWithEmptyHome() {
-  vi.resetModules();
-  const homeDir = makeTempDir();
-  vi.doMock('node:os', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('node:os')>()),
-    homedir: () => homeDir,
-  }));
-
-  return import('#pi-cut/config/config.js');
+  return importWithHome(makeTempDir(), () => import('#pi-cut/config/config.js'));
 }
 
-function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-cut-test-'));
-}
-
-function writeProjectConfig(cwd: string, contents: string) {
-  const configDir = path.join(cwd, '.pi');
-  mkdirSync(configDir, { recursive: true });
-  writeFileSync(path.join(configDir, 'pi-cut.jsonc'), contents);
+async function loadProjectConfig(projectConfig: object) {
+  const { loadConfig } = await importConfigWithEmptyHome();
+  const cwd = makeTempDir();
+  writeProjectConfig(cwd, JSON.stringify(projectConfig));
+  return loadConfig(cwd);
 }

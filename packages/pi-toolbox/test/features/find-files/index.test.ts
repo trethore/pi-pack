@@ -7,10 +7,13 @@ import { createFindFilesToolDefinition, registerFindFilesTool } from '#pi-toolbo
 
 import {
   createPi,
+  createLineOutput,
   createRenderContext,
   createTheme,
+  expectCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
   renderComponent,
+  renderToolResult,
 } from '#test/utils/tool-test-helpers.js';
 
 describe('find_files tool', () => {
@@ -247,27 +250,20 @@ src/index.ts`,
   it('renders collapsed results with an expansion hint', () => {
     // Arrange
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
-    const output = Array.from({ length: 25 }, (_value, index) => `line ${index + 1}`).join('\n');
+    const output = createLineOutput(25);
 
     // Act
-    const rendered = renderComponent(
-      tool.renderResult?.(
-        {
-          content: [{ type: 'text', text: output }],
-          details: { paths: ['.'], count: 24, limited: false },
-        },
-        { expanded: false, isPartial: false },
-        createTheme(),
-        createRenderContext(false)
-      )
+    const rendered = renderToolResult(
+      tool.renderResult,
+      {
+        content: [{ type: 'text', text: output }],
+        details: { paths: ['.'], count: 24, limited: false },
+      },
+      { expanded: false, isPartial: false }
     );
 
     // Assert
-    expect(rendered).toContain('<toolOutput>line 1</toolOutput>');
-    expect(rendered).toContain('<toolOutput>line 10</toolOutput>');
-    expect(rendered).not.toContain('line 11');
-    expect(rendered).toContain('15 more lines');
-    expect(rendered).toContain('to expand');
+    expectCollapsedOutputWithExpansionHint(rendered);
   });
 
   it('renders expanded results with the full output returned to the model', () => {
@@ -276,16 +272,13 @@ src/index.ts`,
     const output = ['paths=. count=2', 'src/', '  index.ts'].join('\n');
 
     // Act
-    const rendered = renderComponent(
-      tool.renderResult?.(
-        {
-          content: [{ type: 'text', text: output }],
-          details: { paths: ['.'], count: 2, limited: false },
-        },
-        { expanded: true, isPartial: false },
-        createTheme(),
-        createRenderContext(false)
-      )
+    const rendered = renderToolResult(
+      tool.renderResult,
+      {
+        content: [{ type: 'text', text: output }],
+        details: { paths: ['.'], count: 2, limited: false },
+      },
+      { expanded: true, isPartial: false }
     );
 
     // Assert
@@ -300,27 +293,22 @@ src/index.ts`,
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
 
     // Act
-    const zeroResult = renderComponent(
-      tool.renderResult?.(
-        {
-          content: [{ type: 'text', text: 'paths=. count=0' }],
-          details: { paths: ['.'], count: 0, limited: false },
-        },
-        { expanded: false, isPartial: false },
-        createTheme(),
-        createRenderContext(false)
-      )
+    const zeroResult = renderToolResult(
+      tool.renderResult,
+      {
+        content: [{ type: 'text', text: 'paths=. count=0' }],
+        details: { paths: ['.'], count: 0, limited: false },
+      },
+      { expanded: false, isPartial: false }
     );
-    const failedResult = renderComponent(
-      tool.renderResult?.(
-        {
-          content: [{ type: 'text', text: 'find_files failed: rg executable not found' }],
-          details: undefined,
-        },
-        { expanded: false, isPartial: false },
-        createTheme(),
-        createRenderContext(true)
-      )
+    const failedResult = renderToolResult(
+      tool.renderResult,
+      {
+        content: [{ type: 'text', text: 'find_files failed: rg executable not found' }],
+        details: undefined,
+      },
+      { expanded: false, isPartial: false },
+      true
     );
 
     // Assert

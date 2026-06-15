@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { defaultConfig, type PiTinyMcpConfig } from '#pi-tiny-mcp/config/schema.js';
 import { transformMcpContent } from '#pi-tiny-mcp/core/content.js';
 import { TinyMcpRuntime } from '#pi-tiny-mcp/core/runtime.js';
 import { buildToolMetadata } from '#pi-tiny-mcp/core/tool-metadata.js';
 import type { McpResource, McpTool } from '#pi-tiny-mcp/core/types.js';
+import { createTinyMcpConfig } from '#test/utils/config-test-helpers.js';
 
 describe('resource tool metadata', () => {
   it('converts resources to zero-argument tool metadata', () => {
@@ -117,7 +117,7 @@ describe('resource result rendering', () => {
   it('returns resource call details with content count and MIME types', async () => {
     // Arrange
     const runtime = new TinyMcpRuntime(
-      createConfig({ servers: { docs: { command: 'npx' } }, metadataCache: { enabled: false } })
+      createTinyMcpConfig({ servers: { docs: { command: 'npx' } }, metadataCache: { enabled: false } })
     );
     runtime.metadataByServer.set('docs', [
       {
@@ -156,21 +156,3 @@ describe('resource result rendering', () => {
     });
   });
 });
-
-function createConfig(
-  overrides: {
-    servers?: PiTinyMcpConfig['servers'];
-    metadataCache?: Partial<PiTinyMcpConfig['metadataCache']>;
-  } = {}
-): PiTinyMcpConfig {
-  return {
-    ...defaultConfig,
-    proxyTool: { ...defaultConfig.proxyTool },
-    directTools: { ...defaultConfig.directTools },
-    metadataCache: { ...defaultConfig.metadataCache, ...overrides.metadataCache },
-    lifecycle: { ...defaultConfig.lifecycle },
-    toolNames: { ...defaultConfig.toolNames },
-    sources: { ...defaultConfig.sources },
-    servers: overrides.servers ?? {},
-  };
-}

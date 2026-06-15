@@ -21,14 +21,12 @@ describe('time taken feature', () => {
 
   it('notifies elapsed time when the agent ends', () => {
     // Arrange
-    const dateNow = vi.spyOn(Date, 'now');
-    dateNow.mockReturnValueOnce(1000).mockReturnValueOnce(6500);
+    mockNowSequence(1000, 6500);
     const piApi = createPiApi();
     registerTimeTakenFeature(piApi.extensionApi);
 
     // Act
-    piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: true });
+    runAgentCycle(piApi, true);
 
     // Assert
     expect(piApi.notifications).toEqual([{ message: 'Took 6s', type: 'info' }]);
@@ -36,8 +34,7 @@ describe('time taken feature', () => {
 
   it('does not notify before the agent ends', () => {
     // Arrange
-    const dateNow = vi.spyOn(Date, 'now');
-    dateNow.mockReturnValue(1000);
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
     const piApi = createPiApi();
     registerTimeTakenFeature(piApi.extensionApi);
 
@@ -50,14 +47,12 @@ describe('time taken feature', () => {
 
   it('does not notify without UI', () => {
     // Arrange
-    const dateNow = vi.spyOn(Date, 'now');
-    dateNow.mockReturnValueOnce(1000).mockReturnValueOnce(6500);
+    mockNowSequence(1000, 6500);
     const piApi = createPiApi();
     registerTimeTakenFeature(piApi.extensionApi);
 
     // Act
-    piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: false });
+    runAgentCycle(piApi, false);
 
     // Assert
     expect(piApi.notifications).toEqual([]);
@@ -65,16 +60,13 @@ describe('time taken feature', () => {
 
   it('resets the timer between runs', () => {
     // Arrange
-    const dateNow = vi.spyOn(Date, 'now');
-    dateNow.mockReturnValueOnce(1000).mockReturnValueOnce(2000).mockReturnValueOnce(10_000).mockReturnValueOnce(75_000);
+    mockNowSequence(1000, 2000, 10_000, 75_000);
     const piApi = createPiApi();
     registerTimeTakenFeature(piApi.extensionApi);
 
     // Act
-    piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: true });
-    piApi.emitAgentStart();
-    piApi.emitAgentEnd({ hasUI: true });
+    runAgentCycle(piApi, true);
+    runAgentCycle(piApi, true);
 
     // Assert
     expect(piApi.notifications).toEqual([
@@ -120,4 +112,14 @@ function createPiApi() {
       );
     },
   };
+}
+
+function mockNowSequence(...timestamps: number[]): void {
+  const dateNow = vi.spyOn(Date, 'now');
+  for (const timestamp of timestamps) dateNow.mockReturnValueOnce(timestamp);
+}
+
+function runAgentCycle(piApi: ReturnType<typeof createPiApi>, hasUI: boolean): void {
+  piApi.emitAgentStart();
+  piApi.emitAgentEnd({ hasUI });
 }

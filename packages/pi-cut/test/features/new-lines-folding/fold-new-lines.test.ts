@@ -19,40 +19,20 @@ describe('foldNewLines', () => {
     expect(foldedText).toBe(`before${'\n'.repeat(5)}after`);
   });
 
-  it('folds custom minimum new lines to the configured target', () => {
+  it.each([
+    { name: 'folds custom minimum new lines', newLineCount: 4, expectedNewLineCount: 2 },
+    { name: 'folds exactly the configured minimum new lines', newLineCount: 3, expectedNewLineCount: 2 },
+    { name: 'does not fold below the configured minimum new lines', newLineCount: 2, expectedNewLineCount: 2 },
+  ])('$name', ({ newLineCount, expectedNewLineCount }) => {
     // Arrange
-    const text = `before${'\n'.repeat(4)}after`;
+    const text = `before${'\n'.repeat(newLineCount)}after`;
     const config = { ...defaultConfig, minNewLines: 3, foldTo: 2 };
 
     // Act
     const foldedText = foldNewLines(text, config);
 
     // Assert
-    expect(foldedText).toBe(`before${'\n'.repeat(2)}after`);
-  });
-
-  it('folds exactly the configured minimum new lines', () => {
-    // Arrange
-    const text = `before${'\n'.repeat(3)}after`;
-    const config = { ...defaultConfig, minNewLines: 3, foldTo: 2 };
-
-    // Act
-    const foldedText = foldNewLines(text, config);
-
-    // Assert
-    expect(foldedText).toBe(`before${'\n'.repeat(2)}after`);
-  });
-
-  it('does not fold below the configured minimum new lines', () => {
-    // Arrange
-    const text = `before${'\n'.repeat(2)}after`;
-    const config = { ...defaultConfig, minNewLines: 3, foldTo: 2 };
-
-    // Act
-    const foldedText = foldNewLines(text, config);
-
-    // Assert
-    expect(foldedText).toBe(text);
+    expect(foldedText).toBe(`before${'\n'.repeat(expectedNewLineCount)}after`);
   });
 
   it('preserves crlf newline style', () => {

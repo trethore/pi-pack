@@ -15,7 +15,8 @@
   },
   "imports": {
     "#src/*": "./src/*",
-    "#pi-tiny-mcp/*": "./src/*"
+    "#pi-tiny-mcp/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "pi": {
     "extensions": [

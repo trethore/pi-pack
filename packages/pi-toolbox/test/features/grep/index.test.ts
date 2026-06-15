@@ -6,10 +6,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGrepToolDefinition, registerGrepTool } from '#pi-toolbox/features/grep/index.js';
 import {
   createPi,
+  createLineOutput,
   createRenderContext,
   createTheme,
+  expectCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
   renderComponent,
+  renderToolResult,
 } from '#test/utils/tool-test-helpers.js';
 
 const DEFAULT_GREP_CONFIG = {
@@ -294,27 +297,20 @@ src/index.ts
   it('renders collapsed results with an expansion hint', () => {
     // Arrange
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG);
-    const output = Array.from({ length: 25 }, (_value, index) => `line ${index + 1}`).join('\n');
+    const output = createLineOutput(25);
 
     // Act
-    const rendered = renderComponent(
-      tool.renderResult?.(
-        {
-          content: [{ type: 'text', text: output }],
-          details: { count: 24, files: 2, limited: false },
-        },
-        { expanded: false, isPartial: false },
-        createTheme(),
-        createRenderContext(false)
-      )
+    const rendered = renderToolResult(
+      tool.renderResult,
+      {
+        content: [{ type: 'text', text: output }],
+        details: { count: 24, files: 2, limited: false },
+      },
+      { expanded: false, isPartial: false }
     );
 
     // Assert
-    expect(rendered).toContain('<toolOutput>line 1</toolOutput>');
-    expect(rendered).toContain('<toolOutput>line 10</toolOutput>');
-    expect(rendered).not.toContain('line 11');
-    expect(rendered).toContain('15 more lines');
-    expect(rendered).toContain('to expand');
+    expectCollapsedOutputWithExpansionHint(rendered);
   });
 
   it('fails when the search path does not exist', async () => {

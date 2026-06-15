@@ -1,8 +1,14 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { createConfigTestHelpers } from '@trethore/pi-shared/test/config-test-helpers.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const { importConfigWithHome, makeTempDir, writeProjectConfig } = createConfigTestHelpers({
+  configFileName: 'pi-tiny-mcp.jsonc',
+  importConfig: () => import('#pi-tiny-mcp/config/config.js'),
+  tempPrefix: 'pi-tiny-mcp-test-',
+});
 
 describe('loadConfig', () => {
   afterEach(() => {
@@ -226,23 +232,3 @@ describe('loadConfig', () => {
     ]);
   });
 });
-
-async function importConfigWithHome(homeDir: string) {
-  vi.resetModules();
-  vi.doMock('node:os', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('node:os')>()),
-    homedir: () => homeDir,
-  }));
-
-  return import('#pi-tiny-mcp/config/config.js');
-}
-
-function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-tiny-mcp-test-'));
-}
-
-function writeProjectConfig(cwd: string, contents: string): void {
-  const configDir = path.join(cwd, '.pi');
-  mkdirSync(configDir, { recursive: true });
-  writeFileSync(path.join(configDir, 'pi-tiny-mcp.jsonc'), contents);
-}

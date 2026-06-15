@@ -57,8 +57,7 @@ function mergeFindFilesConfig(
   configPath: string,
   errors: string[]
 ) {
-  mergeEnabledField(target, source, `${label}.enabled`, configPath, errors);
-  mergeDefaultLimit(target, source, label, configPath, errors);
+  mergeLimitedToolConfig(target, source, label, configPath, errors);
 }
 
 function mergeGrepConfig(
@@ -68,8 +67,7 @@ function mergeGrepConfig(
   configPath: string,
   errors: string[]
 ) {
-  mergeEnabledField(target, source, `${label}.enabled`, configPath, errors);
-  mergeDefaultLimit(target, source, label, configPath, errors);
+  mergeLimitedToolConfig(target, source, label, configPath, errors);
   mergeField(
     source,
     'defaultLimitPerFile',
@@ -94,13 +92,14 @@ function mergeGrepConfig(
   );
 }
 
-function mergeDefaultLimit(
-  target: { defaultLimit: number },
+function mergeLimitedToolConfig(
+  target: { enabled?: boolean; defaultLimit: number },
   source: Record<string, unknown>,
   label: string,
   configPath: string,
   errors: string[]
 ) {
+  mergeEnabledField(target, source, `${label}.enabled`, configPath, errors);
   mergeField(source, 'defaultLimit', `${label}.defaultLimit`, limitSchema, configPath, errors, (value) => {
     target.defaultLimit = value;
   });
