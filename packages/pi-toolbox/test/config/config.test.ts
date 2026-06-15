@@ -1,8 +1,11 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  importConfigWithHome,
+  makeTempDir,
+  writeGlobalConfig,
+  writeProjectConfig,
+} from '#test/utils/config-test-helpers.js';
 
 describe('loadConfig', () => {
   afterEach(() => {
@@ -127,29 +130,3 @@ describe('loadConfig', () => {
     expect(loaded.config.findFiles.defaultLimit).toBe(250);
   });
 });
-
-async function importConfigWithHome(homeDir: string) {
-  vi.resetModules();
-  vi.doMock('node:os', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('node:os')>()),
-    homedir: () => homeDir,
-  }));
-
-  return import('#pi-toolbox/config/config.js');
-}
-
-function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-test-'));
-}
-
-function writeGlobalConfig(homeDir: string, contents: string) {
-  const configDir = path.join(homeDir, '.pi', 'agent');
-  mkdirSync(configDir, { recursive: true });
-  writeFileSync(path.join(configDir, 'pi-toolbox.jsonc'), contents);
-}
-
-function writeProjectConfig(cwd: string, contents: string) {
-  const configDir = path.join(cwd, '.pi');
-  mkdirSync(configDir, { recursive: true });
-  writeFileSync(path.join(configDir, 'pi-toolbox.jsonc'), contents);
-}

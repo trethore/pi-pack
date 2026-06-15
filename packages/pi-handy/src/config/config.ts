@@ -1,6 +1,6 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
-import { getConfigPaths } from '#src/config/locations.js';
+import { getHandyConfigPaths } from '#src/config/locations.js';
 import { defaultConfig, type LoadedConfig, type PartialPiHandyConfig, type PiHandyConfig } from '#src/config/schema.js';
 
 type FeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
@@ -13,7 +13,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getHandyConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });

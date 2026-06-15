@@ -204,37 +204,83 @@ function computeReplacements(
   let lineIndex = 0;
 
   for (const chunk of chunks) {
-    if (chunk.changeContext !== undefined) {
-      const contextIndex = seekSequence(originalLines, [chunk.changeContext], lineIndex, false);
-      if (contextIndex === undefined)
-        throw new ApplyPatchError(`Failed to find context '${chunk.changeContext}' in ${filePath}`);
-      lineIndex = contextIndex + 1;
-    }
-
-    if (chunk.oldLines.length === 0) {
-      replacements.push({ startIndex: originalLines.length, oldLength: 0, newLines: [...chunk.newLines] });
-      continue;
-    }
-
-    let pattern = chunk.oldLines;
-    let newLines = chunk.newLines;
-    let startIndex = seekSequence(originalLines, pattern, lineIndex, chunk.isEndOfFile);
-
-    if (startIndex === undefined && pattern.at(-1) === '') {
-      pattern = pattern.slice(0, -1);
-      if (newLines.at(-1) === '') newLines = newLines.slice(0, -1);
-      startIndex = seekSequence(originalLines, pattern, lineIndex, chunk.isEndOfFile);
-    }
-
-    if (startIndex === undefined) {
-      throw new ApplyPatchError(`Failed to find expected lines in ${filePath}:\n${chunk.oldLines.join('\n')}`);
-    }
-
-    replacements.push({ startIndex, oldLength: pattern.length, newLines: [...newLines] });
-    lineIndex = startIndex + pattern.length;
+    const result = computeChunkReplacement(originalLines, filePath, chunk, lineIndex);
+    replacements.push(result.replacement);
+    lineIndex = result.nextLineIndex;
   }
 
   return replacements.sort((left, right) => left.startIndex - right.startIndex);
+}
+
+function computeChunkReplacement(
+  originalLines: readonly string[],
+  filePath: string,
+  chunk: UpdateFileChunk,
+  lineIndex: number
+): {
+  replacement: { startIndex: number; oldLength: number; newLines: string[] };
+  nextLineIndex: number;
+} {
+  const searchStartIndex = seekChangeContext(originalLines, filePath, chunk, lineIndex);
+  if (chunk.oldLines.length === 0) {
+    return {
+      replacement: { startIndex: originalLines.length, oldLength: 0, newLines: [...chunk.newLines] },
+      nextLineIndex: searchStartIndex,
+    };
+  }
+
+  const match = findChunkMatch(originalLines, chunk, searchStartIndex);
+  if (match === undefined) {
+    throw new ApplyPatchError(`Failed to find expected lines in ${filePath}:\n${chunk.oldLines.join('\n')}`);
+  }
+
+  return {
+    replacement: { startIndex: match.startIndex, oldLength: match.pattern.length, newLines: [...match.newLines] },
+    nextLineIndex: match.startIndex + match.pattern.length,
+  };
+}
+
+function seekChangeContext(
+  originalLines: readonly string[],
+  filePath: string,
+  chunk: UpdateFileChunk,
+  lineIndex: number
+): number {
+  if (chunk.changeContext === undefined) return lineIndex;
+
+  const contextIndex = seekSequence(originalLines, [chunk.changeContext], lineIndex, false);
+  if (contextIndex === undefined) {
+    throw new ApplyPatchError(`Failed to find context '${chunk.changeContext}' in ${filePath}`);
+  }
+  return contextIndex + 1;
+}
+
+function findChunkMatch(
+  originalLines: readonly string[],
+  chunk: UpdateFileChunk,
+  lineIndex: number
+): { startIndex: number; pattern: readonly string[]; newLines: readonly string[] } | undefined {
+  const directStartIndex = seekSequence(originalLines, chunk.oldLines, lineIndex, chunk.isEndOfFile);
+  if (directStartIndex !== undefined) {
+    return { startIndex: directStartIndex, pattern: chunk.oldLines, newLines: chunk.newLines };
+  }
+
+  const normalized = normalizeTrailingBlankLine(chunk.oldLines, chunk.newLines);
+  if (normalized === undefined) return undefined;
+
+  const normalizedStartIndex = seekSequence(originalLines, normalized.pattern, lineIndex, chunk.isEndOfFile);
+  return normalizedStartIndex === undefined ? undefined : { startIndex: normalizedStartIndex, ...normalized };
+}
+
+function normalizeTrailingBlankLine(
+  pattern: readonly string[],
+  newLines: readonly string[]
+): { pattern: readonly string[]; newLines: readonly string[] } | undefined {
+  if (pattern.at(-1) !== '') return undefined;
+  return {
+    pattern: pattern.slice(0, -1),
+    newLines: newLines.at(-1) === '' ? newLines.slice(0, -1) : newLines,
+  };
 }
 
 function applyReplacements(

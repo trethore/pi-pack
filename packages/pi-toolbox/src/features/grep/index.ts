@@ -195,17 +195,29 @@ function formatGrepCall(args: GrepParameters | undefined, theme: Theme): string 
 }
 
 function formatGrepFlags(args: GrepParameters | undefined): string {
-  return [
-    formatOptionalNumberFlag('limit', args?.limit),
-    formatOptionalNumberFlag('limit/file', args?.limitPerFile),
-    formatOptionalNumberFlag('depth', args?.depth),
-    formatOptionalNumberFlag('chars', args?.maxCharsPerMatch),
+  return collectFlags([
+    ...formatNumberFlags(args),
     formatOptionalStringListFlag('globs', args?.globs),
-    args?.noIgnore ? 'noIgnore' : undefined,
-    args?.visibleOnly ? 'visibleOnly' : undefined,
-  ]
-    .filter((flag): flag is string => flag !== undefined)
-    .join(', ');
+    formatBooleanFlag('noIgnore', args?.noIgnore),
+    formatBooleanFlag('visibleOnly', args?.visibleOnly),
+  ]);
+}
+
+function formatNumberFlags(args: GrepParameters | undefined): Array<string | undefined> {
+  return [
+    ['limit', args?.limit],
+    ['limit/file', args?.limitPerFile],
+    ['depth', args?.depth],
+    ['chars', args?.maxCharsPerMatch],
+  ].map(([label, value]) => formatOptionalNumberFlag(String(label), value as number | undefined));
+}
+
+function formatBooleanFlag(label: string, value: boolean | undefined): string | undefined {
+  return value ? label : undefined;
+}
+
+function collectFlags(flags: Array<string | undefined>): string {
+  return flags.filter((flag): flag is string => flag !== undefined).join(', ');
 }
 
 function formatOptionalNumberFlag(label: string, value: number | undefined): string | undefined {

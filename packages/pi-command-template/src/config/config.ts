@@ -1,6 +1,6 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { booleanSchema, createConfigMerger } from '@trethore/pi-shared/config/schema.js';
-import { getConfigPaths } from '#src/config/locations.js';
+import { getCommandTemplateConfigPaths } from '#src/config/locations.js';
 import {
   cwdSchema,
   defaultConfig,
@@ -19,7 +19,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getCommandTemplateConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });

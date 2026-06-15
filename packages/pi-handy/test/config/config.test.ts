@@ -9,7 +9,7 @@ const globalConfigPath = path.join(tmpdir(), 'pi-handy-global.jsonc');
 vi.mock('#pi-handy/config/locations.js', () => ({
   GLOBAL_CONFIG_PATH: globalConfigPath,
   PROJECT_CONFIG_PATH: path.join(process.cwd(), '.pi', 'pi-handy.jsonc'),
-  getConfigPaths: (cwd: string) => [globalConfigPath, path.join(cwd, '.pi', 'pi-handy.jsonc')],
+  getHandyConfigPaths: (cwd: string) => [globalConfigPath, path.join(cwd, '.pi', 'pi-handy.jsonc')],
 }));
 
 const { loadConfig } = await import('#pi-handy/config/config.js');

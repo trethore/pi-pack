@@ -37,7 +37,7 @@ export interface MetadataCache {
   servers: Record<string, ServerCacheEntry>;
 }
 
-export function getMetadataCachePath(): string {
+function getMetadataCachePath(): string {
   return getGlobalConfigPath(CACHE_FILE_NAME);
 }
 
@@ -108,7 +108,7 @@ export function reconstructToolMetadata(
   return buildToolMetadata(entry.tools, entry.resources, definition, serverName, prefix);
 }
 
-export function computeServerHash(definition: ServerConfig): string {
+function computeServerHash(definition: ServerConfig): string {
   const identity = {
     command: definition.command,
     args: definition.args,

@@ -97,31 +97,45 @@ function usedToLeftPercent(value: number | null | undefined): number | null {
 }
 
 function getResetSeconds(window: UsageWindow | null | undefined): number | null {
-  const resetAfterSeconds = window?.reset_after_seconds;
-  if (typeof resetAfterSeconds === 'number' && !Number.isNaN(resetAfterSeconds)) {
-    return Math.max(0, resetAfterSeconds);
-  }
+  return getFiniteNumber(window?.reset_after_seconds) ?? getSecondsUntilResetAt(window?.reset_at);
+}
 
-  const resetAt = window?.reset_at;
-  if (typeof resetAt !== 'number' || Number.isNaN(resetAt)) return null;
+function getFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && !Number.isNaN(value) ? Math.max(0, value) : null;
+}
 
-  const resetAtSeconds = resetAt > 100_000_000_000 ? resetAt / 1000 : resetAt;
+function getSecondsUntilResetAt(value: unknown): number | null {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const resetAtSeconds = normalizeTimestampSeconds(value);
   return Math.max(0, Math.round(resetAtSeconds - Date.now() / 1000));
+}
+
+function normalizeTimestampSeconds(value: number): number {
+  return value > 100_000_000_000 ? value / 1000 : value;
 }
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return 'unknown';
 
   const totalSeconds = Math.max(0, Math.round(seconds));
-  const days = Math.floor(totalSeconds / 86_400);
-  const hours = Math.floor((totalSeconds % 86_400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const duration = splitDuration(totalSeconds);
+  return formatDurationParts(duration) ?? `${totalSeconds}s`;
+}
 
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m`;
+function formatDurationParts(duration: { days: number; hours: number; minutes: number }): string | undefined {
+  return [
+    { value: duration.days, text: `${duration.days}d ${duration.hours}h` },
+    { value: duration.hours, text: `${duration.hours}h ${duration.minutes}m` },
+    { value: duration.minutes, text: `${duration.minutes}m` },
+  ].find((part) => part.value > 0)?.text;
+}
 
-  return `${totalSeconds}s`;
+function splitDuration(totalSeconds: number): { days: number; hours: number; minutes: number } {
+  return {
+    days: Math.floor(totalSeconds / 86_400),
+    hours: Math.floor((totalSeconds % 86_400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+  };
 }
 
 function formatPercentUsed(value: number | null): string {
@@ -137,20 +151,22 @@ function formatPercentLeft(value: number | null): string {
 async function loadAuthCredentials(): Promise<{ accessToken: string; accountId: string }> {
   const raw = await fs.readFile(AUTH_FILE, 'utf8');
   const auth = JSON.parse(raw) as Record<string, OpenAICodexAuthEntry | undefined>;
-  const entry = auth['openai-codex'];
-
-  if (entry?.type !== 'oauth') {
-    throw new Error(`Missing openai-codex OAuth entry in ${AUTH_FILE}`);
-  }
-
-  const accessToken = entry.access?.trim();
-  const accountId = getAccountId(entry);
-
-  if (!accessToken || !accountId) {
-    throw new Error(`Missing access token or accountId in ${AUTH_FILE}`);
-  }
+  const entry = getOpenAICodexAuthEntry(auth);
+  const accessToken = requireAuthField(entry.access?.trim(), 'access token');
+  const accountId = requireAuthField(getAccountId(entry), 'accountId');
 
   return { accessToken, accountId };
+}
+
+function getOpenAICodexAuthEntry(auth: Record<string, OpenAICodexAuthEntry | undefined>): OpenAICodexAuthEntry {
+  const entry = auth['openai-codex'];
+  if (entry?.type === 'oauth') return entry;
+  throw new Error(`Missing openai-codex OAuth entry in ${AUTH_FILE}`);
+}
+
+function requireAuthField(value: string | undefined, label: string): string {
+  if (value) return value;
+  throw new Error(`Missing ${label} in ${AUTH_FILE}`);
 }
 
 function getAccountId(entry: OpenAICodexAuthEntry): string | undefined {

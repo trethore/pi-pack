@@ -17,7 +17,8 @@
   },
   "imports": {
     "#src/*": "./src/*",
-    "#pi-codexify/*": "./src/*"
+    "#pi-codexify/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "dependencies": {
     "@trethore/pi-shared": "*"

@@ -184,18 +184,32 @@ function makeMarker(lineCount: number, repeatCount: number, ending: string): str
 }
 
 function exceedsMaxFoldingLines(text: string): boolean {
+  const lineCount = countLinesUpTo(text, MAX_FOLDING_LINES + 1);
+  return lineCount > MAX_FOLDING_LINES;
+}
+
+function countLinesUpTo(text: string, maxLines: number): number {
   let lineCount = 0;
 
   for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (character !== '\r' && character !== '\n') continue;
-
+    if (!isLineEnding(text[index])) continue;
     lineCount += 1;
-    if (lineCount > MAX_FOLDING_LINES) return true;
+    if (lineCount >= maxLines) return lineCount;
 
-    if (character === '\r' && text[index + 1] === '\n') index += 1;
+    if (isCrLfAt(text, index)) index += 1;
   }
 
-  const hasTrailingLine = text.length > 0 && !text.endsWith('\r') && !text.endsWith('\n');
-  return hasTrailingLine && lineCount + 1 > MAX_FOLDING_LINES;
+  return hasTrailingLine(text) ? lineCount + 1 : lineCount;
+}
+
+function isLineEnding(character: string): boolean {
+  return character === '\r' || character === '\n';
+}
+
+function isCrLfAt(text: string, index: number): boolean {
+  return text[index] === '\r' && text[index + 1] === '\n';
+}
+
+function hasTrailingLine(text: string): boolean {
+  return text.length > 0 && !isLineEnding(text.at(-1)!);
 }

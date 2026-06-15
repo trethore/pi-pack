@@ -52,16 +52,26 @@ interface ParsedAuthorization {
 
 function parseAuthorization(value: string): ParsedAuthorization {
   const trimmed = value.trim();
-  if (!trimmed) return {};
+  return trimmed ? parseNonEmptyAuthorization(trimmed) : {};
+}
 
+function parseNonEmptyAuthorization(value: string): ParsedAuthorization {
+  const url = parseUrl(value);
+  return url ? parseAuthorizationUrl(url, value) : { code: value };
+}
+
+function parseAuthorizationUrl(url: URL, fallbackCode: string): ParsedAuthorization {
+  return {
+    code: url.searchParams.get('code') ?? fallbackCode,
+    state: url.searchParams.get('state') ?? undefined,
+  };
+}
+
+function parseUrl(value: string): URL | undefined {
   try {
-    const url = new URL(trimmed);
-    return {
-      code: url.searchParams.get('code') ?? trimmed,
-      state: url.searchParams.get('state') ?? undefined,
-    };
+    return new URL(value);
   } catch {
-    return { code: trimmed };
+    return undefined;
   }
 }
 

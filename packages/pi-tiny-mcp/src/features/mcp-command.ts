@@ -18,45 +18,79 @@ async function handleMcpCommand(
   ctx: ExtensionContext,
   getRuntime: () => Promise<TinyMcpRuntime>
 ): Promise<void> {
-  const [subcommand = 'status', target, extra] = args.trim().split(/\s+/).filter(Boolean);
+  const command = parseMcpCommand(args);
 
-  if (subcommand === 'cache' && target === 'clear') {
-    clearMetadataCache();
-    notify(ctx, 'pi-tiny-mcp cache cleared. Restart Pi or reconnect servers to rebuild metadata.', 'info');
-    return;
-  }
+  if (handleCacheCommand(command, ctx)) return;
 
   const runtime = await getRuntime();
-  if (subcommand === 'reconnect' && target) {
-    await runtime.connectServer(target);
-    notify(ctx, `pi-tiny-mcp reconnected ${target}.`, 'info');
-    return;
-  }
+  if (await handleRuntimeMcpCommand(command, ctx, runtime)) return;
 
-  if (subcommand === 'refresh') {
-    await refreshMetadata(ctx, runtime, target);
-    return;
-  }
-
-  if (subcommand === 'tools') {
-    showTools(ctx, runtime, target);
-    return;
-  }
-
-  if (extra) notify(ctx, `Ignoring extra /mcp arguments after "${target}".`, 'warning');
+  if (command.extra) notify(ctx, `Ignoring extra /mcp arguments after "${command.target}".`, 'warning');
   showStatus(ctx, runtime);
 }
 
-async function refreshMetadata(ctx: ExtensionContext, runtime: TinyMcpRuntime, serverName?: string): Promise<void> {
-  if (serverName && !runtime.hasServer(serverName)) {
-    notify(ctx, `pi-tiny-mcp: server "${serverName}" is not configured.`, 'error');
-    return;
+function handleCacheCommand(command: McpCommand, ctx: ExtensionContext): boolean {
+  if (command.subcommand !== 'cache' || command.target !== 'clear') return false;
+
+  clearMetadataCache();
+  notify(ctx, 'pi-tiny-mcp cache cleared. Restart Pi or reconnect servers to rebuild metadata.', 'info');
+  return true;
+}
+
+interface McpCommand {
+  subcommand: string;
+  target?: string;
+  extra?: string;
+}
+
+function parseMcpCommand(args: string): McpCommand {
+  const [subcommand = 'status', target, extra] = args.trim().split(/\s+/).filter(Boolean);
+  return { subcommand, target, extra };
+}
+
+async function handleRuntimeMcpCommand(
+  command: McpCommand,
+  ctx: ExtensionContext,
+  runtime: TinyMcpRuntime
+): Promise<boolean> {
+  switch (command.subcommand) {
+    case 'reconnect': {
+      return reconnectServer(command, ctx, runtime);
+    }
+    case 'refresh': {
+      await refreshMetadata(ctx, runtime, command.target);
+      return true;
+    }
+    case 'tools': {
+      showTools(ctx, runtime, command.target);
+      return true;
+    }
+    default: {
+      return false;
+    }
   }
+}
+
+async function reconnectServer(command: McpCommand, ctx: ExtensionContext, runtime: TinyMcpRuntime): Promise<boolean> {
+  if (!command.target) return false;
+  await runtime.connectServer(command.target);
+  notify(ctx, `pi-tiny-mcp reconnected ${command.target}.`, 'info');
+  return true;
+}
+
+async function refreshMetadata(ctx: ExtensionContext, runtime: TinyMcpRuntime, serverName?: string): Promise<void> {
+  if (!validateRefreshTarget(ctx, runtime, serverName)) return;
 
   const results = serverName ? [await runtime.refreshServer(serverName)] : await runtime.refreshAllServers();
   const failedCount = countFailedRefreshResults(results);
   const level = failedCount > 0 ? 'warning' : 'info';
   notify(ctx, formatRefreshResults(results), level);
+}
+
+function validateRefreshTarget(ctx: ExtensionContext, runtime: TinyMcpRuntime, serverName?: string): boolean {
+  if (!serverName || runtime.hasServer(serverName)) return true;
+  notify(ctx, `pi-tiny-mcp: server "${serverName}" is not configured.`, 'error');
+  return false;
 }
 
 function showStatus(ctx: ExtensionContext, runtime: TinyMcpRuntime): void {

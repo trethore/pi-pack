@@ -2,6 +2,6 @@ import { getConfigPaths as getSharedConfigPaths } from '@trethore/pi-shared/conf
 
 const CONFIG_FILE_NAME = 'pi-tiny-mcp.jsonc';
 
-export function getConfigPaths(cwd: string): string[] {
+export function getTinyMcpConfigPaths(cwd: string): string[] {
   return getSharedConfigPaths(cwd, CONFIG_FILE_NAME);
 }

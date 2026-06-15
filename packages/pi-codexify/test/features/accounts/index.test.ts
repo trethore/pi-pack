@@ -1,9 +1,5 @@
-import { mkdtempSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 
-import { AuthStorage } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -13,19 +9,24 @@ import {
   syncActiveCodexAccount,
   useCodexAccount,
 } from '#pi-codexify/features/accounts/index.js';
-
-const CODEX_PROVIDER = 'openai-codex';
+import {
+  CODEX_PROVIDER,
+  createContext,
+  createCredential,
+  makeProfilePath,
+  setCodexCredential,
+} from '#test/utils/account-test-helpers.js';
 
 describe('codex account profiles', () => {
   it('saves the active Pi Codex credential and switches between saved profiles', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeAccountProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
 
     // Act
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('work'));
+    setCodexCredential(ctx, 'work');
     await saveCurrentCodexAccount(ctx, 'work', { profilePath });
     await useCodexAccount(ctx, 'personal', { profilePath });
 
@@ -43,9 +44,9 @@ describe('codex account profiles', () => {
 
   it('syncs refreshed active credentials back into the saved active profile', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeAccountProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
@@ -55,7 +56,7 @@ describe('codex account profiles', () => {
       refresh: 'refresh-personal-refreshed',
     });
     await syncActiveCodexAccount(ctx, { profilePath });
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('other'));
+    setCodexCredential(ctx, 'other');
     await useCodexAccount(ctx, 'personal', { profilePath });
 
     // Assert
@@ -67,13 +68,13 @@ describe('codex account profiles', () => {
 
   it('does not sync a different manually logged-in account into the active profile', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeAccountProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('work'));
+    setCodexCredential(ctx, 'work');
     await syncActiveCodexAccount(ctx, { profilePath });
     await useCodexAccount(ctx, 'personal', { profilePath });
 
@@ -87,9 +88,9 @@ describe('codex account profiles', () => {
 
   it('deletes saved profiles and clears the active profile marker', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeAccountProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
@@ -103,33 +104,15 @@ describe('codex account profiles', () => {
   it('rejects invalid account names', async () => {
     // Arrange
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
 
     // Act and assert
-    await expect(saveCurrentCodexAccount(ctx, 'bad/name', { profilePath: makeProfilePath() })).rejects.toThrow(
+    await expect(saveCurrentCodexAccount(ctx, 'bad/name', { profilePath: makeAccountProfilePath() })).rejects.toThrow(
       'Codex account names may only contain'
     );
   });
 });
 
-function createContext() {
-  return {
-    modelRegistry: {
-      authStorage: AuthStorage.inMemory(),
-    },
-  };
-}
-
-function createCredential(label: string) {
-  return {
-    type: 'oauth' as const,
-    access: `access-${label}`,
-    refresh: `refresh-${label}`,
-    expires: 1_800_000_000_000,
-    accountId: `account-${label}`,
-  };
-}
-
-function makeProfilePath(): string {
-  return path.join(mkdtempSync(path.join(tmpdir(), 'pi-codexify-accounts-test-')), 'accounts.json');
+function makeAccountProfilePath(): string {
+  return makeProfilePath('pi-codexify-accounts-test-');
 }

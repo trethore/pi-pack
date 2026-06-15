@@ -1,15 +1,9 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
-import { AuthStorage } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it } from 'vitest';
 
 import { defaultConfig, type PiCodexifyConfig } from '#pi-codexify/config/schema.js';
 import { saveCurrentCodexAccount } from '#pi-codexify/features/accounts/index.js';
 import { getCodexifyArgumentCompletions } from '#pi-codexify/features/command/completions.js';
-
-const CODEX_PROVIDER = 'openai-codex';
+import { createContext, makeProfilePath, setCodexCredential } from '#test/utils/account-test-helpers.js';
 
 const commands = [
   {
@@ -22,11 +16,11 @@ const commands = [
 describe('codexify command completions', () => {
   it('completes saved account names for account use', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeCompletionProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('work'));
+    setCodexCredential(ctx, 'work');
     await saveCurrentCodexAccount(ctx, 'work', { profilePath });
 
     // Act
@@ -40,9 +34,9 @@ describe('codexify command completions', () => {
 
   it('completes saved account names for account delete', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeCompletionProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
@@ -56,9 +50,9 @@ describe('codexify command completions', () => {
 
   it('does not complete account names for account save', async () => {
     // Arrange
-    const profilePath = makeProfilePath();
+    const profilePath = makeCompletionProfilePath();
     const ctx = createContext();
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, createCredential('personal'));
+    setCodexCredential(ctx, 'personal');
     await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
     // Act
@@ -82,24 +76,6 @@ describe('codexify command completions', () => {
   });
 });
 
-function createContext() {
-  return {
-    modelRegistry: {
-      authStorage: AuthStorage.inMemory(),
-    },
-  };
-}
-
-function createCredential(label: string) {
-  return {
-    type: 'oauth' as const,
-    access: `access-${label}`,
-    refresh: `refresh-${label}`,
-    expires: 1_800_000_000_000,
-    accountId: `account-${label}`,
-  };
-}
-
-function makeProfilePath(): string {
-  return path.join(mkdtempSync(path.join(tmpdir(), 'pi-codexify-completions-test-')), 'accounts.json');
+function makeCompletionProfilePath(): string {
+  return makeProfilePath('pi-codexify-completions-test-');
 }

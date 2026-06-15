@@ -11,6 +11,7 @@ import {
 import { notifyCodexUsage } from '#src/features/usage/index.js';
 import {
   buildConfigUpdateMessage,
+  type CodexControlValue,
   resolveConfigScope,
   updateCodexControlConfig,
 } from '#src/features/command/config-updates.js';
@@ -149,31 +150,14 @@ async function handleVerbosityCommand(
   config: PiCodexifyConfig,
   codexControls: CodexControlsController | undefined
 ): Promise<void> {
-  if (!config.codex.enabled) {
-    ctx.ui.notify('codexify codex controls are disabled in pi-codexify.jsonc.', 'warning');
-    return;
-  }
-
-  const controls = getCodexControls(codexControls);
-  if (value === undefined) {
-    ctx.ui.notify(buildCodexControlsStatusMessage(controls.getConfig(), ctx.model), 'info');
-    return;
-  }
-
-  const parsedValue = parseCodexVerbosity(value);
-  if (parsedValue === undefined) {
-    ctx.ui.notify('Usage: /codexify verbosity low|medium|high|off', 'warning');
-    return;
-  }
-
-  try {
-    const scope = resolveConfigScope();
-    await updateCodexControlConfig(scope, 'verbosity', parsedValue);
-    controls.updateVerbosity(parsedValue === 'off' ? undefined : parsedValue);
-    ctx.ui.notify(buildConfigUpdateMessage('Codex verbosity', parsedValue, scope), 'info');
-  } catch (error) {
-    ctx.ui.notify(`codexify verbosity failed: ${getErrorMessage(error)}`, 'error');
-  }
+  await handleCodexControlUpdate(value, ctx, config, codexControls, {
+    commandName: 'verbosity',
+    usage: 'Usage: /codexify verbosity low|medium|high|off',
+    label: 'Codex verbosity',
+    configKey: 'verbosity',
+    parse: parseCodexVerbosity,
+    update: (controls, parsedValue) => controls.updateVerbosity(parsedValue === 'off' ? undefined : parsedValue),
+  });
 }
 
 async function handleReasoningSummaryCommand(
@@ -181,6 +165,32 @@ async function handleReasoningSummaryCommand(
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig,
   codexControls: CodexControlsController | undefined
+): Promise<void> {
+  await handleCodexControlUpdate(value, ctx, config, codexControls, {
+    commandName: 'reasoning-summary',
+    usage: 'Usage: /codexify reasoning-summary auto|concise|detailed|off',
+    label: 'Codex reasoning summary',
+    configKey: 'reasoningSummary',
+    parse: parseCodexReasoningSummary,
+    update: (controls, parsedValue) => controls.updateReasoningSummary(parsedValue === 'off' ? undefined : parsedValue),
+  });
+}
+
+interface CodexControlUpdateOptions<TValue extends CodexControlValue> {
+  commandName: string;
+  usage: string;
+  label: string;
+  configKey: 'verbosity' | 'reasoningSummary';
+  parse(value: string): TValue | undefined;
+  update(controls: CodexControlsController, parsedValue: TValue): void;
+}
+
+async function handleCodexControlUpdate<TValue extends CodexControlValue>(
+  value: string | undefined,
+  ctx: ExtensionCommandContext,
+  config: PiCodexifyConfig,
+  codexControls: CodexControlsController | undefined,
+  options: CodexControlUpdateOptions<TValue>
 ): Promise<void> {
   if (!config.codex.enabled) {
     ctx.ui.notify('codexify codex controls are disabled in pi-codexify.jsonc.', 'warning');
@@ -193,19 +203,28 @@ async function handleReasoningSummaryCommand(
     return;
   }
 
-  const parsedValue = parseCodexReasoningSummary(value);
+  const parsedValue = options.parse(value);
   if (parsedValue === undefined) {
-    ctx.ui.notify('Usage: /codexify reasoning-summary auto|concise|detailed|off', 'warning');
+    ctx.ui.notify(options.usage, 'warning');
     return;
   }
 
+  await updateCodexControlValue(ctx, controls, parsedValue, options);
+}
+
+async function updateCodexControlValue<TValue extends CodexControlValue>(
+  ctx: ExtensionCommandContext,
+  controls: CodexControlsController,
+  parsedValue: TValue,
+  options: CodexControlUpdateOptions<TValue>
+): Promise<void> {
   try {
     const scope = resolveConfigScope();
-    await updateCodexControlConfig(scope, 'reasoningSummary', parsedValue);
-    controls.updateReasoningSummary(parsedValue === 'off' ? undefined : parsedValue);
-    ctx.ui.notify(buildConfigUpdateMessage('Codex reasoning summary', parsedValue, scope), 'info');
+    await updateCodexControlConfig(scope, options.configKey, parsedValue);
+    options.update(controls, parsedValue);
+    ctx.ui.notify(buildConfigUpdateMessage(options.label, parsedValue, scope), 'info');
   } catch (error) {
-    ctx.ui.notify(`codexify reasoning-summary failed: ${getErrorMessage(error)}`, 'error');
+    ctx.ui.notify(`codexify ${options.commandName} failed: ${getErrorMessage(error)}`, 'error');
   }
 }
 
@@ -214,20 +233,34 @@ function buildStatusMessage(
   ctx: ExtensionCommandContext,
   codexControls: CodexControlsController | undefined
 ): string {
-  const lines = [
+  return [
     'pi-codexify',
-    `codex controls enabled: ${config.codex.enabled ? 'yes' : 'no'}`,
-    `usage command enabled: ${config.usage.enabled ? 'yes' : 'no'}`,
-    `account command enabled: ${config.account.enabled ? 'yes' : 'no'}`,
-    `native web_search enabled: ${config.webSearch.enabled ? 'yes' : 'no'}`,
+    ...formatFeatureStatusLines(config),
+    ...formatCodexControlStatusLines(config, ctx, codexControls),
+  ].join('\n');
+}
+
+function formatFeatureStatusLines(config: PiCodexifyConfig): string[] {
+  return [
+    formatEnabledLine('codex controls', config.codex.enabled),
+    formatEnabledLine('usage command', config.usage.enabled),
+    formatEnabledLine('account command', config.account.enabled),
+    formatEnabledLine('native web_search', config.webSearch.enabled),
   ];
+}
 
-  if (config.codex.enabled) {
-    const controls = getCodexControls(codexControls);
-    lines.push('', buildCodexControlsStatusMessage(controls.getConfig(), ctx.model));
-  }
+function formatCodexControlStatusLines(
+  config: PiCodexifyConfig,
+  ctx: ExtensionCommandContext,
+  codexControls: CodexControlsController | undefined
+): string[] {
+  if (!config.codex.enabled) return [];
+  const controls = getCodexControls(codexControls);
+  return ['', buildCodexControlsStatusMessage(controls.getConfig(), ctx.model)];
+}
 
-  return lines.join('\n');
+function formatEnabledLine(label: string, enabled: boolean): string {
+  return `${label} enabled: ${enabled ? 'yes' : 'no'}`;
 }
 
 function getCodexControls(codexControls: CodexControlsController | undefined): CodexControlsController {

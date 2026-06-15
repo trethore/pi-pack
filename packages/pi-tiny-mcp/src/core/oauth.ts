@@ -61,7 +61,7 @@ export function createOAuthProvider(serverName: string): PiTinyMcpOAuthProvider 
   return new PiTinyMcpOAuthProvider(serverName, new OAuthStateStore());
 }
 
-export class PiTinyMcpOAuthProvider implements OAuthClientProvider {
+class PiTinyMcpOAuthProvider implements OAuthClientProvider {
   readonly redirectUrl = DEFAULT_REDIRECT_URL;
 
   constructor(

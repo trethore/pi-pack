@@ -56,16 +56,16 @@ function createRuntimeController(config: PiTinyMcpConfig) {
     const currentRuntime = runtime;
     runtime = null;
 
-    if (startingRuntime) {
-      const startedRuntime = await startingRuntime.catch(() => null);
-      if (startedRuntime) {
-        await startedRuntime.shutdown();
-        if (runtime === startedRuntime) runtime = null;
-      }
-      return;
-    }
+    if (startingRuntime) await shutdownStartingRuntime(startingRuntime);
+    else if (currentRuntime) await currentRuntime.shutdown();
+  }
 
-    if (currentRuntime) await currentRuntime.shutdown();
+  async function shutdownStartingRuntime(startingRuntime: Promise<TinyMcpRuntime>): Promise<void> {
+    const startedRuntime = await startingRuntime.catch(() => null);
+    if (!startedRuntime) return;
+
+    await startedRuntime.shutdown();
+    if (runtime === startedRuntime) runtime = null;
   }
 
   async function restart(): Promise<TinyMcpRuntime | null> {

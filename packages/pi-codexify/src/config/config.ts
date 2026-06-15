@@ -1,6 +1,6 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
-import { getConfigPaths } from '#src/config/locations.js';
+import { getCodexifyConfigPaths } from '#src/config/locations.js';
 import {
   codexReasoningSummarySchema,
   codexVerbositySchema,
@@ -17,7 +17,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getCodexifyConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });

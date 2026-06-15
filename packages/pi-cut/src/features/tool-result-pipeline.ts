@@ -21,22 +21,25 @@ export function registerToolResultPipeline(pi: ExtensionAPI, config: PiCutConfig
 
 function transformToolResultText(text: string, config: ResolvedToolConfig): string {
   let transformedText = text;
-
-  if (config.terminalCleanup.enabled) {
-    transformedText = cleanTerminalOutput(transformedText, config.terminalCleanup);
-  }
-
-  if (config.newLinesFolding.enabled) {
-    transformedText = foldNewLines(transformedText, config.newLinesFolding);
-  }
-
-  if (config.repetitionFolding.enabled) {
-    transformedText = foldRepeatedOutput(transformedText, config.repetitionFolding);
-  }
-
-  if (config.lineTruncation.enabled) {
-    transformedText = truncateLines(transformedText, config.lineTruncation.maxChars);
-  }
-
+  transformedText = transformTerminalOutput(transformedText, config);
+  transformedText = transformNewLines(transformedText, config);
+  transformedText = transformRepetitions(transformedText, config);
+  transformedText = transformLongLines(transformedText, config);
   return transformedText;
+}
+
+function transformTerminalOutput(text: string, config: ResolvedToolConfig): string {
+  return config.terminalCleanup.enabled ? cleanTerminalOutput(text, config.terminalCleanup) : text;
+}
+
+function transformNewLines(text: string, config: ResolvedToolConfig): string {
+  return config.newLinesFolding.enabled ? foldNewLines(text, config.newLinesFolding) : text;
+}
+
+function transformRepetitions(text: string, config: ResolvedToolConfig): string {
+  return config.repetitionFolding.enabled ? foldRepeatedOutput(text, config.repetitionFolding) : text;
+}
+
+function transformLongLines(text: string, config: ResolvedToolConfig): string {
+  return config.lineTruncation.enabled ? truncateLines(text, config.lineTruncation.maxChars) : text;
 }

@@ -1,5 +1,5 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { getConfigPaths } from '#src/config/locations.js';
+import { getCutConfigPaths } from '#src/config/locations.js';
 import { mergeEnabledField, mergeSection } from '#src/config/merge.js';
 import { defaultConfig, type LoadedConfig, type PartialPiCutConfig, type PiCutConfig } from '#src/config/schema.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
@@ -13,7 +13,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getCutConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });

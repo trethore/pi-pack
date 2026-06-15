@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
-import { getConfigPaths } from '#src/config/locations.js';
+import { getCodeactConfigPaths } from '#src/config/locations.js';
 import {
   defaultConfig,
   packageCachePathSchema,
@@ -21,7 +21,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getCodeactConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig(target, source, configPath, errors) {
       mergeConfig(target, source, configPath, errors, cwd);

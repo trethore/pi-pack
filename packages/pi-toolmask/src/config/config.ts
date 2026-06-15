@@ -1,7 +1,7 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { booleanSchema, createConfigMerger } from '@trethore/pi-shared/config/schema.js';
 
-import { getConfigPaths } from '#src/config/locations.js';
+import { getToolmaskConfigPaths } from '#src/config/locations.js';
 import {
   defaultConfig,
   stringArraySchema,
@@ -17,7 +17,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getToolmaskConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });

@@ -2,7 +2,7 @@ import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file
 import { booleanSchema, createConfigMerger } from '@trethore/pi-shared/config/schema.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
 
-import { getConfigPaths } from '#src/config/locations.js';
+import { getTinyMcpConfigPaths } from '#src/config/locations.js';
 import { loadStandardMcpServers } from '#src/config/mcp-files.js';
 import {
   defaultConfig,
@@ -28,7 +28,7 @@ export function loadConfig(cwd: string): LoadedConfig {
   const loadedConfig = loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths,
+    getConfigPaths: getTinyMcpConfigPaths,
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });
