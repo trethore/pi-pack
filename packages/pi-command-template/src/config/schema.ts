@@ -3,7 +3,7 @@ import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
 
 export type TemplateSurface = 'system' | 'appendSystem' | 'contextFiles' | 'promptTemplates' | 'skills';
 
-export type ExecutionCwd = 'workspace' | 'extension' | string;
+type ExecutionCwd = 'workspace' | 'extension' | string;
 
 export type TemplateCommand = string | string[];
 
@@ -14,9 +14,9 @@ export interface PiCommandTemplateConfig {
   templates: Record<string, TemplateCommand>;
 }
 
-export type SurfaceConfig = Record<TemplateSurface, boolean>;
+type SurfaceConfig = Record<TemplateSurface, boolean>;
 
-export interface ExecutionConfig {
+interface ExecutionConfig {
   timeoutMs: number;
   maxOutputChars: number;
   cwd: ExecutionCwd;
@@ -67,7 +67,7 @@ export const positiveIntegerSchema = defineConfigSchema(z.number().int().positiv
 
 export const cwdSchema = defineConfigSchema(z.string().min(1), 'expected non-empty string');
 
-export const templateCommandSchema = z.union([z.string(), z.tuple([z.string().min(1)]).rest(z.string())]);
+const templateCommandSchema = z.union([z.string(), z.tuple([z.string().min(1)]).rest(z.string())]);
 
 export const templatesSchema = defineConfigSchema(
   z.record(z.string().regex(/^[A-Za-z0-9_-]+$/), templateCommandSchema),

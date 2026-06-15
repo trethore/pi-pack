@@ -1,6 +1,6 @@
 import type { RenderSurface } from '#src/core/types.js';
 
-export type CommandDiagnosticSeverity = 'warning' | 'error';
+type CommandDiagnosticSeverity = 'warning' | 'error';
 
 export interface CommandDiagnostic {
   severity: CommandDiagnosticSeverity;

@@ -11,10 +11,6 @@ export function matchesWildcardPattern(value: string, pattern: string): boolean 
   return wildcardPatternToRegex(pattern).test(value);
 }
 
-export function matchesAnyWildcardPattern(value: string, patterns: readonly string[]): boolean {
-  return createWildcardMatcher(patterns)(value);
-}
-
 export function isNegatedWildcardPattern(pattern: string): boolean {
   return pattern.startsWith('!') && pattern.length > 1;
 }

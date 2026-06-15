@@ -26,7 +26,7 @@ interface PlannedPatch {
   summary: ApplyPatchResult;
 }
 
-export class ApplyPatchError extends Error {
+class ApplyPatchError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = 'ApplyPatchError';

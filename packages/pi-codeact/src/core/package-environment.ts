@@ -18,7 +18,7 @@ export interface EnsurePackageEnvironmentOptions {
 
 export type InstallRunner = (options: InstallRunnerOptions) => Promise<RunProcessResult>;
 
-export interface InstallRunnerOptions {
+interface InstallRunnerOptions {
   environmentDirectory: string;
   npmCacheDirectory: string;
   packages: string[];
@@ -74,7 +74,7 @@ export function normalizePackages(packages: string[] | undefined): string[] {
   return normalized.sort((left, right) => left.localeCompare(right));
 }
 
-export function getRuntimeKey(): string {
+function getRuntimeKey(): string {
   return [
     process.platform,
     process.arch,

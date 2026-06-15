@@ -30,18 +30,18 @@ export class InvalidHunkError extends Error {
 
 export type Hunk = AddFileHunk | DeleteFileHunk | UpdateFileHunk;
 
-export interface AddFileHunk {
+interface AddFileHunk {
   type: 'add';
   path: string;
   contents: string;
 }
 
-export interface DeleteFileHunk {
+interface DeleteFileHunk {
   type: 'delete';
   path: string;
 }
 
-export interface UpdateFileHunk {
+interface UpdateFileHunk {
   type: 'update';
   path: string;
   movePath?: string;
