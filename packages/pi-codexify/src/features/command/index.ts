@@ -8,7 +8,11 @@ import {
   parseCodexReasoningSummary,
   parseCodexVerbosity,
 } from '#src/features/codex-controls/index.js';
-import { handleResetCreditCommand } from '#src/features/reset-credit/index.js';
+import {
+  handleResetCreditCountCommand,
+  handleUseResetCreditCommand,
+  parseResetCreditAction,
+} from '#src/features/reset-credit/index.js';
 import { notifyCodexUsage } from '#src/features/usage/index.js';
 import {
   buildConfigUpdateMessage,
@@ -91,10 +95,11 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
   {
     name: 'reset',
-    usage: '/codexify reset',
+    usage: '/codexify reset use|count',
+    needsMoreArgs: true,
     isAvailable: (config) => config.reset.enabled,
-    async handle(_parts, ctx, config) {
-      await handleResetCommand(ctx, config);
+    async handle(parts, ctx, config) {
+      await handleResetCommand(parts, ctx, config);
     },
   },
   {
@@ -127,6 +132,8 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
 ];
 
+const RESET_COMMAND_USAGE = 'Usage: /codexify reset use|count';
+
 function findCodexifyCommand(commandName: string): CodexifyCommand | undefined {
   return CODEXIFY_COMMANDS.find((command) => command.name === commandName || command.aliases?.includes(commandName));
 }
@@ -140,13 +147,21 @@ async function handleUsageCommand(ctx: ExtensionCommandContext, config: PiCodexi
   await notifyCodexUsage(ctx);
 }
 
-async function handleResetCommand(ctx: ExtensionCommandContext, config: PiCodexifyConfig): Promise<void> {
+async function handleResetCommand(
+  parts: readonly string[],
+  ctx: ExtensionCommandContext,
+  config: PiCodexifyConfig
+): Promise<void> {
   if (!config.reset.enabled) {
     ctx.ui.notify('codexify reset is disabled in pi-codexify.jsonc.', 'warning');
     return;
   }
 
-  await handleResetCreditCommand(ctx);
+  const action = parseResetCreditAction(parts[1]);
+
+  if (action === 'use') await handleUseResetCreditCommand(ctx);
+  else if (action === 'count') await handleResetCreditCountCommand(ctx);
+  else ctx.ui.notify(RESET_COMMAND_USAGE, 'warning');
 }
 
 async function handleAccountCommand(

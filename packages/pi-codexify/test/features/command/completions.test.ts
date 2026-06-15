@@ -11,6 +11,11 @@ const commands = [
     needsMoreArgs: true,
     isAvailable: (config: PiCodexifyConfig) => config.account.enabled,
   },
+  {
+    name: 'reset',
+    needsMoreArgs: true,
+    isAvailable: (config: PiCodexifyConfig) => config.reset.enabled,
+  },
 ] as const;
 
 describe('codexify command completions', () => {
@@ -70,6 +75,28 @@ describe('codexify command completions', () => {
 
     // Act
     const completions = await getCodexifyArgumentCompletions('account ', config, commands);
+
+    // Assert
+    expect(completions).toBeNull();
+  });
+
+  it('completes reset actions', async () => {
+    // Arrange / Act
+    const completions = await getCodexifyArgumentCompletions('reset ', defaultConfig, commands);
+
+    // Assert
+    expect(completions).toEqual([
+      { value: 'reset use', label: 'use' },
+      { value: 'reset count', label: 'count' },
+    ]);
+  });
+
+  it('does not complete reset actions when reset is disabled', async () => {
+    // Arrange
+    const config = { ...defaultConfig, reset: { enabled: false } };
+
+    // Act
+    const completions = await getCodexifyArgumentCompletions('reset ', config, commands);
 
     // Assert
     expect(completions).toBeNull();

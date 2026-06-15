@@ -10,7 +10,7 @@ Codex-focused controls.
 - Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
 - Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
-- Adds `/codexify reset` to consume one Codex usage reset credit after an explicit confirmation prompt when `reset.enabled` is true.
+- Adds `/codexify reset use|count` to consume one Codex usage reset credit or display the available reset token count when `reset.enabled` is true.
 
 ## Commands
 
@@ -25,7 +25,8 @@ Codex-focused controls.
 /codexify account delete <name>
 /codexify verbosity low|medium|high|off
 /codexify reasoning-summary auto|concise|detailed|off
-/codexify reset
+/codexify reset use
+/codexify reset count
 ```
 
 Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.
@@ -42,7 +43,7 @@ Codex account commands store OAuth profile copies in `~/.pi/agent/pi-codexify-co
 
 Account names may contain letters, numbers, dots, underscores, and dashes.
 
-`/codexify reset` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request.
+`/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset count` gets the available reset token count without consuming a token.
 
 ## Configuration
 

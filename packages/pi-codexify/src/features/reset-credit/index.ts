@@ -2,13 +2,19 @@ import { randomUUID } from 'node:crypto';
 
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { isRecord } from '@trethore/pi-shared/object.js';
 import {
   CODEX_PROVIDER,
   getCurrentCodexCredential,
   type CodexCredentialContext,
 } from '#src/features/accounts/index.js';
 
-const RESET_CREDIT_URL = 'https://chatgpt.com/wham/rate-limit-reset-credits/consume';
+const RESET_CREDIT_COUNT_URL = 'https://chatgpt.com/wham/rate-limit-reset-credits';
+const RESET_CREDIT_CONSUME_URL = 'https://chatgpt.com/wham/rate-limit-reset-credits/consume';
+
+export const resetCreditActions = ['use', 'count'] as const;
+
+type ResetCreditAction = (typeof resetCreditActions)[number];
 
 type ResetCreditOptions = {
   fetch?: typeof fetch;
@@ -21,7 +27,11 @@ type ResetCreditResult = {
   body: unknown;
 };
 
-export async function handleResetCreditCommand(
+type ResetCreditCountResult = ResetCreditResult & {
+  availableCount: number;
+};
+
+export async function handleUseResetCreditCommand(
   ctx: ExtensionCommandContext,
   options: ResetCreditOptions = {}
 ): Promise<void> {
@@ -43,19 +53,30 @@ export async function handleResetCreditCommand(
   }
 }
 
+export async function handleResetCreditCountCommand(
+  ctx: ExtensionCommandContext,
+  options: ResetCreditOptions = {}
+): Promise<void> {
+  try {
+    const result = await countResetCredits(ctx, options);
+    ctx.ui.notify(`You have ${result.availableCount} reset tokens available.`, 'info');
+  } catch (error) {
+    ctx.ui.notify(`Codex reset credit count request failed: ${getErrorMessage(error)}`, 'error');
+  }
+}
+
+export function parseResetCreditAction(value: string | undefined): ResetCreditAction | undefined {
+  return resetCreditActions.find((action) => action === value);
+}
+
 export async function consumeResetCredit(
   ctx: CodexCredentialContext,
   options: ResetCreditOptions = {}
 ): Promise<ResetCreditResult> {
   const accessToken = getCurrentCodexAccessToken(ctx);
-  const response = await (options.fetch ?? fetch)(RESET_CREDIT_URL, {
+  const response = await (options.fetch ?? fetch)(RESET_CREDIT_CONSUME_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'OAI-Language': 'en',
-      originator: 'Codex Desktop',
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: buildResetCreditHeaders(accessToken, { contentType: true }),
     body: JSON.stringify({
       credit_id: null,
       redeem_request_id: (options.randomUUID ?? randomUUID)(),
@@ -74,11 +95,43 @@ export async function consumeResetCredit(
   };
 }
 
+export async function countResetCredits(
+  ctx: CodexCredentialContext,
+  options: ResetCreditOptions = {}
+): Promise<ResetCreditCountResult> {
+  const accessToken = getCurrentCodexAccessToken(ctx);
+  const response = await (options.fetch ?? fetch)(RESET_CREDIT_COUNT_URL, {
+    method: 'GET',
+    headers: buildResetCreditHeaders(accessToken),
+  });
+  const body = await readResponseBody(response);
+
+  if (!response.ok) {
+    throw new Error(`Reset credit count request failed: ${response.status}${formatStatusText(response.statusText)}`);
+  }
+
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    body,
+    availableCount: getAvailableResetCreditCount(body),
+  };
+}
+
 function getCurrentCodexAccessToken(ctx: CodexCredentialContext): string {
   const credential = getCurrentCodexCredential(ctx);
   const accessToken = credential.access.trim();
   if (!accessToken) throw new Error(`Missing access token for ${CODEX_PROVIDER}. Use /login ${CODEX_PROVIDER} first.`);
   return accessToken;
+}
+
+function buildResetCreditHeaders(accessToken: string, options: { contentType?: boolean } = {}): Record<string, string> {
+  return {
+    ...(options.contentType ? { 'Content-Type': 'application/json' } : {}),
+    'OAI-Language': 'en',
+    originator: 'Codex Desktop',
+    Authorization: `Bearer ${accessToken}`,
+  };
 }
 
 async function readResponseBody(response: Response): Promise<unknown> {
@@ -108,4 +161,12 @@ function formatResultBody(body: unknown): string {
   if (body === null) return 'empty';
   if (typeof body === 'string') return body;
   return JSON.stringify(body);
+}
+
+function getAvailableResetCreditCount(body: unknown): number {
+  if (!isRecord(body) || typeof body.availableCount !== 'number' || !Number.isFinite(body.availableCount)) {
+    throw new Error('Reset credit count response missing availableCount.');
+  }
+
+  return body.availableCount;
 }

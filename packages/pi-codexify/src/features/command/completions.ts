@@ -6,6 +6,7 @@ import {
   getSavedCodexAccountNames,
   parseCodexAccountAction,
 } from '#src/features/accounts/index.js';
+import { resetCreditActions } from '#src/features/reset-credit/index.js';
 
 interface CompletionCommand {
   name: string;
@@ -66,6 +67,10 @@ function getDirectArgumentCompletions(
 
   if (command === 'account' && config.account.enabled) {
     return buildCompletionItems(state, codexAccountActions, commands);
+  }
+
+  if (command === 'reset' && config.reset.enabled) {
+    return buildCompletionItems(state, resetCreditActions, commands, { appendNeedsMoreArgs: false });
   }
 
   return null;

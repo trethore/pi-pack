@@ -29,8 +29,8 @@
   },
 
   "reset": {
-    // Enables /codexify reset to consume a codex reset usage credit.
-    // The command always asks for confirmation before consuming a credit.
+    // Enables /codexify reset use|count.
+    // /codexify reset use always asks for confirmation before consuming a credit.
     "enabled": true
   },
 

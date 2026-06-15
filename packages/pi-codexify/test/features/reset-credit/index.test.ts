@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 
-import { consumeResetCredit, handleResetCreditCommand } from '#pi-codexify/features/reset-credit/index.js';
+import {
+  consumeResetCredit,
+  countResetCredits,
+  handleResetCreditCountCommand,
+  handleUseResetCreditCommand,
+} from '#pi-codexify/features/reset-credit/index.js';
 import { createContext, setCodexCredential } from '#test/utils/account-test-helpers.js';
 
 describe('use reset credit command', () => {
@@ -45,7 +50,7 @@ describe('use reset credit command', () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
 
     // Act
-    await handleResetCreditCommand(ctx, { fetch: fetchMock });
+    await handleUseResetCreditCommand(ctx, { fetch: fetchMock });
 
     // Assert
     expect(fetchMock).not.toHaveBeenCalled();
@@ -59,7 +64,7 @@ describe('use reset credit command', () => {
     const fetchMock = vi.fn(async () => Response.json({ consumed: true }, { status: 200 }));
 
     // Act
-    await handleResetCreditCommand(ctx, {
+    await handleUseResetCreditCommand(ctx, {
       fetch: fetchMock,
       randomUUID: () => '00000000-0000-4000-8000-000000000000',
     });
@@ -82,13 +87,56 @@ describe('use reset credit command', () => {
     const fetchMock = vi.fn(async () => new Response('no credit', { status: 429, statusText: 'Too Many Requests' }));
 
     // Act
-    await handleResetCreditCommand(ctx, { fetch: fetchMock });
+    await handleUseResetCreditCommand(ctx, { fetch: fetchMock });
 
     // Assert
     expect(ctx.ui.notify).toHaveBeenCalledWith(
       'Codex reset credit request failed: Reset credit request failed: 429 Too Many Requests',
       'error'
     );
+  });
+});
+
+describe('count reset credits command', () => {
+  it('gets the available reset credit count with the active Codex OAuth token', async () => {
+    // Arrange
+    const ctx = createContext();
+    setCodexCredential(ctx, 'test');
+    const fetchMock = vi.fn(async () => Response.json({ availableCount: 3 }, { status: 200 }));
+
+    // Act
+    const result = await countResetCredits(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/wham/rate-limit-reset-credits', {
+      method: 'GET',
+      headers: {
+        'OAI-Language': 'en',
+        originator: 'Codex Desktop',
+        Authorization: 'Bearer access-test',
+      },
+    });
+    expect(result).toEqual({
+      status: 200,
+      statusText: '',
+      body: { availableCount: 3 },
+      availableCount: 3,
+    });
+  });
+
+  it('notifies the available reset token count', async () => {
+    // Arrange
+    const ctx = createCommandContext(false);
+    setCodexCredential(ctx, 'test');
+    const fetchMock = vi.fn(async () => Response.json({ availableCount: 2 }, { status: 200 }));
+
+    // Act
+    await handleResetCreditCountCommand(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
+    expect(ctx.ui.notify).toHaveBeenCalledWith('You have 2 reset tokens available.', 'info');
   });
 });
 
