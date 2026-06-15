@@ -11,14 +11,14 @@ import type {
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
 
-const CODEX_PROVIDER = 'openai-codex';
+export const CODEX_PROVIDER = 'openai-codex';
 const DEFAULT_PROFILE_PATH = path.join(getAgentDir(), 'pi-codexify-codex-accounts.json');
 
 export type CodexAccountAction = 'current' | 'delete' | 'list' | 'save' | 'use';
 
 export const codexAccountActions = ['list', 'current', 'save', 'use', 'delete'] as const;
 
-type OpenAICodexCredential = AuthCredential & {
+export type OpenAICodexCredential = AuthCredential & {
   type: 'oauth';
   accountId?: unknown;
   account_id?: unknown;
@@ -38,9 +38,15 @@ type CurrentCredentialOptions = {
   reload?: boolean;
 };
 
-type CodexAuthContext = {
+export type CodexAuthContext = {
   modelRegistry: {
     authStorage: Pick<AuthStorage, 'get' | 'reload' | 'set'>;
+  };
+};
+
+export type CodexCredentialContext = {
+  modelRegistry: {
+    authStorage: Pick<AuthStorage, 'get' | 'reload'>;
   };
 };
 
@@ -200,16 +206,16 @@ async function buildCurrentCodexAccountMessage(options: CodexAccountOptions = {}
   return `Active Codex account: ${profiles.active}${formatAccountIdSuffix(credential)}`;
 }
 
-function getCurrentCodexCredential(
-  ctx: CodexAuthContext,
+export function getCurrentCodexCredential(
+  ctx: CodexCredentialContext,
   options?: CurrentCredentialOptions & { allowMissing?: false }
 ): OpenAICodexCredential;
-function getCurrentCodexCredential(
-  ctx: CodexAuthContext,
+export function getCurrentCodexCredential(
+  ctx: CodexCredentialContext,
   options: CurrentCredentialOptions & { allowMissing: true }
 ): OpenAICodexCredential | undefined;
-function getCurrentCodexCredential(
-  ctx: CodexAuthContext,
+export function getCurrentCodexCredential(
+  ctx: CodexCredentialContext,
   options: CurrentCredentialOptions = {}
 ): OpenAICodexCredential | undefined {
   if (options.reload !== false) ctx.modelRegistry.authStorage.reload();

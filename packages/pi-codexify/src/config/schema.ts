@@ -14,6 +14,7 @@ export interface PiCodexifyConfig {
   codex: CodexControlsConfig;
   usage: CodexUsageConfig;
   account: CodexAccountConfig;
+  reset: CodexResetConfig;
   webSearch: WebSearchConfig;
 }
 
@@ -26,6 +27,8 @@ type CodexUsageConfig = EnabledConfig;
 
 type CodexAccountConfig = EnabledConfig;
 
+type CodexResetConfig = EnabledConfig;
+
 type WebSearchConfig = EnabledConfig;
 
 export type PartialPiCodexifyConfig = Partial<{
@@ -37,6 +40,7 @@ export type PartialPiCodexifyConfig = Partial<{
   }>;
   usage: PartialEnabledConfig;
   account: PartialEnabledConfig;
+  reset: PartialEnabledConfig;
   webSearch: PartialEnabledConfig;
 }>;
 
@@ -51,6 +55,9 @@ export const defaultConfig: PiCodexifyConfig = {
     enabled: true,
   },
   account: {
+    enabled: true,
+  },
+  reset: {
     enabled: true,
   },
   webSearch: {

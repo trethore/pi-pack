@@ -29,6 +29,7 @@ function cloneDefaultConfig(): PiCodexifyConfig {
     codex: { ...defaultConfig.codex },
     usage: { ...defaultConfig.usage },
     account: { ...defaultConfig.account },
+    reset: { ...defaultConfig.reset },
     webSearch: { ...defaultConfig.webSearch },
   };
 }
@@ -44,6 +45,9 @@ function mergeConfig(target: PiCodexifyConfig, source: PartialPiCodexifyConfig, 
   });
   mergeSection(source, 'account', configPath, errors, (section, sectionName) => {
     mergeEnabledField(target.account, section, `${sectionName}.enabled`, configPath, errors);
+  });
+  mergeSection(source, 'reset', configPath, errors, (section, sectionName) => {
+    mergeEnabledField(target.reset, section, `${sectionName}.enabled`, configPath, errors);
   });
   mergeSection(source, 'webSearch', configPath, errors, (section, sectionName) => {
     mergeEnabledField(target.webSearch, section, `${sectionName}.enabled`, configPath, errors);

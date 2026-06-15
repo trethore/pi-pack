@@ -28,6 +28,12 @@
     "enabled": true
   },
 
+  "reset": {
+    // Enables /codexify reset to consume a codex reset usage credit.
+    // The command always asks for confirmation before consuming a credit.
+    "enabled": true
+  },
+
   "webSearch": {
     // Enables the native OpenAI Codex web_search tool.
     "enabled": true

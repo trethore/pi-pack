@@ -28,6 +28,7 @@ describe('loadConfig', () => {
       codex: { enabled: true },
       usage: { enabled: true },
       account: { enabled: true },
+      reset: { enabled: true },
       webSearch: { enabled: true },
     });
   });
@@ -41,6 +42,7 @@ describe('loadConfig', () => {
         codex: { verbosity: 'low', reasoningSummary: 'concise' },
         usage: { enabled: false },
         account: { enabled: false },
+        reset: { enabled: false },
         webSearch: { enabled: false },
       })
     );
@@ -51,6 +53,7 @@ describe('loadConfig', () => {
       JSON.stringify({
         codex: { verbosity: 'high' },
         account: { enabled: true },
+        reset: { enabled: true },
         webSearch: { enabled: true },
       })
     );
@@ -65,6 +68,7 @@ describe('loadConfig', () => {
       codex: { enabled: true, verbosity: 'high', reasoningSummary: 'concise' },
       usage: { enabled: false },
       account: { enabled: true },
+      reset: { enabled: true },
       webSearch: { enabled: true },
     });
   });
@@ -96,6 +100,7 @@ describe('loadConfig', () => {
         codex: { enabled: 'yes', verbosity: 'verbose', reasoningSummary: 'long' },
         usage: { enabled: 'no' },
         account: { enabled: 'yes' },
+        reset: { enabled: 'yes' },
         webSearch: { enabled: 'yes' },
       })
     );
@@ -109,9 +114,10 @@ describe('loadConfig', () => {
       codex: { enabled: true },
       usage: { enabled: true },
       account: { enabled: true },
+      reset: { enabled: true },
       webSearch: { enabled: true },
     });
-    expect(loaded.errors).toHaveLength(7);
+    expect(loaded.errors).toHaveLength(8);
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid codex.enabled value'),
@@ -119,6 +125,7 @@ describe('loadConfig', () => {
       expect.stringContaining('invalid codex.reasoningSummary value'),
       expect.stringContaining('invalid usage.enabled value'),
       expect.stringContaining('invalid account.enabled value'),
+      expect.stringContaining('invalid reset.enabled value'),
       expect.stringContaining('invalid webSearch.enabled value'),
     ]);
   });

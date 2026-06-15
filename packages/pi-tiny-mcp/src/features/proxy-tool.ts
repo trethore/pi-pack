@@ -11,7 +11,7 @@ type ProxyToolResult = AgentToolResult<Record<string, unknown>>;
 
 type ProxyParametersSchema = ReturnType<typeof createProxyParametersSchema>;
 
-export interface ProxyParameters {
+interface ProxyParameters {
   server?: string;
   search?: string;
   describe?: string;

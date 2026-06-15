@@ -8,6 +8,7 @@ import {
   parseCodexReasoningSummary,
   parseCodexVerbosity,
 } from '#src/features/codex-controls/index.js';
+import { handleResetCreditCommand } from '#src/features/reset-credit/index.js';
 import { notifyCodexUsage } from '#src/features/usage/index.js';
 import {
   buildConfigUpdateMessage,
@@ -89,6 +90,14 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     },
   },
   {
+    name: 'reset',
+    usage: '/codexify reset',
+    isAvailable: (config) => config.reset.enabled,
+    async handle(_parts, ctx, config) {
+      await handleResetCommand(ctx, config);
+    },
+  },
+  {
     name: 'account',
     usage: '/codexify account list|current|save <name>|use <name>|delete <name>',
     needsMoreArgs: true,
@@ -129,6 +138,15 @@ async function handleUsageCommand(ctx: ExtensionCommandContext, config: PiCodexi
   }
 
   await notifyCodexUsage(ctx);
+}
+
+async function handleResetCommand(ctx: ExtensionCommandContext, config: PiCodexifyConfig): Promise<void> {
+  if (!config.reset.enabled) {
+    ctx.ui.notify('codexify reset is disabled in pi-codexify.jsonc.', 'warning');
+    return;
+  }
+
+  await handleResetCreditCommand(ctx);
 }
 
 async function handleAccountCommand(
@@ -244,6 +262,7 @@ function formatFeatureStatusLines(config: PiCodexifyConfig): string[] {
   return [
     formatEnabledLine('codex controls', config.codex.enabled),
     formatEnabledLine('usage command', config.usage.enabled),
+    formatEnabledLine('reset command', config.reset.enabled),
     formatEnabledLine('account command', config.account.enabled),
     formatEnabledLine('native web_search', config.webSearch.enabled),
   ];
