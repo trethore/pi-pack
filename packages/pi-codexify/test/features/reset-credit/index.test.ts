@@ -7,7 +7,12 @@ import {
   handleResetCreditCountCommand,
   handleUseResetCreditCommand,
 } from '#pi-codexify/features/reset-credit/index.js';
-import { createContext, setCodexCredential } from '#test/utils/account-test-helpers.js';
+import {
+  CODEX_PROVIDER,
+  createContext,
+  createCredential,
+  setCodexCredential,
+} from '#test/utils/account-test-helpers.js';
 
 describe('use reset credit command', () => {
   it('posts the consume request with the active Codex OAuth token', async () => {
@@ -24,7 +29,7 @@ describe('use reset credit command', () => {
 
     // Assert
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/wham/rate-limit-reset-credits/consume', {
+    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -102,14 +107,14 @@ describe('count reset credits command', () => {
     // Arrange
     const ctx = createContext();
     setCodexCredential(ctx, 'test');
-    const fetchMock = vi.fn(async () => Response.json({ availableCount: 3 }, { status: 200 }));
+    const fetchMock = vi.fn(async () => Response.json({ available_count: 3 }, { status: 200 }));
 
     // Act
     const result = await countResetCredits(ctx, { fetch: fetchMock });
 
     // Assert
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/wham/rate-limit-reset-credits', {
+    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
       method: 'GET',
       headers: {
         'OAI-Language': 'en',
@@ -120,9 +125,55 @@ describe('count reset credits command', () => {
     expect(result).toEqual({
       status: 200,
       statusText: '',
-      body: { availableCount: 3 },
+      body: { available_count: 3 },
       availableCount: 3,
     });
+  });
+
+  it('supports the legacy camelCase available count field', async () => {
+    // Arrange
+    const ctx = createContext();
+    setCodexCredential(ctx, 'test');
+    const fetchMock = vi.fn(async () => Response.json({ availableCount: 3 }, { status: 200 }));
+
+    // Act
+    const result = await countResetCredits(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(result.availableCount).toBe(3);
+  });
+
+  it('refreshes an expired Codex OAuth token before matching the curl-style count request', async () => {
+    // Arrange
+    let credential = { ...createCredential('stale'), expires: 1 };
+    const ctx = {
+      modelRegistry: {
+        authStorage: {
+          reload: vi.fn(),
+          get: vi.fn((provider: string) => (provider === CODEX_PROVIDER ? credential : undefined)),
+          getApiKey: vi.fn(async () => {
+            credential = createCredential('fresh');
+            return credential.access;
+          }),
+        },
+      },
+    };
+    const fetchMock = vi.fn(async () => Response.json({ availableCount: 1 }, { status: 200 }));
+
+    // Act
+    const result = await countResetCredits(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(ctx.modelRegistry.authStorage.getApiKey).toHaveBeenCalledWith(CODEX_PROVIDER, { includeFallback: false });
+    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
+      method: 'GET',
+      headers: {
+        'OAI-Language': 'en',
+        originator: 'Codex Desktop',
+        Authorization: 'Bearer access-fresh',
+      },
+    });
+    expect(result.availableCount).toBe(1);
   });
 
   it('notifies the available reset token count', async () => {

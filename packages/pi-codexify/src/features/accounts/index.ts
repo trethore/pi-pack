@@ -246,7 +246,7 @@ function formatAccountLine(
 }
 
 function formatAccountIdSuffix(credential: OpenAICodexCredential | undefined): string {
-  const accountId = getAccountId(credential);
+  const accountId = getCodexCredentialAccountId(credential);
   return accountId ? ` [${accountId}]` : '';
 }
 
@@ -254,8 +254,8 @@ function isSameCodexAccount(
   left: OpenAICodexCredential | undefined,
   right: OpenAICodexCredential | undefined
 ): boolean {
-  const leftAccountId = getAccountId(left);
-  const rightAccountId = getAccountId(right);
+  const leftAccountId = getCodexCredentialAccountId(left);
+  const rightAccountId = getCodexCredentialAccountId(right);
   if (leftAccountId && rightAccountId) return leftAccountId === rightAccountId;
   return true;
 }
@@ -265,11 +265,11 @@ function hasSameTokenData(left: OpenAICodexCredential, right: OpenAICodexCredent
     left.access === right.access &&
     left.refresh === right.refresh &&
     left.expires === right.expires &&
-    getAccountId(left) === getAccountId(right)
+    getCodexCredentialAccountId(left) === getCodexCredentialAccountId(right)
   );
 }
 
-function getAccountId(credential: OpenAICodexCredential | undefined): string | undefined {
+export function getCodexCredentialAccountId(credential: OpenAICodexCredential | undefined): string | undefined {
   const accountId = credential?.accountId ?? credential?.account_id;
   return typeof accountId === 'string' && accountId.trim() ? accountId.trim() : undefined;
 }

@@ -8,9 +8,10 @@ import {
   getCurrentCodexCredential,
   type CodexCredentialContext,
 } from '#src/features/accounts/index.js';
+import { buildChatGptBackendApiUrl } from '#src/utils/chatgpt-backend.js';
 
-const RESET_CREDIT_COUNT_URL = 'https://chatgpt.com/wham/rate-limit-reset-credits';
-const RESET_CREDIT_CONSUME_URL = 'https://chatgpt.com/wham/rate-limit-reset-credits/consume';
+const RESET_CREDIT_COUNT_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits');
+const RESET_CREDIT_CONSUME_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits/consume');
 
 export const resetCreditActions = ['use', 'count'] as const;
 
@@ -19,6 +20,14 @@ type ResetCreditAction = (typeof resetCreditActions)[number];
 type ResetCreditOptions = {
   fetch?: typeof fetch;
   randomUUID?: typeof randomUUID;
+};
+
+type ResetCreditCredentialContext = CodexCredentialContext & {
+  modelRegistry: {
+    authStorage: CodexCredentialContext['modelRegistry']['authStorage'] & {
+      getApiKey(providerId: string, options?: { includeFallback?: boolean }): Promise<string | undefined>;
+    };
+  };
 };
 
 type ResetCreditResult = {
@@ -70,10 +79,10 @@ export function parseResetCreditAction(value: string | undefined): ResetCreditAc
 }
 
 export async function consumeResetCredit(
-  ctx: CodexCredentialContext,
+  ctx: ResetCreditCredentialContext,
   options: ResetCreditOptions = {}
 ): Promise<ResetCreditResult> {
-  const accessToken = getCurrentCodexAccessToken(ctx);
+  const accessToken = await getCurrentCodexAccessToken(ctx);
   const response = await (options.fetch ?? fetch)(RESET_CREDIT_CONSUME_URL, {
     method: 'POST',
     headers: buildResetCreditHeaders(accessToken, { contentType: true }),
@@ -96,10 +105,10 @@ export async function consumeResetCredit(
 }
 
 export async function countResetCredits(
-  ctx: CodexCredentialContext,
+  ctx: ResetCreditCredentialContext,
   options: ResetCreditOptions = {}
 ): Promise<ResetCreditCountResult> {
-  const accessToken = getCurrentCodexAccessToken(ctx);
+  const accessToken = await getCurrentCodexAccessToken(ctx);
   const response = await (options.fetch ?? fetch)(RESET_CREDIT_COUNT_URL, {
     method: 'GET',
     headers: buildResetCreditHeaders(accessToken),
@@ -118,10 +127,18 @@ export async function countResetCredits(
   };
 }
 
-function getCurrentCodexAccessToken(ctx: CodexCredentialContext): string {
-  const credential = getCurrentCodexCredential(ctx);
+async function getCurrentCodexAccessToken(ctx: ResetCreditCredentialContext): Promise<string> {
+  let credential = getCurrentCodexCredential(ctx);
+
+  if (Date.now() >= credential.expires) {
+    await ctx.modelRegistry.authStorage.getApiKey(CODEX_PROVIDER, { includeFallback: false });
+    credential = getCurrentCodexCredential(ctx);
+  }
+
   const accessToken = credential.access.trim();
   if (!accessToken) throw new Error(`Missing access token for ${CODEX_PROVIDER}. Use /login ${CODEX_PROVIDER} first.`);
+  if (Date.now() >= credential.expires)
+    throw new Error(`Expired access token for ${CODEX_PROVIDER}. Use /login ${CODEX_PROVIDER} again.`);
   return accessToken;
 }
 
@@ -164,9 +181,14 @@ function formatResultBody(body: unknown): string {
 }
 
 function getAvailableResetCreditCount(body: unknown): number {
-  if (!isRecord(body) || typeof body.availableCount !== 'number' || !Number.isFinite(body.availableCount)) {
-    throw new Error('Reset credit count response missing availableCount.');
+  if (!isRecord(body)) {
+    throw new TypeError('Reset credit count response missing available count.');
   }
 
-  return body.availableCount;
+  const availableCount = body.available_count ?? body.availableCount;
+  if (typeof availableCount !== 'number' || !Number.isFinite(availableCount)) {
+    throw new TypeError('Reset credit count response missing available count.');
+  }
+
+  return availableCount;
 }

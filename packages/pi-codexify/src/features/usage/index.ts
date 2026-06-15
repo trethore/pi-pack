@@ -1,9 +1,12 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
-import { getAgentDir } from '@earendil-works/pi-coding-agent';
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import {
+  CODEX_PROVIDER,
+  getCodexCredentialAccountId,
+  getCurrentCodexCredential,
+  type CodexCredentialContext,
+} from '#src/features/accounts/index.js';
+import { buildChatGptBackendApiUrl } from '#src/utils/chatgpt-backend.js';
 
 type UsageWindow = {
   used_percent?: number | null;
@@ -22,19 +25,11 @@ type CodexUsageResponse = {
   rate_limit?: RateLimitBucket | null;
 };
 
-type OpenAICodexAuthEntry = {
-  type?: string;
-  access?: string | null;
-  accountId?: string | null;
-  account_id?: string | null;
-};
-
-const AUTH_FILE = path.join(getAgentDir(), 'auth.json');
-const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
+const USAGE_URL = buildChatGptBackendApiUrl('wham/usage');
 
 export async function notifyCodexUsage(ctx: ExtensionCommandContext): Promise<void> {
   try {
-    const data = await fetchUsage();
+    const data = await fetchUsage(ctx);
     ctx.ui.notify(buildUsageMessage(data), 'info');
   } catch (error) {
     ctx.ui.notify(`codexify usage failed: ${getErrorMessage(error)}`, 'warning');
@@ -148,34 +143,21 @@ function formatPercentLeft(value: number | null): string {
   return `${Math.round(clampPercent(value))}% left`;
 }
 
-async function loadAuthCredentials(): Promise<{ accessToken: string; accountId: string }> {
-  const raw = await fs.readFile(AUTH_FILE, 'utf8');
-  const auth = JSON.parse(raw) as Record<string, OpenAICodexAuthEntry | undefined>;
-  const entry = getOpenAICodexAuthEntry(auth);
-  const accessToken = requireAuthField(entry.access?.trim(), 'access token');
-  const accountId = requireAuthField(getAccountId(entry), 'accountId');
+function loadAuthCredentials(ctx: CodexCredentialContext): { accessToken: string; accountId: string } {
+  const credential = getCurrentCodexCredential(ctx);
+  const accessToken = requireAuthField(credential.access.trim(), 'access token');
+  const accountId = requireAuthField(getCodexCredentialAccountId(credential), 'accountId');
 
   return { accessToken, accountId };
 }
 
-function getOpenAICodexAuthEntry(auth: Record<string, OpenAICodexAuthEntry | undefined>): OpenAICodexAuthEntry {
-  const entry = auth['openai-codex'];
-  if (entry?.type === 'oauth') return entry;
-  throw new Error(`Missing openai-codex OAuth entry in ${AUTH_FILE}`);
-}
-
 function requireAuthField(value: string | undefined, label: string): string {
   if (value) return value;
-  throw new Error(`Missing ${label} in ${AUTH_FILE}`);
+  throw new Error(`Missing ${label} for ${CODEX_PROVIDER}. Use /login ${CODEX_PROVIDER} first.`);
 }
 
-function getAccountId(entry: OpenAICodexAuthEntry): string | undefined {
-  const accountId = entry.accountId ?? entry.account_id;
-  return typeof accountId === 'string' ? accountId.trim() : undefined;
-}
-
-async function fetchUsage(): Promise<CodexUsageResponse> {
-  const { accessToken, accountId } = await loadAuthCredentials();
+async function fetchUsage(ctx: CodexCredentialContext): Promise<CodexUsageResponse> {
+  const { accessToken, accountId } = loadAuthCredentials(ctx);
   const response = await fetch(USAGE_URL, {
     headers: {
       accept: '*/*',

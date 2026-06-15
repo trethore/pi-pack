@@ -40,7 +40,7 @@ describe('codexify reset command', () => {
 
     // Assert
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://chatgpt.com/wham/rate-limit-reset-credits/consume',
+      'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume',
       expect.objectContaining({ method: 'POST' })
     );
   });
@@ -50,7 +50,7 @@ describe('codexify reset command', () => {
     const command = registerTestCodexifyCommand();
     const ctx = createCommandContext(true);
     setCodexCredential(ctx, 'test');
-    const fetchMock = vi.fn(async () => Response.json({ availableCount: 4 }, { status: 200 }));
+    const fetchMock = vi.fn(async () => Response.json({ available_count: 4 }, { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
 
     // Act
@@ -58,7 +58,7 @@ describe('codexify reset command', () => {
 
     // Assert
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://chatgpt.com/wham/rate-limit-reset-credits',
+      'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits',
       expect.objectContaining({ method: 'GET' })
     );
     expect(ctx.ui.notify).toHaveBeenCalledWith('You have 4 reset tokens available.', 'info');
