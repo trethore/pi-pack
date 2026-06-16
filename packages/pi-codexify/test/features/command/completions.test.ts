@@ -21,6 +21,11 @@ const commands = [
     needsMoreArgs: true,
     isAvailable: (config: PiCodexifyConfig) => config.codex.enabled,
   },
+  {
+    name: 'reasoning-summary',
+    needsMoreArgs: true,
+    isAvailable: (config: PiCodexifyConfig) => config.codex.enabled,
+  },
 ] as const;
 
 describe('codexify command completions', () => {
@@ -115,6 +120,20 @@ describe('codexify command completions', () => {
     expect(completions).toEqual([
       { value: 'serviceTier slow', label: 'slow' },
       { value: 'serviceTier fast', label: 'fast' },
+    ]);
+  });
+
+  it('completes reasoning summary values', async () => {
+    // Arrange / Act
+    const completions = await getCodexifyArgumentCompletions('reasoning-summary ', defaultConfig, commands);
+
+    // Assert
+    expect(completions).toEqual([
+      { value: 'reasoning-summary auto', label: 'auto' },
+      { value: 'reasoning-summary concise', label: 'concise' },
+      { value: 'reasoning-summary detailed', label: 'detailed' },
+      { value: 'reasoning-summary none', label: 'none' },
+      { value: 'reasoning-summary off', label: 'off' },
     ]);
   });
 });

@@ -25,7 +25,7 @@ Codex-focused controls.
 /codexify account use <name>
 /codexify account delete <name>
 /codexify verbosity low|medium|high|off
-/codexify reasoning-summary auto|concise|detailed|off
+/codexify reasoning-summary auto|concise|detailed|none|off
 /codexify serviceTier slow|fast
 /codexify reset use
 /codexify reset count
@@ -55,5 +55,7 @@ Supported config locations:
 - Project: `.pi/pi-codexify.jsonc`
 
 Project config overrides global config.
+
+For Codex controls, omitted values leave the provider payload unchanged. Setting a value to `null` also leaves the payload unchanged, and in project config it disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` from outgoing supported payloads while preserving other `reasoning` fields.
 
 See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc).

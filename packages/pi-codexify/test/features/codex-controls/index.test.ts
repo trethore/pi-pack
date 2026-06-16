@@ -23,6 +23,7 @@ describe('codex controls', () => {
     expect(parseCodexVerbosity('off')).toBe('off');
     expect(parseCodexVerbosity('verbose')).toBeUndefined();
     expect(parseCodexReasoningSummary('detailed')).toBe('detailed');
+    expect(parseCodexReasoningSummary('none')).toBe('none');
     expect(parseCodexReasoningSummary('off')).toBe('off');
     expect(parseCodexReasoningSummary('long')).toBeUndefined();
     expect(parseCodexServiceTier('fast')).toBe('fast');
@@ -117,6 +118,66 @@ describe('codex controls', () => {
 
     // Assert
     expect(patchedPayload).toEqual({ text: { verbosity: 'medium' }, service_tier: 'priority' });
+  });
+
+  it.each([
+    {
+      name: 'reasoning response models',
+      model: {
+        provider: 'openai-codex',
+        id: 'gpt-5-codex',
+        api: 'openai-codex-responses',
+        reasoning: true,
+      },
+      payload: { input: 'hello', reasoning: { effort: 'medium', summary: 'auto' } },
+      expectedPayload: { input: 'hello', reasoning: { effort: 'medium' } },
+    },
+    {
+      name: 'response models without reasoning support',
+      model: {
+        provider: 'openai',
+        id: 'gpt-5',
+        api: 'openai-responses',
+        reasoning: false,
+      },
+      payload: { input: 'hello', reasoning: { summary: 'auto' } },
+      expectedPayload: { input: 'hello' },
+    },
+  ])('removes reasoning summary for supported $name when configured as none', ({ model, payload, expectedPayload }) => {
+    // Arrange
+    const pi = createPi();
+    registerCodexControls(pi.extensionApi, {
+      enabled: true,
+      reasoningSummary: 'none',
+    });
+
+    // Act
+    const patchedPayload = pi.emitBeforeProviderRequest(payload, model);
+
+    // Assert
+    expect(patchedPayload).toEqual(expectedPayload);
+    expect(patchedPayload).not.toBe(payload);
+  });
+
+  it('leaves payloads unchanged when reasoning summary is none and no summary key exists', () => {
+    // Arrange
+    const pi = createPi();
+    registerCodexControls(pi.extensionApi, {
+      enabled: true,
+      reasoningSummary: 'none',
+    });
+    const payload = { input: 'hello', reasoning: { effort: 'medium' } };
+
+    // Act
+    const patchedPayload = pi.emitBeforeProviderRequest(payload, {
+      provider: 'openai-codex',
+      id: 'gpt-5-codex',
+      api: 'openai-codex-responses',
+      reasoning: true,
+    });
+
+    // Assert
+    expect(patchedPayload).toBe(payload);
   });
 
   it('leaves unsupported provider payloads unchanged', () => {

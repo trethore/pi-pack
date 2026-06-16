@@ -123,7 +123,7 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
   {
     name: 'reasoning-summary',
-    usage: '/codexify reasoning-summary auto|concise|detailed|off',
+    usage: '/codexify reasoning-summary auto|concise|detailed|none|off',
     aliases: ['summary'],
     needsMoreArgs: true,
     isAvailable: (config) => config.codex.enabled,
@@ -211,7 +211,7 @@ async function handleReasoningSummaryCommand(
 ): Promise<void> {
   await handleCodexControlUpdate(value, ctx, config, codexControls, {
     commandName: 'reasoning-summary',
-    usage: 'Usage: /codexify reasoning-summary auto|concise|detailed|off',
+    usage: 'Usage: /codexify reasoning-summary auto|concise|detailed|none|off',
     label: 'Codex reasoning summary',
     configKey: 'reasoningSummary',
     parse: parseCodexReasoningSummary,

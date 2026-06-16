@@ -86,6 +86,19 @@ describe('loadConfig', () => {
     expect(loaded.config.codex).toEqual({ enabled: true });
   });
 
+  it('loads none as a reasoning summary control value', async () => {
+    // Arrange
+    const { loadConfig, cwd } = await loadConfigAndProjectDir();
+    configTest.writeProjectConfig(cwd, JSON.stringify({ codex: { reasoningSummary: 'none' } }));
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.codex).toEqual({ enabled: true, reasoningSummary: 'none' });
+  });
+
   it('keeps defaults and reports errors for invalid field values', async () => {
     // Arrange
     const { loadConfig, cwd } = await loadConfigAndProjectDir();

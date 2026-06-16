@@ -125,9 +125,16 @@ function patchRequestPayload(
   const withVerbosity = supportsVerbosityControl(model) ? patchPayloadVerbosity(payload, config.verbosity) : payload;
   const withServiceTier = patchPayloadServiceTier(withVerbosity, config.serviceTier);
 
-  return supportsReasoningSummaryControl(model)
+  return shouldPatchReasoningSummary(config, model)
     ? patchPayloadReasoningSummary(withServiceTier, config.reasoningSummary)
     : withServiceTier;
+}
+
+function shouldPatchReasoningSummary(
+  config: CodexControlsConfig,
+  model: Pick<Model<Api>, 'api' | 'reasoning'>
+): boolean {
+  return config.reasoningSummary === 'none' || supportsReasoningSummaryControl(model);
 }
 
 function patchPayloadVerbosity(payload: MutableJsonObject, verbosity: CodexVerbosity | undefined): MutableJsonObject {
@@ -149,6 +156,10 @@ function patchPayloadReasoningSummary(
 ): MutableJsonObject {
   if (!reasoningSummary) return payload;
 
+  if (reasoningSummary === 'none') {
+    return removePayloadReasoningSummary(payload);
+  }
+
   const reasoning = isRecord(payload.reasoning) ? payload.reasoning : {};
   return {
     ...payload,
@@ -156,6 +167,23 @@ function patchPayloadReasoningSummary(
       ...reasoning,
       summary: reasoningSummary,
     },
+  };
+}
+
+function removePayloadReasoningSummary(payload: MutableJsonObject): MutableJsonObject {
+  if (!isRecord(payload.reasoning) || !Object.hasOwn(payload.reasoning, 'summary')) return payload;
+
+  const reasoning = { ...payload.reasoning };
+  delete reasoning.summary;
+  if (Object.keys(reasoning).length === 0) {
+    const payloadWithoutReasoning = { ...payload };
+    delete payloadWithoutReasoning.reasoning;
+    return payloadWithoutReasoning;
+  }
+
+  return {
+    ...payload,
+    reasoning,
   };
 }
 

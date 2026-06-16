@@ -7,7 +7,7 @@ import {
 } from '@trethore/pi-shared/config/schema.js';
 
 export type CodexVerbosity = 'low' | 'medium' | 'high';
-export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed';
+export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed' | 'none';
 export type CodexServiceTier = 'slow' | 'fast';
 
 export interface PiCodexifyConfig {
@@ -69,7 +69,7 @@ export const defaultConfig: PiCodexifyConfig = {
 };
 
 export const codexVerbosityValues = ['low', 'medium', 'high'] as const;
-export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed'] as const;
+export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed', 'none'] as const;
 export const codexServiceTierValues = ['slow', 'fast'] as const;
 
 export const codexVerbositySchema = defineConfigSchema(
@@ -78,7 +78,7 @@ export const codexVerbositySchema = defineConfigSchema(
 );
 export const codexReasoningSummarySchema = defineConfigSchema(
   z.enum(codexReasoningSummaryValues).nullable(),
-  'expected auto, concise, detailed, or null'
+  'expected auto, concise, detailed, none, or null'
 );
 export const codexServiceTierSchema = defineConfigSchema(
   z.enum(codexServiceTierValues).nullable(),
