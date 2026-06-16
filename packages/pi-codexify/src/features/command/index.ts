@@ -6,6 +6,7 @@ import {
   buildCodexControlsStatusMessage,
   type CodexControlsController,
   parseCodexReasoningSummary,
+  parseCodexServiceTier,
   parseCodexVerbosity,
 } from '#src/features/codex-controls/index.js';
 import {
@@ -130,6 +131,15 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
       await handleReasoningSummaryCommand(parts[1], ctx, config, codexControls);
     },
   },
+  {
+    name: 'serviceTier',
+    usage: '/codexify serviceTier slow|fast',
+    needsMoreArgs: true,
+    isAvailable: (config) => config.codex.enabled,
+    async handle(parts, ctx, config, codexControls) {
+      await handleServiceTierCommand(parts[1], ctx, config, codexControls);
+    },
+  },
 ];
 
 const RESET_COMMAND_USAGE = 'Usage: /codexify reset use|count';
@@ -209,11 +219,27 @@ async function handleReasoningSummaryCommand(
   });
 }
 
+async function handleServiceTierCommand(
+  value: string | undefined,
+  ctx: ExtensionCommandContext,
+  config: PiCodexifyConfig,
+  codexControls: CodexControlsController | undefined
+): Promise<void> {
+  await handleCodexControlUpdate(value, ctx, config, codexControls, {
+    commandName: 'serviceTier',
+    usage: 'Usage: /codexify serviceTier slow|fast',
+    label: 'Codex service tier',
+    configKey: 'serviceTier',
+    parse: parseCodexServiceTier,
+    update: (controls, parsedValue) => controls.updateServiceTier(parsedValue),
+  });
+}
+
 interface CodexControlUpdateOptions<TValue extends CodexControlValue> {
   commandName: string;
   usage: string;
   label: string;
-  configKey: 'verbosity' | 'reasoningSummary';
+  configKey: 'verbosity' | 'reasoningSummary' | 'serviceTier';
   parse(value: string): TValue | undefined;
   update(controls: CodexControlsController, parsedValue: TValue): void;
 }

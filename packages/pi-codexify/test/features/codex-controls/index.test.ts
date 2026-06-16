@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCodexControlsStatusMessage,
   parseCodexReasoningSummary,
+  parseCodexServiceTier,
   parseCodexVerbosity,
   registerCodexControls,
 } from '#pi-codexify/features/codex-controls/index.js';
@@ -24,15 +25,19 @@ describe('codex controls', () => {
     expect(parseCodexReasoningSummary('detailed')).toBe('detailed');
     expect(parseCodexReasoningSummary('off')).toBe('off');
     expect(parseCodexReasoningSummary('long')).toBeUndefined();
+    expect(parseCodexServiceTier('fast')).toBe('fast');
+    expect(parseCodexServiceTier('slow')).toBe('slow');
+    expect(parseCodexServiceTier('priority')).toBeUndefined();
   });
 
-  it('patches supported codex response requests with configured verbosity and reasoning summary', () => {
+  it('patches supported codex response requests with configured verbosity, reasoning summary, and service tier', () => {
     // Arrange
     const pi = createPi();
     registerCodexControls(pi.extensionApi, {
       enabled: true,
       verbosity: 'high',
       reasoningSummary: 'concise',
+      serviceTier: 'fast',
     });
     const payload = { input: 'hello', text: { format: 'plain' }, reasoning: { effort: 'medium' } };
 
@@ -49,8 +54,49 @@ describe('codex controls', () => {
       input: 'hello',
       text: { format: 'plain', verbosity: 'high' },
       reasoning: { effort: 'medium', summary: 'concise' },
+      service_tier: 'priority',
     });
     expect(patchedPayload).not.toBe(payload);
+  });
+
+  it('does not add service_tier for slow service tier', () => {
+    // Arrange
+    const pi = createPi();
+    registerCodexControls(pi.extensionApi, {
+      enabled: true,
+      serviceTier: 'slow',
+    });
+    const payload = { input: 'hello' };
+
+    // Act
+    const patchedPayload = pi.emitBeforeProviderRequest(payload, {
+      provider: 'openai-codex',
+      id: 'gpt-5-codex',
+      api: 'openai-codex-responses',
+      reasoning: true,
+    });
+
+    // Assert
+    expect(patchedPayload).toBe(payload);
+  });
+
+  it.each([
+    ['openai-responses', 'openai'],
+    ['openai-codex-responses', 'openai-codex'],
+    ['azure-openai-responses', 'azure-openai-responses'],
+  ])('adds service_tier for supported %s payloads', (api, provider) => {
+    // Arrange
+    const pi = createPi();
+    registerCodexControls(pi.extensionApi, {
+      enabled: true,
+      serviceTier: 'fast',
+    });
+
+    // Act
+    const patchedPayload = pi.emitBeforeProviderRequest({}, { provider, id: 'gpt-5', api });
+
+    // Assert
+    expect(patchedPayload).toEqual({ service_tier: 'priority' });
   });
 
   it('does not add reasoning summary for supported response models without reasoning support', () => {
@@ -60,6 +106,7 @@ describe('codex controls', () => {
       enabled: true,
       verbosity: 'medium',
       reasoningSummary: 'auto',
+      serviceTier: 'fast',
     });
 
     // Act
@@ -69,7 +116,7 @@ describe('codex controls', () => {
     );
 
     // Assert
-    expect(patchedPayload).toEqual({ text: { verbosity: 'medium' } });
+    expect(patchedPayload).toEqual({ text: { verbosity: 'medium' }, service_tier: 'priority' });
   });
 
   it('leaves unsupported provider payloads unchanged', () => {
@@ -100,6 +147,7 @@ describe('codex controls', () => {
     const controller = registerCodexControls(pi.extensionApi, { enabled: true });
     controller.updateVerbosity('high');
     controller.updateReasoningSummary('detailed');
+    controller.updateServiceTier('fast');
 
     // Act
     const patchedPayload = pi.emitBeforeProviderRequest(
@@ -122,11 +170,14 @@ describe('codex controls', () => {
     expect(patchedPayload).toEqual({
       text: { verbosity: 'high' },
       reasoning: { summary: 'detailed' },
+      service_tier: 'priority',
     });
     expect(statusMessage).toContain('verbosity: high');
     expect(statusMessage).toContain('reasoning summary: detailed');
+    expect(statusMessage).toContain('service tier: fast');
     expect(statusMessage).toContain('verbosity supported here: yes');
     expect(statusMessage).toContain('reasoning summary supported here: yes');
+    expect(statusMessage).toContain('service tier supported here: yes');
   });
 });
 

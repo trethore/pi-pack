@@ -16,6 +16,11 @@ const commands = [
     needsMoreArgs: true,
     isAvailable: (config: PiCodexifyConfig) => config.reset.enabled,
   },
+  {
+    name: 'serviceTier',
+    needsMoreArgs: true,
+    isAvailable: (config: PiCodexifyConfig) => config.codex.enabled,
+  },
 ] as const;
 
 describe('codexify command completions', () => {
@@ -100,6 +105,17 @@ describe('codexify command completions', () => {
 
     // Assert
     expect(completions).toBeNull();
+  });
+
+  it('completes service tier values', async () => {
+    // Arrange / Act
+    const completions = await getCodexifyArgumentCompletions('serviceTier ', defaultConfig, commands);
+
+    // Assert
+    expect(completions).toEqual([
+      { value: 'serviceTier slow', label: 'slow' },
+      { value: 'serviceTier fast', label: 'fast' },
+    ]);
   });
 });
 

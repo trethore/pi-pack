@@ -30,7 +30,7 @@ describe('loadConfig', () => {
     configTest.writeGlobalConfig(
       homeDir,
       JSON.stringify({
-        codex: { verbosity: 'low', reasoningSummary: 'concise' },
+        codex: { verbosity: 'low', reasoningSummary: 'concise', serviceTier: 'fast' },
         usage: { enabled: false },
         account: { enabled: false },
         reset: { enabled: false },
@@ -56,7 +56,7 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
-      codex: { enabled: true, verbosity: 'high', reasoningSummary: 'concise' },
+      codex: { enabled: true, verbosity: 'high', reasoningSummary: 'concise', serviceTier: 'fast' },
       usage: { enabled: false },
       account: { enabled: true },
       reset: { enabled: true },
@@ -64,16 +64,19 @@ describe('loadConfig', () => {
     });
   });
 
-  it('uses null codex control values to disable inherited verbosity and reasoning summary', async () => {
+  it('uses null codex control values to disable inherited verbosity, reasoning summary, and service tier', async () => {
     // Arrange
     const homeDir = configTest.makeTempDir();
     configTest.writeGlobalConfig(
       homeDir,
-      JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed' } })
+      JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed', serviceTier: 'fast' } })
     );
     const { loadConfig } = await configTest.importConfigWithHome(homeDir);
     const cwd = configTest.makeTempDir();
-    configTest.writeProjectConfig(cwd, JSON.stringify({ codex: { verbosity: null, reasoningSummary: null } }));
+    configTest.writeProjectConfig(
+      cwd,
+      JSON.stringify({ codex: { verbosity: null, reasoningSummary: null, serviceTier: null } })
+    );
 
     // Act
     const loaded = loadConfig(cwd);
@@ -90,7 +93,7 @@ describe('loadConfig', () => {
       cwd,
       JSON.stringify({
         enabled: 'yes',
-        codex: { enabled: 'yes', verbosity: 'verbose', reasoningSummary: 'long' },
+        codex: { enabled: 'yes', verbosity: 'verbose', reasoningSummary: 'long', serviceTier: 'priority' },
         usage: { enabled: 'no' },
         account: { enabled: 'yes' },
         reset: { enabled: 'yes' },
@@ -103,12 +106,13 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.config).toEqual(CODEXIFY_DEFAULT_CONFIG);
-    expect(loaded.errors).toHaveLength(8);
+    expect(loaded.errors).toHaveLength(9);
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid codex.enabled value'),
       expect.stringContaining('invalid codex.verbosity value'),
       expect.stringContaining('invalid codex.reasoningSummary value'),
+      expect.stringContaining('invalid codex.serviceTier value'),
       expect.stringContaining('invalid usage.enabled value'),
       expect.stringContaining('invalid account.enabled value'),
       expect.stringContaining('invalid reset.enabled value'),

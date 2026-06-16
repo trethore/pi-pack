@@ -1,6 +1,11 @@
 import type { AutocompleteItem } from '@earendil-works/pi-tui';
 
-import type { PiCodexifyConfig } from '#src/config/schema.js';
+import {
+  codexReasoningSummaryValues,
+  codexServiceTierValues,
+  codexVerbosityValues,
+  type PiCodexifyConfig,
+} from '#src/config/schema.js';
 import {
   codexAccountActions,
   getSavedCodexAccountNames,
@@ -27,6 +32,16 @@ type CompletionOptions = {
 type CompletionItemOptions = {
   appendNeedsMoreArgs?: boolean;
 };
+
+type DirectArgumentCompletion = {
+  commandName: string;
+  enabled: boolean;
+  candidates: readonly string[];
+  itemOptions?: CompletionItemOptions;
+};
+
+const codexVerbosityCompletionValues = [...codexVerbosityValues, 'off'] as const;
+const codexReasoningSummaryCompletionValues = [...codexReasoningSummaryValues, 'off'] as const;
 
 export async function getCodexifyArgumentCompletions(
   prefix: string,
@@ -56,24 +71,51 @@ function getDirectArgumentCompletions(
   if (state.path.length !== 1) return null;
 
   const command = state.path[0];
+  const commandName = findCommand(command, commands)?.name ?? command;
+  const completion = getDirectArgumentCompletion(commandName, config);
 
-  if (command === 'verbosity' && config.codex.enabled) {
-    return buildCompletionItems(state, ['low', 'medium', 'high', 'off'], commands);
-  }
+  if (!completion) return null;
+  return buildCompletionItems(state, completion.candidates, commands, completion.itemOptions);
+}
 
-  if (isReasoningSummaryCommand(command, commands) && config.codex.enabled) {
-    return buildCompletionItems(state, ['auto', 'concise', 'detailed', 'off'], commands);
-  }
+function getDirectArgumentCompletion(
+  commandName: string,
+  config: PiCodexifyConfig
+): DirectArgumentCompletion | undefined {
+  return getDirectArgumentCompletionOptions(config).find(
+    (completion) => completion.commandName === commandName && completion.enabled
+  );
+}
 
-  if (command === 'account' && config.account.enabled) {
-    return buildCompletionItems(state, codexAccountActions, commands);
-  }
-
-  if (command === 'reset' && config.reset.enabled) {
-    return buildCompletionItems(state, resetCreditActions, commands, { appendNeedsMoreArgs: false });
-  }
-
-  return null;
+function getDirectArgumentCompletionOptions(config: PiCodexifyConfig): readonly DirectArgumentCompletion[] {
+  return [
+    {
+      commandName: 'verbosity',
+      enabled: config.codex.enabled,
+      candidates: codexVerbosityCompletionValues,
+    },
+    {
+      commandName: 'reasoning-summary',
+      enabled: config.codex.enabled,
+      candidates: codexReasoningSummaryCompletionValues,
+    },
+    {
+      commandName: 'serviceTier',
+      enabled: config.codex.enabled,
+      candidates: codexServiceTierValues,
+    },
+    {
+      commandName: 'account',
+      enabled: config.account.enabled,
+      candidates: codexAccountActions,
+    },
+    {
+      commandName: 'reset',
+      enabled: config.reset.enabled,
+      candidates: resetCreditActions,
+      itemOptions: { appendNeedsMoreArgs: false },
+    },
+  ];
 }
 
 async function getAccountNameCompletions(
@@ -152,10 +194,6 @@ function candidateNeedsMoreArgs(candidate: string, commands: readonly Completion
 function hasAccountNameCompletion(state: CompletionState): boolean {
   const action = parseCodexAccountAction(state.path[1]);
   return action === 'use' || action === 'delete';
-}
-
-function isReasoningSummaryCommand(command: string, commands: readonly CompletionCommand[]): boolean {
-  return findCommand(command, commands)?.name === 'reasoning-summary';
 }
 
 function findCommand(commandName: string, commands: readonly CompletionCommand[]): CompletionCommand | undefined {

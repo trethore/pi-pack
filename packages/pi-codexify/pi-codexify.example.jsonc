@@ -14,7 +14,13 @@
     // Supported values: "auto", "concise", "detailed".
     // Omit this key in both global and project config to avoid overriding the provider payload.
     // Set it to null in project config to disable an inherited global override.
-    "reasoningSummary": "auto"
+    "reasoningSummary": "auto",
+
+    // Controls Responses API service tier for supported Codex payloads.
+    // Supported values: "slow", "fast".
+    // "fast" requests priority processing.
+    // "slow" leaves the provider payload unchanged and uses the provider default.
+    "serviceTier": "slow"
   },
 
   "usage": {

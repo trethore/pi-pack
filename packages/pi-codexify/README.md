@@ -7,6 +7,7 @@ Codex-focused controls.
 - Mutates supported OpenAI Responses / Codex provider payloads with:
   - `text.verbosity`
   - `reasoning.summary`
+  - `service_tier: "priority"` for OpenAI Codex Responses when `serviceTier` is `fast`
 - Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
 - Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
@@ -25,6 +26,7 @@ Codex-focused controls.
 /codexify account delete <name>
 /codexify verbosity low|medium|high|off
 /codexify reasoning-summary auto|concise|detailed|off
+/codexify serviceTier slow|fast
 /codexify reset use
 /codexify reset count
 ```

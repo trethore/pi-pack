@@ -2,9 +2,11 @@ import type { Api, Model } from '@earendil-works/pi-ai';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import {
   codexReasoningSummaryValues,
+  codexServiceTierValues,
   codexVerbosityValues,
   type CodexControlsConfig,
   type CodexReasoningSummary,
+  type CodexServiceTier,
   type CodexVerbosity,
 } from '#src/config/schema.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
@@ -23,6 +25,7 @@ export interface CodexControlsController {
   getConfig(): CodexControlsConfig;
   updateVerbosity(value: CodexVerbosity | undefined): void;
   updateReasoningSummary(value: CodexReasoningSummary | undefined): void;
+  updateServiceTier(value: CodexServiceTier | undefined): void;
 }
 
 export function registerCodexControls(pi: ExtensionAPI, config: CodexControlsConfig): CodexControlsController {
@@ -51,6 +54,12 @@ export function registerCodexControls(pi: ExtensionAPI, config: CodexControlsCon
         reasoningSummary: value,
       };
     },
+    updateServiceTier(value) {
+      activeConfig = {
+        ...activeConfig,
+        serviceTier: value,
+      };
+    },
   };
 }
 
@@ -69,6 +78,11 @@ export function parseCodexReasoningSummary(value: string): CodexReasoningSummary
   return undefined;
 }
 
+export function parseCodexServiceTier(value: string): CodexServiceTier | undefined {
+  if (codexServiceTierValues.includes(value as CodexServiceTier)) return value as CodexServiceTier;
+  return undefined;
+}
+
 export function buildCodexControlsStatusMessage(
   config: CodexControlsConfig,
   model: Pick<Model<Api>, 'provider' | 'id' | 'api' | 'reasoning'> | undefined
@@ -80,9 +94,11 @@ export function buildCodexControlsStatusMessage(
     `enabled: ${config.enabled ? 'yes' : 'no'}`,
     `verbosity: ${config.verbosity ?? 'off'}`,
     `reasoning summary: ${config.reasoningSummary ?? 'off'}`,
+    `service tier: ${config.serviceTier ?? 'slow'}`,
     `current model: ${modelLabel}`,
     `verbosity supported here: ${supportsVerbosityControl(model) ? 'yes' : 'no'}`,
     `reasoning summary supported here: ${supportsReasoningSummaryControl(model) ? 'yes' : 'no'}`,
+    `service tier supported here: ${supportsCodexControls(model) ? 'yes' : 'no'}`,
   ].join('\n');
 }
 
@@ -107,10 +123,11 @@ function patchRequestPayload(
   if (!isRecord(payload)) return payload;
 
   const withVerbosity = supportsVerbosityControl(model) ? patchPayloadVerbosity(payload, config.verbosity) : payload;
+  const withServiceTier = patchPayloadServiceTier(withVerbosity, config.serviceTier);
 
   return supportsReasoningSummaryControl(model)
-    ? patchPayloadReasoningSummary(withVerbosity, config.reasoningSummary)
-    : withVerbosity;
+    ? patchPayloadReasoningSummary(withServiceTier, config.reasoningSummary)
+    : withServiceTier;
 }
 
 function patchPayloadVerbosity(payload: MutableJsonObject, verbosity: CodexVerbosity | undefined): MutableJsonObject {
@@ -139,5 +156,17 @@ function patchPayloadReasoningSummary(
       ...reasoning,
       summary: reasoningSummary,
     },
+  };
+}
+
+function patchPayloadServiceTier(
+  payload: MutableJsonObject,
+  serviceTier: CodexServiceTier | undefined
+): MutableJsonObject {
+  if (serviceTier !== 'fast') return payload;
+
+  return {
+    ...payload,
+    service_tier: 'priority',
   };
 }

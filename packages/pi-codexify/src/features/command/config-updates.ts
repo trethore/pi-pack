@@ -2,11 +2,11 @@ import { existsSync } from 'node:fs';
 
 import { updateJsoncFile } from '@trethore/pi-shared/config/write-jsonc.js';
 import { GLOBAL_CONFIG_PATH, PROJECT_CONFIG_PATH } from '#src/config/locations.js';
-import type { CodexReasoningSummary, CodexVerbosity } from '#src/config/schema.js';
+import type { CodexReasoningSummary, CodexServiceTier, CodexVerbosity } from '#src/config/schema.js';
 
 export type ConfigScope = 'global' | 'project';
-export type CodexControlField = 'verbosity' | 'reasoningSummary';
-export type CodexControlValue = CodexVerbosity | CodexReasoningSummary | 'off';
+export type CodexControlField = 'verbosity' | 'reasoningSummary' | 'serviceTier';
+export type CodexControlValue = CodexVerbosity | CodexReasoningSummary | CodexServiceTier | 'off';
 
 export async function updateCodexControlConfig(
   scope: ConfigScope,

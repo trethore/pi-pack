@@ -85,6 +85,7 @@ function createCodexControlsController(): CodexControlsController {
   return {
     getConfig: () => defaultConfig.codex,
     updateReasoningSummary: vi.fn(),
+    updateServiceTier: vi.fn(),
     updateVerbosity: vi.fn(),
   };
 }

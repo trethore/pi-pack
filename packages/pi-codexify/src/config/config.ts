@@ -3,6 +3,7 @@ import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
 import { getCodexifyConfigPaths } from '#src/config/locations.js';
 import {
   codexReasoningSummarySchema,
+  codexServiceTierSchema,
   codexVerbositySchema,
   defaultConfig,
   type LoadedConfig,
@@ -74,6 +75,17 @@ function mergeCodexFields(
     errors,
     (value) => {
       target.codex.reasoningSummary = value ?? undefined;
+    }
+  );
+  mergeField(
+    source,
+    'serviceTier',
+    `${configName}.serviceTier`,
+    codexServiceTierSchema,
+    configPath,
+    errors,
+    (value) => {
+      target.codex.serviceTier = value ?? undefined;
     }
   );
 }
