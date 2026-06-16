@@ -61,5 +61,5 @@ npm run test        # run tests
 Or you can run the following command to run all checks and tests at once:
 
 ```bash
-set -o pipefail; { npm run format && npm run typecheck && npm run lint && npm run test; } 2>&1 | tail -n 50.
+set -o pipefail; { npm run format && npm run typecheck && npm run lint && npm run test; } 2>&1 | tail -n 50
 ```

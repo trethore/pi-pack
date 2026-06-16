@@ -4,7 +4,11 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { parseRipgrepMatchLine, runRipgrepGrep } from '#pi-toolbox/features/grep/ripgrep.js';
+import {
+  parseRipgrepMatchLine,
+  runRipgrepGrep,
+  type RunRipgrepGrepOptions,
+} from '#pi-toolbox/features/grep/ripgrep.js';
 import {
   writeDepthFixture,
   writeHiddenGitFixture,
@@ -20,16 +24,7 @@ describe('ripgrep grep runner', () => {
     writeFileSync(path.join(cwd, 'notes.md'), 'haystack\n');
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: [],
-      limit: 10,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd);
 
     // Assert
     expect(result).toEqual({
@@ -48,17 +43,7 @@ describe('ripgrep grep runner', () => {
     });
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: [],
-      limit: 10,
-      depth: 2,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd, { depth: 2 });
 
     // Assert
     const matches = toRelativeMatches(cwd, result.matches);
@@ -78,17 +63,7 @@ describe('ripgrep grep runner', () => {
     writeIndependentDepthFixture(cwd, { child: 'needle child\n', grandchild: 'needle grandchild\n' });
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['root', 'root/nested'],
-      globs: [],
-      limit: 10,
-      depth: 1,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd, { paths: ['root', 'root/nested'], depth: 1 });
 
     // Assert
     expect(toRelativeMatches(cwd, result.matches)).toEqual([
@@ -103,17 +78,7 @@ describe('ripgrep grep runner', () => {
     writeFileSync(path.join(cwd, 'nested', 'deep', 'target.txt'), 'needle target\n');
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['nested/deep/target.txt'],
-      globs: [],
-      limit: 10,
-      depth: 1,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd, { paths: ['nested/deep/target.txt'], depth: 1 });
 
     // Assert
     expect(result.matches).toEqual([{ file: 'nested/deep/target.txt', line: 1, text: 'needle target' }]);
@@ -127,16 +92,7 @@ describe('ripgrep grep runner', () => {
     writeFileSync(path.join(cwd, 'm.txt'), 'needle m\n');
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: [],
-      limit: 2,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd, { limit: 2 });
 
     // Assert
     expect(result).toEqual({
@@ -156,16 +112,7 @@ describe('ripgrep grep runner', () => {
     writeFileSync(path.join(cwd, 'dir', 'b.txt'), 'needle b\n');
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['dir', path.join(cwd, 'dir', 'a.txt')],
-      globs: [],
-      limit: 2,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd, { paths: ['dir', path.join(cwd, 'dir', 'a.txt')], limit: 2 });
 
     // Assert
     expect(toRelativeMatches(cwd, result.matches)).toEqual([
@@ -185,16 +132,7 @@ describe('ripgrep grep runner', () => {
     });
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: [],
-      limit: 10,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd);
 
     // Assert
     expect(result.matches).toEqual([{ file: '.env.example', line: 1, text: 'needle=example' }]);
@@ -207,16 +145,7 @@ describe('ripgrep grep runner', () => {
     writeFileSync(path.join(cwd, '.env.example'), 'needle=example\n');
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: [],
-      limit: 10,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: true,
-    });
+    const result = await runGrepWithDefaults(cwd, { visibleOnly: true });
 
     // Assert
     expect(result.matches).toEqual([{ file: 'index.ts', line: 1, text: 'const needle = true;' }]);
@@ -228,16 +157,7 @@ describe('ripgrep grep runner', () => {
     writeHiddenIgnoredFixture(cwd, { ignored: 'needle ignored\n', hidden: 'needle hidden\n' });
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: [],
-      limit: 10,
-      maxCharsPerMatch: 200,
-      noIgnore: true,
-      visibleOnly: true,
-    });
+    const result = await runGrepWithDefaults(cwd, { noIgnore: true, visibleOnly: true });
 
     // Assert
     expect(result.matches).toEqual([{ file: 'ignored.txt', line: 1, text: 'needle ignored' }]);
@@ -251,16 +171,7 @@ describe('ripgrep grep runner', () => {
     writeFileSync(path.join(cwd, 'notes.md'), 'needle md\n');
 
     // Act
-    const result = await runRipgrepGrep({
-      cwd,
-      regexes: ['needle'],
-      paths: ['.'],
-      globs: ['*.ts', '!*.test.ts'],
-      limit: 10,
-      maxCharsPerMatch: 200,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await runGrepWithDefaults(cwd, { globs: ['*.ts', '!*.test.ts'] });
 
     // Assert
     expect(result.matches).toEqual([{ file: 'index.ts', line: 1, text: 'needle ts' }]);
@@ -308,6 +219,20 @@ function toRelativeMatches(
     ...match,
     file: path.relative(cwd, path.resolve(cwd, match.file)),
   }));
+}
+
+function runGrepWithDefaults(cwd: string, overrides: Partial<Omit<RunRipgrepGrepOptions, 'cwd'>> = {}) {
+  return runRipgrepGrep({
+    cwd,
+    regexes: ['needle'],
+    paths: ['.'],
+    globs: [],
+    limit: 10,
+    maxCharsPerMatch: 200,
+    noIgnore: false,
+    visibleOnly: false,
+    ...overrides,
+  });
 }
 
 function makeTempDir(): string {

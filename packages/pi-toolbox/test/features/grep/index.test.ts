@@ -146,9 +146,7 @@ src/index.ts
 
   it('normalizes blank optional lists to fallback values at the tool boundary', async () => {
     // Arrange
-    const cwd = makeTempDir();
-    const runner = vi.fn(async () => ({ matches: [], limited: false }));
-    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
+    const { runner, tool } = createEmptyGrepTool();
 
     // Act
     await tool.execute(
@@ -165,9 +163,7 @@ src/index.ts
 
   it('fails when regexes only contain blank values', async () => {
     // Arrange
-    const cwd = makeTempDir();
-    const runner = vi.fn(async () => ({ matches: [], limited: false }));
-    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
+    const { runner, tool } = createEmptyGrepTool();
 
     // Act and assert
     await expect(tool.execute('call-id', { regexes: [' ', ''] }, undefined, undefined, {} as never)).rejects.toThrow(
@@ -222,10 +218,8 @@ src/index.ts
 
   it('accepts a file path', async () => {
     // Arrange
-    const cwd = makeTempDir();
+    const { cwd, runner, tool } = createEmptyGrepTool();
     writeFileSync(path.join(cwd, 'file.txt'), 'needle');
-    const runner = vi.fn(async () => ({ matches: [], limited: false }));
-    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
 
     // Act
     await tool.execute('call-id', { regexes: ['needle'], paths: ['file.txt'] }, undefined, undefined, {} as never);
@@ -327,4 +321,11 @@ src/index.ts
 
 function makeTempDir(): string {
   return makePrefixedTempDir('pi-toolbox-grep-test-');
+}
+
+function createEmptyGrepTool() {
+  const cwd = makeTempDir();
+  const runner = vi.fn(async () => ({ matches: [], limited: false }));
+  const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { cwd, runner });
+  return { cwd, runner, tool };
 }

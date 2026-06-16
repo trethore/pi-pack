@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  importConfigWithHome,
-  makeTempDir,
-  writeGlobalConfig,
-  writeProjectConfig,
-} from '#test/utils/config-test-helpers.js';
+import * as configTest from '#test/utils/config-test-helpers.js';
+
+const CODEXIFY_DEFAULT_CONFIG = {
+  enabled: true,
+  codex: { enabled: true },
+  usage: { enabled: true },
+  account: { enabled: true },
+  reset: { enabled: true },
+  webSearch: { enabled: true },
+};
 
 describe('loadConfig', () => {
   afterEach(() => {
@@ -14,29 +18,16 @@ describe('loadConfig', () => {
   });
 
   it('loads defaults when no config files exist', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
+    const loaded = await loadConfigForFreshProject();
 
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.config).toEqual({
-      enabled: true,
-      codex: { enabled: true },
-      usage: { enabled: true },
-      account: { enabled: true },
-      reset: { enabled: true },
-      webSearch: { enabled: true },
-    });
+    expect(loaded.config).toEqual(CODEXIFY_DEFAULT_CONFIG);
   });
 
   it('merges global config before project config so project values override global values', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    writeGlobalConfig(
+    const homeDir = configTest.makeTempDir();
+    configTest.writeGlobalConfig(
       homeDir,
       JSON.stringify({
         codex: { verbosity: 'low', reasoningSummary: 'concise' },
@@ -46,9 +37,9 @@ describe('loadConfig', () => {
         webSearch: { enabled: false },
       })
     );
-    const { loadConfig } = await importConfigWithHome(homeDir);
-    const cwd = makeTempDir();
-    writeProjectConfig(
+    const { loadConfig } = await configTest.importConfigWithHome(homeDir);
+    const cwd = configTest.makeTempDir();
+    configTest.writeProjectConfig(
       cwd,
       JSON.stringify({
         codex: { verbosity: 'high' },
@@ -75,11 +66,14 @@ describe('loadConfig', () => {
 
   it('uses null codex control values to disable inherited verbosity and reasoning summary', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    writeGlobalConfig(homeDir, JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed' } }));
-    const { loadConfig } = await importConfigWithHome(homeDir);
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ codex: { verbosity: null, reasoningSummary: null } }));
+    const homeDir = configTest.makeTempDir();
+    configTest.writeGlobalConfig(
+      homeDir,
+      JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed' } })
+    );
+    const { loadConfig } = await configTest.importConfigWithHome(homeDir);
+    const cwd = configTest.makeTempDir();
+    configTest.writeProjectConfig(cwd, JSON.stringify({ codex: { verbosity: null, reasoningSummary: null } }));
 
     // Act
     const loaded = loadConfig(cwd);
@@ -91,9 +85,8 @@ describe('loadConfig', () => {
 
   it('keeps defaults and reports errors for invalid field values', async () => {
     // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
-    writeProjectConfig(
+    const { loadConfig, cwd } = await loadConfigAndProjectDir();
+    configTest.writeProjectConfig(
       cwd,
       JSON.stringify({
         enabled: 'yes',
@@ -109,14 +102,7 @@ describe('loadConfig', () => {
     const loaded = loadConfig(cwd);
 
     // Assert
-    expect(loaded.config).toEqual({
-      enabled: true,
-      codex: { enabled: true },
-      usage: { enabled: true },
-      account: { enabled: true },
-      reset: { enabled: true },
-      webSearch: { enabled: true },
-    });
+    expect(loaded.config).toEqual(CODEXIFY_DEFAULT_CONFIG);
     expect(loaded.errors).toHaveLength(8);
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
@@ -132,9 +118,8 @@ describe('loadConfig', () => {
 
   it('parses jsonc comments and trailing commas', async () => {
     // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
-    writeProjectConfig(
+    const { loadConfig, cwd } = await loadConfigAndProjectDir();
+    configTest.writeProjectConfig(
       cwd,
       `{
         // Disable only the web search tool.
@@ -150,3 +135,13 @@ describe('loadConfig', () => {
     expect(loaded.config.webSearch.enabled).toBe(false);
   });
 });
+
+async function loadConfigForFreshProject() {
+  const { loadConfig, cwd } = await loadConfigAndProjectDir();
+  return loadConfig(cwd);
+}
+
+async function loadConfigAndProjectDir() {
+  const { loadConfig } = await configTest.importConfigWithHome(configTest.makeTempDir());
+  return { loadConfig, cwd: configTest.makeTempDir() };
+}

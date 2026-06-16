@@ -7,6 +7,13 @@ import {
   writeProjectConfig,
 } from '#test/utils/config-test-helpers.js';
 
+const TOOLBOX_DEFAULT_CONFIG = {
+  enabled: true,
+  applyPatch: { enabled: true },
+  findFiles: { enabled: true, defaultLimit: 100 },
+  grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+};
+
 describe('loadConfig', () => {
   afterEach(() => {
     vi.doUnmock('node:os');
@@ -14,21 +21,10 @@ describe('loadConfig', () => {
   });
 
   it('loads defaults when no config files exist', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
+    const loaded = await loadToolboxConfigFromEmptyProject();
 
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.config).toEqual({
-      enabled: true,
-      applyPatch: { enabled: true },
-      findFiles: { enabled: true, defaultLimit: 100 },
-      grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
-    });
+    expect(loaded.config).toEqual(TOOLBOX_DEFAULT_CONFIG);
   });
 
   it('merges global config before project config so project values override global values', async () => {
@@ -92,12 +88,7 @@ describe('loadConfig', () => {
     const loaded = loadConfig(cwd);
 
     // Assert
-    expect(loaded.config).toEqual({
-      enabled: true,
-      applyPatch: { enabled: true },
-      findFiles: { enabled: true, defaultLimit: 100 },
-      grep: { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
-    });
+    expect(loaded.config).toEqual(TOOLBOX_DEFAULT_CONFIG);
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid applyPatch.enabled value'),
@@ -130,3 +121,8 @@ describe('loadConfig', () => {
     expect(loaded.config.findFiles.defaultLimit).toBe(250);
   });
 });
+
+async function loadToolboxConfigFromEmptyProject() {
+  const { loadConfig } = await importConfigWithHome(makeTempDir());
+  return loadConfig(makeTempDir());
+}

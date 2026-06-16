@@ -17,14 +17,8 @@ describe('loadConfig', () => {
   });
 
   it('loads tiny defaults when no config files exist', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
+    const loaded = await loadTinyConfigFromNewProject();
 
-    // Act
-    const loaded = loadConfig(cwd);
-
-    // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.proxyTool).toEqual({
       enabled: true,
@@ -88,25 +82,16 @@ describe('loadConfig', () => {
   });
 
   it('loads HTTP MCP server fields', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        servers: {
-          remote: {
-            url: 'https://mcp.example.com/mcp',
-            headers: { 'X-Api-Key': '${API_KEY}' },
-            auth: 'bearer',
-            bearerTokenEnv: 'MCP_TOKEN',
-          },
+    const loaded = await loadProjectConfig({
+      servers: {
+        remote: {
+          url: 'https://mcp.example.com/mcp',
+          headers: { 'X-Api-Key': '${API_KEY}' },
+          auth: 'bearer',
+          bearerTokenEnv: 'MCP_TOKEN',
         },
-      })
-    );
-
-    // Act
-    const loaded = loadConfig(cwd);
+      },
+    });
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -119,23 +104,14 @@ describe('loadConfig', () => {
   });
 
   it('loads OAuth HTTP MCP server fields', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithHome(makeTempDir());
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        servers: {
-          remote: {
-            url: 'https://mcp.example.com/mcp',
-            auth: 'oauth',
-          },
+    const loaded = await loadProjectConfig({
+      servers: {
+        remote: {
+          url: 'https://mcp.example.com/mcp',
+          auth: 'oauth',
         },
-      })
-    );
-
-    // Act
-    const loaded = loadConfig(cwd);
+      },
+    });
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -232,3 +208,17 @@ describe('loadConfig', () => {
     ]);
   });
 });
+
+async function loadTinyConfigFromNewProject() {
+  const homeDir = makeTempDir();
+  const projectDir = makeTempDir();
+  const { loadConfig } = await importConfigWithHome(homeDir);
+  return loadConfig(projectDir);
+}
+
+async function loadProjectConfig(projectConfig: object) {
+  const cwd = makeTempDir();
+  const { loadConfig } = await importConfigWithHome(makeTempDir());
+  writeProjectConfig(cwd, JSON.stringify(projectConfig));
+  return loadConfig(cwd);
+}

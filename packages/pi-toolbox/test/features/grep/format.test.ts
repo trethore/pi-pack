@@ -112,11 +112,7 @@ describe('formatGrepResult', () => {
   it('adds per-file footers only when more matches exist in that file', () => {
     // Arrange and act
     const result = formatGrepResult({
-      matches: [
-        { file: 'src/index.ts', line: 1, text: 'first' },
-        { file: 'src/index.ts', line: 2, text: 'second' },
-        { file: 'src/index.ts', line: 3, text: 'third' },
-      ],
+      matches: srcIndexMatches('first', 'second', 'third'),
       limit: 100,
       limitPerFile: 2,
     });
@@ -130,12 +126,7 @@ describe('formatGrepResult', () => {
   it('separates the global footer from per-file footers', () => {
     // Arrange and act
     const result = formatGrepResult({
-      matches: [
-        { file: 'src/index.ts', line: 1, text: 'first' },
-        { file: 'src/index.ts', line: 2, text: 'second' },
-        { file: 'src/index.ts', line: 3, text: 'third' },
-        { file: 'src/index.ts', line: 4, text: 'fourth' },
-      ],
+      matches: srcIndexMatches('first', 'second', 'third', 'fourth'),
       limit: 3,
       limitPerFile: 2,
       limited: true,
@@ -200,3 +191,7 @@ describe('formatGrepResult', () => {
     ).toBe(lines('matches=1 files=1', '', 'src/index.ts', '1: abc'));
   });
 });
+
+function srcIndexMatches(...texts: string[]) {
+  return texts.map((text, index) => ({ file: 'src/index.ts', line: index + 1, text }));
+}

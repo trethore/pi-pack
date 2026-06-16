@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { runRipgrepFindFiles } from '#pi-toolbox/features/find-files/ripgrep.js';
+import { runRipgrepFindFiles, type RunRipgrepFindFilesOptions } from '#pi-toolbox/features/find-files/ripgrep.js';
 import {
   writeDepthFixture,
   writeHiddenGitFixture,
@@ -20,14 +20,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, 'notes.md'), '# notes');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['*.ts'],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { patterns: ['*.ts'] });
 
     // Assert
     expect(result).toEqual({ files: ['index.ts'], limited: false });
@@ -43,14 +36,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: [],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { patterns: [] });
 
     // Assert
     expect(result.files).toEqual(['.gitignore', 'index.ts', 'notes.md']);
@@ -64,14 +50,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, 'ignored.txt'), 'ignored');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: [],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: true,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { patterns: [], noIgnore: true });
 
     // Assert
     expect(result.files).toContain('ignored.txt');
@@ -83,15 +62,7 @@ describe('ripgrep find_files runner', () => {
     writeDepthFixture(cwd, { root: 'root', child: 'child', grandchild: 'grandchild' });
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['**/*.txt'],
-      paths: ['.'],
-      limit: 10,
-      depth: 2,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { patterns: ['**/*.txt'], depth: 2 });
 
     // Assert
     expect(result.files).toHaveLength(2);
@@ -104,14 +75,10 @@ describe('ripgrep find_files runner', () => {
     writeIndependentDepthFixture(cwd, { child: 'child', grandchild: 'grandchild' });
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
+    const result = await findFilesWithDefaults(cwd, {
       patterns: ['**/*.txt'],
       paths: ['root', 'root/nested'],
-      limit: 10,
       depth: 1,
-      noIgnore: false,
-      visibleOnly: false,
     });
 
     // Assert
@@ -126,14 +93,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, 'm.txt'), 'm');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['*.txt'],
-      paths: ['.'],
-      limit: 2,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { patterns: ['*.txt'], limit: 2 });
 
     // Assert
     expect(result).toEqual({ files: ['a.txt', 'm.txt'], limited: true });
@@ -147,14 +107,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, 'dir', 'b.txt'), 'b');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['**/*'],
-      paths: ['dir', path.join(cwd, 'dir', 'a.txt')],
-      limit: 2,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { paths: ['dir', path.join(cwd, 'dir', 'a.txt')], limit: 2 });
 
     // Assert
     expect(toRelativeFiles(cwd, result.files)).toEqual(['dir/a.txt', 'dir/b.txt']);
@@ -167,14 +120,7 @@ describe('ripgrep find_files runner', () => {
     writeHiddenGitFixture(cwd, { hidden: 'TOKEN=example', gitConfig: '[core]', gitObject: 'object' });
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['**/*'],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd);
 
     // Assert
     expect(result.files).toContain('.env.example');
@@ -189,14 +135,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, '.env.example'), 'TOKEN=example');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['**/*'],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: false,
-      visibleOnly: true,
-    });
+    const result = await findFilesWithDefaults(cwd, { visibleOnly: true });
 
     // Assert
     expect(result.files).toContain('index.ts');
@@ -209,14 +148,7 @@ describe('ripgrep find_files runner', () => {
     writeHiddenIgnoredFixture(cwd, { ignored: 'ignored', hidden: 'TOKEN=example' });
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['**/*'],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: true,
-      visibleOnly: true,
-    });
+    const result = await findFilesWithDefaults(cwd, { noIgnore: true, visibleOnly: true });
 
     // Assert
     expect(result.files).toContain('ignored.txt');
@@ -231,14 +163,7 @@ describe('ripgrep find_files runner', () => {
     writeFileSync(path.join(cwd, 'notes.md'), '# notes');
 
     // Act
-    const result = await runRipgrepFindFiles({
-      cwd,
-      patterns: ['*.ts', '!*.test.ts'],
-      paths: ['.'],
-      limit: 10,
-      noIgnore: false,
-      visibleOnly: false,
-    });
+    const result = await findFilesWithDefaults(cwd, { patterns: ['*.ts', '!*.test.ts'] });
 
     // Assert
     expect(result.files).toEqual(['index.ts']);
@@ -247,6 +172,18 @@ describe('ripgrep find_files runner', () => {
 
 function toRelativeFiles(cwd: string, files: readonly string[]): string[] {
   return files.map((file) => path.relative(cwd, path.resolve(cwd, file)));
+}
+
+function findFilesWithDefaults(cwd: string, overrides: Partial<Omit<RunRipgrepFindFilesOptions, 'cwd'>> = {}) {
+  return runRipgrepFindFiles({
+    cwd,
+    patterns: ['**/*'],
+    paths: ['.'],
+    limit: 10,
+    noIgnore: false,
+    visibleOnly: false,
+    ...overrides,
+  });
 }
 
 function makeTempDir(): string {

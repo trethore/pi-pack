@@ -53,13 +53,7 @@ describe('loadConfig', () => {
   });
 
   it('rejects new lines folding foldTo above minNewLines', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { minNewLines: 3, foldTo: 4 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig({ newLinesFolding: { minNewLines: 3, foldTo: 4 } });
 
     // Assert
     expect(loaded.config.newLinesFolding).toEqual({ enabled: true, minNewLines: 10, foldTo: 5 });
@@ -67,12 +61,7 @@ describe('loadConfig', () => {
   });
 
   it('loads repetition folding defaults', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadDefaultConfig();
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -86,12 +75,7 @@ describe('loadConfig', () => {
   });
 
   it('loads new lines folding defaults', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadDefaultConfig();
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -103,12 +87,7 @@ describe('loadConfig', () => {
   });
 
   it('loads terminal cleanup defaults', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadDefaultConfig();
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -121,13 +100,7 @@ describe('loadConfig', () => {
   });
 
   it('merges terminal cleanup trimTrailingWhitespace config', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ terminalCleanup: { trimTrailingWhitespace: false } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig({ terminalCleanup: { trimTrailingWhitespace: false } });
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -135,13 +108,7 @@ describe('loadConfig', () => {
   });
 
   it('merges project new lines folding config', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ newLinesFolding: { enabled: false, minNewLines: 4, foldTo: 2 } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig({ newLinesFolding: { enabled: false, minNewLines: 4, foldTo: 2 } });
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -153,13 +120,7 @@ describe('loadConfig', () => {
   });
 
   it('rejects invalid terminal cleanup trimTrailingWhitespace values', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ terminalCleanup: { trimTrailingWhitespace: 'no' } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig({ terminalCleanup: { trimTrailingWhitespace: 'no' } });
 
     // Assert
     expect(loaded.config.terminalCleanup.trimTrailingWhitespace).toBe(true);
@@ -198,13 +159,7 @@ describe('loadConfig', () => {
   });
 
   it('rejects invalid repetition folding savingsMode', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ repetitionFolding: { savingsMode: 'xor' } }));
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig({ repetitionFolding: { savingsMode: 'xor' } });
 
     // Assert
     expect(loaded.config.repetitionFolding.savingsMode).toBe('or');
@@ -212,27 +167,7 @@ describe('loadConfig', () => {
   });
 
   it('loads new lines folding tool overrides', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        tools: [
-          {
-            selector: 'write',
-            newLinesFolding: {
-              enabled: true,
-              minNewLines: 3,
-              foldTo: 2,
-            },
-          },
-        ],
-      })
-    );
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadToolOverrideConfig({ newLinesFolding: { enabled: true, minNewLines: 3, foldTo: 2 } });
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -245,28 +180,9 @@ describe('loadConfig', () => {
   });
 
   it('loads repetition folding tool overrides', async () => {
-    // Arrange
-    const { loadConfig } = await importConfigWithEmptyHome();
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        tools: [
-          {
-            selector: 'write',
-            repetitionFolding: {
-              enabled: true,
-              minRepeats: 5,
-              minSavedLines: 0,
-              savingsMode: 'and',
-            },
-          },
-        ],
-      })
-    );
-
-    // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadToolOverrideConfig({
+      repetitionFolding: { enabled: true, minRepeats: 5, minSavedLines: 0, savingsMode: 'and' },
+    });
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -284,9 +200,18 @@ async function importConfigWithEmptyHome() {
   return importWithHome(makeTempDir(), () => import('#pi-cut/config/config.js'));
 }
 
+async function loadDefaultConfig() {
+  const { loadConfig } = await importConfigWithEmptyHome();
+  return loadConfig(makeTempDir());
+}
+
 async function loadProjectConfig(projectConfig: object) {
   const { loadConfig } = await importConfigWithEmptyHome();
   const cwd = makeTempDir();
   writeProjectConfig(cwd, JSON.stringify(projectConfig));
   return loadConfig(cwd);
+}
+
+async function loadToolOverrideConfig(toolConfig: object) {
+  return loadProjectConfig({ tools: [{ selector: 'write', ...toolConfig }] });
 }
