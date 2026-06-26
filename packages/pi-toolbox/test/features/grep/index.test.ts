@@ -137,7 +137,6 @@ describe('grep tool', () => {
       {
         type: 'text',
         text: `matches=1 files=1
-
 src/index.ts
 4: const needle = true;`,
       },
@@ -212,7 +211,7 @@ src/index.ts
     expect(result.details).toEqual({ count: 0, files: 0, limited: true });
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: 'matches=0 files=0\n\n[more matches available]',
+      text: 'matches=0 files=0\n[more matches available]',
     });
   });
 

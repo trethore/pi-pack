@@ -126,17 +126,14 @@ Example output:
 
 ```text
 matches=5 files=2
-
 src/agent/tools.ts
 12: export const findFilesTool = ...
 18: export const grepTool = ...
 25: very long line clipped by maxCharsPerMatch, once it hits the char limit, it ends: abcdefabcdefabcd
 [more matches in this file]
-
 src/index.ts
 4: import { grepTool } from "./agent/tools"
 9: tools: [findFilesTool, grepTool]
-
 [more matches available]
 ```
 

@@ -19,11 +19,9 @@ describe('formatGrepResult', () => {
     expect(result).toBe(
       lines(
         'matches=3 files=2',
-        '',
         'src/agent/tools.ts',
         '12: export const findFilesTool = ...',
         '18: export const grepTool = ...',
-        '',
         'src/index.ts',
         '9: tools: [findFilesTool, grepTool]'
       )
@@ -47,7 +45,7 @@ describe('formatGrepResult', () => {
     });
 
     // Assert
-    expect(result).toBe(lines('matches=4 files=2', '', 'a.txt', '1: a1', '2: a2', '', 'b.txt', '1: b1', '2: b2'));
+    expect(result).toBe(lines('matches=4 files=2', 'a.txt', '1: a1', '2: a2', 'b.txt', '1: b1', '2: b2'));
   });
 
   it('deduplicates matches returned through overlapping search paths', () => {
@@ -66,7 +64,6 @@ describe('formatGrepResult', () => {
     expect(result).toBe(
       lines(
         'matches=2 files=1',
-        '',
         'README.md',
         '39: - `patterns`: glob pattern(s)',
         '40: - `paths`: directories to search in'
@@ -83,7 +80,7 @@ describe('formatGrepResult', () => {
     });
 
     // Assert
-    expect(result).toBe(lines('matches=1 files=1', '', 'src/visible.txt', '1: visible TODO'));
+    expect(result).toBe(lines('matches=1 files=1', 'src/visible.txt', '1: visible TODO'));
   });
 
   it('uses shortest unique root suffixes for conflicting search roots', () => {
@@ -99,13 +96,13 @@ describe('formatGrepResult', () => {
 
     // Assert
     expect(result).toBe(
-      lines('matches=2 files=2', '', 'tmp/project/src/a.ts', '1: tmp match', '', 'u/project/src/a.ts', '1: home match')
+      lines('matches=2 files=2', 'tmp/project/src/a.ts', '1: tmp match', 'u/project/src/a.ts', '1: home match')
     );
   });
 
   it('adds a footer when more matches are available', () => {
     expect(formatGrepResult({ matches: [], limit: 100, limited: true })).toBe(
-      'matches=0 files=0\n\n[more matches available]'
+      'matches=0 files=0\n[more matches available]'
     );
   });
 
@@ -119,7 +116,7 @@ describe('formatGrepResult', () => {
 
     // Assert
     expect(result).toBe(
-      lines('matches=2 files=1', '', 'src/index.ts', '1: first', '2: second', '[more matches in this file]')
+      lines('matches=2 files=1', 'src/index.ts', '1: first', '2: second', '[more matches in this file]')
     );
   });
 
@@ -136,12 +133,10 @@ describe('formatGrepResult', () => {
     expect(result).toBe(
       lines(
         'matches=2 files=1',
-        '',
         'src/index.ts',
         '1: first',
         '2: second',
         '[more matches in this file]',
-        '',
         '[more matches available]'
       )
     );
@@ -166,15 +161,12 @@ describe('formatGrepResult', () => {
     expect(result).toBe(
       lines(
         'matches=3 files=3',
-        '',
         'a.txt',
         '1: a1',
         '[more matches in this file]',
-        '',
         'b.txt',
         '1: b1',
         '[more matches in this file]',
-        '',
         'c.txt',
         '1: c1',
         '[more matches in this file]'
@@ -188,7 +180,7 @@ describe('formatGrepResult', () => {
         matches: [{ file: 'src/index.ts', line: 1, text: 'abc' }],
         limit: 100,
       })
-    ).toBe(lines('matches=1 files=1', '', 'src/index.ts', '1: abc'));
+    ).toBe(lines('matches=1 files=1', 'src/index.ts', '1: abc'));
   });
 });
 

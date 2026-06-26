@@ -27,12 +27,12 @@ export function formatGrepResult(options: GrepFormatOptions): string {
 }
 
 export function formatGrepDisplay(display: GrepDisplay): string {
-  const files = groupMatchesByFile(display.matches);
   const header = `matches=${display.matches.length} files=${display.files}`;
 
   if (display.matches.length === 0) return formatWithGlobalFooter(header, display);
 
-  return formatWithGlobalFooter([header, '', ...formatFiles(files, display.perFileLimitedFiles)].join('\n'), display);
+  const files = groupMatchesByFile(display.matches);
+  return formatWithGlobalFooter([header, ...formatFiles(files, display.perFileLimitedFiles)].join('\n'), display);
 }
 
 export function createGrepDisplay(options: GrepFormatOptions): GrepDisplay {
@@ -68,7 +68,7 @@ export function createGrepDisplay(options: GrepFormatOptions): GrepDisplay {
 
 function formatWithGlobalFooter(text: string, display: GrepDisplay): string {
   if (!display.globalLimited) return text;
-  return `${text}\n\n[more matches available]`;
+  return `${text}\n[more matches available]`;
 }
 
 function normalizeMatches(matches: readonly GrepMatch[], paths: readonly string[]): GrepMatch[] {
@@ -119,7 +119,7 @@ function formatFiles(files: Map<string, GrepMatch[]>, perFileLimitedFiles: Set<s
   const lines: string[] = [];
 
   for (const [file, matches] of files) {
-    lines.push(...(lines.length > 0 ? [''] : []), file, ...formatFileMatches(file, matches, perFileLimitedFiles));
+    lines.push(file, ...formatFileMatches(file, matches, perFileLimitedFiles));
   }
 
   return lines;
