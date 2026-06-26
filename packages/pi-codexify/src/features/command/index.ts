@@ -1,7 +1,7 @@
 import type { ExtensionAPI, ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
 import type { PiCodexifyConfig } from '#src/config/schema.js';
-import { handleCodexAccountCommand } from '#src/features/accounts/index.js';
+import { handleCodexAccountCommand, handleCodexAccountSyncCommand } from '#src/features/accounts/index.js';
 import {
   buildCodexControlsStatusMessage,
   type CodexControlsController,
@@ -113,6 +113,14 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     },
   },
   {
+    name: 'sync',
+    usage: '/codexify sync',
+    isAvailable: (config) => config.account.enabled,
+    async handle(_parts, ctx, config) {
+      await handleSyncCommand(ctx, config);
+    },
+  },
+  {
     name: 'verbosity',
     usage: '/codexify verbosity low|medium|high|off',
     needsMoreArgs: true,
@@ -185,6 +193,15 @@ async function handleAccountCommand(
   }
 
   await handleCodexAccountCommand(parts, ctx);
+}
+
+async function handleSyncCommand(ctx: ExtensionCommandContext, config: PiCodexifyConfig): Promise<void> {
+  if (!config.account.enabled) {
+    ctx.ui.notify('codexify account is disabled in pi-codexify.jsonc.', 'warning');
+    return;
+  }
+
+  await handleCodexAccountSyncCommand(ctx);
 }
 
 async function handleVerbosityCommand(

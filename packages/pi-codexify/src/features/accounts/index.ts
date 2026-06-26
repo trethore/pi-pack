@@ -31,12 +31,20 @@ type CodexAccountProfiles = {
 
 type CodexAccountOptions = {
   profilePath?: string;
+  reloadAuth?: boolean;
 };
 
 type CurrentCredentialOptions = {
   allowMissing?: boolean;
   reload?: boolean;
 };
+
+export type CodexAccountSyncResult =
+  | 'different-account'
+  | 'missing-active'
+  | 'missing-current'
+  | 'synced'
+  | 'unchanged';
 
 export type CodexAuthContext = {
   modelRegistry: {
@@ -53,7 +61,7 @@ export type CodexCredentialContext = {
 export function registerCodexAccountSync(pi: ExtensionAPI): void {
   pi.on('before_provider_request', async (_event, ctx) => {
     if (ctx.model?.provider !== CODEX_PROVIDER) return;
-    await syncActiveCodexAccount(ctx);
+    await syncActiveCodexAccount(ctx, { reloadAuth: false });
   });
 }
 
@@ -98,6 +106,15 @@ export async function handleCodexAccountCommand(parts: readonly string[], ctx: E
     ctx.ui.notify(`Codex account deleted: ${name}.`, 'info');
   } catch (error) {
     ctx.ui.notify(`codexify account failed: ${getErrorMessage(error)}`, 'error');
+  }
+}
+
+export async function handleCodexAccountSyncCommand(ctx: ExtensionCommandContext): Promise<void> {
+  try {
+    const result = await syncActiveCodexAccount(ctx);
+    ctx.ui.notify(formatCodexAccountSyncMessage(result), result === 'different-account' ? 'warning' : 'info');
+  } catch (error) {
+    ctx.ui.notify(`codexify sync failed: ${getErrorMessage(error)}`, 'error');
   }
 }
 
@@ -166,17 +183,22 @@ export async function deleteCodexAccount(name: string, options: CodexAccountOpti
   await saveProfiles(profiles, options.profilePath);
 }
 
-export async function syncActiveCodexAccount(ctx: CodexAuthContext, options: CodexAccountOptions = {}): Promise<void> {
+export async function syncActiveCodexAccount(
+  ctx: CodexAuthContext,
+  options: CodexAccountOptions = {}
+): Promise<CodexAccountSyncResult> {
   const profiles = await loadProfiles(options.profilePath);
-  if (!profiles.active || !profiles.accounts[profiles.active]) return;
+  if (!profiles.active || !profiles.accounts[profiles.active]) return 'missing-active';
 
   const activeCredential = profiles.accounts[profiles.active];
-  const credential = getCurrentCodexCredential(ctx, { allowMissing: true, reload: false });
-  if (!credential || !isSameCodexAccount(activeCredential, credential)) return;
-  if (hasSameTokenData(activeCredential, credential)) return;
+  const credential = getCurrentCodexCredential(ctx, { allowMissing: true, reload: options.reloadAuth });
+  if (!credential) return 'missing-current';
+  if (!isSameCodexAccount(activeCredential, credential)) return 'different-account';
+  if (hasSameTokenData(activeCredential, credential)) return 'unchanged';
 
   profiles.accounts[profiles.active] = credential;
   await saveProfiles(profiles, options.profilePath);
+  return 'synced';
 }
 
 export async function buildCodexAccountListMessage(options: CodexAccountOptions = {}): Promise<string> {
@@ -267,6 +289,26 @@ function hasSameTokenData(left: OpenAICodexCredential, right: OpenAICodexCredent
     left.expires === right.expires &&
     getCodexCredentialAccountId(left) === getCodexCredentialAccountId(right)
   );
+}
+
+function formatCodexAccountSyncMessage(result: CodexAccountSyncResult): string {
+  switch (result) {
+    case 'different-account': {
+      return 'Current Pi openai-codex auth is a different Codex account; active codexify account was not updated.';
+    }
+    case 'missing-active': {
+      return 'No active codexify Codex account profile to sync.';
+    }
+    case 'missing-current': {
+      return `No active ${CODEX_PROVIDER} OAuth credential. Use /login ${CODEX_PROVIDER} first.`;
+    }
+    case 'synced': {
+      return 'Active codexify Codex account synced from current Pi auth.';
+    }
+    case 'unchanged': {
+      return 'Active codexify Codex account is already in sync with current Pi auth.';
+    }
+  }
 }
 
 export function getCodexCredentialAccountId(credential: OpenAICodexCredential | undefined): string | undefined {

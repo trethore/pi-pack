@@ -10,6 +10,7 @@ Codex-focused controls.
   - `service_tier: "priority"` for OpenAI Codex Responses when `serviceTier` is `fast`
 - Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
 - Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
+- Adds `/codexify sync` to copy freshly logged-in Pi `openai-codex` tokens into the active saved codexify account when both credentials are for the same Codex account.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
 - Adds `/codexify reset use|count` to consume one Codex usage reset credit or display the available reset token count when `reset.enabled` is true.
 
@@ -24,6 +25,7 @@ Codex-focused controls.
 /codexify account save <name>
 /codexify account use <name>
 /codexify account delete <name>
+/codexify sync
 /codexify verbosity low|medium|high|off
 /codexify reasoning-summary auto|concise|detailed|none|off
 /codexify serviceTier slow|fast
@@ -44,6 +46,8 @@ Codex account commands store OAuth profile copies in `~/.pi/agent/pi-codexify-co
 ```
 
 Account names may contain letters, numbers, dots, underscores, and dashes.
+
+After refreshing the active Codex account with `/login openai-codex`, run `/codexify sync` to update the active saved codexify profile with the fresh Pi auth tokens. If the newly logged-in Codex account is different from the active codexify profile, sync is skipped.
 
 `/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset count` gets the available reset token count without consuming a token.
 
