@@ -9,7 +9,6 @@ The project is organized as follows:
 ```text
 pi-pack/                            # You are here!
   packages/                         # Workspace packages for Pi extensions
-    pi-codeact/
     pi-cut/
     pi-codexify/
     pi-command-template/
