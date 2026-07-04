@@ -67,6 +67,42 @@ describe('codex account profiles', () => {
     });
   });
 
+  it('saves without a name into the active saved profile', async () => {
+    // Arrange
+    const profilePath = makeAccountProfilePath();
+    const ctx = createContext();
+    setCodexCredential(ctx, 'personal');
+    await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
+
+    // Act
+    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, {
+      ...createCredential('personal'),
+      access: 'access-personal-refreshed',
+      refresh: 'refresh-personal-refreshed',
+    });
+    const savedName = await saveCurrentCodexAccount(ctx, undefined, { profilePath });
+    setCodexCredential(ctx, 'other');
+    await useCodexAccount(ctx, 'personal', { profilePath });
+
+    // Assert
+    expect(savedName).toBe('personal');
+    expect(ctx.modelRegistry.authStorage.get(CODEX_PROVIDER)).toMatchObject({
+      access: 'access-personal-refreshed',
+      refresh: 'refresh-personal-refreshed',
+    });
+  });
+
+  it('rejects save without a name when there is no active saved profile', async () => {
+    // Arrange
+    const ctx = createContext();
+    setCodexCredential(ctx, 'personal');
+
+    // Act and assert
+    await expect(saveCurrentCodexAccount(ctx, undefined, { profilePath: makeAccountProfilePath() })).rejects.toThrow(
+      'Missing Codex account name and no active Codex account profile.'
+    );
+  });
+
   it('does not sync a different manually logged-in account into the active profile', async () => {
     // Arrange
     const profilePath = makeAccountProfilePath();

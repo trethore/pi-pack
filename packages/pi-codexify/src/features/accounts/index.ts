@@ -85,14 +85,15 @@ export async function handleCodexAccountCommand(parts: readonly string[], ctx: E
     }
 
     const name = normalizeAccountName(parts[2]);
-    if (!name) {
-      ctx.ui.notify(getCodexAccountUsage(), 'warning');
+
+    if (action === 'save') {
+      const savedName = await saveCurrentCodexAccount(ctx, name);
+      ctx.ui.notify(`Codex account saved as ${savedName}.`, 'info');
       return;
     }
 
-    if (action === 'save') {
-      await saveCurrentCodexAccount(ctx, name);
-      ctx.ui.notify(`Codex account saved as ${name}.`, 'info');
+    if (!name) {
+      ctx.ui.notify(getCodexAccountUsage(), 'warning');
       return;
     }
 
@@ -127,7 +128,7 @@ function getCodexAccountUsage(): string {
     'Usage:',
     '/codexify account list',
     '/codexify account current',
-    '/codexify account save <name>',
+    '/codexify account save [name]',
     '/codexify account use <name>',
     '/codexify account delete <name>',
   ].join('\n');
@@ -135,16 +136,18 @@ function getCodexAccountUsage(): string {
 
 export async function saveCurrentCodexAccount(
   ctx: CodexAuthContext,
-  name: string,
+  name?: string,
   options: CodexAccountOptions = {}
-): Promise<void> {
-  const accountName = requireAccountName(name);
-  const credential = getCurrentCodexCredential(ctx);
+): Promise<string> {
+  const explicitAccountName = name === undefined ? undefined : requireAccountName(name);
   const profiles = await loadProfiles(options.profilePath);
+  const accountName = explicitAccountName ?? requireActiveAccountName(profiles);
+  const credential = getCurrentCodexCredential(ctx);
 
   profiles.accounts[accountName] = credential;
   profiles.active = accountName;
   await saveProfiles(profiles, options.profilePath);
+  return accountName;
 }
 
 export async function useCodexAccount(
@@ -329,6 +332,11 @@ function requireAccountName(name: string): string {
     throw new Error('Codex account names may only contain letters, numbers, dots, underscores, and dashes.');
   }
   return accountName;
+}
+
+function requireActiveAccountName(profiles: CodexAccountProfiles): string {
+  if (profiles.active && profiles.accounts[profiles.active]) return profiles.active;
+  throw new Error('Missing Codex account name and no active Codex account profile.');
 }
 
 async function loadProfiles(profilePath = DEFAULT_PROFILE_PATH): Promise<CodexAccountProfiles> {

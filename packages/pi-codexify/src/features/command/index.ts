@@ -105,7 +105,7 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
   {
     name: 'account',
-    usage: '/codexify account list|current|save <name>|use <name>|delete <name>',
+    usage: '/codexify account list|current|save [name]|use <name>|delete <name>',
     needsMoreArgs: true,
     isAvailable: (config) => config.account.enabled,
     async handle(parts, ctx, config) {

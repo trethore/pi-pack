@@ -22,7 +22,7 @@ Codex-focused controls.
 /codexify usage
 /codexify account list
 /codexify account current
-/codexify account save <name>
+/codexify account save [name]
 /codexify account use <name>
 /codexify account delete <name>
 /codexify sync
@@ -45,7 +45,7 @@ Codex account commands store OAuth profile copies in `~/.pi/agent/pi-codexify-co
 /codexify account use personal
 ```
 
-Account names may contain letters, numbers, dots, underscores, and dashes.
+When `[name]` is omitted, `/codexify account save` updates the active saved codexify account. Account names may contain letters, numbers, dots, underscores, and dashes.
 
 After refreshing the active Codex account with `/login openai-codex`, run `/codexify sync` to update the active saved codexify profile with the fresh Pi auth tokens. If the newly logged-in Codex account is different from the active codexify profile, sync is skipped.
 
