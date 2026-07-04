@@ -116,15 +116,7 @@ describe('count reset credits command', () => {
     const result = await countResetCredits(ctx, { fetch: fetchMock });
 
     // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
-      method: 'GET',
-      headers: {
-        'OAI-Language': 'en',
-        originator: 'Codex Desktop',
-        Authorization: 'Bearer access-test',
-      },
-    });
+    expectResetCreditListRequest(fetchMock);
     expect(result).toEqual({
       status: 200,
       statusText: '',
@@ -225,15 +217,7 @@ describe('reset credit details command', () => {
     const result = await getResetCreditDetails(ctx, { fetch: fetchMock });
 
     // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
-      method: 'GET',
-      headers: {
-        'OAI-Language': 'en',
-        originator: 'Codex Desktop',
-        Authorization: 'Bearer access-test',
-      },
-    });
+    expectResetCreditListRequest(fetchMock);
     expect(result.credits).toEqual([
       {
         id: 'RateLimitResetCredit_1234567890',
@@ -329,3 +313,15 @@ type TestCommandContext = ReturnType<typeof createContext> & {
     notify: ReturnType<typeof vi.fn>;
   };
 };
+
+function expectResetCreditListRequest(fetchMock: ReturnType<typeof vi.fn>, accessToken = 'access-test'): void {
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
+    method: 'GET',
+    headers: {
+      'OAI-Language': 'en',
+      originator: 'Codex Desktop',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}

@@ -44,17 +44,9 @@ describe('codex account profiles', () => {
 
   it('syncs refreshed active credentials back into the saved active profile', async () => {
     // Arrange
-    const profilePath = makeAccountProfilePath();
-    const ctx = createContext();
-    setCodexCredential(ctx, 'personal');
-    await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
+    const { ctx, profilePath } = await createSavedPersonalProfileWithRefreshedCredential();
 
     // Act
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, {
-      ...createCredential('personal'),
-      access: 'access-personal-refreshed',
-      refresh: 'refresh-personal-refreshed',
-    });
     const result = await syncActiveCodexAccount(ctx, { profilePath });
     setCodexCredential(ctx, 'other');
     await useCodexAccount(ctx, 'personal', { profilePath });
@@ -69,17 +61,9 @@ describe('codex account profiles', () => {
 
   it('saves without a name into the active saved profile', async () => {
     // Arrange
-    const profilePath = makeAccountProfilePath();
-    const ctx = createContext();
-    setCodexCredential(ctx, 'personal');
-    await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
+    const { ctx, profilePath } = await createSavedPersonalProfileWithRefreshedCredential();
 
     // Act
-    ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, {
-      ...createCredential('personal'),
-      access: 'access-personal-refreshed',
-      refresh: 'refresh-personal-refreshed',
-    });
     const savedName = await saveCurrentCodexAccount(ctx, undefined, { profilePath });
     setCodexCredential(ctx, 'other');
     await useCodexAccount(ctx, 'personal', { profilePath });
@@ -167,4 +151,23 @@ describe('codex account profiles', () => {
 
 function makeAccountProfilePath(): string {
   return makeProfilePath('pi-codexify-accounts-test-');
+}
+
+async function createSavedPersonalProfileWithRefreshedCredential(): Promise<{
+  ctx: ReturnType<typeof createContext>;
+  profilePath: string;
+}> {
+  const profilePath = makeAccountProfilePath();
+  const ctx = createContext();
+
+  setCodexCredential(ctx, 'personal');
+  await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
+
+  ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, {
+    ...createCredential('personal'),
+    access: 'access-personal-refreshed',
+    refresh: 'refresh-personal-refreshed',
+  });
+
+  return { ctx, profilePath };
 }
