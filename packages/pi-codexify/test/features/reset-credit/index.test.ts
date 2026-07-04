@@ -2,9 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 
 import {
+  buildResetCreditDetailsMessage,
   consumeResetCredit,
   countResetCredits,
+  getResetCreditDetails,
   handleResetCreditCountCommand,
+  handleResetCreditDetailsCommand,
   handleUseResetCreditCommand,
 } from '#pi-codexify/features/reset-credit/index.js';
 import {
@@ -188,6 +191,125 @@ describe('count reset credits command', () => {
     // Assert
     expect(ctx.ui.confirm).not.toHaveBeenCalled();
     expect(ctx.ui.notify).toHaveBeenCalledWith('You have 2 reset tokens available.', 'info');
+  });
+});
+
+describe('reset credit details command', () => {
+  it('gets reset credit details with the active Codex OAuth token', async () => {
+    // Arrange
+    const ctx = createContext();
+    setCodexCredential(ctx, 'test');
+    const fetchMock = vi.fn(async () =>
+      Response.json(
+        {
+          available_count: 1,
+          credits: [
+            {
+              id: 'RateLimitResetCredit_1234567890',
+              status: 'available',
+              expires_at: '2026-07-12T15:30:00.000Z',
+            },
+            {
+              id: 'RateLimitResetCredit_used',
+              status: 'redeemed',
+              expires_at: '2026-07-10T08:00:00.000Z',
+              redeemed_at: '2026-07-04T08:00:00.000Z',
+            },
+          ],
+        },
+        { status: 200 }
+      )
+    );
+
+    // Act
+    const result = await getResetCreditDetails(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
+      method: 'GET',
+      headers: {
+        'OAI-Language': 'en',
+        originator: 'Codex Desktop',
+        Authorization: 'Bearer access-test',
+      },
+    });
+    expect(result.credits).toEqual([
+      {
+        id: 'RateLimitResetCredit_1234567890',
+        used: false,
+        expiresAt: '2026-07-12T15:30:00.000Z',
+      },
+      {
+        id: 'RateLimitResetCredit_used',
+        used: true,
+        expiresAt: '2026-07-10T08:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('builds a markdown table with shortened ids and ISO expiration dates', () => {
+    // Arrange / Act
+    const message = buildResetCreditDetailsMessage({
+      availableCount: 1,
+      credits: [
+        {
+          id: 'RateLimitResetCredit_1234567890',
+          used: false,
+          expiresAt: '2026-07-12T15:30:00.000Z',
+        },
+        {
+          id: 'short-id',
+          used: true,
+        },
+      ],
+    });
+
+    // Assert
+    expect(message).toBe(
+      [
+        'Codex reset credits',
+        'Available reset tokens: 1',
+        '',
+        '| ID | Used | Expires |',
+        '| --- | --- | --- |',
+        '| RateLimitResetCr...7890 | no | 2026-07-12T15:30:00.000Z |',
+        '| short-id | yes | unknown |',
+      ].join('\n')
+    );
+  });
+
+  it('reports when reset credit details are unavailable', () => {
+    // Arrange / Act
+    const message = buildResetCreditDetailsMessage({ availableCount: 0, credits: [] });
+
+    // Assert
+    expect(message).toBe('No Codex reset credit details available.\nAvailable reset tokens: 0');
+  });
+
+  it('notifies reset credit details without confirmation', async () => {
+    // Arrange
+    const ctx = createCommandContext(false);
+    setCodexCredential(ctx, 'test');
+    const fetchMock = vi.fn(async () =>
+      Response.json(
+        {
+          availableCount: 1,
+          credits: [{ id: 'RateLimitResetCredit_1234567890', status: 'available' }],
+        },
+        { status: 200 }
+      )
+    );
+
+    // Act
+    await handleResetCreditDetailsCommand(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(ctx.ui.confirm).not.toHaveBeenCalled();
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining('| RateLimitResetCr...7890 | no | unknown |'),
+      'info'
+    );
   });
 });
 

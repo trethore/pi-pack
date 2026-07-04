@@ -31,6 +31,7 @@ Codex-focused controls.
 /codexify serviceTier slow|fast
 /codexify reset use
 /codexify reset count
+/codexify reset details
 ```
 
 Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.
@@ -49,7 +50,7 @@ When `[name]` is omitted, `/codexify account save` updates the active saved code
 
 After refreshing the active Codex account with `/login openai-codex`, run `/codexify sync` to update the active saved codexify profile with the fresh Pi auth tokens. If the newly logged-in Codex account is different from the active codexify profile, sync is skipped.
 
-`/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset count` gets the available reset token count without consuming a token.
+`/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset count` gets the available reset token count without consuming a token. `/codexify reset details` is read-only and displays reset token ids, usage state, and ISO expiration dates when the API exposes token details.
 
 ## Configuration
 

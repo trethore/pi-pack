@@ -13,7 +13,7 @@ import { buildChatGptBackendApiUrl } from '#src/utils/chatgpt-backend.js';
 const RESET_CREDIT_COUNT_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits');
 const RESET_CREDIT_CONSUME_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits/consume');
 
-export const resetCreditActions = ['use', 'count'] as const;
+export const resetCreditActions = ['use', 'count', 'details'] as const;
 
 type ResetCreditAction = (typeof resetCreditActions)[number];
 
@@ -38,6 +38,16 @@ type ResetCreditResult = {
 
 type ResetCreditCountResult = ResetCreditResult & {
   availableCount: number;
+};
+
+type ResetCreditDetailsResult = ResetCreditCountResult & {
+  credits: ResetCreditDetail[];
+};
+
+type ResetCreditDetail = {
+  id: string;
+  used: boolean;
+  expiresAt?: string;
 };
 
 export async function handleUseResetCreditCommand(
@@ -71,6 +81,18 @@ export async function handleResetCreditCountCommand(
     ctx.ui.notify(`You have ${result.availableCount} reset tokens available.`, 'info');
   } catch (error) {
     ctx.ui.notify(`Codex reset credit count request failed: ${getErrorMessage(error)}`, 'error');
+  }
+}
+
+export async function handleResetCreditDetailsCommand(
+  ctx: ExtensionCommandContext,
+  options: ResetCreditOptions = {}
+): Promise<void> {
+  try {
+    const result = await getResetCreditDetails(ctx, options);
+    ctx.ui.notify(buildResetCreditDetailsMessage(result), 'info');
+  } catch (error) {
+    ctx.ui.notify(`Codex reset credit details request failed: ${getErrorMessage(error)}`, 'error');
   }
 }
 
@@ -108,22 +130,24 @@ export async function countResetCredits(
   ctx: ResetCreditCredentialContext,
   options: ResetCreditOptions = {}
 ): Promise<ResetCreditCountResult> {
-  const accessToken = await getCurrentCodexAccessToken(ctx);
-  const response = await (options.fetch ?? fetch)(RESET_CREDIT_COUNT_URL, {
-    method: 'GET',
-    headers: buildResetCreditHeaders(accessToken),
-  });
-  const body = await readResponseBody(response);
-
-  if (!response.ok) {
-    throw new Error(`Reset credit count request failed: ${response.status}${formatStatusText(response.statusText)}`);
-  }
+  const result = await requestResetCredits(ctx, options, 'count');
 
   return {
-    status: response.status,
-    statusText: response.statusText,
-    body,
-    availableCount: getAvailableResetCreditCount(body),
+    ...result,
+    availableCount: getAvailableResetCreditCount(result.body),
+  };
+}
+
+export async function getResetCreditDetails(
+  ctx: ResetCreditCredentialContext,
+  options: ResetCreditOptions = {}
+): Promise<ResetCreditDetailsResult> {
+  const result = await requestResetCredits(ctx, options, 'details');
+
+  return {
+    ...result,
+    availableCount: getAvailableResetCreditCount(result.body),
+    credits: getResetCreditDetailsFromBody(result.body),
   };
 }
 
@@ -170,6 +194,26 @@ function buildResetCreditSuccessMessage(result: ResetCreditResult): string {
   ].join('\n');
 }
 
+export function buildResetCreditDetailsMessage(
+  result: Pick<ResetCreditDetailsResult, 'availableCount' | 'credits'>
+): string {
+  if (result.credits.length === 0) {
+    return ['No Codex reset credit details available.', `Available reset tokens: ${result.availableCount}`].join('\n');
+  }
+
+  return [
+    'Codex reset credits',
+    `Available reset tokens: ${result.availableCount}`,
+    '',
+    '| ID | Used | Expires |',
+    '| --- | --- | --- |',
+    ...result.credits.map(
+      (credit) =>
+        `| ${formatMarkdownCell(shortenResetCreditId(credit.id))} | ${credit.used ? 'yes' : 'no'} | ${formatMarkdownCell(credit.expiresAt ?? 'unknown')} |`
+    ),
+  ].join('\n');
+}
+
 function formatStatusText(statusText: string): string {
   return statusText ? ` ${statusText}` : '';
 }
@@ -182,13 +226,77 @@ function formatResultBody(body: unknown): string {
 
 function getAvailableResetCreditCount(body: unknown): number {
   if (!isRecord(body)) {
-    throw new TypeError('Reset credit count response missing available count.');
+    throw new TypeError('Reset credit response missing available count.');
   }
 
   const availableCount = body.available_count ?? body.availableCount;
   if (typeof availableCount !== 'number' || !Number.isFinite(availableCount)) {
-    throw new TypeError('Reset credit count response missing available count.');
+    throw new TypeError('Reset credit response missing available count.');
   }
 
   return availableCount;
+}
+
+async function requestResetCredits(
+  ctx: ResetCreditCredentialContext,
+  options: ResetCreditOptions,
+  action: 'count' | 'details'
+): Promise<ResetCreditResult> {
+  const accessToken = await getCurrentCodexAccessToken(ctx);
+  const response = await (options.fetch ?? fetch)(RESET_CREDIT_COUNT_URL, {
+    method: 'GET',
+    headers: buildResetCreditHeaders(accessToken),
+  });
+  const body = await readResponseBody(response);
+
+  if (!response.ok) {
+    throw new Error(
+      `Reset credit ${action} request failed: ${response.status}${formatStatusText(response.statusText)}`
+    );
+  }
+
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    body,
+  };
+}
+
+function getResetCreditDetailsFromBody(body: unknown): ResetCreditDetail[] {
+  if (!isRecord(body) || !Array.isArray(body.credits)) return [];
+
+  return body.credits.flatMap((credit) => {
+    const normalizedCredit = normalizeResetCreditDetail(credit);
+    return normalizedCredit ? [normalizedCredit] : [];
+  });
+}
+
+function normalizeResetCreditDetail(credit: unknown): ResetCreditDetail | undefined {
+  if (!isRecord(credit) || typeof credit.id !== 'string' || !credit.id.trim()) return undefined;
+
+  const status = typeof credit.status === 'string' ? credit.status : undefined;
+  return {
+    id: credit.id.trim(),
+    used: isUsedResetCreditStatus(status) || credit.redeemed_at != null,
+    expiresAt: formatIsoDate(credit.expires_at),
+  };
+}
+
+function isUsedResetCreditStatus(status: string | undefined): boolean {
+  const normalizedStatus = status?.toLowerCase();
+  return normalizedStatus === 'redeemed' || normalizedStatus === 'used' || normalizedStatus === 'consumed';
+}
+
+function formatIsoDate(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value.trim() : date.toISOString();
+}
+
+function shortenResetCreditId(id: string): string {
+  return id.length <= 24 ? id : `${id.slice(0, 16)}...${id.slice(-4)}`;
+}
+
+function formatMarkdownCell(value: string): string {
+  return value.replaceAll('|', String.raw`\|`);
 }

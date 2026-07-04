@@ -11,6 +11,7 @@ import {
 } from '#src/features/codex-controls/index.js';
 import {
   handleResetCreditCountCommand,
+  handleResetCreditDetailsCommand,
   handleUseResetCreditCommand,
   parseResetCreditAction,
 } from '#src/features/reset-credit/index.js';
@@ -96,7 +97,7 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
   {
     name: 'reset',
-    usage: '/codexify reset use|count',
+    usage: '/codexify reset use|count|details',
     needsMoreArgs: true,
     isAvailable: (config) => config.reset.enabled,
     async handle(parts, ctx, config) {
@@ -150,7 +151,7 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
 ];
 
-const RESET_COMMAND_USAGE = 'Usage: /codexify reset use|count';
+const RESET_COMMAND_USAGE = 'Usage: /codexify reset use|count|details';
 
 function findCodexifyCommand(commandName: string): CodexifyCommand | undefined {
   return CODEXIFY_COMMANDS.find((command) => command.name === commandName || command.aliases?.includes(commandName));
@@ -177,9 +178,23 @@ async function handleResetCommand(
 
   const action = parseResetCreditAction(parts[1]);
 
-  if (action === 'use') await handleUseResetCreditCommand(ctx);
-  else if (action === 'count') await handleResetCreditCountCommand(ctx);
-  else ctx.ui.notify(RESET_COMMAND_USAGE, 'warning');
+  switch (action) {
+    case 'use': {
+      await handleUseResetCreditCommand(ctx);
+      return;
+    }
+    case 'count': {
+      await handleResetCreditCountCommand(ctx);
+      return;
+    }
+    case 'details': {
+      await handleResetCreditDetailsCommand(ctx);
+      return;
+    }
+    default: {
+      ctx.ui.notify(RESET_COMMAND_USAGE, 'warning');
+    }
+  }
 }
 
 async function handleAccountCommand(

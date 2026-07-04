@@ -98,6 +98,7 @@ describe('codexify command completions', () => {
     expect(completions).toEqual([
       { value: 'reset use', label: 'use' },
       { value: 'reset count', label: 'count' },
+      { value: 'reset details', label: 'details' },
     ]);
   });
 
