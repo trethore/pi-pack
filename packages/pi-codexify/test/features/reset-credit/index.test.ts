@@ -255,10 +255,10 @@ describe('reset credit details command', () => {
         'Codex reset credits',
         'Available reset tokens: 1',
         '',
-        '| ID | Used | Expires |',
-        '| --- | --- | --- |',
-        '| RateLimitResetCr...7890 | no | 2026-07-12T15:30:00.000Z |',
-        '| short-id | yes | unknown |',
+        '| ID                      | Used | Expires                  |',
+        '| ----------------------- | ---- | ------------------------ |',
+        '| RateLimitResetCr...7890 | no   | 2026-07-12T15:30:00.000Z |',
+        '| short-id                | yes  | unknown                  |',
       ].join('\n')
     );
   });
@@ -291,7 +291,7 @@ describe('reset credit details command', () => {
     // Assert
     expect(ctx.ui.confirm).not.toHaveBeenCalled();
     expect(ctx.ui.notify).toHaveBeenCalledWith(
-      expect.stringContaining('| RateLimitResetCr...7890 | no | unknown |'),
+      expect.stringContaining('| RateLimitResetCr...7890 | no   | unknown |'),
       'info'
     );
   });

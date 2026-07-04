@@ -94,7 +94,7 @@ describe('codexify reset command', () => {
       expect.anything()
     );
     expect(ctx.ui.notify).toHaveBeenCalledWith(
-      expect.stringContaining('| RateLimitResetCr...7890 | no | unknown |'),
+      expect.stringContaining('| RateLimitResetCr...7890 | no   | unknown |'),
       'info'
     );
   });

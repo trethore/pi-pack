@@ -205,12 +205,14 @@ export function buildResetCreditDetailsMessage(
     'Codex reset credits',
     `Available reset tokens: ${result.availableCount}`,
     '',
-    '| ID | Used | Expires |',
-    '| --- | --- | --- |',
-    ...result.credits.map(
-      (credit) =>
-        `| ${formatMarkdownCell(shortenResetCreditId(credit.id))} | ${credit.used ? 'yes' : 'no'} | ${formatMarkdownCell(credit.expiresAt ?? 'unknown')} |`
-    ),
+    ...formatMarkdownTable([
+      ['ID', 'Used', 'Expires'],
+      ...result.credits.map((credit) => [
+        shortenResetCreditId(credit.id),
+        credit.used ? 'yes' : 'no',
+        credit.expiresAt ?? 'unknown',
+      ]),
+    ]),
   ].join('\n');
 }
 
@@ -299,4 +301,22 @@ function shortenResetCreditId(id: string): string {
 
 function formatMarkdownCell(value: string): string {
   return value.replaceAll('|', String.raw`\|`);
+}
+
+function formatMarkdownTable(rows: string[][]): string[] {
+  const escapedRows = rows.map((row) => row.map(formatMarkdownCell));
+  const columnWidths = escapedRows[0].map((_, columnIndex) =>
+    Math.max(3, ...escapedRows.map((row) => row[columnIndex].length))
+  );
+
+  const [header, ...bodyRows] = escapedRows;
+  return [formatMarkdownTableRow(header, columnWidths), formatMarkdownSeparatorRow(columnWidths), ...bodyRows.map((row) => formatMarkdownTableRow(row, columnWidths))];
+}
+
+function formatMarkdownTableRow(row: string[], columnWidths: number[]): string {
+  return `| ${row.map((cell, index) => cell.padEnd(columnWidths[index])).join(' | ')} |`;
+}
+
+function formatMarkdownSeparatorRow(columnWidths: number[]): string {
+  return `| ${columnWidths.map((width) => '-'.repeat(width)).join(' | ')} |`;
 }
