@@ -10,10 +10,10 @@ import {
 } from '#src/features/accounts/index.js';
 import { buildChatGptBackendApiUrl } from '#src/utils/chatgpt-backend.js';
 
-const RESET_CREDIT_COUNT_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits');
+const RESET_CREDIT_DETAILS_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits');
 const RESET_CREDIT_CONSUME_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits/consume');
 
-export const resetCreditActions = ['use', 'count', 'details'] as const;
+export const resetCreditActions = ['use', 'details'] as const;
 
 type ResetCreditAction = (typeof resetCreditActions)[number];
 
@@ -36,11 +36,8 @@ type ResetCreditResult = {
   body: unknown;
 };
 
-type ResetCreditCountResult = ResetCreditResult & {
+type ResetCreditDetailsResult = ResetCreditResult & {
   availableCount: number;
-};
-
-type ResetCreditDetailsResult = ResetCreditCountResult & {
   credits: ResetCreditDetail[];
 };
 
@@ -69,18 +66,6 @@ export async function handleUseResetCreditCommand(
     ctx.ui.notify(buildResetCreditSuccessMessage(result), 'info');
   } catch (error) {
     ctx.ui.notify(`Codex reset credit request failed: ${getErrorMessage(error)}`, 'error');
-  }
-}
-
-export async function handleResetCreditCountCommand(
-  ctx: ExtensionCommandContext,
-  options: ResetCreditOptions = {}
-): Promise<void> {
-  try {
-    const result = await countResetCredits(ctx, options);
-    ctx.ui.notify(`You have ${result.availableCount} reset tokens available.`, 'info');
-  } catch (error) {
-    ctx.ui.notify(`Codex reset credit count request failed: ${getErrorMessage(error)}`, 'error');
   }
 }
 
@@ -126,23 +111,11 @@ export async function consumeResetCredit(
   };
 }
 
-export async function countResetCredits(
-  ctx: ResetCreditCredentialContext,
-  options: ResetCreditOptions = {}
-): Promise<ResetCreditCountResult> {
-  const result = await requestResetCredits(ctx, options, 'count');
-
-  return {
-    ...result,
-    availableCount: getAvailableResetCreditCount(result.body),
-  };
-}
-
 export async function getResetCreditDetails(
   ctx: ResetCreditCredentialContext,
   options: ResetCreditOptions = {}
 ): Promise<ResetCreditDetailsResult> {
-  const result = await requestResetCredits(ctx, options, 'details');
+  const result = await requestResetCreditDetails(ctx, options);
 
   return {
     ...result,
@@ -239,22 +212,19 @@ function getAvailableResetCreditCount(body: unknown): number {
   return availableCount;
 }
 
-async function requestResetCredits(
+async function requestResetCreditDetails(
   ctx: ResetCreditCredentialContext,
-  options: ResetCreditOptions,
-  action: 'count' | 'details'
+  options: ResetCreditOptions
 ): Promise<ResetCreditResult> {
   const accessToken = await getCurrentCodexAccessToken(ctx);
-  const response = await (options.fetch ?? fetch)(RESET_CREDIT_COUNT_URL, {
+  const response = await (options.fetch ?? fetch)(RESET_CREDIT_DETAILS_URL, {
     method: 'GET',
     headers: buildResetCreditHeaders(accessToken),
   });
   const body = await readResponseBody(response);
 
   if (!response.ok) {
-    throw new Error(
-      `Reset credit ${action} request failed: ${response.status}${formatStatusText(response.statusText)}`
-    );
+    throw new Error(`Reset credit details request failed: ${response.status}${formatStatusText(response.statusText)}`);
   }
 
   return {
@@ -304,13 +274,17 @@ function formatMarkdownCell(value: string): string {
 }
 
 function formatMarkdownTable(rows: string[][]): string[] {
-  const escapedRows = rows.map((row) => row.map(formatMarkdownCell));
+  const escapedRows = rows.map((row) => row.map((cell) => formatMarkdownCell(cell)));
   const columnWidths = escapedRows[0].map((_, columnIndex) =>
     Math.max(3, ...escapedRows.map((row) => row[columnIndex].length))
   );
 
   const [header, ...bodyRows] = escapedRows;
-  return [formatMarkdownTableRow(header, columnWidths), formatMarkdownSeparatorRow(columnWidths), ...bodyRows.map((row) => formatMarkdownTableRow(row, columnWidths))];
+  return [
+    formatMarkdownTableRow(header, columnWidths),
+    formatMarkdownSeparatorRow(columnWidths),
+    ...bodyRows.map((row) => formatMarkdownTableRow(row, columnWidths)),
+  ];
 }
 
 function formatMarkdownTableRow(row: string[], columnWidths: number[]): string {

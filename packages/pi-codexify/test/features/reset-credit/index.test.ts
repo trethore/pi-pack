@@ -4,9 +4,7 @@ import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import {
   buildResetCreditDetailsMessage,
   consumeResetCredit,
-  countResetCredits,
   getResetCreditDetails,
-  handleResetCreditCountCommand,
   handleResetCreditDetailsCommand,
   handleUseResetCreditCommand,
 } from '#pi-codexify/features/reset-credit/index.js';
@@ -105,87 +103,6 @@ describe('use reset credit command', () => {
   });
 });
 
-describe('count reset credits command', () => {
-  it('gets the available reset credit count with the active Codex OAuth token', async () => {
-    // Arrange
-    const ctx = createContext();
-    setCodexCredential(ctx, 'test');
-    const fetchMock = vi.fn(async () => Response.json({ available_count: 3 }, { status: 200 }));
-
-    // Act
-    const result = await countResetCredits(ctx, { fetch: fetchMock });
-
-    // Assert
-    expectResetCreditListRequest(fetchMock);
-    expect(result).toEqual({
-      status: 200,
-      statusText: '',
-      body: { available_count: 3 },
-      availableCount: 3,
-    });
-  });
-
-  it('supports the legacy camelCase available count field', async () => {
-    // Arrange
-    const ctx = createContext();
-    setCodexCredential(ctx, 'test');
-    const fetchMock = vi.fn(async () => Response.json({ availableCount: 3 }, { status: 200 }));
-
-    // Act
-    const result = await countResetCredits(ctx, { fetch: fetchMock });
-
-    // Assert
-    expect(result.availableCount).toBe(3);
-  });
-
-  it('refreshes an expired Codex OAuth token before matching the curl-style count request', async () => {
-    // Arrange
-    let credential = { ...createCredential('stale'), expires: 1 };
-    const ctx = {
-      modelRegistry: {
-        authStorage: {
-          reload: vi.fn(),
-          get: vi.fn((provider: string) => (provider === CODEX_PROVIDER ? credential : undefined)),
-          getApiKey: vi.fn(async () => {
-            credential = createCredential('fresh');
-            return credential.access;
-          }),
-        },
-      },
-    };
-    const fetchMock = vi.fn(async () => Response.json({ availableCount: 1 }, { status: 200 }));
-
-    // Act
-    const result = await countResetCredits(ctx, { fetch: fetchMock });
-
-    // Assert
-    expect(ctx.modelRegistry.authStorage.getApiKey).toHaveBeenCalledWith(CODEX_PROVIDER, { includeFallback: false });
-    expect(fetchMock).toHaveBeenCalledWith('https://chatgpt.com/backend-api/wham/rate-limit-reset-credits', {
-      method: 'GET',
-      headers: {
-        'OAI-Language': 'en',
-        originator: 'Codex Desktop',
-        Authorization: 'Bearer access-fresh',
-      },
-    });
-    expect(result.availableCount).toBe(1);
-  });
-
-  it('notifies the available reset token count', async () => {
-    // Arrange
-    const ctx = createCommandContext(false);
-    setCodexCredential(ctx, 'test');
-    const fetchMock = vi.fn(async () => Response.json({ availableCount: 2 }, { status: 200 }));
-
-    // Act
-    await handleResetCreditCountCommand(ctx, { fetch: fetchMock });
-
-    // Assert
-    expect(ctx.ui.confirm).not.toHaveBeenCalled();
-    expect(ctx.ui.notify).toHaveBeenCalledWith('You have 2 reset tokens available.', 'info');
-  });
-});
-
 describe('reset credit details command', () => {
   it('gets reset credit details with the active Codex OAuth token', async () => {
     // Arrange
@@ -218,6 +135,7 @@ describe('reset credit details command', () => {
 
     // Assert
     expectResetCreditListRequest(fetchMock);
+    expect(result.availableCount).toBe(1);
     expect(result.credits).toEqual([
       {
         id: 'RateLimitResetCredit_1234567890',
@@ -230,6 +148,32 @@ describe('reset credit details command', () => {
         expiresAt: '2026-07-10T08:00:00.000Z',
       },
     ]);
+  });
+
+  it('refreshes an expired Codex OAuth token before requesting reset credit details', async () => {
+    // Arrange
+    let credential = { ...createCredential('stale'), expires: 1 };
+    const ctx = {
+      modelRegistry: {
+        authStorage: {
+          reload: vi.fn(),
+          get: vi.fn((provider: string) => (provider === CODEX_PROVIDER ? credential : undefined)),
+          getApiKey: vi.fn(async () => {
+            credential = createCredential('fresh');
+            return credential.access;
+          }),
+        },
+      },
+    };
+    const fetchMock = vi.fn(async () => Response.json({ availableCount: 1 }, { status: 200 }));
+
+    // Act
+    const result = await getResetCreditDetails(ctx, { fetch: fetchMock });
+
+    // Assert
+    expect(ctx.modelRegistry.authStorage.getApiKey).toHaveBeenCalledWith(CODEX_PROVIDER, { includeFallback: false });
+    expectResetCreditListRequest(fetchMock, 'access-fresh');
+    expect(result.availableCount).toBe(1);
   });
 
   it('builds a markdown table with shortened ids and ISO expiration dates', () => {
@@ -290,6 +234,7 @@ describe('reset credit details command', () => {
 
     // Assert
     expect(ctx.ui.confirm).not.toHaveBeenCalled();
+    expect(ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining('Available reset tokens: 1'), 'info');
     expect(ctx.ui.notify).toHaveBeenCalledWith(
       expect.stringContaining('| RateLimitResetCr...7890 | no   | unknown |'),
       'info'

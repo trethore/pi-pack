@@ -97,7 +97,6 @@ describe('codexify command completions', () => {
     // Assert
     expect(completions).toEqual([
       { value: 'reset use', label: 'use' },
-      { value: 'reset count', label: 'count' },
       { value: 'reset details', label: 'details' },
     ]);
   });

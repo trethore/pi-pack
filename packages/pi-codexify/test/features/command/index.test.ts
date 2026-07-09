@@ -24,7 +24,22 @@ describe('codexify reset command', () => {
     // Assert
     expect(fetchMock).not.toHaveBeenCalled();
     expect(ctx.ui.confirm).not.toHaveBeenCalled();
-    expect(ctx.ui.notify).toHaveBeenCalledWith('Usage: /codexify reset use|count|details', 'warning');
+    expect(ctx.ui.notify).toHaveBeenCalledWith('Usage: /codexify reset use|details', 'warning');
+  });
+
+  it('rejects the removed /codexify reset count action', async () => {
+    // Arrange
+    const command = registerTestCodexifyCommand();
+    const ctx = createCommandContext(true);
+    const fetchMock = vi.fn(async () => Response.json({ available_count: 4 }, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Act
+    await command.handler('reset count', ctx);
+
+    // Assert
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(ctx.ui.notify).toHaveBeenCalledWith('Usage: /codexify reset use|details', 'warning');
   });
 
   it('routes /codexify reset use to the consume endpoint', async () => {
@@ -43,25 +58,6 @@ describe('codexify reset command', () => {
       'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume',
       expect.objectContaining({ method: 'POST' })
     );
-  });
-
-  it('routes /codexify reset count to the count endpoint', async () => {
-    // Arrange
-    const command = registerTestCodexifyCommand();
-    const ctx = createCommandContext(true);
-    setCodexCredential(ctx, 'test');
-    const fetchMock = vi.fn(async () => Response.json({ available_count: 4 }, { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    // Act
-    await command.handler('reset count', ctx);
-
-    // Assert
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://chatgpt.com/backend-api/wham/rate-limit-reset-credits',
-      expect.objectContaining({ method: 'GET' })
-    );
-    expect(ctx.ui.notify).toHaveBeenCalledWith('You have 4 reset tokens available.', 'info');
   });
 
   it('routes /codexify reset details to the read-only count endpoint', async () => {

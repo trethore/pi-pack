@@ -12,7 +12,7 @@ Codex-focused controls.
 - Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
 - Adds `/codexify sync` to copy freshly logged-in Pi `openai-codex` tokens into the active saved codexify account when both credentials are for the same Codex account.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
-- Adds `/codexify reset use|count` to consume one Codex usage reset credit or display the available reset token count when `reset.enabled` is true.
+- Adds `/codexify reset use|details` to consume one Codex usage reset credit or display available reset-credit details when `reset.enabled` is true.
 
 ## Commands
 
@@ -30,7 +30,6 @@ Codex-focused controls.
 /codexify reasoning-summary auto|concise|detailed|none|off
 /codexify serviceTier slow|fast
 /codexify reset use
-/codexify reset count
 /codexify reset details
 ```
 
@@ -50,7 +49,7 @@ When `[name]` is omitted, `/codexify account save` updates the active saved code
 
 After refreshing the active Codex account with `/login openai-codex`, run `/codexify sync` to update the active saved codexify profile with the fresh Pi auth tokens. If the newly logged-in Codex account is different from the active codexify profile, sync is skipped.
 
-`/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset count` gets the available reset token count without consuming a token. `/codexify reset details` is read-only and displays reset token ids, usage state, and ISO expiration dates when the API exposes token details.
+`/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset details` is read-only and displays the available reset token count, token ids, usage state, and ISO expiration dates when the API exposes token details.
 
 ## Configuration
 

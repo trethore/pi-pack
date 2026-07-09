@@ -36,7 +36,7 @@
   },
 
   "reset": {
-    // Enables /codexify reset use|count.
+    // Enables /codexify reset use|details.
     // /codexify reset use always asks for confirmation before consuming a credit.
     "enabled": true
   },

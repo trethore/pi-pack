@@ -10,7 +10,6 @@ import {
   parseCodexVerbosity,
 } from '#src/features/codex-controls/index.js';
 import {
-  handleResetCreditCountCommand,
   handleResetCreditDetailsCommand,
   handleUseResetCreditCommand,
   parseResetCreditAction,
@@ -97,7 +96,7 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
   {
     name: 'reset',
-    usage: '/codexify reset use|count|details',
+    usage: '/codexify reset use|details',
     needsMoreArgs: true,
     isAvailable: (config) => config.reset.enabled,
     async handle(parts, ctx, config) {
@@ -151,7 +150,7 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
   },
 ];
 
-const RESET_COMMAND_USAGE = 'Usage: /codexify reset use|count|details';
+const RESET_COMMAND_USAGE = 'Usage: /codexify reset use|details';
 
 function findCodexifyCommand(commandName: string): CodexifyCommand | undefined {
   return CODEXIFY_COMMANDS.find((command) => command.name === commandName || command.aliases?.includes(commandName));
@@ -181,10 +180,6 @@ async function handleResetCommand(
   switch (action) {
     case 'use': {
       await handleUseResetCreditCommand(ctx);
-      return;
-    }
-    case 'count': {
-      await handleResetCreditCountCommand(ctx);
       return;
     }
     case 'details': {
