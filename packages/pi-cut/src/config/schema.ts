@@ -6,12 +6,14 @@ export const MIN_REPEATS = 2;
 export const MIN_NEW_LINES = 2;
 const DEFAULT_MIN_SAVED_LINES = 3;
 const DEFAULT_MIN_SAVED_TOKENS = 40;
+const DEFAULT_MAX_COMPARISONS = 250_000;
 const DEFAULT_SAVINGS_MODE: SavingsMode = 'or';
 const DEFAULT_MIN_NEW_LINES = 10;
 const DEFAULT_FOLD_TO_NEW_LINES = 5;
 
 export interface PiCutConfig {
   enabled: boolean;
+  transformErrors: boolean;
   terminalCleanup: TerminalCleanupConfig;
   repetitionFolding: RepetitionFoldingConfig;
   newLinesFolding: NewLinesFoldingConfig;
@@ -21,6 +23,7 @@ export interface PiCutConfig {
 
 export interface ResolvedToolConfig {
   enabled: boolean;
+  transformErrors: boolean;
   terminalCleanup: TerminalCleanupConfig;
   repetitionFolding: RepetitionFoldingConfig;
   newLinesFolding: NewLinesFoldingConfig;
@@ -30,6 +33,7 @@ export interface ResolvedToolConfig {
 export interface ToolOverrideConfig {
   selector: RegExp;
   enabled?: boolean;
+  transformErrors?: boolean;
   terminalCleanup?: Partial<TerminalCleanupConfig>;
   repetitionFolding?: PartialRepetitionFoldingConfig;
   newLinesFolding?: Partial<NewLinesFoldingConfig>;
@@ -48,6 +52,7 @@ export interface RepetitionFoldingConfig extends EnabledConfig {
   minRepeats: number;
   minSavedLines: number;
   minSavedTokens: number;
+  maxComparisons: number;
   savingsMode: SavingsMode;
 }
 
@@ -72,6 +77,7 @@ export type PartialRepetitionFoldingConfig = Partial<{
   minRepeats: number;
   minSavedLines: number;
   minSavedTokens: number;
+  maxComparisons: number;
   savingsMode: SavingsMode;
 }>;
 
@@ -82,6 +88,7 @@ type PartialLineTruncationConfig = Partial<{
 
 export type PartialPiCutConfig = Partial<{
   enabled: unknown;
+  transformErrors: unknown;
   terminalCleanup: PartialTerminalCleanupConfig;
   repetitionFolding: unknown;
   newLinesFolding: unknown;
@@ -93,6 +100,7 @@ export type LoadedConfig = LoadedExtensionConfig<PiCutConfig>;
 
 export const defaultConfig: PiCutConfig = {
   enabled: true,
+  transformErrors: false,
   terminalCleanup: {
     enabled: true,
     stripAnsi: true,
@@ -104,6 +112,7 @@ export const defaultConfig: PiCutConfig = {
     minRepeats: MIN_REPEATS,
     minSavedLines: DEFAULT_MIN_SAVED_LINES,
     minSavedTokens: DEFAULT_MIN_SAVED_TOKENS,
+    maxComparisons: DEFAULT_MAX_COMPARISONS,
     savingsMode: DEFAULT_SAVINGS_MODE,
   },
   newLinesFolding: {

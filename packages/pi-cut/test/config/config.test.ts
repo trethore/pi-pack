@@ -23,6 +23,13 @@ describe('loadConfig', () => {
       expectedError: 'repetitionFolding.minRepeats value',
     },
     {
+      name: 'repetition folding maxComparisons below 1',
+      projectConfig: { repetitionFolding: { maxComparisons: 0 } },
+      getActual: (config: LoadedPiCutConfig) => config.repetitionFolding.maxComparisons,
+      expectedValue: 250_000,
+      expectedError: 'repetitionFolding.maxComparisons value',
+    },
+    {
       name: 'line truncation maxChars below 1',
       projectConfig: { lineTruncation: { maxChars: 0 } },
       getActual: (config: LoadedPiCutConfig) => config.lineTruncation.maxChars,
@@ -70,8 +77,25 @@ describe('loadConfig', () => {
       minRepeats: 2,
       minSavedLines: 3,
       minSavedTokens: 40,
+      maxComparisons: 250_000,
       savingsMode: 'or',
     });
+  });
+
+  it('loads transformErrors disabled by default', async () => {
+    const loaded = await loadDefaultConfig();
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.transformErrors).toBe(false);
+  });
+
+  it('merges transformErrors config', async () => {
+    const loaded = await loadProjectConfig({ transformErrors: true });
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.transformErrors).toBe(true);
   });
 
   it('loads new lines folding defaults', async () => {
@@ -139,6 +163,7 @@ describe('loadConfig', () => {
           minRepeats: 4,
           minSavedLines: 0,
           minSavedTokens: -1,
+          maxComparisons: 10_000,
           savingsMode: 'and',
         },
       })
@@ -154,6 +179,7 @@ describe('loadConfig', () => {
       minRepeats: 4,
       minSavedLines: 0,
       minSavedTokens: -1,
+      maxComparisons: 10_000,
       savingsMode: 'and',
     });
   });
@@ -181,7 +207,13 @@ describe('loadConfig', () => {
 
   it('loads repetition folding tool overrides', async () => {
     const loaded = await loadToolOverrideConfig({
-      repetitionFolding: { enabled: true, minRepeats: 5, minSavedLines: 0, savingsMode: 'and' },
+      repetitionFolding: {
+        enabled: true,
+        minRepeats: 5,
+        minSavedLines: 0,
+        maxComparisons: 1000,
+        savingsMode: 'and',
+      },
     });
 
     // Assert
@@ -191,8 +223,18 @@ describe('loadConfig', () => {
       enabled: true,
       minRepeats: 5,
       minSavedLines: 0,
+      maxComparisons: 1000,
       savingsMode: 'and',
     });
+  });
+
+  it('loads transformErrors tool overrides', async () => {
+    const loaded = await loadToolOverrideConfig({ transformErrors: true });
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.tools).toHaveLength(1);
+    expect(loaded.config.tools[0].transformErrors).toBe(true);
   });
 });
 

@@ -53,6 +53,9 @@ function parseToolOverride(
   mergeField(source, 'enabled', `${configName}.enabled`, booleanSchema, configPath, errors, (value) => {
     override.enabled = value;
   });
+  mergeField(source, 'transformErrors', `${configName}.transformErrors`, booleanSchema, configPath, errors, (value) => {
+    override.transformErrors = value;
+  });
 
   const terminalCleanup = parseStrategyOverride<TerminalCleanupConfig>(
     source,
@@ -142,6 +145,7 @@ function parseToolSelector(
 function hasToolOverrideFields(override: ToolOverrideConfig): boolean {
   return (
     override.enabled !== undefined ||
+    override.transformErrors !== undefined ||
     override.terminalCleanup !== undefined ||
     override.repetitionFolding !== undefined ||
     override.newLinesFolding !== undefined ||

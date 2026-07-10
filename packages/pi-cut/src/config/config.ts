@@ -1,12 +1,13 @@
 import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { getCutConfigPaths } from '#src/config/locations.js';
-import { mergeEnabledField, mergeSection } from '#src/config/merge.js';
+import { mergeEnabledField, mergeField, mergeSection } from '#src/config/merge.js';
 import { defaultConfig, type LoadedConfig, type PartialPiCutConfig, type PiCutConfig } from '#src/config/schema.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
 import { mergeNewLinesFoldingFields } from '#src/config/sections/new-lines-folding.js';
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
 import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanup.js';
 import { mergeToolOverrides } from '#src/config/tool-overrides.js';
+import { booleanSchema } from '#src/config/validation.js';
 const EXTENSION_NAME = 'pi-cut';
 
 export function loadConfig(cwd: string): LoadedConfig {
@@ -32,6 +33,9 @@ function cloneDefaultConfig(): PiCutConfig {
 
 function mergeConfig(target: PiCutConfig, source: PartialPiCutConfig, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
+  mergeField(source, 'transformErrors', 'transformErrors', booleanSchema, configPath, errors, (value) => {
+    target.transformErrors = value;
+  });
 
   mergeSection(source, 'terminalCleanup', configPath, errors, (section, sectionName) => {
     mergeTerminalCleanupFields(target.terminalCleanup, section, sectionName, configPath, errors);

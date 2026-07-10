@@ -3,6 +3,7 @@ import type { PiCutConfig, ResolvedToolConfig } from '#src/config/schema.js';
 export function resolveToolConfig(config: PiCutConfig, toolName: string): ResolvedToolConfig {
   const resolvedConfig: ResolvedToolConfig = {
     enabled: config.enabled,
+    transformErrors: config.transformErrors,
     terminalCleanup: { ...config.terminalCleanup },
     repetitionFolding: { ...config.repetitionFolding },
     newLinesFolding: { ...config.newLinesFolding },
@@ -16,6 +17,9 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
 
     applyBooleanOverride(override.enabled, (value) => {
       resolvedConfig.enabled = value;
+    });
+    applyBooleanOverride(override.transformErrors, (value) => {
+      resolvedConfig.transformErrors = value;
     });
     applyStrategyOverride(resolvedConfig.terminalCleanup, override.terminalCleanup);
     applyStrategyOverride(resolvedConfig.repetitionFolding, override.repetitionFolding);

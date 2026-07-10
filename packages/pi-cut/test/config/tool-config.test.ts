@@ -12,12 +12,14 @@ describe('resolveToolConfig', () => {
 
     // Assert
     expect(config.enabled).toBe(true);
+    expect(config.transformErrors).toBe(false);
     expect(config.terminalCleanup.enabled).toBe(false);
     expect(config.repetitionFolding).toEqual({
       enabled: true,
       minRepeats: 2,
       minSavedLines: 3,
       minSavedTokens: 40,
+      maxComparisons: 250_000,
       savingsMode: 'or',
     });
     expect(config.newLinesFolding).toEqual({
@@ -67,8 +69,10 @@ describe('resolveToolConfig', () => {
             enabled: true,
             minRepeats: 5,
             minSavedLines: 0,
+            maxComparisons: 1000,
             savingsMode: 'and' as const,
           },
+          transformErrors: true,
           newLinesFolding: { enabled: true, minNewLines: 3, foldTo: 2 },
           lineTruncation: { enabled: true, maxChars: 10 },
         },
@@ -81,12 +85,14 @@ describe('resolveToolConfig', () => {
 
     // Assert
     expect(config.terminalCleanup.enabled).toBe(true);
+    expect(config.transformErrors).toBe(true);
     expect(config.terminalCleanup.trimTrailingWhitespace).toBe(false);
     expect(config.repetitionFolding).toEqual({
       enabled: true,
       minRepeats: 5,
       minSavedLines: 0,
       minSavedTokens: 40,
+      maxComparisons: 1000,
       savingsMode: 'and',
     });
     expect(config.newLinesFolding).toEqual({ enabled: true, minNewLines: 3, foldTo: 2 });

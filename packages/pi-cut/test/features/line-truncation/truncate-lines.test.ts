@@ -11,7 +11,7 @@ describe('truncateLines', () => {
     const truncatedText = truncateLines(text, maxChars);
 
     // Assert
-    expect(truncatedText).toBe('abc [... truncated, +3 chars]\n');
+    expect(truncatedText).toBe('abc [... truncated at 3/6 chars]\n');
   });
 
   it('leaves lines at maxChars unchanged', () => {
@@ -35,7 +35,7 @@ describe('truncateLines', () => {
     const truncatedText = truncateLines(text, maxChars);
 
     // Assert
-    expect(truncatedText).toBe('abc [... truncated, +3 chars]\nxy\n123 [... truncated, +2 chars]');
+    expect(truncatedText).toBe('abc [... truncated at 3/6 chars]\nxy\n123 [... truncated at 3/5 chars]');
   });
 
   it('counts unicode code points instead of UTF-16 code units', () => {
@@ -48,6 +48,13 @@ describe('truncateLines', () => {
     const truncatedText = truncateLines(text, maxChars);
 
     // Assert
-    expect(truncatedText).toBe(`${symbol}${symbol} [... truncated, +1 chars]\n`);
+    expect(truncatedText).toBe(`${symbol}${symbol} [... truncated at 2/3 chars]\n`);
   });
+
+  it.each(['[previous line repeated x12]', '[previous block of 123 lines repeated x45]'])(
+    'preserves repetition marker %s',
+    (marker) => {
+      expect(truncateLines(`${marker}\n`, 1)).toBe(`${marker}\n`);
+    }
+  );
 });

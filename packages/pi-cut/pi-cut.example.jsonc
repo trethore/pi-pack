@@ -2,6 +2,9 @@
   // Master switch for all pi-cut features.
   "enabled": true,
 
+  // Transform failed tool results. Disabled by default to preserve complete diagnostics.
+  "transformErrors": false,
+
   // Strip terminal-only formatting, progress redraw noise, and trailing whitespace from bash tool outputs.
   "terminalCleanup": {
     "enabled": true,
@@ -18,6 +21,8 @@
     // Values <= 0 disable the corresponding savings check. Defaults are 3 and 40.
     "minSavedLines": 3,
     "minSavedTokens": 40,
+    // Stop repetition searching after this many candidate and line comparisons.
+    "maxComparisons": 250000,
     // "or" folds when any enabled savings check passes. "and" requires all enabled checks.
     "savingsMode": "or"
   },

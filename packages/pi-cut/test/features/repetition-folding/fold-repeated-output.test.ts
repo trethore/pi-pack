@@ -6,6 +6,7 @@ const defaultConfig = {
   minRepeats: 2,
   minSavedLines: 3,
   minSavedTokens: 40,
+  maxComparisons: 250_000,
   savingsMode: 'or' as const,
 };
 
@@ -104,5 +105,18 @@ describe('foldRepeatedOutput', () => {
 
     // Assert
     expect(foldedText).toBe(text);
+  });
+
+  it('folds confirmed repetitions and preserves unchecked output when the comparison budget is exhausted', () => {
+    // Arrange
+    const line = `${'same'.repeat(20)}\n`;
+    const text = line.repeat(4);
+    const config = { ...defaultConfig, minSavedLines: 0, minSavedTokens: 0, maxComparisons: 2 };
+
+    // Act
+    const foldedText = foldRepeatedOutput(text, config);
+
+    // Assert
+    expect(foldedText).toBe(`${line}[previous line repeated x1]\n${line}${line}`);
   });
 });

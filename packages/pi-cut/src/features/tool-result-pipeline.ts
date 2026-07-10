@@ -11,6 +11,7 @@ export function registerToolResultPipeline(pi: ExtensionAPI, config: PiCutConfig
   pi.on('tool_result', (event) => {
     const toolConfig = resolveToolConfig(config, event.toolName);
     if (!toolConfig.enabled) return;
+    if (event.isError && !toolConfig.transformErrors) return;
 
     const content = transformTextContent(event.content, (text) => transformToolResultText(text, toolConfig));
     if (content === event.content) return;
@@ -22,8 +23,8 @@ export function registerToolResultPipeline(pi: ExtensionAPI, config: PiCutConfig
 function transformToolResultText(text: string, config: ResolvedToolConfig): string {
   let transformedText = text;
   transformedText = transformTerminalOutput(transformedText, config);
-  transformedText = transformNewLines(transformedText, config);
   transformedText = transformRepetitions(transformedText, config);
+  transformedText = transformNewLines(transformedText, config);
   transformedText = transformLongLines(transformedText, config);
   return transformedText;
 }

@@ -1,6 +1,6 @@
 import { mergeEnabledField, mergeField } from '#src/config/merge.js';
 import type { PartialRepetitionFoldingConfig, RepetitionFoldingConfig } from '#src/config/schema.js';
-import { integerSchema, minRepeatsSchema, savingsModeSchema } from '#src/config/validation.js';
+import { integerSchema, minRepeatsSchema, positiveIntegerSchema, savingsModeSchema } from '#src/config/validation.js';
 
 export function mergeRepetitionFoldingFields(
   target: Partial<RepetitionFoldingConfig> | PartialRepetitionFoldingConfig,
@@ -19,6 +19,17 @@ export function mergeRepetitionFoldingFields(
   mergeField(source, 'minSavedTokens', `${configName}.minSavedTokens`, integerSchema, configPath, errors, (value) => {
     target.minSavedTokens = value;
   });
+  mergeField(
+    source,
+    'maxComparisons',
+    `${configName}.maxComparisons`,
+    positiveIntegerSchema,
+    configPath,
+    errors,
+    (value) => {
+      target.maxComparisons = value;
+    }
+  );
   mergeField(source, 'savingsMode', `${configName}.savingsMode`, savingsModeSchema, configPath, errors, (value) => {
     target.savingsMode = value;
   });

@@ -14,6 +14,7 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
 ```jsonc
 {
   "enabled": true,
+  "transformErrors": false,
   "terminalCleanup": {
     "enabled": true,
     "stripAnsi": true,
@@ -25,6 +26,7 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
     "minRepeats": 2,
     "minSavedLines": 3,
     "minSavedTokens": 40,
+    "maxComparisons": 250000,
     "savingsMode": "or",
   },
   "newLinesFolding": {
@@ -52,6 +54,7 @@ Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.ex
 Tool override rules:
 
 - Top-level settings are the global defaults.
+- Error results are left unchanged unless `transformErrors` is enabled globally or for a matching tool.
 - Add optional per-tool overrides in `tools`.
 - `selector` is a JavaScript regex string.
 - Use `"*"` to match every tool.
@@ -85,6 +88,7 @@ Savings are checked by estimated tokens and/or lines:
 - `minSavedTokens` defaults to 40. Values less than or equal to 0 disable this check. Tokens are estimated as 1 token per 4 characters.
 - `savingsMode` is `"or"` by default. Use `"and"` to require every enabled savings check to pass.
 - Folding always requires positive estimated token savings.
+- Repetition searching stops after `maxComparisons` candidate and line comparisons and preserves the remaining output unchanged. The default is 250,000.
 
 Note: Folding is skipped for outputs above the hardcoded safety limit of 10,000 lines.
 
@@ -131,5 +135,5 @@ after
 When enabled, all text tool result lines longer than `maxChars` are truncated and annotated. `maxChars` must be an integer greater than or equal to 1:
 
 ```text
-first N chars [... truncated, +X chars]
+first N chars [... truncated at N/TOTAL chars]
 ```

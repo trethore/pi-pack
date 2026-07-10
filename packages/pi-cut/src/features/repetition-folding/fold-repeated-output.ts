@@ -1,4 +1,5 @@
 import type { RepetitionFoldingConfig } from '#src/config/schema.js';
+import { makeRepetitionMarker } from '#src/features/repetition-folding/repetition-marker.js';
 import { type LineParts, splitLines } from '#src/shared/line.js';
 
 export const MAX_FOLDING_LINES = 10_000;
@@ -9,19 +10,29 @@ export function foldRepeatedOutput(text: string, config: RepetitionFoldingConfig
   if (exceedsMaxFoldingLines(text)) return text;
 
   const context = makeFoldingContext(splitLines(text));
+  if (context.nonEmptyLineOffsets.at(-1) === 0) return text;
+
+  const comparisonBudget: ComparisonBudget = { remaining: config.maxComparisons };
   const foldedLines: string[] = [];
   let changed = false;
   let index = 0;
 
   while (index < context.lines.length) {
-    const candidate = findBestCandidate(context, index, config);
+    const result = findBestCandidate(context, index, config, comparisonBudget);
+    if (result.exhausted) {
+      if (result.candidate) {
+        appendCandidate(foldedLines, context.lines, index, result.candidate);
+        changed = true;
+        index += result.candidate.lineCount * result.candidate.repeatCount;
+      }
+      appendRemainingLines(foldedLines, context.lines, index);
+      return changed ? foldedLines.join('') : text;
+    }
+
+    const candidate = result.candidate;
 
     if (candidate) {
-      for (let segmentIndex = 0; segmentIndex < candidate.lineCount; segmentIndex += 1) {
-        foldedLines.push(context.lines[index + segmentIndex].raw);
-      }
-
-      foldedLines.push(candidate.marker);
+      appendCandidate(foldedLines, context.lines, index, candidate);
       changed = true;
       index += candidate.lineCount * candidate.repeatCount;
       continue;
@@ -48,6 +59,20 @@ interface RepetitionCandidate {
   marker: string;
 }
 
+interface ComparisonBudget {
+  remaining: number;
+}
+
+interface CandidateSearchResult {
+  candidate?: RepetitionCandidate;
+  exhausted: boolean;
+}
+
+interface RepeatCountResult {
+  repeatCount: number;
+  exhausted: boolean;
+}
+
 function makeFoldingContext(lines: LineParts[]): FoldingContext {
   const rawCharOffsets = [0];
   const nonEmptyLineOffsets = [0];
@@ -66,53 +91,79 @@ function makeFoldingContext(lines: LineParts[]): FoldingContext {
 function findBestCandidate(
   context: FoldingContext,
   startIndex: number,
-  config: RepetitionFoldingConfig
-): RepetitionCandidate | undefined {
+  config: RepetitionFoldingConfig,
+  comparisonBudget: ComparisonBudget
+): CandidateSearchResult {
   const maxLineCount = Math.floor((context.lines.length - startIndex) / config.minRepeats);
   let bestCandidate: RepetitionCandidate | undefined;
 
   for (let lineCount = 1; lineCount <= maxLineCount; lineCount += 1) {
+    if (!consumeComparison(comparisonBudget)) return { candidate: bestCandidate, exhausted: true };
     if (isEmptySegment(context, startIndex, lineCount)) continue;
 
-    const repeatCount = countSegmentRepeats(context.lines, startIndex, lineCount);
-    if (repeatCount < config.minRepeats) continue;
-
-    const candidate = makeCandidate(context, startIndex, lineCount, repeatCount);
-    if (!passesSavingsChecks(candidate, config)) continue;
-    if (!bestCandidate || compareCandidates(candidate, bestCandidate) < 0) {
-      bestCandidate = candidate;
+    const repeatResult = countSegmentRepeats(context.lines, startIndex, lineCount, comparisonBudget);
+    if (repeatResult.repeatCount >= config.minRepeats) {
+      const candidate = makeCandidate(context, startIndex, lineCount, repeatResult.repeatCount);
+      if (
+        passesSavingsChecks(candidate, config) &&
+        (!bestCandidate || compareCandidates(candidate, bestCandidate) < 0)
+      ) {
+        bestCandidate = candidate;
+      }
     }
+
+    if (repeatResult.exhausted) return { candidate: bestCandidate, exhausted: true };
   }
 
-  return bestCandidate;
+  return { candidate: bestCandidate, exhausted: false };
 }
 
 function isEmptySegment(context: FoldingContext, startIndex: number, lineCount: number): boolean {
   return countNonEmptyLines(context, startIndex, lineCount) === 0;
 }
 
-function countSegmentRepeats(lines: LineParts[], startIndex: number, lineCount: number): number {
+function countSegmentRepeats(
+  lines: LineParts[],
+  startIndex: number,
+  lineCount: number,
+  comparisonBudget: ComparisonBudget
+): RepeatCountResult {
   let repeatCount = 1;
 
-  while (segmentEquals(lines, startIndex, startIndex + repeatCount * lineCount, lineCount)) {
+  while (true) {
+    const segmentsEqual = segmentEquals(
+      lines,
+      startIndex,
+      startIndex + repeatCount * lineCount,
+      lineCount,
+      comparisonBudget
+    );
+    if (segmentsEqual === undefined) return { repeatCount, exhausted: true };
+    if (!segmentsEqual) return { repeatCount, exhausted: false };
     repeatCount += 1;
   }
-
-  return repeatCount;
 }
 
 function segmentEquals(
   lines: LineParts[],
   leftStartIndex: number,
   rightStartIndex: number,
-  lineCount: number
-): boolean {
+  lineCount: number,
+  comparisonBudget: ComparisonBudget
+): boolean | undefined {
   if (rightStartIndex + lineCount > lines.length) return false;
 
   for (let index = 0; index < lineCount; index += 1) {
+    if (!consumeComparison(comparisonBudget)) return undefined;
     if (lines[leftStartIndex + index].body !== lines[rightStartIndex + index].body) return false;
   }
 
+  return true;
+}
+
+function consumeComparison(comparisonBudget: ComparisonBudget): boolean {
+  if (comparisonBudget.remaining === 0) return false;
+  comparisonBudget.remaining -= 1;
   return true;
 }
 
@@ -124,7 +175,7 @@ function makeCandidate(
 ): RepetitionCandidate {
   const repeatedLineCount = lineCount * repeatCount;
   const ending = context.lines[startIndex + repeatedLineCount - 1]?.ending ?? '';
-  const marker = makeMarker(lineCount, repeatCount, ending);
+  const marker = `${makeRepetitionMarker(lineCount, repeatCount)}${ending}`;
   const savedLines = lineCount * (repeatCount - 1) - 1;
   const savedChars = countRawChars(context, startIndex + lineCount, repeatedLineCount - lineCount) - marker.length;
   const savedTokens = estimateTokens(savedChars);
@@ -177,10 +228,22 @@ function compareCandidates(left: RepetitionCandidate, right: RepetitionCandidate
   return right.repeatCount - left.repeatCount;
 }
 
-function makeMarker(lineCount: number, repeatCount: number, ending: string): string {
-  const foldedRepeatCount = repeatCount - 1;
-  if (lineCount === 1) return `[previous line repeated x${foldedRepeatCount}]${ending}`;
-  return `[previous block of ${lineCount} lines repeated x${foldedRepeatCount}]${ending}`;
+function appendCandidate(
+  target: string[],
+  lines: LineParts[],
+  startIndex: number,
+  candidate: RepetitionCandidate
+): void {
+  for (let segmentIndex = 0; segmentIndex < candidate.lineCount; segmentIndex += 1) {
+    target.push(lines[startIndex + segmentIndex].raw);
+  }
+  target.push(candidate.marker);
+}
+
+function appendRemainingLines(target: string[], lines: LineParts[], startIndex: number): void {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    target.push(lines[index].raw);
+  }
 }
 
 function exceedsMaxFoldingLines(text: string): boolean {
