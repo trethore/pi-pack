@@ -52,7 +52,7 @@
     "jscpd": "jscpd packages scripts --format typescript --no-tips"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.80.2 <1"
+    "@earendil-works/pi-coding-agent": ">=0.80.6 <1"
   },
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",

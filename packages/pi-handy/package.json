@@ -11,8 +11,8 @@
     "productivity"
   ],
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.80.2 <1",
-    "@earendil-works/pi-tui": ">=0.80.2 <1"
+    "@earendil-works/pi-coding-agent": ">=0.80.6 <1",
+    "@earendil-works/pi-tui": ">=0.80.6 <1"
   },
   "imports": {
     "#src/*": "./src/*",
