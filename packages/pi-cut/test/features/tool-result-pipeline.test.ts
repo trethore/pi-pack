@@ -8,6 +8,23 @@ type ToolResultHandler = (
 ) => { content?: ToolResultEvent['content']; details?: unknown; isError?: boolean } | undefined;
 
 describe('registerToolResultPipeline', () => {
+  it('keeps the master switch disabled even when a tool override is enabled', () => {
+    // Arrange
+    const handler = registerPipeline(
+      makeConfig({
+        enabled: false,
+        tools: [{ selector: /.*/, enabled: true }],
+      })
+    );
+    const event = makeToolResultEvent('abcdef', false);
+
+    // Act
+    const result = handler(event);
+
+    // Assert
+    expect(result).toBeUndefined();
+  });
+
   it('leaves error results unchanged by default', () => {
     // Arrange
     const handler = registerPipeline(makeConfig());

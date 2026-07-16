@@ -98,6 +98,20 @@ describe('loadConfig', () => {
     expect(loaded.config.transformErrors).toBe(true);
   });
 
+  it('can exclude project config', async () => {
+    // Arrange
+    const { loadConfig } = await importConfigWithEmptyHome();
+    const cwd = makeTempDir();
+    writeProjectConfig(cwd, JSON.stringify({ enabled: false }));
+
+    // Act
+    const loaded = loadConfig(cwd, { includeProject: false });
+
+    // Assert
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.enabled).toBe(true);
+  });
+
   it('loads new lines folding defaults', async () => {
     const loaded = await loadDefaultConfig();
 

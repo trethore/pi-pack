@@ -6,9 +6,23 @@ export function truncateLines(text: string, maxChars: number): string {
     if (isRepetitionMarker(body)) return raw;
     if (body.length <= maxChars) return raw;
 
-    const chars = [...body];
-    if (chars.length <= maxChars) return raw;
+    const truncation = findTruncation(body, maxChars);
+    if (!truncation) return raw;
 
-    return `${chars.slice(0, maxChars).join('')} [... truncated at ${maxChars}/${chars.length} chars]${ending}`;
+    return `${body.slice(0, truncation.prefixEnd)} [... truncated at ${maxChars}/${truncation.totalChars} chars]${ending}`;
   });
+}
+
+function findTruncation(body: string, maxChars: number): { prefixEnd: number; totalChars: number } | undefined {
+  let prefixEnd = 0;
+  let totalChars = 0;
+  let offset = 0;
+
+  for (const character of body) {
+    offset += character.length;
+    totalChars += 1;
+    if (totalChars === maxChars) prefixEnd = offset;
+  }
+
+  return totalChars > maxChars ? { prefixEnd, totalChars } : undefined;
 }

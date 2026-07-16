@@ -98,4 +98,32 @@ describe('resolveToolConfig', () => {
     expect(config.newLinesFolding).toEqual({ enabled: true, minNewLines: 3, foldTo: 2 });
     expect(config.lineTruncation).toEqual({ enabled: true, maxChars: 10 });
   });
+
+  it('ignores a partial new lines override that would expand matching output', () => {
+    // Arrange
+    const configWithOverride = {
+      ...defaultConfig,
+      tools: [{ selector: /^read$/, newLinesFolding: { minNewLines: 3 } }],
+    };
+
+    // Act
+    const config = resolveToolConfig(configWithOverride, 'read');
+
+    // Assert
+    expect(config.newLinesFolding).toEqual(defaultConfig.newLinesFolding);
+  });
+
+  it('applies a valid partial new lines override', () => {
+    // Arrange
+    const configWithOverride = {
+      ...defaultConfig,
+      tools: [{ selector: /^read$/, newLinesFolding: { foldTo: 2 } }],
+    };
+
+    // Act
+    const config = resolveToolConfig(configWithOverride, 'read');
+
+    // Assert
+    expect(config.newLinesFolding).toEqual({ ...defaultConfig.newLinesFolding, foldTo: 2 });
+  });
 });

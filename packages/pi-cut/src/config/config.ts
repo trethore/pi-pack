@@ -10,11 +10,11 @@ import { mergeToolOverrides } from '#src/config/tool-overrides.js';
 import { booleanSchema } from '#src/config/validation.js';
 const EXTENSION_NAME = 'pi-cut';
 
-export function loadConfig(cwd: string): LoadedConfig {
+export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths: getCutConfigPaths,
+    getConfigPaths: (configCwd) => getCutConfigPaths(configCwd, options.includeProject),
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });

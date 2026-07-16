@@ -51,6 +51,18 @@ describe('truncateLines', () => {
     expect(truncatedText).toBe(`${symbol}${symbol} [... truncated at 2/3 chars]\n`);
   });
 
+  it('preserves the correct UTF-16 boundary for mixed-width characters', () => {
+    // Arrange
+    const text = `a\u{1D11E}bc\n`;
+    const maxChars = 2;
+
+    // Act
+    const truncatedText = truncateLines(text, maxChars);
+
+    // Assert
+    expect(truncatedText).toBe(`a\u{1D11E} [... truncated at 2/4 chars]\n`);
+  });
+
   it.each(['[previous line repeated x12]', '[previous block of 123 lines repeated x45]'])(
     'preserves repetition marker %s',
     (marker) => {

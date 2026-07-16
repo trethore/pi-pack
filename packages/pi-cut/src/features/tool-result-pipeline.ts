@@ -9,6 +9,8 @@ import { transformTextContent } from '#src/shared/content.js';
 
 export function registerToolResultPipeline(pi: ExtensionAPI, config: PiCutConfig) {
   pi.on('tool_result', (event) => {
+    if (!config.enabled) return;
+
     const toolConfig = resolveToolConfig(config, event.toolName);
     if (!toolConfig.enabled) return;
     if (event.isError && !toolConfig.transformErrors) return;

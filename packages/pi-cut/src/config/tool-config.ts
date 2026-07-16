@@ -23,7 +23,7 @@ export function resolveToolConfig(config: PiCutConfig, toolName: string): Resolv
     });
     applyStrategyOverride(resolvedConfig.terminalCleanup, override.terminalCleanup);
     applyStrategyOverride(resolvedConfig.repetitionFolding, override.repetitionFolding);
-    applyStrategyOverride(resolvedConfig.newLinesFolding, override.newLinesFolding);
+    applyNewLinesFoldingOverride(resolvedConfig.newLinesFolding, override.newLinesFolding);
     applyStrategyOverride(resolvedConfig.lineTruncation, override.lineTruncation);
   }
 
@@ -53,5 +53,17 @@ function applyBooleanOverride(value: boolean | undefined, apply: (value: boolean
 
 function applyStrategyOverride<T extends object>(target: T, source: Partial<T> | undefined) {
   if (!source) return;
+  Object.assign(target, source);
+}
+
+function applyNewLinesFoldingOverride(
+  target: ResolvedToolConfig['newLinesFolding'],
+  source: Partial<ResolvedToolConfig['newLinesFolding']> | undefined
+) {
+  if (!source) return;
+
+  const nextConfig = { ...target, ...source };
+  if (nextConfig.foldTo > nextConfig.minNewLines) return;
+
   Object.assign(target, source);
 }
