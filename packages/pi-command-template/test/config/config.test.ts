@@ -24,9 +24,10 @@ describe('loadConfig', () => {
     const loadedConfig = loadConfig(workspace);
 
     expect(loadedConfig.config.surfaces.skills).toBe(false);
-    expect(loadedConfig.config.surfaces.system).toBe(true);
+    expect(loadedConfig.config.surfaces.system).toBe(false);
     expect(loadedConfig.config.execution.timeoutMs).toBe(1234);
     expect(loadedConfig.config.execution.maxOutputChars).toBe(20_000);
+    expect(loadedConfig.config.execution.shell).toBe(false);
     expect(loadedConfig.config.templates['node-version']).toEqual(['node', '--version']);
     expect(loadedConfig.errors).toEqual([]);
   });

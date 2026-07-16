@@ -6,7 +6,7 @@ import type { CommandDiagnostic } from '#src/core/diagnostics.js';
 import { createCommandTemplateRenderer } from '#src/core/render-template.js';
 import type { RenderSurface } from '#src/core/types.js';
 import { registerCommandTemplateDiagnostics } from '#src/command-template/diagnostics.js';
-import { installUnsafePiCommandTemplatePatch } from '#src/unsafe/index.js';
+import { disableUnsafePiCommandTemplatePatch, installUnsafePiCommandTemplatePatch } from '#src/unsafe/index.js';
 
 export function registerCommandTemplate(pi: ExtensionAPI, config: PiCommandTemplateConfig): void {
   const extensionCwd = getExtensionCwd();
@@ -19,6 +19,9 @@ export function registerCommandTemplate(pi: ExtensionAPI, config: PiCommandTempl
   const installResult = installUnsafePiCommandTemplatePatch(extensionCwd, ({ surface, content, path }) => {
     if (!isSurfaceEnabled(config, surface)) return content;
     return renderer.render(content, { surface, path });
+  });
+  pi.on('session_shutdown', (event) => {
+    if (event.reason === 'reload') disableUnsafePiCommandTemplatePatch(extensionCwd);
   });
   const startupDiagnostics = [
     ...installResult.warnings.map((message) => createStartupDiagnostic(message, 'warning')),

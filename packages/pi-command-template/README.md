@@ -11,6 +11,8 @@ Inject command output in your prompt files via templates.
 
 Project config overrides global config. See [`pi-command-template.example.jsonc`](./pi-command-template.example.jsonc) for a copyable template.
 
+All rendering surfaces and shell execution are disabled by default. Enable only the surfaces and execution mode you intend to use.
+
 ```jsonc
 {
   "enabled": true,
@@ -68,6 +70,14 @@ Output is `stdout + stderr`, with one trailing line ending removed. If output ex
 
 Template commands can also be arrays such as `["node", "--version"]`. Array commands always run directly as executable + arguments and are the preferred form when `shell` features are not needed.
 
+Failed commands are replaced with a short marker such as `[pi-command-template error: {{node-version}}]` and a diagnostic is reported.
+
+## Security and process scope
+
+Enabling a surface allows content from that surface to trigger any matching configured command. Commands use the configured working directory and can read or execute workspace-controlled files. Only enable this extension, its surfaces, and shell execution for resources and workspaces you trust.
+
+The compatibility layer patches Pi prototypes process-wide. It is designed for Pi's normal single-session CLI. Multiple SDK sessions in the same process are not isolated: the most recently registered transformer for this extension directory is used by every patched Pi instance.
+
 ## Unsafe internals notice
 
-This extension uses an unsafe compatibility layer that monkey-patches Pi internals so templates are rendered before resources enter model context. If Pi changes those internals, the affected patch is disabled and a warning is reported instead of crashing Pi.
+This extension uses an unsafe compatibility layer that monkey-patches Pi internals so templates are rendered before resources enter model context. Resource-loader methods are public Pi APIs, but prototype patching is unsupported, and explicit skill invocation depends on the private `AgentSession._expandSkillCommand` method. If Pi changes those internals, the affected patch is disabled and a warning is reported instead of crashing Pi.

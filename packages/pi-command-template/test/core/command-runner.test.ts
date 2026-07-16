@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -11,7 +11,11 @@ const extensionCwd = process.cwd();
 describe('runTemplateCommand', () => {
   it('trims one trailing line ending from output', () => {
     const result = runTemplateCommand({
-      config: { ...defaultConfig, templates: {} },
+      config: {
+        ...defaultConfig,
+        execution: { ...defaultConfig.execution, shell: true },
+        templates: {},
+      },
       workspaceCwd,
       extensionCwd,
       name: 'trim',
@@ -45,7 +49,7 @@ describe('runTemplateCommand', () => {
       context: { surface: 'contextFiles', path: 'AGENTS.md' },
     });
 
-    expect(result.output).toBe('bad');
+    expect(result.output).toBe('[pi-command-template error: {{fail}}]');
     expect(result.diagnostics).toMatchObject([
       {
         severity: 'warning',
@@ -93,5 +97,35 @@ describe('runTemplateCommand', () => {
     });
 
     expect(result.output).toBe(commandCwd);
+  });
+
+  it('preserves empty quoted arguments in direct command strings', () => {
+    const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'pi-command-template-args-'));
+    const scriptPath = path.join(temporaryDirectory, 'print-args.cjs');
+    writeFileSync(scriptPath, 'process.stdout.write(JSON.stringify(process.argv.slice(2)))');
+
+    const result = runTemplateCommand({
+      config: { ...defaultConfig, templates: {} },
+      workspaceCwd,
+      extensionCwd,
+      name: 'args',
+      command: `${process.execPath} ${scriptPath} "" tail`,
+    });
+
+    expect(result.output).toBe('["","tail"]');
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('reports unterminated quotes in direct command strings', () => {
+    const result = runTemplateCommand({
+      config: { ...defaultConfig, templates: {} },
+      workspaceCwd,
+      extensionCwd,
+      name: 'quote',
+      command: 'node "unterminated',
+    });
+
+    expect(result.output).toBe('[pi-command-template error: {{quote}}]');
+    expect(result.diagnostics[0]?.message).toContain('unterminated " quote');
   });
 });

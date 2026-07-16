@@ -40,17 +40,17 @@ export type LoadedConfig = LoadedExtensionConfig<PiCommandTemplateConfig>;
 export const defaultConfig: PiCommandTemplateConfig = {
   enabled: true,
   surfaces: {
-    system: true,
-    appendSystem: true,
-    contextFiles: true,
-    promptTemplates: true,
-    skills: true,
+    system: false,
+    appendSystem: false,
+    contextFiles: false,
+    promptTemplates: false,
+    skills: false,
   },
   execution: {
     timeoutMs: 3000,
     maxOutputChars: 20_000,
     cwd: 'workspace',
-    shell: true,
+    shell: false,
   },
   templates: {},
 };
