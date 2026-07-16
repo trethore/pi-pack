@@ -22,7 +22,7 @@ describe('payload dump command', () => {
     });
 
     // Assert
-    expect(filePath).toBe(path.join(outputDirectory, '.payload-dump-2026-06-09T12:34:56.789Z'));
+    expect(filePath).toBe(path.join(outputDirectory, '.payload-dump-2026-06-09T12-34-56.789Z'));
     await expect(readFile(filePath, 'utf8')).resolves.toContain('"model": "gpt-5.5-codex"');
     await expect(readFile(filePath, 'utf8')).resolves.toContain('"tools"');
   });

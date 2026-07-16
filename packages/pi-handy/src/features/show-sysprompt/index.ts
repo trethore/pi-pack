@@ -3,9 +3,8 @@ import { Box, Text } from '@earendil-works/pi-tui';
 import { formatKeybindingText } from '@trethore/pi-shared/ui/keybindings.js';
 import type { TArray, TEnum, TLiteral, TObject, TSchema, TSchemaOptions, TUnion } from 'typebox';
 
-const SYSTEM_PROMPT_MESSAGE_TYPE = 'pi-handy-system-prompt';
-const TOOL_SCHEMAS_MESSAGE_TYPE = 'pi-handy-tool-schemas';
-const HIDDEN_MESSAGE_TYPES = new Set([SYSTEM_PROMPT_MESSAGE_TYPE, TOOL_SCHEMAS_MESSAGE_TYPE]);
+const SYSTEM_PROMPT_ENTRY_TYPE = 'pi-handy-system-prompt';
+const TOOL_SCHEMAS_ENTRY_TYPE = 'pi-handy-tool-schemas';
 const SHOW_MODES = ['prompt', 'tools'] as const;
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
@@ -14,41 +13,27 @@ type DescribedSchema = TSchema & Pick<TSchemaOptions, 'description'>;
 type ToolParameters = TObject<Record<string, DescribedSchema>> & { required?: string[] };
 
 export function registerShowSyspromptCommand(pi: ExtensionAPI) {
-  pi.registerMessageRenderer(SYSTEM_PROMPT_MESSAGE_TYPE, (message, { expanded }, theme) => {
-    const prompt = typeof message.content === 'string' ? message.content : '';
+  pi.registerEntryRenderer<string>(SYSTEM_PROMPT_ENTRY_TYPE, (entry, { expanded }, theme) => {
+    const prompt = entry.data ?? '';
     return formatCollapsibleMessage('System prompt', prompt, expanded, theme);
   });
 
-  pi.registerMessageRenderer(TOOL_SCHEMAS_MESSAGE_TYPE, (message, { expanded }, theme) => {
-    const schemas = typeof message.content === 'string' ? message.content : '';
-    return formatCollapsibleMessage('Available tools', schemas, expanded, theme);
+  pi.registerEntryRenderer<string>(TOOL_SCHEMAS_ENTRY_TYPE, (entry, { expanded }, theme) => {
+    const schemas = entry.data ?? '';
+    return formatCollapsibleMessage('Active tools', schemas, expanded, theme);
   });
 
   pi.registerCommand('showsysprompt', {
-    description: 'Show the current system prompt and available tools',
+    description: 'Show the current system prompt and active tools',
     getArgumentCompletions: (prefix) => getShowSyspromptArgumentCompletions(prefix),
     handler: async (args, ctx) => {
       handleShowSyspromptCommand(pi, args, ctx);
     },
   });
-
-  pi.on('session_before_tree', (event, ctx) => {
-    const entry = ctx.sessionManager.getEntry(event.preparation.targetId);
-    if (entry?.type === 'custom_message' && HIDDEN_MESSAGE_TYPES.has(entry.customType)) {
-      return { cancel: true };
-    }
-  });
-
-  pi.on('context', (event) => ({
-    messages: event.messages.filter(
-      (message) =>
-        !(message.role === 'custom' && 'customType' in message && HIDDEN_MESSAGE_TYPES.has(message.customType))
-    ),
-  }));
 }
 
 export function handleShowSyspromptCommand(
-  pi: Pick<ExtensionAPI, 'getActiveTools' | 'getAllTools' | 'sendMessage'>,
+  pi: Pick<ExtensionAPI, 'appendEntry' | 'getActiveTools' | 'getAllTools'>,
   args: string,
   ctx: {
     getSystemPrompt(): string;
@@ -64,19 +49,11 @@ export function handleShowSyspromptCommand(
   }
 
   if (modes.includes('prompt')) {
-    pi.sendMessage({
-      customType: SYSTEM_PROMPT_MESSAGE_TYPE,
-      content: ctx.getSystemPrompt(),
-      display: true,
-    });
+    pi.appendEntry(SYSTEM_PROMPT_ENTRY_TYPE, ctx.getSystemPrompt());
   }
 
   if (modes.includes('tools')) {
-    pi.sendMessage({
-      customType: TOOL_SCHEMAS_MESSAGE_TYPE,
-      content: getActiveToolSchemas(pi),
-      display: true,
-    });
+    pi.appendEntry(TOOL_SCHEMAS_ENTRY_TYPE, getActiveToolSchemas(pi));
   }
 }
 
@@ -85,7 +62,7 @@ export function getShowSyspromptArgumentCompletions(prefix: string) {
   return SHOW_MODES.filter((mode) => mode.startsWith(normalizedPrefix)).map((mode) => ({
     value: mode,
     label: mode,
-    description: mode === 'prompt' ? 'Show system prompt only' : 'Show available tools only',
+    description: mode === 'prompt' ? 'Show system prompt only' : 'Show active tools only',
   }));
 }
 

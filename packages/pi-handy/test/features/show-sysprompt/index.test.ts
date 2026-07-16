@@ -10,50 +10,45 @@ import type { ExtensionAPI, ToolInfo } from '@earendil-works/pi-coding-agent';
 describe('show sysprompt command', () => {
   it('shows prompt and tools when invoked without args', () => {
     // Arrange
-    const { piApi, commandContext, sendMessage } = createHarness();
+    const { piApi, commandContext, appendEntry } = createHarness();
 
     // Act
     handleShowSyspromptCommand(piApi, '', commandContext);
 
     // Assert
-    expect(sendMessage).toHaveBeenCalledTimes(2);
-    expect(sendMessage).toHaveBeenNthCalledWith(1, {
-      customType: 'pi-handy-system-prompt',
-      content: 'system prompt',
-      display: true,
-    });
-    expect(sendMessage).toHaveBeenNthCalledWith(2, {
-      customType: 'pi-handy-tool-schemas',
-      content: expect.stringContaining('bash - Run shell commands'),
-      display: true,
-    });
+    expect(appendEntry).toHaveBeenCalledTimes(2);
+    expect(appendEntry).toHaveBeenNthCalledWith(1, 'pi-handy-system-prompt', 'system prompt');
+    expect(appendEntry).toHaveBeenNthCalledWith(
+      2,
+      'pi-handy-tool-schemas',
+      expect.stringContaining('bash - Run shell commands')
+    );
   });
 
   it('shows only the requested section', () => {
     // Arrange
-    const { piApi, commandContext, sendMessage } = createHarness();
+    const { piApi, commandContext, appendEntry } = createHarness();
 
     // Act
     handleShowSyspromptCommand(piApi, 'tools', commandContext);
 
     // Assert
-    expect(sendMessage).toHaveBeenCalledOnce();
-    expect(sendMessage).toHaveBeenCalledWith({
-      customType: 'pi-handy-tool-schemas',
-      content: expect.stringContaining('command: string [required] - Command to run'),
-      display: true,
-    });
+    expect(appendEntry).toHaveBeenCalledOnce();
+    expect(appendEntry).toHaveBeenCalledWith(
+      'pi-handy-tool-schemas',
+      expect.stringContaining('command: string [required] - Command to run')
+    );
   });
 
   it('notifies on invalid args', () => {
     // Arrange
-    const { piApi, commandContext, sendMessage, notify } = createHarness();
+    const { piApi, commandContext, appendEntry, notify } = createHarness();
 
     // Act
     handleShowSyspromptCommand(piApi, 'all', commandContext);
 
     // Assert
-    expect(sendMessage).not.toHaveBeenCalled();
+    expect(appendEntry).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledWith('Usage: /showsysprompt [prompt|tools]', 'warning');
   });
 
@@ -77,7 +72,7 @@ describe('show sysprompt command', () => {
 });
 
 function createHarness() {
-  const sendMessage = vi.fn();
+  const appendEntry = vi.fn();
   const notify = vi.fn();
   const piApi = {
     getActiveTools: () => ['bash'],
@@ -97,12 +92,12 @@ function createHarness() {
         },
       } satisfies ToolInfo,
     ],
-    sendMessage,
-  } satisfies Pick<ExtensionAPI, 'getActiveTools' | 'getAllTools' | 'sendMessage'>;
+    appendEntry,
+  } satisfies Pick<ExtensionAPI, 'appendEntry' | 'getActiveTools' | 'getAllTools'>;
   const commandContext = {
     getSystemPrompt: () => 'system prompt',
     ui: { notify },
   };
 
-  return { piApi, commandContext, sendMessage, notify };
+  return { piApi, commandContext, appendEntry, notify };
 }

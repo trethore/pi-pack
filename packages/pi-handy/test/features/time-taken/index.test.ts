@@ -19,7 +19,7 @@ describe('time taken feature', () => {
     expect(formatTimeTaken(elapsedMs)).toBe(expectedMessage);
   });
 
-  it('notifies elapsed time when the agent ends', () => {
+  it('notifies elapsed time when the agent settles', () => {
     // Arrange
     mockNowSequence(1000, 6500);
     const piApi = createPiApi();
@@ -32,7 +32,7 @@ describe('time taken feature', () => {
     expect(piApi.notifications).toEqual([{ message: 'Took 6s', type: 'info' }]);
   });
 
-  it('does not notify before the agent ends', () => {
+  it('does not notify before the agent settles', () => {
     // Arrange
     vi.spyOn(Date, 'now').mockReturnValue(1000);
     const piApi = createPiApi();
@@ -74,22 +74,37 @@ describe('time taken feature', () => {
       { message: 'Took 1m5s', type: 'info' },
     ]);
   });
+
+  it('includes automatic continuation runs in the elapsed time', () => {
+    // Arrange
+    mockNowSequence(1000, 6500);
+    const piApi = createPiApi();
+    registerTimeTakenFeature(piApi.extensionApi);
+
+    // Act
+    piApi.emitAgentStart();
+    piApi.emitAgentStart();
+    piApi.emitAgentSettled({ hasUI: true });
+
+    // Assert
+    expect(piApi.notifications).toEqual([{ message: 'Took 6s', type: 'info' }]);
+  });
 });
 
 type AgentStartHandler = () => void;
-type AgentEndHandler = (
-  event: { type: 'agent_end'; messages: [] },
+type AgentSettledHandler = (
+  event: { type: 'agent_settled' },
   ctx: { hasUI: boolean; ui: { notify(message: string, type?: string): void } }
 ) => void;
 
 function createPiApi() {
-  const handlers = new Map<string, AgentStartHandler | AgentEndHandler>();
+  const handlers = new Map<string, AgentStartHandler | AgentSettledHandler>();
   const notifications: Array<{ message: string; type: string | undefined }> = [];
 
   return {
     notifications,
     extensionApi: {
-      on(eventName: string, handler: AgentStartHandler | AgentEndHandler) {
+      on(eventName: string, handler: AgentStartHandler | AgentSettledHandler) {
         handlers.set(eventName, handler);
       },
     } as unknown as Parameters<typeof registerTimeTakenFeature>[0],
@@ -97,10 +112,10 @@ function createPiApi() {
       const handler = handlers.get('agent_start') as AgentStartHandler | undefined;
       handler?.();
     },
-    emitAgentEnd(options: { hasUI: boolean }) {
-      const handler = handlers.get('agent_end') as AgentEndHandler | undefined;
+    emitAgentSettled(options: { hasUI: boolean }) {
+      const handler = handlers.get('agent_settled') as AgentSettledHandler | undefined;
       handler?.(
-        { type: 'agent_end', messages: [] },
+        { type: 'agent_settled' },
         {
           hasUI: options.hasUI,
           ui: {
@@ -121,5 +136,5 @@ function mockNowSequence(...timestamps: number[]): void {
 
 function runAgentCycle(piApi: ReturnType<typeof createPiApi>, hasUI: boolean): void {
   piApi.emitAgentStart();
-  piApi.emitAgentEnd({ hasUI });
+  piApi.emitAgentSettled({ hasUI });
 }

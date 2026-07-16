@@ -37,10 +37,14 @@ export async function dumpProviderPayload(
 
   const filePath = path.join(
     outputDirectory,
-    `${PAYLOAD_DUMP_FILE_PREFIX}${(options.now ?? new Date()).toISOString()}`
+    `${PAYLOAD_DUMP_FILE_PREFIX}${formatFileTimestamp(options.now ?? new Date())}`
   );
   await writeFile(filePath, `${stringifyPayload(payload)}\n`, 'utf8');
   return filePath;
+}
+
+function formatFileTimestamp(date: Date): string {
+  return date.toISOString().replaceAll(':', '-');
 }
 
 export function stringifyPayload(payload: unknown): string {
