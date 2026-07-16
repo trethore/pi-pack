@@ -60,7 +60,7 @@ export function registerCodexAccountSync(pi: ExtensionAPI): void {
   });
   pi.on('before_provider_headers', async (event, ctx) => {
     if (ctx.model?.provider !== CODEX_PROVIDER) return;
-    await applyCodexCredentialHeaders(event.headers);
+    await applyCodexCredentialHeaders(ctx, event.headers);
   });
 }
 

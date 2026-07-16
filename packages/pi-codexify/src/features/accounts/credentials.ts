@@ -1,8 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { createModels, type Credential, type CredentialInfo, type CredentialStore } from '@earendil-works/pi-ai';
-import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
+import { type Credential, type CredentialInfo, type CredentialStore } from '@earendil-works/pi-ai';
 import { getAgentDir, type ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { isRecord } from '@trethore/pi-shared/object.js';
 
@@ -84,8 +83,6 @@ class FileCredentialStore implements CredentialStore {
 }
 
 const defaultCredentialStore = new FileCredentialStore(path.join(getAgentDir(), 'auth.json'));
-const codexModels = createModels({ credentials: defaultCredentialStore });
-codexModels.setProvider(openaiCodexProvider());
 
 function getCredentialStore(ctx: CodexCredentialContext): CredentialStore {
   return ctx.credentialStore ?? defaultCredentialStore;
@@ -95,11 +92,7 @@ export async function readCodexCredential(
   ctx: CodexCredentialContext,
   refresh = true
 ): Promise<Credential | undefined> {
-  if (refresh) {
-    await (ctx.credentialStore
-      ? ctx.modelRegistry.getApiKeyForProvider(CODEX_PROVIDER)
-      : codexModels.getAuth(CODEX_PROVIDER));
-  }
+  if (refresh) await ctx.modelRegistry.getApiKeyForProvider(CODEX_PROVIDER);
   return getCredentialStore(ctx).read(CODEX_PROVIDER);
 }
 
@@ -107,12 +100,15 @@ export async function writeCodexCredential(ctx: CodexCredentialContext, credenti
   await getCredentialStore(ctx).modify(CODEX_PROVIDER, async () => credential);
 }
 
-export async function applyCodexCredentialHeaders(headers: Record<string, string | null>): Promise<void> {
-  const auth = await codexModels.getAuth(CODEX_PROVIDER);
-  const credential = await defaultCredentialStore.read(CODEX_PROVIDER);
-  if (credential?.type !== 'oauth' || !auth?.auth.apiKey) return;
+export async function applyCodexCredentialHeaders(
+  ctx: CodexCredentialContext,
+  headers: Record<string, string | null>
+): Promise<void> {
+  const apiKey = await ctx.modelRegistry.getApiKeyForProvider(CODEX_PROVIDER);
+  const credential = await getCredentialStore(ctx).read(CODEX_PROVIDER);
+  if (credential?.type !== 'oauth' || !apiKey) return;
 
-  headers.Authorization = `Bearer ${auth.auth.apiKey}`;
+  headers.Authorization = `Bearer ${apiKey}`;
   const accountId = getCredentialAccountId(credential);
   if (accountId) headers['chatgpt-account-id'] = accountId;
 }
