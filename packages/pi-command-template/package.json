@@ -11,7 +11,7 @@
     "templates"
   ],
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.80.6 <1"
+    "@earendil-works/pi-coding-agent": ">=0.80.8 <1"
   },
   "dependencies": {
     "@trethore/pi-shared": "*"

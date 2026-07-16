@@ -11,9 +11,9 @@
     "codex"
   ],
   "peerDependencies": {
-    "@earendil-works/pi-ai": ">=0.80.6 <1",
-    "@earendil-works/pi-coding-agent": ">=0.80.6 <1",
-    "@earendil-works/pi-tui": ">=0.80.6 <1"
+    "@earendil-works/pi-ai": ">=0.80.8 <1",
+    "@earendil-works/pi-coding-agent": ">=0.80.8 <1",
+    "@earendil-works/pi-tui": ">=0.80.8 <1"
   },
   "imports": {
     "#src/*": "./src/*",

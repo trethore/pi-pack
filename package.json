@@ -52,7 +52,7 @@
     "jscpd": "jscpd packages scripts --format typescript --no-tips"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.80.6 <1"
+    "@earendil-works/pi-coding-agent": ">=0.80.8 <1"
   },
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",
@@ -64,7 +64,7 @@
     "#pi-toolmask/*": "./packages/pi-toolmask/src/*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "latest",
+    "@earendil-works/pi-coding-agent": ">=0.80.8 <1",
     "@eslint/js": "9.39.4",
     "@types/node": "^22.19.19",
     "eslint": "9.39.4",
