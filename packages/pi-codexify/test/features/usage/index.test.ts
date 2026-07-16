@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 
 import { notifyCodexUsage } from '#pi-codexify/features/usage/index.js';
-import { createContext, setCodexCredential } from '#test/utils/account-test-helpers.js';
+import { createContext, setCodexCredential } from '#test/utils/codex-credential-test-helpers.js';
 
 describe('codex usage command', () => {
   afterEach(() => {

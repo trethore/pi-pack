@@ -6,11 +6,6 @@ import {
   codexVerbosityValues,
   type PiCodexifyConfig,
 } from '#src/config/schema.js';
-import {
-  codexAccountActions,
-  getSavedCodexAccountNames,
-  parseCodexAccountAction,
-} from '#src/features/accounts/index.js';
 import { resetCreditActions } from '#src/features/reset-credit/index.js';
 
 interface CompletionCommand {
@@ -23,10 +18,6 @@ interface CompletionCommand {
 type CompletionState = {
   path: string[];
   currentToken: string;
-};
-
-type CompletionOptions = {
-  accountProfilePath?: string;
 };
 
 type CompletionItemOptions = {
@@ -46,9 +37,9 @@ const codexReasoningSummaryCompletionValues = [...codexReasoningSummaryValues, '
 export async function getCodexifyArgumentCompletions(
   prefix: string,
   config: PiCodexifyConfig,
-  commands: readonly CompletionCommand[],
-  options: CompletionOptions = {}
+  commands: readonly CompletionCommand[]
 ): Promise<AutocompleteItem[] | null> {
+  if (!config.enabled) return null;
   const state = parseCompletionState(prefix);
 
   if (state.path.length === 0) {
@@ -58,9 +49,7 @@ export async function getCodexifyArgumentCompletions(
   const directCompletions = getDirectArgumentCompletions(state, config, commands);
   if (directCompletions) return directCompletions;
 
-  if (!config.account.enabled) return null;
-
-  return getAccountNameCompletions(state, commands, options);
+  return null;
 }
 
 function getDirectArgumentCompletions(
@@ -100,14 +89,9 @@ function getDirectArgumentCompletionOptions(config: PiCodexifyConfig): readonly 
       candidates: codexReasoningSummaryCompletionValues,
     },
     {
-      commandName: 'serviceTier',
+      commandName: 'service-tier',
       enabled: config.codex.enabled,
       candidates: codexServiceTierValues,
-    },
-    {
-      commandName: 'account',
-      enabled: config.account.enabled,
-      candidates: codexAccountActions,
     },
     {
       commandName: 'reset',
@@ -116,24 +100,6 @@ function getDirectArgumentCompletionOptions(config: PiCodexifyConfig): readonly 
       itemOptions: { appendNeedsMoreArgs: false },
     },
   ];
-}
-
-async function getAccountNameCompletions(
-  state: CompletionState,
-  commands: readonly CompletionCommand[],
-  options: CompletionOptions
-): Promise<AutocompleteItem[] | null> {
-  if (state.path.length !== 2 || state.path[0] !== 'account') return null;
-  if (!hasAccountNameCompletion(state)) return null;
-
-  try {
-    const accountNames = await getSavedCodexAccountNames({
-      profilePath: options.accountProfilePath,
-    });
-    return buildCompletionItems(state, accountNames, commands, { appendNeedsMoreArgs: false });
-  } catch {
-    return null;
-  }
 }
 
 export function splitArgs(args: string): string[] {
@@ -188,12 +154,7 @@ function formatCompletionToken(
 }
 
 function candidateNeedsMoreArgs(candidate: string, commands: readonly CompletionCommand[]): boolean {
-  return findCommand(candidate, commands)?.needsMoreArgs === true || parseCodexAccountAction(candidate) != null;
-}
-
-function hasAccountNameCompletion(state: CompletionState): boolean {
-  const action = parseCodexAccountAction(state.path[1]);
-  return action === 'use' || action === 'delete';
+  return findCommand(candidate, commands)?.needsMoreArgs === true;
 }
 
 function findCommand(commandName: string, commands: readonly CompletionCommand[]): CompletionCommand | undefined {

@@ -8,13 +8,12 @@ import {
 
 export type CodexVerbosity = 'low' | 'medium' | 'high';
 export type CodexReasoningSummary = 'auto' | 'concise' | 'detailed' | 'none';
-export type CodexServiceTier = 'slow' | 'fast';
+export type CodexServiceTier = 'default' | 'priority';
 
 export interface PiCodexifyConfig {
   enabled: boolean;
   codex: CodexControlsConfig;
   usage: CodexUsageConfig;
-  account: CodexAccountConfig;
   reset: CodexResetConfig;
   webSearch: WebSearchConfig;
 }
@@ -26,8 +25,6 @@ export interface CodexControlsConfig extends EnabledConfig {
 }
 
 type CodexUsageConfig = EnabledConfig;
-
-type CodexAccountConfig = EnabledConfig;
 
 type CodexResetConfig = EnabledConfig;
 
@@ -42,7 +39,6 @@ export type PartialPiCodexifyConfig = Partial<{
     serviceTier: unknown;
   }>;
   usage: PartialEnabledConfig;
-  account: PartialEnabledConfig;
   reset: PartialEnabledConfig;
   webSearch: PartialEnabledConfig;
 }>;
@@ -57,9 +53,6 @@ export const defaultConfig: PiCodexifyConfig = {
   usage: {
     enabled: true,
   },
-  account: {
-    enabled: true,
-  },
   reset: {
     enabled: true,
   },
@@ -70,7 +63,7 @@ export const defaultConfig: PiCodexifyConfig = {
 
 export const codexVerbosityValues = ['low', 'medium', 'high'] as const;
 export const codexReasoningSummaryValues = ['auto', 'concise', 'detailed', 'none'] as const;
-export const codexServiceTierValues = ['slow', 'fast'] as const;
+export const codexServiceTierValues = ['default', 'priority'] as const;
 
 export const codexVerbositySchema = defineConfigSchema(
   z.enum(codexVerbosityValues).nullable(),
@@ -82,5 +75,5 @@ export const codexReasoningSummarySchema = defineConfigSchema(
 );
 export const codexServiceTierSchema = defineConfigSchema(
   z.enum(codexServiceTierValues).nullable(),
-  'expected slow, fast, or null'
+  'expected default, priority, or null'
 );

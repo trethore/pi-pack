@@ -1,10 +1,8 @@
 import type { ExtensionAPI, ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
 import type { PiCodexifyConfig } from '#src/config/schema.js';
-import { handleCodexAccountCommand, handleCodexAccountSyncCommand } from '#src/features/accounts/index.js';
 import {
   buildCodexControlsStatusMessage,
-  type CodexControlsController,
   parseCodexReasoningSummary,
   parseCodexServiceTier,
   parseCodexVerbosity,
@@ -23,16 +21,12 @@ import {
 } from '#src/features/command/config-updates.js';
 import { getCodexifyArgumentCompletions, splitArgs } from '#src/features/command/completions.js';
 
-export function registerCodexifyCommand(
-  pi: ExtensionAPI,
-  config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
-) {
+export function registerCodexifyCommand(pi: ExtensionAPI, config: PiCodexifyConfig) {
   pi.registerCommand('codexify', {
     description: 'Control Codex payload options and inspect Codex usage',
     getArgumentCompletions: (prefix) => getCodexifyArgumentCompletions(prefix, config, CODEXIFY_COMMANDS),
     handler: async (args, ctx) => {
-      await handleCodexifyCommand(args, ctx, config, codexControls);
+      await handleCodexifyCommand(args, ctx, config);
     },
   });
 }
@@ -40,9 +34,13 @@ export function registerCodexifyCommand(
 async function handleCodexifyCommand(
   args: string,
   ctx: ExtensionCommandContext,
-  config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
+  config: PiCodexifyConfig
 ): Promise<void> {
+  if (!config.enabled) {
+    ctx.ui.notify('pi-codexify is disabled in pi-codexify.jsonc.', 'warning');
+    return;
+  }
+
   const parts = splitArgs(args);
   const commandName = parts[0] ?? 'help';
   const command = findCodexifyCommand(commandName);
@@ -52,7 +50,7 @@ async function handleCodexifyCommand(
     return;
   }
 
-  await command.handle(parts, ctx, config, codexControls);
+  await command.handle(parts, ctx, config);
 }
 
 interface CodexifyCommand {
@@ -61,12 +59,7 @@ interface CodexifyCommand {
   aliases?: readonly string[];
   needsMoreArgs?: boolean;
   isAvailable(config: PiCodexifyConfig): boolean;
-  handle(
-    parts: readonly string[],
-    ctx: ExtensionCommandContext,
-    config: PiCodexifyConfig,
-    codexControls: CodexControlsController | undefined
-  ): Promise<void> | void;
+  handle(parts: readonly string[], ctx: ExtensionCommandContext, config: PiCodexifyConfig): Promise<void> | void;
 }
 
 const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
@@ -82,8 +75,8 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     name: 'status',
     usage: '/codexify status',
     isAvailable: () => true,
-    handle(_parts, ctx, config, codexControls) {
-      ctx.ui.notify(buildStatusMessage(config, ctx, codexControls), 'info');
+    handle(_parts, ctx, config) {
+      ctx.ui.notify(buildStatusMessage(config, ctx), 'info');
     },
   },
   {
@@ -104,29 +97,12 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     },
   },
   {
-    name: 'account',
-    usage: '/codexify account list|current|save [name]|use <name>|delete <name>',
-    needsMoreArgs: true,
-    isAvailable: (config) => config.account.enabled,
-    async handle(parts, ctx, config) {
-      await handleAccountCommand(parts, ctx, config);
-    },
-  },
-  {
-    name: 'sync',
-    usage: '/codexify sync',
-    isAvailable: (config) => config.account.enabled,
-    async handle(_parts, ctx, config) {
-      await handleSyncCommand(ctx, config);
-    },
-  },
-  {
     name: 'verbosity',
     usage: '/codexify verbosity low|medium|high|off',
     needsMoreArgs: true,
     isAvailable: (config) => config.codex.enabled,
-    async handle(parts, ctx, config, codexControls) {
-      await handleVerbosityCommand(parts[1], ctx, config, codexControls);
+    async handle(parts, ctx, config) {
+      await handleVerbosityCommand(parts[1], ctx, config);
     },
   },
   {
@@ -135,17 +111,17 @@ const CODEXIFY_COMMANDS: readonly CodexifyCommand[] = [
     aliases: ['summary'],
     needsMoreArgs: true,
     isAvailable: (config) => config.codex.enabled,
-    async handle(parts, ctx, config, codexControls) {
-      await handleReasoningSummaryCommand(parts[1], ctx, config, codexControls);
+    async handle(parts, ctx, config) {
+      await handleReasoningSummaryCommand(parts[1], ctx, config);
     },
   },
   {
-    name: 'serviceTier',
-    usage: '/codexify serviceTier slow|fast',
+    name: 'service-tier',
+    usage: '/codexify service-tier default|priority',
     needsMoreArgs: true,
     isAvailable: (config) => config.codex.enabled,
-    async handle(parts, ctx, config, codexControls) {
-      await handleServiceTierCommand(parts[1], ctx, config, codexControls);
+    async handle(parts, ctx, config) {
+      await handleServiceTierCommand(parts[1], ctx, config);
     },
   },
 ];
@@ -192,73 +168,54 @@ async function handleResetCommand(
   }
 }
 
-async function handleAccountCommand(
-  parts: readonly string[],
-  ctx: ExtensionCommandContext,
-  config: PiCodexifyConfig
-): Promise<void> {
-  if (!config.account.enabled) {
-    ctx.ui.notify('codexify account is disabled in pi-codexify.jsonc.', 'warning');
-    return;
-  }
-
-  await handleCodexAccountCommand(parts, ctx);
-}
-
-async function handleSyncCommand(ctx: ExtensionCommandContext, config: PiCodexifyConfig): Promise<void> {
-  if (!config.account.enabled) {
-    ctx.ui.notify('codexify account is disabled in pi-codexify.jsonc.', 'warning');
-    return;
-  }
-
-  await handleCodexAccountSyncCommand(ctx);
-}
-
 async function handleVerbosityCommand(
   value: string | undefined,
   ctx: ExtensionCommandContext,
-  config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
+  config: PiCodexifyConfig
 ): Promise<void> {
-  await handleCodexControlUpdate(value, ctx, config, codexControls, {
+  await handleCodexControlUpdate(value, ctx, config, {
     commandName: 'verbosity',
     usage: 'Usage: /codexify verbosity low|medium|high|off',
     label: 'Codex verbosity',
     configKey: 'verbosity',
     parse: parseCodexVerbosity,
-    update: (controls, parsedValue) => controls.updateVerbosity(parsedValue === 'off' ? undefined : parsedValue),
+    update: (codexConfig, parsedValue) => {
+      codexConfig.verbosity = parsedValue === 'off' ? undefined : parsedValue;
+    },
   });
 }
 
 async function handleReasoningSummaryCommand(
   value: string | undefined,
   ctx: ExtensionCommandContext,
-  config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
+  config: PiCodexifyConfig
 ): Promise<void> {
-  await handleCodexControlUpdate(value, ctx, config, codexControls, {
+  await handleCodexControlUpdate(value, ctx, config, {
     commandName: 'reasoning-summary',
     usage: 'Usage: /codexify reasoning-summary auto|concise|detailed|none|off',
     label: 'Codex reasoning summary',
     configKey: 'reasoningSummary',
     parse: parseCodexReasoningSummary,
-    update: (controls, parsedValue) => controls.updateReasoningSummary(parsedValue === 'off' ? undefined : parsedValue),
+    update: (codexConfig, parsedValue) => {
+      codexConfig.reasoningSummary = parsedValue === 'off' ? undefined : parsedValue;
+    },
   });
 }
 
 async function handleServiceTierCommand(
   value: string | undefined,
   ctx: ExtensionCommandContext,
-  config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined
+  config: PiCodexifyConfig
 ): Promise<void> {
-  await handleCodexControlUpdate(value, ctx, config, codexControls, {
-    commandName: 'serviceTier',
-    usage: 'Usage: /codexify serviceTier slow|fast',
+  await handleCodexControlUpdate(value, ctx, config, {
+    commandName: 'service-tier',
+    usage: 'Usage: /codexify service-tier default|priority',
     label: 'Codex service tier',
     configKey: 'serviceTier',
     parse: parseCodexServiceTier,
-    update: (controls, parsedValue) => controls.updateServiceTier(parsedValue),
+    update: (codexConfig, parsedValue) => {
+      codexConfig.serviceTier = parsedValue;
+    },
   });
 }
 
@@ -268,14 +225,13 @@ interface CodexControlUpdateOptions<TValue extends CodexControlValue> {
   label: string;
   configKey: 'verbosity' | 'reasoningSummary' | 'serviceTier';
   parse(value: string): TValue | undefined;
-  update(controls: CodexControlsController, parsedValue: TValue): void;
+  update(config: PiCodexifyConfig['codex'], parsedValue: TValue): void;
 }
 
 async function handleCodexControlUpdate<TValue extends CodexControlValue>(
   value: string | undefined,
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig,
-  codexControls: CodexControlsController | undefined,
   options: CodexControlUpdateOptions<TValue>
 ): Promise<void> {
   if (!config.codex.enabled) {
@@ -283,9 +239,8 @@ async function handleCodexControlUpdate<TValue extends CodexControlValue>(
     return;
   }
 
-  const controls = getCodexControls(codexControls);
   if (value === undefined) {
-    ctx.ui.notify(buildCodexControlsStatusMessage(controls.getConfig(), ctx.model), 'info');
+    ctx.ui.notify(buildCodexControlsStatusMessage(config.codex, ctx.model), 'info');
     return;
   }
 
@@ -295,35 +250,27 @@ async function handleCodexControlUpdate<TValue extends CodexControlValue>(
     return;
   }
 
-  await updateCodexControlValue(ctx, controls, parsedValue, options);
+  await updateCodexControlValue(ctx, config, parsedValue, options);
 }
 
 async function updateCodexControlValue<TValue extends CodexControlValue>(
   ctx: ExtensionCommandContext,
-  controls: CodexControlsController,
+  config: PiCodexifyConfig,
   parsedValue: TValue,
   options: CodexControlUpdateOptions<TValue>
 ): Promise<void> {
   try {
-    const scope = resolveConfigScope();
-    await updateCodexControlConfig(scope, options.configKey, parsedValue);
-    options.update(controls, parsedValue);
+    const scope = resolveConfigScope(ctx.cwd, ctx.isProjectTrusted());
+    await updateCodexControlConfig(ctx.cwd, scope, options.configKey, parsedValue);
+    options.update(config.codex, parsedValue);
     ctx.ui.notify(buildConfigUpdateMessage(options.label, parsedValue, scope), 'info');
   } catch (error) {
     ctx.ui.notify(`codexify ${options.commandName} failed: ${getErrorMessage(error)}`, 'error');
   }
 }
 
-function buildStatusMessage(
-  config: PiCodexifyConfig,
-  ctx: ExtensionCommandContext,
-  codexControls: CodexControlsController | undefined
-): string {
-  return [
-    'pi-codexify',
-    ...formatFeatureStatusLines(config),
-    ...formatCodexControlStatusLines(config, ctx, codexControls),
-  ].join('\n');
+function buildStatusMessage(config: PiCodexifyConfig, ctx: ExtensionCommandContext): string {
+  return ['pi-codexify', ...formatFeatureStatusLines(config), ...formatCodexControlStatusLines(config, ctx)].join('\n');
 }
 
 function formatFeatureStatusLines(config: PiCodexifyConfig): string[] {
@@ -331,28 +278,17 @@ function formatFeatureStatusLines(config: PiCodexifyConfig): string[] {
     formatEnabledLine('codex controls', config.codex.enabled),
     formatEnabledLine('usage command', config.usage.enabled),
     formatEnabledLine('reset command', config.reset.enabled),
-    formatEnabledLine('account command', config.account.enabled),
     formatEnabledLine('native web_search', config.webSearch.enabled),
   ];
 }
 
-function formatCodexControlStatusLines(
-  config: PiCodexifyConfig,
-  ctx: ExtensionCommandContext,
-  codexControls: CodexControlsController | undefined
-): string[] {
+function formatCodexControlStatusLines(config: PiCodexifyConfig, ctx: ExtensionCommandContext): string[] {
   if (!config.codex.enabled) return [];
-  const controls = getCodexControls(codexControls);
-  return ['', buildCodexControlsStatusMessage(controls.getConfig(), ctx.model)];
+  return ['', buildCodexControlsStatusMessage(config.codex, ctx.model)];
 }
 
 function formatEnabledLine(label: string, enabled: boolean): string {
   return `${label} enabled: ${enabled ? 'yes' : 'no'}`;
-}
-
-function getCodexControls(codexControls: CodexControlsController | undefined): CodexControlsController {
-  if (codexControls) return codexControls;
-  throw new Error('codex controls are not registered');
 }
 
 function buildUsageMessage(config: PiCodexifyConfig): string {

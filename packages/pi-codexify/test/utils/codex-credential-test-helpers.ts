@@ -1,7 +1,3 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import type { Credential, CredentialInfo, CredentialStore } from '@earendil-works/pi-ai';
 
 export const CODEX_PROVIDER = 'openai-codex';
@@ -31,10 +27,6 @@ export function createCredential(label: string) {
 
 export function setCodexCredential(ctx: ReturnType<typeof createContext>, label: string): void {
   ctx.credentialStore.set(CODEX_PROVIDER, createCredential(label));
-}
-
-export function makeProfilePath(prefix: string): string {
-  return path.join(mkdtempSync(path.join(tmpdir(), prefix)), 'accounts.json');
 }
 
 class TestCredentialStore implements CredentialStore {

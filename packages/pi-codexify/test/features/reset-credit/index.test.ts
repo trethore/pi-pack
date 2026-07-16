@@ -13,7 +13,7 @@ import {
   createContext,
   createCredential,
   setCodexCredential,
-} from '#test/utils/account-test-helpers.js';
+} from '#test/utils/codex-credential-test-helpers.js';
 
 describe('use reset credit command', () => {
   it('posts the consume request with the active Codex OAuth token', async () => {

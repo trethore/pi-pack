@@ -2,9 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ExtensionAPI, ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 
 import { defaultConfig } from '#pi-codexify/config/schema.js';
-import type { CodexControlsController } from '#pi-codexify/features/codex-controls/index.js';
 import { registerCodexifyCommand } from '#pi-codexify/features/command/index.js';
-import { createContext, setCodexCredential } from '#test/utils/account-test-helpers.js';
+import { createContext, setCodexCredential } from '#test/utils/codex-credential-test-helpers.js';
 
 describe('codexify reset command', () => {
   afterEach(() => {
@@ -104,21 +103,11 @@ function registerTestCodexifyCommand(): RegisteredCommand {
         command = registeredCommand;
       },
     } as ExtensionAPI,
-    defaultConfig,
-    createCodexControlsController()
+    defaultConfig
   );
 
   if (!command) throw new Error('codexify command was not registered');
   return command;
-}
-
-function createCodexControlsController(): CodexControlsController {
-  return {
-    getConfig: () => defaultConfig.codex,
-    updateReasoningSummary: vi.fn(),
-    updateServiceTier: vi.fn(),
-    updateVerbosity: vi.fn(),
-  };
 }
 
 function createCommandContext(confirmed: boolean): ReturnType<typeof createContext> & ExtensionCommandContext {

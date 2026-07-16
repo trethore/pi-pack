@@ -4,15 +4,13 @@ Codex-focused controls.
 
 ## Features
 
-- Mutates supported OpenAI Responses / Codex provider payloads with:
+- Mutates supported OpenAI Responses payloads with:
   - `text.verbosity`
   - `reasoning.summary`
-  - `service_tier: "priority"` for OpenAI Codex Responses when `serviceTier` is `fast`
-- Adds `/codexify usage` to display Codex 5h and 7d usage windows from ChatGPT's Codex usage endpoint.
-- Adds `/codexify account ...` commands to save and switch multiple OpenAI Codex OAuth accounts while still using Pi's `/login openai-codex` flow.
-- Adds `/codexify sync` to copy freshly logged-in Pi `openai-codex` tokens into the active saved codexify account when both credentials are for the same Codex account.
+  - `service_tier: "priority"` when `serviceTier` is `priority`
+- Adds `/codexify usage` to display Codex 5h and 7d usage windows.
 - Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
-- Adds `/codexify reset use|details` to consume one Codex usage reset credit or display available reset-credit details when `reset.enabled` is true.
+- Adds `/codexify reset use|details` to consume or inspect Codex reset credits.
 
 ## Commands
 
@@ -20,36 +18,18 @@ Codex-focused controls.
 /codexify help
 /codexify status
 /codexify usage
-/codexify account list
-/codexify account current
-/codexify account save [name]
-/codexify account use <name>
-/codexify account delete <name>
-/codexify sync
 /codexify verbosity low|medium|high|off
 /codexify reasoning-summary auto|concise|detailed|none|off
-/codexify serviceTier slow|fast
+/codexify service-tier default|priority
 /codexify reset use
 /codexify reset details
 ```
 
-Control commands update `pi-codexify.jsonc`. If a project config exists, commands update it; otherwise they update the global config.
+Control commands update `pi-codexify.jsonc`. If a trusted project config exists, commands update it; otherwise they update the global config.
 
-Codex account commands store OAuth profile copies in `~/.pi/agent/pi-codexify-codex-accounts.json` and switch Pi's active `openai-codex` credential in `~/.pi/agent/auth.json`. Use Pi's normal login flow first:
+`/codexify usage` and `/codexify reset` use Pi's active `openai-codex` OAuth credential. Use `/login openai-codex` to change it.
 
-```text
-/login openai-codex
-/codexify account save personal
-/login openai-codex
-/codexify account save work
-/codexify account use personal
-```
-
-When `[name]` is omitted, `/codexify account save` updates the active saved codexify account. Account names may contain letters, numbers, dots, underscores, and dashes.
-
-After refreshing the active Codex account with `/login openai-codex`, run `/codexify sync` to update the active saved codexify profile with the fresh Pi auth tokens. If the newly logged-in Codex account is different from the active codexify profile, sync is skipped.
-
-`/codexify reset use` uses the active `openai-codex` OAuth credential from Pi auth storage and posts to ChatGPT's Codex reset-credit endpoint. It asks for confirmation first because reset credits are rare and consumed by the request. `/codexify reset details` is read-only and displays the available reset token count, token ids, usage state, and ISO expiration dates when the API exposes token details.
+`/codexify reset use` asks for confirmation because the request consumes a reset credit. `/codexify reset details` is read-only.
 
 ## Configuration
 
@@ -58,8 +38,10 @@ Supported config locations:
 - Global: `~/.pi/agent/pi-codexify.jsonc`
 - Project: `.pi/pi-codexify.jsonc`
 
-Project config overrides global config.
+Project config overrides global config when the project is trusted.
 
-For Codex controls, omitted values leave the provider payload unchanged. Setting a value to `null` also leaves the payload unchanged, and in project config it disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` from outgoing supported payloads while preserving other `reasoning` fields.
+Omitted or `null` control values leave the provider payload unchanged. In project config, `null` disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` while preserving other reasoning fields.
+
+Priority service tier is applied at the final provider payload layer. Pi may report default-tier pricing if the provider response does not echo the effective priority tier.
 
 See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc).

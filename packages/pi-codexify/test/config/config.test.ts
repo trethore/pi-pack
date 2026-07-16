@@ -6,7 +6,6 @@ const CODEXIFY_DEFAULT_CONFIG = {
   enabled: true,
   codex: { enabled: true },
   usage: { enabled: true },
-  account: { enabled: true },
   reset: { enabled: true },
   webSearch: { enabled: true },
 };
@@ -30,9 +29,8 @@ describe('loadConfig', () => {
     configTest.writeGlobalConfig(
       homeDir,
       JSON.stringify({
-        codex: { verbosity: 'low', reasoningSummary: 'concise', serviceTier: 'fast' },
+        codex: { verbosity: 'low', reasoningSummary: 'concise', serviceTier: 'priority' },
         usage: { enabled: false },
-        account: { enabled: false },
         reset: { enabled: false },
         webSearch: { enabled: false },
       })
@@ -43,7 +41,6 @@ describe('loadConfig', () => {
       cwd,
       JSON.stringify({
         codex: { verbosity: 'high' },
-        account: { enabled: true },
         reset: { enabled: true },
         webSearch: { enabled: true },
       })
@@ -56,12 +53,23 @@ describe('loadConfig', () => {
     expect(loaded.errors).toEqual([]);
     expect(loaded.config).toEqual({
       enabled: true,
-      codex: { enabled: true, verbosity: 'high', reasoningSummary: 'concise', serviceTier: 'fast' },
+      codex: { enabled: true, verbosity: 'high', reasoningSummary: 'concise', serviceTier: 'priority' },
       usage: { enabled: false },
-      account: { enabled: true },
       reset: { enabled: true },
       webSearch: { enabled: true },
     });
+  });
+
+  it('does not load project config when project access is disabled', async () => {
+    const homeDir = configTest.makeTempDir();
+    configTest.writeGlobalConfig(homeDir, JSON.stringify({ codex: { verbosity: 'low' } }));
+    const { loadConfig } = await configTest.importConfigWithHome(homeDir);
+    const cwd = configTest.makeTempDir();
+    configTest.writeProjectConfig(cwd, JSON.stringify({ codex: { verbosity: 'high' } }));
+
+    const loaded = loadConfig(cwd, { includeProject: false });
+
+    expect(loaded.config.codex.verbosity).toBe('low');
   });
 
   it('uses null codex control values to disable inherited verbosity, reasoning summary, and service tier', async () => {
@@ -69,7 +77,7 @@ describe('loadConfig', () => {
     const homeDir = configTest.makeTempDir();
     configTest.writeGlobalConfig(
       homeDir,
-      JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed', serviceTier: 'fast' } })
+      JSON.stringify({ codex: { verbosity: 'medium', reasoningSummary: 'detailed', serviceTier: 'priority' } })
     );
     const { loadConfig } = await configTest.importConfigWithHome(homeDir);
     const cwd = configTest.makeTempDir();
@@ -106,9 +114,8 @@ describe('loadConfig', () => {
       cwd,
       JSON.stringify({
         enabled: 'yes',
-        codex: { enabled: 'yes', verbosity: 'verbose', reasoningSummary: 'long', serviceTier: 'priority' },
+        codex: { enabled: 'yes', verbosity: 'verbose', reasoningSummary: 'long', serviceTier: 'fast' },
         usage: { enabled: 'no' },
-        account: { enabled: 'yes' },
         reset: { enabled: 'yes' },
         webSearch: { enabled: 'yes' },
       })
@@ -119,7 +126,7 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.config).toEqual(CODEXIFY_DEFAULT_CONFIG);
-    expect(loaded.errors).toHaveLength(9);
+    expect(loaded.errors).toHaveLength(8);
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
       expect.stringContaining('invalid codex.enabled value'),
@@ -127,7 +134,6 @@ describe('loadConfig', () => {
       expect.stringContaining('invalid codex.reasoningSummary value'),
       expect.stringContaining('invalid codex.serviceTier value'),
       expect.stringContaining('invalid usage.enabled value'),
-      expect.stringContaining('invalid account.enabled value'),
       expect.stringContaining('invalid reset.enabled value'),
       expect.stringContaining('invalid webSearch.enabled value'),
     ]);

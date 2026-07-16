@@ -3,11 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
-import {
-  CODEX_PROVIDER,
-  getCurrentCodexCredential,
-  type CodexCredentialContext,
-} from '#src/features/accounts/index.js';
+import { CODEX_PROVIDER, getCurrentCodexCredential, type CodexCredentialContext } from '#src/utils/codex-credential.js';
 import { buildChatGptBackendApiUrl } from '#src/utils/chatgpt-backend.js';
 
 const RESET_CREDIT_DETAILS_URL = buildChatGptBackendApiUrl('wham/rate-limit-reset-credits');

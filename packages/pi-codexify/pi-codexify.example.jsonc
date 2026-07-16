@@ -18,20 +18,14 @@
     "reasoningSummary": "auto",
 
     // Controls Responses API service tier for supported Codex payloads.
-    // Supported values: "slow", "fast".
-    // "fast" requests priority processing.
-    // "slow" leaves the provider payload unchanged and uses the provider default.
-    "serviceTier": "slow"
+    // Supported values: "default", "priority".
+    // "priority" requests priority processing.
+    // "default" leaves the provider payload unchanged and uses the provider default.
+    "serviceTier": "default"
   },
 
   "usage": {
     // Enables /codexify usage.
-    "enabled": true
-  },
-
-  "account": {
-    // Enables /codexify account commands and Codex account sync.
-    // Set to false to hide /codexify account from help/completions and disable account switching.
     "enabled": true
   },
 

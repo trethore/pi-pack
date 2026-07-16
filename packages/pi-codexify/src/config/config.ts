@@ -14,11 +14,11 @@ import {
 const EXTENSION_NAME = 'pi-codexify';
 const { mergeEnabledField, mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
-export function loadConfig(cwd: string): LoadedConfig {
+export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
   return loadJsoncExtensionConfig({
     cwd,
     extensionName: EXTENSION_NAME,
-    getConfigPaths: getCodexifyConfigPaths,
+    getConfigPaths: (configCwd) => getCodexifyConfigPaths(configCwd, options.includeProject),
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });
@@ -29,7 +29,6 @@ function cloneDefaultConfig(): PiCodexifyConfig {
     ...defaultConfig,
     codex: { ...defaultConfig.codex },
     usage: { ...defaultConfig.usage },
-    account: { ...defaultConfig.account },
     reset: { ...defaultConfig.reset },
     webSearch: { ...defaultConfig.webSearch },
   };
@@ -43,9 +42,6 @@ function mergeConfig(target: PiCodexifyConfig, source: PartialPiCodexifyConfig, 
   });
   mergeSection(source, 'usage', configPath, errors, (section, sectionName) => {
     mergeEnabledField(target.usage, section, `${sectionName}.enabled`, configPath, errors);
-  });
-  mergeSection(source, 'account', configPath, errors, (section, sectionName) => {
-    mergeEnabledField(target.account, section, `${sectionName}.enabled`, configPath, errors);
   });
   mergeSection(source, 'reset', configPath, errors, (section, sectionName) => {
     mergeEnabledField(target.reset, section, `${sectionName}.enabled`, configPath, errors);

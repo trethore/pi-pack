@@ -1,5 +1,4 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import {
   codexReasoningSummaryValues,
   codexServiceTierValues,
@@ -20,48 +19,6 @@ const SUPPORTED_APIS = new Set<SupportedCodexControlApi>([
   'openai-codex-responses',
   'azure-openai-responses',
 ]);
-
-export interface CodexControlsController {
-  getConfig(): CodexControlsConfig;
-  updateVerbosity(value: CodexVerbosity | undefined): void;
-  updateReasoningSummary(value: CodexReasoningSummary | undefined): void;
-  updateServiceTier(value: CodexServiceTier | undefined): void;
-}
-
-export function registerCodexControls(pi: ExtensionAPI, config: CodexControlsConfig): CodexControlsController {
-  let activeConfig = config;
-
-  pi.on('before_provider_request', (event, ctx) => {
-    if (!activeConfig.enabled) return;
-    if (!ctx.model || !supportsCodexControls(ctx.model)) return;
-
-    return patchRequestPayload(event.payload, activeConfig, ctx.model);
-  });
-
-  return {
-    getConfig() {
-      return activeConfig;
-    },
-    updateVerbosity(value) {
-      activeConfig = {
-        ...activeConfig,
-        verbosity: value,
-      };
-    },
-    updateReasoningSummary(value) {
-      activeConfig = {
-        ...activeConfig,
-        reasoningSummary: value,
-      };
-    },
-    updateServiceTier(value) {
-      activeConfig = {
-        ...activeConfig,
-        serviceTier: value,
-      };
-    },
-  };
-}
 
 export function parseCodexVerbosity(value: string): CodexVerbosity | 'off' | undefined {
   if (value === 'off') return 'off';
@@ -94,7 +51,7 @@ export function buildCodexControlsStatusMessage(
     `enabled: ${config.enabled ? 'yes' : 'no'}`,
     `verbosity: ${config.verbosity ?? 'off'}`,
     `reasoning summary: ${config.reasoningSummary ?? 'off'}`,
-    `service tier: ${config.serviceTier ?? 'slow'}`,
+    `service tier: ${config.serviceTier ?? 'default'}`,
     `current model: ${modelLabel}`,
     `verbosity supported here: ${supportsVerbosityControl(model) ? 'yes' : 'no'}`,
     `reasoning summary supported here: ${supportsReasoningSummaryControl(model) ? 'yes' : 'no'}`,
@@ -115,12 +72,12 @@ function supportsReasoningSummaryControl(model: Pick<Model<Api>, 'api' | 'reason
   return supportsCodexControls(model) && model?.reasoning === true;
 }
 
-function patchRequestPayload(
+export function applyCodexControls(
   payload: unknown,
   config: CodexControlsConfig,
   model: Pick<Model<Api>, 'api' | 'reasoning'>
 ): unknown {
-  if (!isRecord(payload)) return payload;
+  if (!isRecord(payload) || !supportsCodexControls(model)) return payload;
 
   const withVerbosity = supportsVerbosityControl(model) ? patchPayloadVerbosity(payload, config.verbosity) : payload;
   const withServiceTier = patchPayloadServiceTier(withVerbosity, config.serviceTier);
@@ -191,7 +148,7 @@ function patchPayloadServiceTier(
   payload: MutableJsonObject,
   serviceTier: CodexServiceTier | undefined
 ): MutableJsonObject {
-  if (serviceTier !== 'fast') return payload;
+  if (serviceTier !== 'priority') return payload;
 
   return {
     ...payload,

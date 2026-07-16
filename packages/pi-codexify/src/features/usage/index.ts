@@ -5,7 +5,7 @@ import {
   getCodexCredentialAccountId,
   getCurrentCodexCredential,
   type CodexCredentialContext,
-} from '#src/features/accounts/index.js';
+} from '#src/utils/codex-credential.js';
 import { buildChatGptBackendApiUrl } from '#src/utils/chatgpt-backend.js';
 
 type UsageWindow = {

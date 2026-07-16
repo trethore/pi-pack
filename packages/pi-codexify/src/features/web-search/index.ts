@@ -1,13 +1,8 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 import { isRecord } from '@trethore/pi-shared/object.js';
 
 const WEB_SEARCH_MULTIMODAL_CONTENT_TYPES = ['text', 'image'] as const;
-
-interface WebSearchConfig {
-  enabled: boolean;
-}
 
 interface ResponsesWebSearchTool {
   type: 'web_search';
@@ -15,16 +10,11 @@ interface ResponsesWebSearchTool {
   search_content_types?: string[];
 }
 
-export function registerWebSearch(pi: ExtensionAPI, config: WebSearchConfig): void {
-  if (!config.enabled) return;
-
-  pi.on('before_provider_request', (event, ctx) => {
-    if (!supportsNativeWebSearch(ctx.model)) return;
-    return injectNativeWebSearchTool(event.payload, ctx.model);
-  });
-}
-
-function injectNativeWebSearchTool(payload: unknown, model: Pick<Model<Api>, 'provider' | 'id'> | undefined): unknown {
+export function applyNativeWebSearch(
+  payload: unknown,
+  model: Pick<Model<Api>, 'provider' | 'id'> | undefined
+): unknown {
+  if (!supportsNativeWebSearch(model)) return payload;
   if (!isRecord(payload)) return payload;
 
   if (payload.tools !== undefined && !Array.isArray(payload.tools)) return payload;
