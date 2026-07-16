@@ -143,8 +143,8 @@ function formatPercentLeft(value: number | null): string {
   return `${Math.round(clampPercent(value))}% left`;
 }
 
-function loadAuthCredentials(ctx: CodexCredentialContext): { accessToken: string; accountId: string } {
-  const credential = getCurrentCodexCredential(ctx);
+async function loadAuthCredentials(ctx: CodexCredentialContext): Promise<{ accessToken: string; accountId: string }> {
+  const credential = await getCurrentCodexCredential(ctx);
   const accessToken = requireAuthField(credential.access.trim(), 'access token');
   const accountId = requireAuthField(getCodexCredentialAccountId(credential), 'accountId');
 
@@ -157,7 +157,7 @@ function requireAuthField(value: string | undefined, label: string): string {
 }
 
 async function fetchUsage(ctx: CodexCredentialContext): Promise<CodexUsageResponse> {
-  const { accessToken, accountId } = loadAuthCredentials(ctx);
+  const { accessToken, accountId } = await loadAuthCredentials(ctx);
   const response = await fetch(USAGE_URL, {
     headers: {
       accept: '*/*',

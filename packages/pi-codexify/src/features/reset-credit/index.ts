@@ -22,13 +22,7 @@ type ResetCreditOptions = {
   randomUUID?: typeof randomUUID;
 };
 
-type ResetCreditCredentialContext = CodexCredentialContext & {
-  modelRegistry: {
-    authStorage: CodexCredentialContext['modelRegistry']['authStorage'] & {
-      getApiKey(providerId: string, options?: { includeFallback?: boolean }): Promise<string | undefined>;
-    };
-  };
-};
+type ResetCreditCredentialContext = CodexCredentialContext;
 
 type ResetCreditResult = {
   status: number;
@@ -125,12 +119,7 @@ export async function getResetCreditDetails(
 }
 
 async function getCurrentCodexAccessToken(ctx: ResetCreditCredentialContext): Promise<string> {
-  let credential = getCurrentCodexCredential(ctx);
-
-  if (Date.now() >= credential.expires) {
-    await ctx.modelRegistry.authStorage.getApiKey(CODEX_PROVIDER, { includeFallback: false });
-    credential = getCurrentCodexCredential(ctx);
-  }
+  const credential = await getCurrentCodexCredential(ctx);
 
   const accessToken = credential.access.trim();
   if (!accessToken) throw new Error(`Missing access token for ${CODEX_PROVIDER}. Use /login ${CODEX_PROVIDER} first.`);

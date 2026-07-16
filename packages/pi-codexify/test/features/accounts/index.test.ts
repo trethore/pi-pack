@@ -31,7 +31,7 @@ describe('codex account profiles', () => {
     await useCodexAccount(ctx, 'personal', { profilePath });
 
     // Assert
-    expect(ctx.modelRegistry.authStorage.get(CODEX_PROVIDER)).toMatchObject({
+    await expect(ctx.credentialStore.read(CODEX_PROVIDER)).resolves.toMatchObject({
       type: 'oauth',
       access: 'access-personal',
       refresh: 'refresh-personal',
@@ -53,7 +53,7 @@ describe('codex account profiles', () => {
 
     // Assert
     expect(result).toBe('synced');
-    expect(ctx.modelRegistry.authStorage.get(CODEX_PROVIDER)).toMatchObject({
+    await expect(ctx.credentialStore.read(CODEX_PROVIDER)).resolves.toMatchObject({
       access: 'access-personal-refreshed',
       refresh: 'refresh-personal-refreshed',
     });
@@ -70,7 +70,7 @@ describe('codex account profiles', () => {
 
     // Assert
     expect(savedName).toBe('personal');
-    expect(ctx.modelRegistry.authStorage.get(CODEX_PROVIDER)).toMatchObject({
+    await expect(ctx.credentialStore.read(CODEX_PROVIDER)).resolves.toMatchObject({
       access: 'access-personal-refreshed',
       refresh: 'refresh-personal-refreshed',
     });
@@ -101,7 +101,7 @@ describe('codex account profiles', () => {
 
     // Assert
     expect(result).toBe('different-account');
-    expect(ctx.modelRegistry.authStorage.get(CODEX_PROVIDER)).toMatchObject({
+    await expect(ctx.credentialStore.read(CODEX_PROVIDER)).resolves.toMatchObject({
       access: 'access-personal',
       refresh: 'refresh-personal',
       accountId: 'account-personal',
@@ -163,7 +163,7 @@ async function createSavedPersonalProfileWithRefreshedCredential(): Promise<{
   setCodexCredential(ctx, 'personal');
   await saveCurrentCodexAccount(ctx, 'personal', { profilePath });
 
-  ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, {
+  ctx.credentialStore.set(CODEX_PROVIDER, {
     ...createCredential('personal'),
     access: 'access-personal-refreshed',
     refresh: 'refresh-personal-refreshed',

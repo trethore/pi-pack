@@ -1,24 +1,29 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import type { OAuthCredential } from '@earendil-works/pi-ai';
 import { getAgentDir } from '@earendil-works/pi-coding-agent';
-import type {
-  AuthCredential,
-  AuthStorage,
-  ExtensionAPI,
-  ExtensionCommandContext,
-} from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI, ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/pi-shared/error.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
+import {
+  applyCodexCredentialHeaders,
+  CODEX_PROVIDER,
+  getCredentialAccountId,
+  readCodexCredential,
+  writeCodexCredential,
+  type CodexCredentialContext,
+} from '#src/features/accounts/credentials.js';
 
-export const CODEX_PROVIDER = 'openai-codex';
+export { CODEX_PROVIDER } from '#src/features/accounts/credentials.js';
+export type { CodexCredentialContext } from '#src/features/accounts/credentials.js';
 const DEFAULT_PROFILE_PATH = path.join(getAgentDir(), 'pi-codexify-codex-accounts.json');
 
 export type CodexAccountAction = 'current' | 'delete' | 'list' | 'save' | 'use';
 
 export const codexAccountActions = ['list', 'current', 'save', 'use', 'delete'] as const;
 
-export type OpenAICodexCredential = AuthCredential & {
+export type OpenAICodexCredential = OAuthCredential & {
   type: 'oauth';
   accountId?: unknown;
   account_id?: unknown;
@@ -46,22 +51,16 @@ export type CodexAccountSyncResult =
   | 'synced'
   | 'unchanged';
 
-export type CodexAuthContext = {
-  modelRegistry: {
-    authStorage: Pick<AuthStorage, 'get' | 'reload' | 'set'>;
-  };
-};
-
-export type CodexCredentialContext = {
-  modelRegistry: {
-    authStorage: Pick<AuthStorage, 'get' | 'reload'>;
-  };
-};
+export type CodexAuthContext = CodexCredentialContext;
 
 export function registerCodexAccountSync(pi: ExtensionAPI): void {
   pi.on('before_provider_request', async (_event, ctx) => {
     if (ctx.model?.provider !== CODEX_PROVIDER) return;
     await syncActiveCodexAccount(ctx, { reloadAuth: false });
+  });
+  pi.on('before_provider_headers', async (event, ctx) => {
+    if (ctx.model?.provider !== CODEX_PROVIDER) return;
+    await applyCodexCredentialHeaders(event.headers);
   });
 }
 
@@ -142,7 +141,7 @@ export async function saveCurrentCodexAccount(
   const explicitAccountName = name === undefined ? undefined : requireAccountName(name);
   const profiles = await loadProfiles(options.profilePath);
   const accountName = explicitAccountName ?? requireActiveAccountName(profiles);
-  const credential = getCurrentCodexCredential(ctx);
+  const credential = await getCurrentCodexCredential(ctx);
 
   profiles.accounts[accountName] = credential;
   profiles.active = accountName;
@@ -168,7 +167,7 @@ export async function useCodexAccount(
     throw new Error(`Unknown Codex account: ${accountName}`);
   }
 
-  ctx.modelRegistry.authStorage.set(CODEX_PROVIDER, credential);
+  await writeCodexCredential(ctx, credential);
   profiles.active = accountName;
   await saveProfiles(profiles, options.profilePath);
 }
@@ -194,7 +193,7 @@ export async function syncActiveCodexAccount(
   if (!profiles.active || !profiles.accounts[profiles.active]) return 'missing-active';
 
   const activeCredential = profiles.accounts[profiles.active];
-  const credential = getCurrentCodexCredential(ctx, { allowMissing: true, reload: options.reloadAuth });
+  const credential = await getCurrentCodexCredential(ctx, { allowMissing: true, reload: options.reloadAuth });
   if (!credential) return 'missing-current';
   if (!isSameCodexAccount(activeCredential, credential)) return 'different-account';
   if (hasSameTokenData(activeCredential, credential)) return 'unchanged';
@@ -231,20 +230,19 @@ async function buildCurrentCodexAccountMessage(options: CodexAccountOptions = {}
   return `Active Codex account: ${profiles.active}${formatAccountIdSuffix(credential)}`;
 }
 
-export function getCurrentCodexCredential(
+export async function getCurrentCodexCredential(
   ctx: CodexCredentialContext,
   options?: CurrentCredentialOptions & { allowMissing?: false }
-): OpenAICodexCredential;
-export function getCurrentCodexCredential(
+): Promise<OpenAICodexCredential>;
+export async function getCurrentCodexCredential(
   ctx: CodexCredentialContext,
   options: CurrentCredentialOptions & { allowMissing: true }
-): OpenAICodexCredential | undefined;
-export function getCurrentCodexCredential(
+): Promise<OpenAICodexCredential | undefined>;
+export async function getCurrentCodexCredential(
   ctx: CodexCredentialContext,
   options: CurrentCredentialOptions = {}
-): OpenAICodexCredential | undefined {
-  if (options.reload !== false) ctx.modelRegistry.authStorage.reload();
-  const credential = ctx.modelRegistry.authStorage.get(CODEX_PROVIDER);
+): Promise<OpenAICodexCredential | undefined> {
+  const credential = await readCodexCredential(ctx, options.reload !== false);
 
   if (isOpenAICodexCredential(credential)) return credential;
   if (options.allowMissing) return undefined;
@@ -315,8 +313,7 @@ function formatCodexAccountSyncMessage(result: CodexAccountSyncResult): string {
 }
 
 export function getCodexCredentialAccountId(credential: OpenAICodexCredential | undefined): string | undefined {
-  const accountId = credential?.accountId ?? credential?.account_id;
-  return typeof accountId === 'string' && accountId.trim() ? accountId.trim() : undefined;
+  return getCredentialAccountId(credential);
 }
 
 function normalizeAccountName(name: string | undefined): string | undefined {

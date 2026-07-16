@@ -11,7 +11,7 @@ type ThinkingModel = {
   thinkingLevelMap?: ThinkingLevelMap;
 };
 
-const THINKING_LEVELS: ThinkingLevel[] = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+const THINKING_LEVELS: ThinkingLevel[] = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 
 const THINKING_LEVEL_DESCRIPTIONS: Record<ThinkingLevel, string> = {
   off: 'Disable model thinking/reasoning',
@@ -20,6 +20,7 @@ const THINKING_LEVEL_DESCRIPTIONS: Record<ThinkingLevel, string> = {
   medium: 'Use medium model thinking/reasoning',
   high: 'Use high model thinking/reasoning',
   xhigh: 'Use extra-high model thinking/reasoning when supported',
+  max: 'Use maximum model thinking/reasoning when supported',
 };
 
 export function registerThinkingLevelCommand(pi: ExtensionAPI) {
@@ -93,7 +94,7 @@ function isLevelSupportedByModel(model: ThinkingModel, level: ThinkingLevel): bo
   const mappedLevel = model.thinkingLevelMap?.[level];
 
   if (mappedLevel === null) return false;
-  if (level === 'xhigh') return mappedLevel !== undefined;
+  if (level === 'xhigh' || level === 'max') return mappedLevel !== undefined;
 
   return true;
 }

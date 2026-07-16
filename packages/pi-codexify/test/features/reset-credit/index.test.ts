@@ -154,15 +154,17 @@ describe('reset credit details command', () => {
     // Arrange
     let credential = { ...createCredential('stale'), expires: 1 };
     const ctx = {
+      credentialStore: {
+        read: vi.fn(async (provider: string) => (provider === CODEX_PROVIDER ? credential : undefined)),
+        list: vi.fn(async () => []),
+        modify: vi.fn(),
+        delete: vi.fn(),
+      },
       modelRegistry: {
-        authStorage: {
-          reload: vi.fn(),
-          get: vi.fn((provider: string) => (provider === CODEX_PROVIDER ? credential : undefined)),
-          getApiKey: vi.fn(async () => {
-            credential = createCredential('fresh');
-            return credential.access;
-          }),
-        },
+        getApiKeyForProvider: vi.fn(async () => {
+          credential = createCredential('fresh');
+          return credential.access;
+        }),
       },
     };
     const fetchMock = vi.fn(async () => Response.json({ availableCount: 1 }, { status: 200 }));
@@ -171,7 +173,7 @@ describe('reset credit details command', () => {
     const result = await getResetCreditDetails(ctx, { fetch: fetchMock });
 
     // Assert
-    expect(ctx.modelRegistry.authStorage.getApiKey).toHaveBeenCalledWith(CODEX_PROVIDER, { includeFallback: false });
+    expect(ctx.modelRegistry.getApiKeyForProvider).toHaveBeenCalledWith(CODEX_PROVIDER);
     expectResetCreditListRequest(fetchMock, 'access-fresh');
     expect(result.availableCount).toBe(1);
   });
