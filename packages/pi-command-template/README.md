@@ -1,15 +1,72 @@
 # pi-command-template
 
-Inject command output in your prompt files via templates.
+Command output templates for Pi prompt resources.
+
+## Features
+
+- Replaces `{{template}}` placeholders with configured command output.
+- Supports system prompts, context files, prompt templates, and skills.
+- Runs commands through a shell or directly as executable arguments.
+- Caches command output for each extension load or reload.
+- Limits execution time and inserted output size.
+
+## Installation
+
+Requires Pi `>=0.80.8 <1`.
+
+From the `pi-pack` repository root, install globally:
+
+```sh
+pi install ./packages/pi-command-template
+```
+
+Or install for the current project:
+
+```sh
+pi install -l ./packages/pi-command-template
+```
+
+For development, load the extension directly:
+
+```sh
+pi -e ./packages/pi-command-template
+```
+
+## Quick start
+
+Create `.pi/pi-command-template.jsonc`:
+
+```jsonc
+{
+  "enabled": true,
+  "surfaces": {
+    "contextFiles": true,
+  },
+  "execution": {
+    "shell": false,
+  },
+  "templates": {
+    "node-version": ["node", "--version"],
+  },
+}
+```
+
+Use the template in `AGENTS.md` or `CLAUDE.md`:
+
+```md
+Node.js version: {{node-version}}
+```
+
+When Pi loads the resource, the placeholder is replaced by the configured command output.
 
 ## Configuration
 
-`pi-command-template` reads JSONC config from:
+Configuration is loaded from:
 
 1. `$PI_CODING_AGENT_DIR/pi-command-template.jsonc` (defaults to `~/.pi/agent/pi-command-template.jsonc`)
-2. `.pi/pi-command-template.jsonc`
+2. `<project>/.pi/pi-command-template.jsonc`
 
-Project config overrides global config. See [`pi-command-template.example.jsonc`](./pi-command-template.example.jsonc) for a copyable template.
+Project configuration overrides global configuration. See [`pi-command-template.example.jsonc`](./pi-command-template.example.jsonc) for a copyable configuration.
 
 All rendering surfaces and shell execution are disabled by default. Enable only the surfaces and execution mode you intend to use.
 
@@ -37,47 +94,40 @@ All rendering surfaces and shell execution are disabled by default. Enable only 
 }
 ```
 
-## Usage
-
-Write placeholders in prompt resources:
-
-```md
-Operating system: {{osname}}
-Current branch: {{git-branch}}
-```
-
-When Pi loads the resource, the placeholders are replaced by the configured command output.
-
 ## Supported surfaces
 
 - `SYSTEM.md`
 - `APPEND_SYSTEM.md`
-- `AGENTS.md` / `CLAUDE.md`
-- prompt templates
-- skill descriptions in the system prompt
-- explicit `/skill:name` invocation content
+- `AGENTS.md` and `CLAUDE.md`
+- Prompt templates
+- Skill descriptions in the system prompt
+- Explicit `/skill:name` invocation content
 
 ## Execution
 
-Commands run once per extension load/reload and are cached by template name.
+Commands run once per extension load or reload and are cached by template name.
 
 Output is `stdout + stderr`, with one trailing line ending removed. If output exceeds `execution.maxOutputChars`, it is truncated and a warning is reported.
 
-`execution.shell` controls how commands run:
+`execution.shell` controls how command strings run:
 
-- `true`: run the command string through the shell. This supports pipes, redirects, `$VARIABLES`, `&&`, and shell builtins.
-- `false`: parse the command string into a direct executable plus arguments. This avoids shell syntax and is useful for file-style commands such as `node --version`.
+- `true`: run through the shell, enabling pipes, redirects, variables, `&&`, and shell builtins.
+- `false`: parse into a direct executable and arguments.
 
-Template commands can also be arrays such as `["node", "--version"]`. Array commands always run directly as executable + arguments and are the preferred form when `shell` features are not needed.
+Template commands can also be arrays such as `["node", "--version"]`. Array commands always run directly and are preferred when shell features are not needed.
 
-Failed commands are replaced with a short marker such as `[pi-command-template error: {{node-version}}]` and a diagnostic is reported.
+Failed commands are replaced with a marker such as `[pi-command-template error: {{node-version}}]`, and a diagnostic is reported.
 
-## Security and process scope
+## Security
 
 Enabling a surface allows content from that surface to trigger any matching configured command. Commands use the configured working directory and can read or execute workspace-controlled files. Only enable this extension, its surfaces, and shell execution for resources and workspaces you trust.
 
+## Behavior and limitations
+
 The compatibility layer patches Pi prototypes process-wide. It is designed for Pi's normal single-session CLI. Multiple SDK sessions in the same process are not isolated: the most recently registered transformer for this extension directory is used by every patched Pi instance.
 
-## Unsafe internals notice
+This extension uses an unsafe compatibility layer so templates are rendered before resources enter model context. Resource-loader methods are public Pi APIs, but prototype patching is unsupported, and explicit skill invocation depends on the private `AgentSession._expandSkillCommand` method. If Pi changes those internals, the affected patch is disabled and a warning is reported instead of crashing Pi.
 
-This extension uses an unsafe compatibility layer that monkey-patches Pi internals so templates are rendered before resources enter model context. Resource-loader methods are public Pi APIs, but prototype patching is unsupported, and explicit skill invocation depends on the private `AgentSession._expandSkillCommand` method. If Pi changes those internals, the affected patch is disabled and a warning is reported instead of crashing Pi.
+## License
+
+[MIT](../../LICENSE)

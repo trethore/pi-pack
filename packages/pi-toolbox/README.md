@@ -1,15 +1,58 @@
 # pi-toolbox
 
-Various and useful tools.
+Useful file-editing and search tools for Pi.
+
+## Features
+
+- `apply_patch`: structured multi-file editing with the Codex patch format.
+- `find_files`: low-token file discovery powered by `rg --files`.
+- `grep`: low-token content search powered by `rg --json -n`.
+- Configurable result limits and output clipping.
+
+## Installation
+
+Requires Pi `>=0.80.8 <1`.
+
+From the `pi-pack` repository root, install globally:
+
+```sh
+pi install ./packages/pi-toolbox
+```
+
+Or install for the current project:
+
+```sh
+pi install -l ./packages/pi-toolbox
+```
+
+For development, load the extension directly:
+
+```sh
+pi -e ./packages/pi-toolbox
+```
+
+## Quick start
+
+All tools are enabled by default. After loading the extension, Pi can call `apply_patch`, `find_files`, and `grep` directly.
+
+Example `find_files` arguments:
+
+```jsonc
+{
+  "patterns": ["**/*.ts", "!**/*.d.ts"],
+  "paths": ["src", "test"],
+  "depth": 2,
+}
+```
 
 ## Configuration
 
-`pi-toolbox` reads JSONC config from:
+Configuration is loaded from:
 
 1. `$PI_CODING_AGENT_DIR/pi-toolbox.jsonc` (defaults to `~/.pi/agent/pi-toolbox.jsonc`)
-2. `.pi/pi-toolbox.jsonc`
+2. `<project>/.pi/pi-toolbox.jsonc`
 
-Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-toolbox.example.jsonc) for a copyable template.
+Project configuration overrides global configuration. See [`pi-toolbox.example.jsonc`](./pi-toolbox.example.jsonc) for a copyable configuration.
 
 ```jsonc
 {
@@ -31,16 +74,16 @@ Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-to
 }
 ```
 
-## Features
+## Tool reference
 
-### Apply patch tool
+### `apply_patch`
 
-Registers `apply_patch`, a structured file editing tool that applies the Codex apply-patch format.
+Applies structured file edits using the Codex apply-patch format.
 
-Arguments:
-
-- `patch`: patch text starting with `*** Begin Patch` and ending with `*** End Patch`
-- `workdir`: optional directory used to resolve relative paths in the patch; defaults to cwd; absolute paths remain absolute
+| Argument  | Required | Description                                                                                                          |
+| --------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `patch`   | Yes      | Patch text starting with `*** Begin Patch` and ending with `*** End Patch`.                                          |
+| `workdir` | No       | Directory used to resolve relative paths. Defaults to the current working directory; absolute paths remain absolute. |
 
 Example call:
 
@@ -58,18 +101,18 @@ Success. Updated the following files:
 M README.md
 ```
 
-### Find files tool
+### `find_files`
 
-Registers `find_files`, a low-token file discovery tool powered by `rg --files`.
+Discovers files with `rg --files`.
 
-Arguments:
-
-- `patterns`: optional ripgrep-style glob filters passed with `-g`; prefix with `!` for exclusions; omitted to return all discovered files
-- `paths`: search root directories, defaults to cwd
-- `limit`: maximum files to return, defaults to `findFiles.defaultLimit`, minimum `1`, maximum `1000`
-- `depth`: maximum directory traversal depth relative to each search path, passed as `--max-depth`; omitted for unlimited traversal, minimum `1`
-- `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
-- `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
+| Argument      | Required | Default                  | Description                                                                 |
+| ------------- | -------- | ------------------------ | --------------------------------------------------------------------------- |
+| `patterns`    | No       | All files                | Ripgrep-style glob filters passed with `-g`; prefix exclusions with `!`.    |
+| `paths`       | No       | Current directory        | Search root directories.                                                    |
+| `limit`       | No       | `findFiles.defaultLimit` | Maximum files to return, from `1` to `1000`.                                |
+| `depth`       | No       | Unlimited                | Maximum traversal depth relative to each search root.                       |
+| `noIgnore`    | No       | `false`                  | Include files ignored by `.gitignore` and `.ignore`.                        |
+| `visibleOnly` | No       | `false`                  | Exclude hidden files and directories. `.git` internals are always excluded. |
 
 Example calls:
 
@@ -77,7 +120,7 @@ Example calls:
 // Find TypeScript files two levels deep, excluding declarations.
 { "patterns": ["**/*.ts", "!**/*.d.ts"], "paths": ["src", "test"], "depth": 2 }
 
-// Include ignored files but keep hidden files/directories excluded.
+// Include ignored files but keep hidden files and directories excluded.
 { "patterns": ["**/*"], "noIgnore": true, "visibleOnly": true }
 ```
 
@@ -96,29 +139,34 @@ test/find-files.test.ts
 
 When more files exist beyond `limit`, the output ends with `[more files available]`.
 
-### Grep tool
+### `grep`
 
-Registers `grep`, a low-token content search tool powered by `rg --json -n`.
+Searches file contents with `rg --json -n`.
 
-Arguments:
-
-- `regexes`: regex pattern(s) to search for; provide one or more regexes, passed as `-e`
-- `paths`: directories or files to search in, defaults to cwd
-- `globs`: glob filter(s) for files to search; passed as `-g`; use `!` for exclusions
-- `limit`: maximum matching lines to return, defaults to `grep.defaultLimit`, minimum `1`, maximum `1000`
-- `limitPerFile`: maximum matching lines to return per file, defaults to `grep.defaultLimitPerFile` when configured, otherwise no per-file limit
-- `depth`: maximum directory traversal depth relative to each search path, passed as `--max-depth`; omitted for unlimited traversal, minimum `1`
-- `maxCharsPerMatch`: maximum chars per matching line, defaults to `grep.defaultMaxCharsPerMatch`, minimum `100`, maximum `2000`
-- `noIgnore`: ignore `.gitignore` and `.ignore` with `--no-ignore`, defaults to `false`
-- `visibleOnly`: search only non-hidden files and directories, defaults to `false`; hidden files are included by default while `.git` internals are always excluded
+| Argument           | Required | Default                         | Description                                                                 |
+| ------------------ | -------- | ------------------------------- | --------------------------------------------------------------------------- |
+| `regexes`          | Yes      | -                               | Regex patterns passed with `-e`.                                            |
+| `paths`            | No       | Current directory               | Directories or files to search.                                             |
+| `globs`            | No       | All files                       | Glob filters passed with `-g`; prefix exclusions with `!`.                  |
+| `limit`            | No       | `grep.defaultLimit`             | Maximum matching lines to return, from `1` to `1000`.                       |
+| `limitPerFile`     | No       | Configured default or unlimited | Maximum matching lines to return per file.                                  |
+| `depth`            | No       | Unlimited                       | Maximum traversal depth relative to each search root.                       |
+| `maxCharsPerMatch` | No       | `grep.defaultMaxCharsPerMatch`  | Maximum characters per matching line, from `100` to `2000`.                 |
+| `noIgnore`         | No       | `false`                         | Include files ignored by `.gitignore` and `.ignore`.                        |
+| `visibleOnly`      | No       | `false`                         | Exclude hidden files and directories. `.git` internals are always excluded. |
 
 Example calls:
 
 ```jsonc
 // Search TypeScript sources, excluding tests, with per-file limiting.
-{ "regexes": ["TODO|FIXME"], "paths": ["src"], "globs": ["**/*.ts", "!**/*.test.ts"], "limitPerFile": 3 }
+{
+  "regexes": ["TODO|FIXME"],
+  "paths": ["src"],
+  "globs": ["**/*.ts", "!**/*.test.ts"],
+  "limitPerFile": 3,
+}
 
-// Search ignored files but skip hidden files/directories.
+// Search ignored files but skip hidden files and directories.
 { "regexes": ["API_KEY"], "noIgnore": true, "visibleOnly": true }
 ```
 
@@ -132,9 +180,13 @@ src/agent/tools.ts
 25: very long line clipped by maxCharsPerMatch, once it hits the char limit, it ends: abcdefabcdefabcd
 [more matches in this file]
 src/index.ts
-4: import { grepTool } from "./agent/tools"
+4: import { grepTool } from "#src/agent/tools"
 9: tools: [findFilesTool, grepTool]
 [more matches available]
 ```
 
 When more matches exist beyond `limit`, the output ends with `[more matches available]`. When more matches exist beyond `limitPerFile`, the file section ends with `[more matches in this file]`. Long matching lines are clipped to `maxCharsPerMatch` without an extra marker.
+
+## License
+
+[MIT](../../LICENSE)

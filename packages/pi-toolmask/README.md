@@ -1,15 +1,55 @@
 # pi-toolmask
 
-Disable pi tools with wildcard masks.
+Wildcard masks for disabling Pi tools.
+
+## Features
+
+- Disables active tools with case-sensitive wildcard patterns.
+- Supports negated masks that keep matching tools enabled.
+- Reapplies masks before agent runs when configured.
+- Optionally notifies when tools are disabled.
+
+## Installation
+
+Requires Pi `>=0.80.8 <1`.
+
+From the `pi-pack` repository root, install globally:
+
+```sh
+pi install ./packages/pi-toolmask
+```
+
+Or install for the current project:
+
+```sh
+pi install -l ./packages/pi-toolmask
+```
+
+For development, load the extension directly:
+
+```sh
+pi -e ./packages/pi-toolmask
+```
+
+## Quick start
+
+Create `.pi/pi-toolmask.jsonc` to disable every tool except `read`:
+
+```jsonc
+{
+  "enabled": true,
+  "masks": ["*", "!read"],
+}
+```
 
 ## Configuration
 
-`pi-toolmask` reads JSONC config from:
+Configuration is loaded from:
 
 1. `$PI_CODING_AGENT_DIR/pi-toolmask.jsonc` (defaults to `~/.pi/agent/pi-toolmask.jsonc`)
-2. `.pi/pi-toolmask.jsonc`
+2. `<project>/.pi/pi-toolmask.jsonc`
 
-Project config overrides global config. See [`pi-toolmask.example.jsonc`](./pi-toolmask.example.jsonc) for a copyable template.
+Project configuration overrides global configuration. See [`pi-toolmask.example.jsonc`](./pi-toolmask.example.jsonc) for a copyable configuration.
 
 ```jsonc
 {
@@ -20,24 +60,22 @@ Project config overrides global config. See [`pi-toolmask.example.jsonc`](./pi-t
 }
 ```
 
-## Features
-
-### Tool masks
+## Mask patterns
 
 `masks` is an array of wildcard patterns matched against active tool names. Matching is case-sensitive. `*` matches any number of characters, and `!` at the start of a pattern keeps matching tools enabled.
 
-Examples:
+| Pattern  | Matches                     |
+| -------- | --------------------------- |
+| `read`   | Exactly `read`.             |
+| `*read`  | Names ending with `read`.   |
+| `read*`  | Names starting with `read`. |
+| `*read*` | Names containing `read`.    |
+| `*`      | Every active tool.          |
+| `!read`  | Keeps `read` enabled.       |
 
-| Pattern  | Matches                    |
-| -------- | -------------------------- |
-| `read`   | Exactly `read`             |
-| `*read`  | Names ending with `read`   |
-| `read*`  | Names starting with `read` |
-| `*read*` | Names containing `read`    |
-| `*`      | Every active tool          |
-| `!read`  | Keep `read` enabled        |
+Negated masks are exceptions to positive masks. A configuration with only negated masks disables nothing. Tools that do not match a positive mask remain enabled.
 
-Disable all tools:
+### Disable all tools
 
 ```jsonc
 {
@@ -46,7 +84,7 @@ Disable all tools:
 }
 ```
 
-Disable every tool except `read`:
+### Disable every tool except `read`
 
 ```jsonc
 {
@@ -55,9 +93,7 @@ Disable every tool except `read`:
 }
 ```
 
-Negated masks are exceptions to positive masks. A config with only negated masks disables nothing.
-
-Disable write-capable default tools:
+### Disable write-capable default tools
 
 ```jsonc
 {
@@ -66,7 +102,7 @@ Disable write-capable default tools:
 }
 ```
 
-Disable a family of extension tools:
+### Disable a family of extension tools
 
 ```jsonc
 {
@@ -75,12 +111,16 @@ Disable a family of extension tools:
 }
 ```
 
-### Enforcement timing
+## Enforcement timing
 
-`pi-toolmask` applies masks on `session_start`. By default it also reapplies them on `before_agent_start` so tools registered or re-enabled by other extensions are masked before the next model request.
+Masks are applied on `session_start`. By default, they are also reapplied on `before_agent_start` so tools registered or re-enabled by other extensions are masked before the next model request.
 
-Set `enforceBeforeAgentStart` to `false` if you only want startup masking.
+Set `enforceBeforeAgentStart` to `false` to apply masks only at startup.
 
-### Notifications
+## Notifications
 
-Set `notify` to `true` to display a Pi notification whenever `pi-toolmask` disables one or more active tools.
+Set `notify` to `true` to display a Pi notification whenever one or more active tools are disabled.
+
+## License
+
+[MIT](../../LICENSE)

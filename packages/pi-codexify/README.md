@@ -1,16 +1,82 @@
 # pi-codexify
 
-Codex-focused controls.
+Codex settings, tools, and usage controls.
 
 ## Features
 
-- Mutates supported OpenAI Responses payloads with:
+- Controls supported OpenAI Responses payload settings:
   - `text.verbosity`
   - `reasoning.summary`
   - `service_tier: "priority"` when `serviceTier` is `priority`
-- Adds `/codexify usage` to display Codex 5h and 7d usage windows.
-- Adds the native OpenAI Codex `web_search` tool when `webSearch.enabled` is true.
-- Adds `/codexify reset use|details` to consume or inspect Codex reset credits.
+- Displays Codex 5h and 7d usage windows.
+- Adds the native OpenAI Codex `web_search` tool when enabled.
+- Consumes or inspects Codex reset credits.
+
+## Installation
+
+Requires Pi `>=0.80.8 <1`.
+
+From the `pi-pack` repository root, install globally:
+
+```sh
+pi install ./packages/pi-codexify
+```
+
+Or install for the current project:
+
+```sh
+pi install -l ./packages/pi-codexify
+```
+
+For development, load the extension directly:
+
+```sh
+pi -e ./packages/pi-codexify
+```
+
+## Quick start
+
+Run `/codexify status` to inspect the active controls, then update them with commands such as:
+
+```text
+/codexify verbosity medium
+/codexify reasoning-summary auto
+/codexify service-tier default
+```
+
+Commands persist control changes to the active configuration file.
+
+## Configuration
+
+Configuration is loaded from:
+
+1. `$PI_CODING_AGENT_DIR/pi-codexify.jsonc` (defaults to `~/.pi/agent/pi-codexify.jsonc`)
+2. `<project>/.pi/pi-codexify.jsonc`
+
+Project configuration overrides global configuration when the project is trusted. See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc) for a copyable configuration.
+
+```jsonc
+{
+  "enabled": true,
+  "codex": {
+    "enabled": true,
+    "verbosity": "medium",
+    "reasoningSummary": "auto",
+    "serviceTier": "default",
+  },
+  "usage": {
+    "enabled": true,
+  },
+  "reset": {
+    "enabled": true,
+  },
+  "webSearch": {
+    "enabled": true,
+  },
+}
+```
+
+Omitted or `null` control values leave the provider payload unchanged. In project configuration, `null` disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` while preserving other reasoning fields.
 
 ## Commands
 
@@ -25,23 +91,16 @@ Codex-focused controls.
 /codexify reset details
 ```
 
-Control commands update `pi-codexify.jsonc`. If a trusted project config exists, commands update it; otherwise they update the global config.
+Control commands update the trusted project configuration when one exists; otherwise they update the global configuration.
 
 `/codexify usage` and `/codexify reset` use Pi's active `openai-codex` OAuth credential. Use `/login openai-codex` to change it.
 
 `/codexify reset use` asks for confirmation because the request consumes a reset credit. `/codexify reset details` is read-only.
 
-## Configuration
-
-Supported config locations:
-
-- Global: `$PI_CODING_AGENT_DIR/pi-codexify.jsonc` (defaults to `~/.pi/agent/pi-codexify.jsonc`)
-- Project: `.pi/pi-codexify.jsonc`
-
-Project config overrides global config when the project is trusted.
-
-Omitted or `null` control values leave the provider payload unchanged. In project config, `null` disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` while preserving other reasoning fields.
+## Behavior and limitations
 
 Priority service tier is applied at the final provider payload layer. Pi may report default-tier pricing if the provider response does not echo the effective priority tier.
 
-See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc).
+## License
+
+[MIT](../../LICENSE)
