@@ -1,6 +1,15 @@
+import { normalizeToolPath } from '#src/utils/paths.js';
+
 export function normalizeStringList(values: readonly string[] | undefined): string[] {
-  if (values === undefined) return [];
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+  return normalizeList(values, (value) => value.trim());
+}
+
+export function normalizeOptionalPathList(
+  values: readonly string[] | undefined,
+  fallback: readonly string[]
+): string[] {
+  const normalized = normalizeList(values, normalizeToolPath);
+  return normalized.length > 0 ? normalized : [...fallback];
 }
 
 export function normalizeRequiredStringList(
@@ -30,4 +39,9 @@ export function formatStringList(values: readonly string[] | undefined, fallback
 export function formatOptionalStringListFlag(label: string, values: readonly string[] | undefined): string | undefined {
   const normalized = normalizeStringList(values);
   return normalized.length === 0 ? undefined : `${label} [${normalized.join(',')}]`;
+}
+
+function normalizeList(values: readonly string[] | undefined, normalize: (value: string) => string): string[] {
+  if (values === undefined) return [];
+  return [...new Set(values.map((value) => normalize(value)).filter(Boolean))];
 }

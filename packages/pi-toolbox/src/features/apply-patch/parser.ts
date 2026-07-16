@@ -1,5 +1,6 @@
+import { normalizeToolPath } from '#src/utils/paths.js';
+
 const BEGIN_PATCH_MARKER = '*** Begin Patch';
-const ENVIRONMENT_ID_MARKER = '*** Environment ID: ';
 const END_PATCH_MARKER = '*** End Patch';
 const ADD_FILE_MARKER = '*** Add File: ';
 const DELETE_FILE_MARKER = '*** Delete File: ';
@@ -56,17 +57,13 @@ export interface UpdateFileChunk {
 }
 
 export interface ApplyPatchArgs {
-  patch: string;
   hunks: Hunk[];
-  environmentId?: string;
 }
 
 export function parsePatch(patch: string): ApplyPatchArgs {
   const lines = splitPatchLines(patch.trim());
-  const { patchLines, hunkLines } = checkPatchBoundariesLenient(lines);
-  const preamble = parseEnvironmentIdPreamble(hunkLines);
-  let remainingLines = preamble.remainingLines;
-  let lineNumber = preamble.lineNumber;
+  let remainingLines = checkPatchBoundaries(lines);
+  let lineNumber = 2;
   const hunks: Hunk[] = [];
 
   while (remainingLines.length > 0) {
@@ -76,11 +73,7 @@ export function parsePatch(patch: string): ApplyPatchArgs {
     remainingLines = remainingLines.slice(parsed.parsedLines);
   }
 
-  return {
-    patch: patchLines.join('\n'),
-    hunks,
-    environmentId: preamble.environmentId,
-  };
+  return { hunks };
 }
 
 export function formatPatchParseError(error: PatchParseError): string {
@@ -97,51 +90,12 @@ function splitPatchLines(patch: string): string[] {
   return patch.length === 0 ? [] : patch.split(/\r?\n/);
 }
 
-function parseEnvironmentIdPreamble(hunkLines: string[]): {
-  environmentId?: string;
-  remainingLines: string[];
-  lineNumber: number;
-} {
-  const firstLine = hunkLines[0];
-  const environmentId = firstLine?.trimStart().startsWith(ENVIRONMENT_ID_MARKER)
-    ? firstLine.trimStart().slice(ENVIRONMENT_ID_MARKER.length).trim()
-    : undefined;
-
-  if (environmentId === undefined) {
-    return { remainingLines: hunkLines, lineNumber: 2 };
-  }
-
-  if (environmentId.length === 0) {
-    throw new InvalidPatchError('apply_patch environment_id cannot be empty');
-  }
-
-  return { environmentId, remainingLines: hunkLines.slice(1), lineNumber: 3 };
-}
-
-function checkPatchBoundariesLenient(originalLines: string[]): { patchLines: string[]; hunkLines: string[] } {
-  try {
-    return checkPatchBoundariesStrict(originalLines);
-  } catch (error) {
-    if (!(error instanceof InvalidPatchError)) throw error;
-    const first = originalLines[0];
-    const last = originalLines.at(-1);
-    if (
-      originalLines.length >= 4 &&
-      (first === '<<EOF' || first === "<<'EOF'" || first === '<<"EOF"') &&
-      last?.endsWith('EOF') === true
-    ) {
-      return checkPatchBoundariesStrict(originalLines.slice(1, -1));
-    }
-    throw error;
-  }
-}
-
-function checkPatchBoundariesStrict(lines: string[]): { patchLines: string[]; hunkLines: string[] } {
+function checkPatchBoundaries(lines: string[]): string[] {
   const first = lines[0]?.trim();
   const last = lines.at(-1)?.trim();
 
   if (first === BEGIN_PATCH_MARKER && last === END_PATCH_MARKER) {
-    return { patchLines: lines, hunkLines: lines.slice(1, -1) };
+    return lines.slice(1, -1);
   }
 
   if (first !== BEGIN_PATCH_MARKER) {
@@ -153,13 +107,13 @@ function checkPatchBoundariesStrict(lines: string[]): { patchLines: string[]; hu
 
 function parseOneHunk(lines: string[], lineNumber: number): { hunk: Hunk; parsedLines: number } {
   const firstLine = lines[0]?.trim() ?? '';
-  const addPath = stripMarker(firstLine, ADD_FILE_MARKER);
+  const addPath = parsePathMarker(firstLine, ADD_FILE_MARKER, lineNumber);
   if (addPath !== undefined) return parseAddFileHunk(lines, addPath);
 
-  const deletePath = stripMarker(firstLine, DELETE_FILE_MARKER);
+  const deletePath = parsePathMarker(firstLine, DELETE_FILE_MARKER, lineNumber);
   if (deletePath !== undefined) return { hunk: { type: 'delete', path: deletePath }, parsedLines: 1 };
 
-  const updatePath = stripMarker(firstLine, UPDATE_FILE_MARKER);
+  const updatePath = parsePathMarker(firstLine, UPDATE_FILE_MARKER, lineNumber);
   if (updatePath !== undefined) return parseUpdateFileHunk(lines, updatePath, lineNumber);
 
   throw new InvalidHunkError(
@@ -188,7 +142,7 @@ function parseUpdateFileHunk(
 ): { hunk: Hunk; parsedLines: number } {
   let remainingLines = lines.slice(1);
   let parsedLines = 1;
-  const movePath = stripMarker(remainingLines[0], MOVE_TO_MARKER);
+  const movePath = parsePathMarker(remainingLines[0], MOVE_TO_MARKER, lineNumber + 1);
 
   if (movePath !== undefined) {
     remainingLines = remainingLines.slice(1);
@@ -307,6 +261,17 @@ function parseChangeContext(
   throw new InvalidHunkError(`Expected update hunk to start with a @@ context marker, got: '${line}'`, lineNumber);
 }
 
-function stripMarker(line: string | undefined, marker: string): string | undefined {
-  return line?.startsWith(marker) === true ? line.slice(marker.length) : undefined;
+function parsePathMarker(line: string | undefined, marker: string, lineNumber: number): string | undefined {
+  const header = marker.trimEnd();
+  if (line === header) throwEmptyPath(marker, lineNumber);
+  if (line?.startsWith(marker) !== true) return undefined;
+  const filePath = normalizeToolPath(line.slice(marker.length));
+  if (filePath.length === 0) {
+    throwEmptyPath(marker, lineNumber);
+  }
+  return filePath;
+}
+
+function throwEmptyPath(marker: string, lineNumber: number): never {
+  throw new InvalidHunkError(`Path after '${marker.trim()}' cannot be empty`, lineNumber);
 }

@@ -1,66 +1,40 @@
 import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { Type } from 'typebox';
+import { type Static, Type } from 'typebox';
 
 import type { GrepToolConfig } from '#src/config/schema.js';
 import { createGrepDisplay, formatGrepDisplay } from '#src/features/grep/format.js';
 import {
   formatOptionalStringListFlag,
   formatStringList,
+  normalizeOptionalPathList,
   normalizeOptionalStringList,
   normalizeRequiredStringList,
 } from '#src/utils/string-list.js';
+import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import {
-  assertSearchPaths,
-  cloneJsonSchema,
-  createTextToolDefinition,
-  formatToolCall,
-  readJsonDefinition,
-} from '#src/utils/tool-definition.js';
+  createNoIgnoreSchema,
+  createSearchDepthSchema,
+  createSearchPathsSchema,
+  createVisibleOnlySchema,
+} from '#src/utils/search-schema.js';
 import { runRipgrepGrep, type RipgrepGrepResult, type RunRipgrepGrepOptions } from '#src/features/grep/ripgrep.js';
 
-const GREP_TOOL_DEFINITION = readGrepDefinition();
+const GREP_TOOL_DEFINITION = {
+  name: 'grep',
+  label: 'grep',
+  description: "Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)>.",
+  promptSnippet: 'Search file contents by regex(es)',
+  promptGuidelines: [
+    'Use `grep` for fast content search when you know the text or regular expressions to find.',
+    '`grep` always excludes `.git` internals from results.',
+  ],
+};
 
-interface GrepParameters {
-  regexes: string[];
-  paths?: string[];
-  globs?: string[];
-  limit?: number;
-  limitPerFile?: number;
-  depth?: number;
-  maxCharsPerMatch?: number;
-  noIgnore?: boolean;
-  visibleOnly?: boolean;
-}
+type GrepParameters = Static<ReturnType<typeof createGrepParametersSchema>>;
 
 interface PreparedGrepParameters extends Required<Omit<GrepParameters, 'limitPerFile' | 'depth'>> {
   limitPerFile?: number;
   depth?: number;
-}
-
-interface GrepDefinition {
-  name: string;
-  label: string;
-  description: string;
-  promptSnippet: string;
-  promptGuidelines: string[];
-  parameters: GrepParametersJsonSchema;
-}
-
-interface GrepParametersJsonSchema {
-  type: 'object';
-  additionalProperties: boolean;
-  required: string[];
-  properties: {
-    regexes: Record<string, unknown>;
-    paths: Record<string, unknown>;
-    globs: Record<string, unknown>;
-    limit: { description: string } & Record<string, unknown>;
-    limitPerFile: { description: string } & Record<string, unknown>;
-    depth: Record<string, unknown>;
-    maxCharsPerMatch: { description: string } & Record<string, unknown>;
-    noIgnore: Record<string, unknown>;
-    visibleOnly: Record<string, unknown>;
-  };
 }
 
 type GrepParametersSchema = ReturnType<typeof createGrepParametersSchema>;
@@ -77,23 +51,22 @@ export interface GrepToolOptions {
   runner?: GrepRunner;
 }
 
-export function registerGrepTool(pi: ExtensionAPI, config: { grep: GrepToolConfig }): void {
-  if (!config.grep.enabled) return;
-  pi.registerTool(createGrepToolDefinition(config.grep));
+export function registerGrepTool(pi: ExtensionAPI, config: GrepToolConfig): void {
+  pi.registerTool(createGrepToolDefinition(config));
 }
 
 export function createGrepToolDefinition(
   config: GrepToolConfig,
   options: GrepToolOptions = {}
 ): ToolDefinition<GrepParametersSchema, GrepToolDetails | undefined> {
-  const cwd = options.cwd ?? process.cwd();
   const runner = options.runner ?? runRipgrepGrep;
   const parameters = createGrepParametersSchema(config);
 
   return createTextToolDefinition<GrepParametersSchema, GrepToolDetails | undefined>({
     metadata: GREP_TOOL_DEFINITION,
     parameters,
-    async execute(_toolCallId, params, signal) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+      const cwd = options.cwd ?? ctx.cwd;
       const preparedParams = prepareGrepParameters(params, config);
       await assertSearchPaths(cwd, preparedParams.paths, { toolName: 'grep' });
 
@@ -136,29 +109,51 @@ export function createGrepToolDefinition(
   });
 }
 
-function readGrepDefinition(): GrepDefinition {
-  return readJsonDefinition(new URL('grep-definition.json', import.meta.url));
-}
-
 function createGrepParametersSchema(config: GrepToolConfig) {
-  const parameters = cloneParametersSchema(GREP_TOOL_DEFINITION.parameters);
-  parameters.properties.limit.description = parameters.properties.limit.description.replace(
-    '{{defaultLimit}}',
-    String(config.defaultLimit)
+  return Type.Object(
+    {
+      regexes: Type.Array(Type.String(), {
+        minItems: 1,
+        description:
+          'Ripgrep-compatible regex pattern(s) to search for. Provide one or more regexes; each regex is passed with `-e` and multiple regexes use OR semantics. Searches are line-oriented; inline flags like `(?i)` can be used.',
+      }),
+      paths: createSearchPathsSchema(
+        'Path(s) to search in. Provide one or more directories or files. If omitted, the current working directory is used.'
+      ),
+      globs: Type.Optional(
+        Type.Array(Type.String(), {
+          minItems: 1,
+          description:
+            'Glob filter(s) passed with `-g`. Prefix exclusions with `!`. If omitted, no glob filters are applied.',
+        })
+      ),
+      limit: Type.Optional(
+        Type.Integer({
+          minimum: 1,
+          maximum: 1000,
+          description: `Maximum number of matching lines to return globally. If omitted, defaults to ${config.defaultLimit}.`,
+        })
+      ),
+      limitPerFile: Type.Optional(
+        Type.Integer({
+          minimum: 1,
+          maximum: 1000,
+          description: `Maximum number of matching lines to return per file. If omitted, defaults to ${formatDefaultLimitPerFileValue(config.defaultLimitPerFile)}.`,
+        })
+      ),
+      depth: createSearchDepthSchema(),
+      maxCharsPerMatch: Type.Optional(
+        Type.Integer({
+          minimum: 100,
+          maximum: 2000,
+          description: `Maximum number of characters to show per matching line. If omitted, defaults to ${config.defaultMaxCharsPerMatch}.`,
+        })
+      ),
+      noIgnore: createNoIgnoreSchema(),
+      visibleOnly: createVisibleOnlySchema(),
+    },
+    { additionalProperties: false }
   );
-  parameters.properties.limitPerFile.description = parameters.properties.limitPerFile.description.replace(
-    '{{defaultLimitPerFile}}',
-    formatDefaultLimitPerFileValue(config.defaultLimitPerFile)
-  );
-  parameters.properties.maxCharsPerMatch.description = parameters.properties.maxCharsPerMatch.description.replace(
-    '{{defaultMaxCharsPerMatch}}',
-    String(config.defaultMaxCharsPerMatch)
-  );
-  return Type.Unsafe<GrepParameters>(parameters);
-}
-
-function cloneParametersSchema(parameters: GrepParametersJsonSchema): GrepParametersJsonSchema {
-  return cloneJsonSchema(parameters);
 }
 
 function formatDefaultLimitPerFileValue(defaultLimitPerFile: number | undefined): string {
@@ -171,7 +166,7 @@ function prepareGrepParameters(params: GrepParameters, config: GrepToolConfig): 
       name: 'regexes',
       toolName: 'grep',
     }),
-    paths: normalizeOptionalStringList(params.paths, ['.']),
+    paths: normalizeOptionalPathList(params.paths, ['.']),
     globs: normalizeOptionalStringList(params.globs, []),
     limit: params.limit ?? config.defaultLimit,
     limitPerFile: params.limitPerFile ?? config.defaultLimitPerFile,

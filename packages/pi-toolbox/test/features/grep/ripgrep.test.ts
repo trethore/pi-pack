@@ -1,5 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -15,6 +14,7 @@ import {
   writeHiddenIgnoredFixture,
   writeIndependentDepthFixture,
 } from '#test/utils/ripgrep-test-helpers.js';
+import { makeTempDir as makePrefixedTempDir } from '#test/utils/tool-test-helpers.js';
 
 describe('ripgrep grep runner', () => {
   it('finds matches with the packaged ripgrep executable', async () => {
@@ -84,7 +84,7 @@ describe('ripgrep grep runner', () => {
     expect(result.matches).toEqual([{ file: 'nested/deep/target.txt', line: 1, text: 'needle target' }]);
   });
 
-  it('sorts matches by path before applying the collection limit', async () => {
+  it('stops after collecting one match beyond the limit', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'z.txt'), 'needle z\n');
@@ -95,13 +95,9 @@ describe('ripgrep grep runner', () => {
     const result = await runGrepWithDefaults(cwd, { limit: 2 });
 
     // Assert
-    expect(result).toEqual({
-      matches: [
-        { file: 'a.txt', line: 1, text: 'needle a' },
-        { file: 'm.txt', line: 1, text: 'needle m' },
-      ],
-      limited: true,
-    });
+    expect(result.matches).toHaveLength(2);
+    expect(result.matches.every((match) => ['a.txt', 'm.txt', 'z.txt'].includes(match.file))).toBe(true);
+    expect(result.limited).toBe(true);
   });
 
   it('deduplicates matches before applying the collection limit', async () => {
@@ -236,5 +232,5 @@ function runGrepWithDefaults(cwd: string, overrides: Partial<Omit<RunRipgrepGrep
 }
 
 function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-ripgrep-grep-test-'));
+  return makePrefixedTempDir('pi-toolbox-ripgrep-grep-test-');
 }

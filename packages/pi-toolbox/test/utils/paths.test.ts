@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCompactPathFormatter, formatRipgrepPaths, toDisplayPath, toPosixPath } from '#pi-toolbox/utils/paths.js';
+import {
+  createCompactPathFormatter,
+  formatRipgrepPaths,
+  normalizeToolPath,
+  toDisplayPath,
+  toPosixPath,
+} from '#pi-toolbox/utils/paths.js';
 
 describe('path utilities', () => {
   it('omits the default current directory path from ripgrep args', () => {
@@ -10,6 +16,11 @@ describe('path utilities', () => {
   it('keeps explicit ripgrep paths', () => {
     expect(formatRipgrepPaths(['.', 'src'])).toEqual(['.', 'src']);
     expect(formatRipgrepPaths(['src'])).toEqual(['src']);
+  });
+
+  it('normalizes model-provided paths', () => {
+    expect(normalizeToolPath('  @src/index.ts  ')).toBe('src/index.ts');
+    expect(normalizeToolPath('src/index.ts')).toBe('src/index.ts');
   });
 
   it('formats display paths as relative posix paths when possible', () => {

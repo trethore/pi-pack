@@ -95,6 +95,7 @@ describe('runRipgrepLines', () => {
 
     // Act
     child.stdout.emit('data', 'one\ntwo\nthree\n');
+    child.stdout.emit('data', 'four\nfive\n');
     child.emit('close', null);
 
     // Assert

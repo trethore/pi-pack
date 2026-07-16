@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { withFileMutationQueue } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it } from 'vitest';
 
 import { applyPatch } from '#pi-toolbox/features/apply-patch/apply.js';
@@ -179,8 +180,103 @@ describe('applyPatch', () => {
     // Act and assert
     await expect(applyPatch({ cwd, patch })).rejects.toThrow(`Failed to delete file ${path.join(cwd, 'dir')}`);
   });
+
+  it('rejects adding a file that already exists', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'existing.txt'), 'original\n');
+    const patch = lines('*** Begin Patch', '*** Add File: existing.txt', '+replacement', '*** End Patch');
+
+    // Act and assert
+    await expect(applyPatch({ cwd, patch })).rejects.toThrow('path already exists');
+    expect(readFileSync(path.join(cwd, 'existing.txt'), 'utf8')).toBe('original\n');
+  });
+
+  it('rejects moving a file over an existing destination', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    writeFileSync(path.join(cwd, 'source.txt'), 'source\n');
+    writeFileSync(path.join(cwd, 'destination.txt'), 'destination\n');
+    const patch = lines(
+      '*** Begin Patch',
+      '*** Update File: source.txt',
+      '*** Move to: destination.txt',
+      '@@',
+      '-source',
+      '+moved',
+      '*** End Patch'
+    );
+
+    // Act and assert
+    await expect(applyPatch({ cwd, patch })).rejects.toThrow('destination already exists');
+    expect(readFileSync(path.join(cwd, 'source.txt'), 'utf8')).toBe('source\n');
+    expect(readFileSync(path.join(cwd, 'destination.txt'), 'utf8')).toBe('destination\n');
+  });
+
+  it('rejects planned file paths that conflict as parent and child', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const patch = lines(
+      '*** Begin Patch',
+      '*** Add File: parent',
+      '+parent',
+      '*** Add File: parent/child.txt',
+      '+child',
+      '*** End Patch'
+    );
+
+    // Act and assert
+    await expect(applyPatch({ cwd, patch })).rejects.toThrow('conflicts with planned file');
+    expect(existsSync(path.join(cwd, 'parent'))).toBe(false);
+  });
+
+  it('waits for Pi file mutations targeting the same path', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const targetPath = path.join(cwd, 'shared.txt');
+    writeFileSync(targetPath, 'original\n');
+    const patch = lines(
+      '*** Begin Patch',
+      '*** Update File: shared.txt',
+      '@@',
+      '-original',
+      '+patched',
+      '*** End Patch'
+    );
+    const locked = createDeferred();
+    const release = createDeferred();
+    const existingMutation = withFileMutationQueue(targetPath, async () => {
+      locked.resolve();
+      await release.promise;
+    });
+    await locked.promise;
+    let patchSettled = false;
+
+    // Act
+    const patchOperation = applyPatch({ cwd, patch }).finally(() => {
+      patchSettled = true;
+    });
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+
+    // Assert
+    expect(patchSettled).toBe(false);
+    release.resolve();
+    await existingMutation;
+    await patchOperation;
+    expect(readFileSync(targetPath, 'utf8')).toBe('patched\n');
+  });
 });
 
 function makeTempDir(): string {
   return makePrefixedTempDir('pi-toolbox-apply-patch-test-');
+}
+
+function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }

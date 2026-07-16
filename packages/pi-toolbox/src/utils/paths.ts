@@ -15,6 +15,11 @@ export function formatRipgrepPaths(paths: readonly string[]): string[] {
   return paths.length === 1 && paths[0] === '.' ? [] : [...paths];
 }
 
+export function normalizeToolPath(value: string): string {
+  const normalized = value.trim();
+  return normalized.startsWith('@') ? normalized.slice(1) : normalized;
+}
+
 export function createCompactPathFormatter(searchPaths: readonly string[]): (value: string) => string {
   const formatParts = createCompactPathPartsFormatter(searchPaths);
 

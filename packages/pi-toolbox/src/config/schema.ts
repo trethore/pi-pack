@@ -8,7 +8,7 @@ export interface PiToolboxConfig {
   grep: GrepToolConfig;
 }
 
-export type ApplyPatchToolConfig = EnabledConfig;
+type ApplyPatchToolConfig = EnabledConfig;
 
 export interface FindFilesToolConfig extends EnabledConfig {
   defaultLimit: number;

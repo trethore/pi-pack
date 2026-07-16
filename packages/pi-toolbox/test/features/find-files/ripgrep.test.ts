@@ -1,5 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -11,6 +10,7 @@ import {
   writeHiddenIgnoredFixture,
   writeIndependentDepthFixture,
 } from '#test/utils/ripgrep-test-helpers.js';
+import { makeTempDir as makePrefixedTempDir } from '#test/utils/tool-test-helpers.js';
 
 describe('ripgrep find_files runner', () => {
   it('discovers files with the packaged ripgrep executable', async () => {
@@ -39,7 +39,8 @@ describe('ripgrep find_files runner', () => {
     const result = await findFilesWithDefaults(cwd, { patterns: [] });
 
     // Assert
-    expect(result.files).toEqual(['.gitignore', 'index.ts', 'notes.md']);
+    expect(result.files).toEqual(expect.arrayContaining(['.gitignore', 'index.ts', 'notes.md']));
+    expect(result.files).toHaveLength(3);
   });
 
   it('includes ignored files without glob filters when noIgnore is true', async () => {
@@ -85,7 +86,7 @@ describe('ripgrep find_files runner', () => {
     expect(toRelativeFiles(cwd, result.files)).toEqual(['root/nested/child.txt']);
   });
 
-  it('sorts files by path before applying the collection limit', async () => {
+  it('stops after collecting one result beyond the limit', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'z.txt'), 'z');
@@ -96,7 +97,9 @@ describe('ripgrep find_files runner', () => {
     const result = await findFilesWithDefaults(cwd, { patterns: ['*.txt'], limit: 2 });
 
     // Assert
-    expect(result).toEqual({ files: ['a.txt', 'm.txt'], limited: true });
+    expect(result.files).toHaveLength(2);
+    expect(result.files.every((file) => ['a.txt', 'm.txt', 'z.txt'].includes(file))).toBe(true);
+    expect(result.limited).toBe(true);
   });
 
   it('deduplicates files before applying the collection limit', async () => {
@@ -187,5 +190,5 @@ function findFilesWithDefaults(cwd: string, overrides: Partial<Omit<RunRipgrepFi
 }
 
 function makeTempDir(): string {
-  return mkdtempSync(path.join(tmpdir(), 'pi-toolbox-ripgrep-find-files-test-'));
+  return makePrefixedTempDir('pi-toolbox-ripgrep-find-files-test-');
 }

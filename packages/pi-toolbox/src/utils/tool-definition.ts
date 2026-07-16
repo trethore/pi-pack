@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -25,14 +24,6 @@ interface CreateTextToolDefinitionOptions<TParameters extends TSchema, TDetails>
   parameters: TParameters;
   execute: ToolDefinition<TParameters, TDetails>['execute'];
   formatCall: (args: Static<TParameters> | undefined, theme: Theme) => string;
-}
-
-export function readJsonDefinition<TDefinition>(url: URL): TDefinition {
-  return JSON.parse(readFileSync(url, 'utf8')) as TDefinition;
-}
-
-export function cloneJsonSchema<TSchema>(schema: TSchema): TSchema {
-  return structuredClone(schema);
 }
 
 export function createTextToolDefinition<TParameters extends TSchema, TDetails>(

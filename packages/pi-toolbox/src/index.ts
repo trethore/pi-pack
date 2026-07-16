@@ -14,11 +14,11 @@ const FEATURES: readonly ExtensionFeature<PiToolboxConfig>[] = [
   },
   {
     isEnabled: (config) => config.enabled && config.findFiles.enabled,
-    register: registerFindFilesTool,
+    register: (pi, config) => registerFindFilesTool(pi, config.findFiles),
   },
   {
     isEnabled: (config) => config.enabled && config.grep.enabled,
-    register: registerGrepTool,
+    register: (pi, config) => registerGrepTool(pi, config.grep),
   },
 ];
 

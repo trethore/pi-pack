@@ -22,23 +22,12 @@ const DEFAULT_GREP_CONFIG = {
 };
 
 describe('grep tool', () => {
-  it('does not register when disabled', () => {
+  it('registers the grep tool', () => {
     // Arrange
     const pi = createPi();
 
     // Act
-    registerGrepTool(pi.extensionApi, { grep: { ...DEFAULT_GREP_CONFIG, enabled: false } });
-
-    // Assert
-    expect(pi.tools).toEqual([]);
-  });
-
-  it('registers the grep tool when enabled', () => {
-    // Arrange
-    const pi = createPi();
-
-    // Act
-    registerGrepTool(pi.extensionApi, { grep: DEFAULT_GREP_CONFIG });
+    registerGrepTool(pi.extensionApi, DEFAULT_GREP_CONFIG);
 
     // Assert
     expect(pi.tools.map((tool) => tool.name)).toEqual(['grep']);
@@ -158,6 +147,20 @@ src/index.ts
 
     // Assert
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ paths: ['.'], globs: [] }));
+  });
+
+  it('uses ctx.cwd and strips a leading at-sign from search paths', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'src'));
+    const runner = vi.fn(async () => ({ matches: [], limited: false }));
+    const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG, { runner });
+
+    // Act
+    await tool.execute('call-id', { regexes: ['needle'], paths: ['@src'] }, undefined, undefined, { cwd } as never);
+
+    // Assert
+    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ cwd, paths: ['src'] }));
   });
 
   it('fails when regexes only contain blank values', async () => {

@@ -68,8 +68,6 @@ function buildRipgrepArgs(options: RunRipgrepGrepOptions): string[] {
     '-n',
     '--color',
     'never',
-    '--sort',
-    'path',
     ...(options.limitPerFile === undefined ? [] : ['--max-count', String(options.limitPerFile + 1)]),
     ...formatRipgrepSearchFilterArgs({
       depth: options.depth,

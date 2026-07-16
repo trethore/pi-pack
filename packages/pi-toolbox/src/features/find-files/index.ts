@@ -1,59 +1,40 @@
 import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { Type } from 'typebox';
+import { type Static, Type } from 'typebox';
 
 import type { FindFilesToolConfig } from '#src/config/schema.js';
-import { countFindFiles, formatFindFilesResult } from '#src/features/find-files/format.js';
-import { formatStringList, normalizeOptionalStringList } from '#src/utils/string-list.js';
+import { createFindFilesDisplay, formatFindFilesDisplay } from '#src/features/find-files/format.js';
+import { formatStringList, normalizeOptionalPathList, normalizeOptionalStringList } from '#src/utils/string-list.js';
 import {
-  assertSearchPaths,
-  cloneJsonSchema,
-  createTextToolDefinition,
-  formatToolCall,
-  readJsonDefinition,
-} from '#src/utils/tool-definition.js';
+  createNoIgnoreSchema,
+  createSearchDepthSchema,
+  createSearchPathsSchema,
+  createVisibleOnlySchema,
+} from '#src/utils/search-schema.js';
+import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import {
   runRipgrepFindFiles,
   type RipgrepFindFilesResult,
   type RunRipgrepFindFilesOptions,
 } from '#src/features/find-files/ripgrep.js';
 
-const FIND_FILES_TOOL_DEFINITION = readFindFilesDefinition();
+const FIND_FILES_TOOL_DEFINITION = {
+  name: 'find_files',
+  label: 'find_files',
+  description:
+    'Find files recursively under search roots using `rg --files`, optionally filtered by ripgrep-style glob patterns.',
+  promptSnippet: 'Find files by path and filters',
+  promptGuidelines: [
+    'Use `find_files` for fast file discovery before reading or searching files.',
+    'Use `find_files.paths` as search roots and `find_files.patterns` as optional `rg -g` filters.',
+    '`find_files` always excludes `.git` internals from results.',
+  ],
+};
 
-interface FindFilesParameters {
-  patterns?: string[];
-  paths?: string[];
-  limit?: number;
-  depth?: number;
-  noIgnore?: boolean;
-  visibleOnly?: boolean;
-}
+type FindFilesParameters = Static<ReturnType<typeof createFindFilesParametersSchema>>;
 
 interface PreparedFindFilesParameters extends Required<Omit<FindFilesParameters, 'depth' | 'patterns'>> {
   patterns: string[];
   depth?: number;
-}
-
-interface FindFilesDefinition {
-  name: string;
-  label: string;
-  description: string;
-  promptSnippet: string;
-  promptGuidelines: string[];
-  parameters: FindFilesParametersJsonSchema;
-}
-
-interface FindFilesParametersJsonSchema {
-  type: 'object';
-  additionalProperties: boolean;
-  required?: string[];
-  properties: {
-    patterns: Record<string, unknown>;
-    paths: Record<string, unknown>;
-    limit: { description: string } & Record<string, unknown>;
-    depth: Record<string, unknown>;
-    noIgnore: Record<string, unknown>;
-    visibleOnly: Record<string, unknown>;
-  };
 }
 
 type FindFilesParametersSchema = ReturnType<typeof createFindFilesParametersSchema>;
@@ -70,23 +51,22 @@ export interface FindFilesToolOptions {
   runner?: FindFilesRunner;
 }
 
-export function registerFindFilesTool(pi: ExtensionAPI, config: { findFiles: FindFilesToolConfig }): void {
-  if (!config.findFiles.enabled) return;
-  pi.registerTool(createFindFilesToolDefinition(config.findFiles));
+export function registerFindFilesTool(pi: ExtensionAPI, config: FindFilesToolConfig): void {
+  pi.registerTool(createFindFilesToolDefinition(config));
 }
 
 export function createFindFilesToolDefinition(
   config: FindFilesToolConfig,
   options: FindFilesToolOptions = {}
 ): ToolDefinition<FindFilesParametersSchema, FindFilesToolDetails | undefined> {
-  const cwd = options.cwd ?? process.cwd();
   const runner = options.runner ?? runRipgrepFindFiles;
   const parameters = createFindFilesParametersSchema(config.defaultLimit);
 
   return createTextToolDefinition<FindFilesParametersSchema, FindFilesToolDetails | undefined>({
     metadata: FIND_FILES_TOOL_DEFINITION,
     parameters,
-    async execute(_toolCallId, params, signal) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+      const cwd = options.cwd ?? ctx.cwd;
       const preparedParams = prepareFindFilesParameters(params, config);
       await assertSearchPaths(cwd, preparedParams.paths, {
         toolName: FIND_FILES_TOOL_DEFINITION.name,
@@ -104,22 +84,22 @@ export function createFindFilesToolDefinition(
         signal,
       });
 
-      const count = countFindFiles(result.files, preparedParams.paths);
+      const display = createFindFilesDisplay({
+        paths: preparedParams.paths,
+        files: result.files,
+        limited: result.limited,
+      });
 
       return {
         content: [
           {
             type: 'text',
-            text: formatFindFilesResult({
-              paths: preparedParams.paths,
-              files: result.files,
-              limited: result.limited,
-            }),
+            text: formatFindFilesDisplay(display),
           },
         ],
         details: {
           paths: preparedParams.paths,
-          count,
+          count: display.count,
           limited: result.limited,
         },
       };
@@ -128,21 +108,32 @@ export function createFindFilesToolDefinition(
   });
 }
 
-function readFindFilesDefinition(): FindFilesDefinition {
-  return readJsonDefinition(new URL('find-files-definition.json', import.meta.url));
-}
-
 function createFindFilesParametersSchema(defaultLimit: number) {
-  const parameters = cloneParametersSchema(FIND_FILES_TOOL_DEFINITION.parameters);
-  parameters.properties.limit.description = parameters.properties.limit.description.replace(
-    '{{defaultLimit}}',
-    String(defaultLimit)
+  return Type.Object(
+    {
+      patterns: Type.Optional(
+        Type.Array(Type.String(), {
+          minItems: 1,
+          description:
+            'Optional ripgrep-style glob filter(s) passed with `-g`. Prefix with `!` to exclude. If omitted, all discovered files are returned.',
+        })
+      ),
+      paths: createSearchPathsSchema(
+        'Search root(s). Provide one or more directories. If omitted, the current working directory is used.'
+      ),
+      limit: Type.Optional(
+        Type.Integer({
+          minimum: 1,
+          maximum: 1000,
+          description: `Maximum number of files to return. If omitted, the default limit is ${defaultLimit}.`,
+        })
+      ),
+      depth: createSearchDepthSchema(),
+      noIgnore: createNoIgnoreSchema(),
+      visibleOnly: createVisibleOnlySchema(),
+    },
+    { additionalProperties: false }
   );
-  return Type.Unsafe<FindFilesParameters>(parameters);
-}
-
-function cloneParametersSchema(parameters: FindFilesParametersJsonSchema): FindFilesParametersJsonSchema {
-  return cloneJsonSchema(parameters);
 }
 
 function prepareFindFilesParameters(
@@ -151,7 +142,7 @@ function prepareFindFilesParameters(
 ): PreparedFindFilesParameters {
   return {
     patterns: normalizeOptionalStringList(params.patterns, []),
-    paths: normalizeOptionalStringList(params.paths, ['.']),
+    paths: normalizeOptionalPathList(params.paths, ['.']),
     limit: params.limit ?? config.defaultLimit,
     depth: params.depth,
     noIgnore: params.noIgnore ?? false,

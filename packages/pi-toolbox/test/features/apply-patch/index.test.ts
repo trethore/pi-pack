@@ -5,23 +5,12 @@ import { lines } from '#test/utils/lines.js';
 import { createPi, createRenderContext, createTheme, renderComponent } from '#test/utils/tool-test-helpers.js';
 
 describe('apply_patch tool', () => {
-  it('does not register when disabled', () => {
+  it('registers the apply_patch tool', () => {
     // Arrange
     const pi = createPi();
 
     // Act
-    registerApplyPatchTool(pi.extensionApi, { applyPatch: { enabled: false } });
-
-    // Assert
-    expect(pi.tools).toEqual([]);
-  });
-
-  it('registers the apply_patch tool when enabled', () => {
-    // Arrange
-    const pi = createPi();
-
-    // Act
-    registerApplyPatchTool(pi.extensionApi, { applyPatch: { enabled: true } });
+    registerApplyPatchTool(pi.extensionApi);
 
     // Assert
     expect(pi.tools.map((tool) => tool.name)).toEqual(['apply_patch']);
@@ -29,7 +18,7 @@ describe('apply_patch tool', () => {
 
   it('defines patch as required and workdir as optional in the tool schema', () => {
     // Arrange and act
-    const tool = createApplyPatchToolDefinition({ enabled: true });
+    const tool = createApplyPatchToolDefinition();
     const parameters = tool.parameters as never as {
       required: string[];
       properties: {
@@ -51,13 +40,14 @@ describe('apply_patch tool', () => {
 
   it('joins multiline definition descriptions', () => {
     // Arrange and act
-    const tool = createApplyPatchToolDefinition({ enabled: true });
+    const tool = createApplyPatchToolDefinition();
 
     // Assert
     expect(tool.description).toBe(
       lines(
         'Apply a patch using a simplified, file-oriented diff format.',
         'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',
+        'Add targets and move destinations must not already exist.',
         'Automatically creates parent directories. Optionally, specify a working directory to resolve relative paths.'
       )
     );
@@ -71,13 +61,13 @@ describe('apply_patch tool', () => {
       modified: ['modified.txt'],
       deleted: ['deleted.txt'],
     }));
-    const tool = createApplyPatchToolDefinition({ enabled: true }, { cwd, runner });
+    const tool = createApplyPatchToolDefinition({ cwd, runner });
     const patch = lines('*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch');
 
     // Act
     const result = await tool.execute(
       'call-id',
-      { patch, workdir: 'packages/pi-toolbox' },
+      { patch, workdir: '@packages/pi-toolbox' },
       undefined,
       undefined,
       {} as never
@@ -99,12 +89,25 @@ describe('apply_patch tool', () => {
     ]);
   });
 
+  it('uses the execution context working directory', async () => {
+    // Arrange
+    const runner = vi.fn(async () => ({ added: [], modified: [], deleted: [] }));
+    const tool = createApplyPatchToolDefinition({ runner });
+    const patch = lines('*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch');
+
+    // Act
+    await tool.execute('call-id', { patch }, undefined, undefined, { cwd: '/session/project' } as never);
+
+    // Assert
+    expect(runner).toHaveBeenCalledWith({ cwd: '/session/project', patch, workdir: undefined });
+  });
+
   it('wraps runner errors with the tool name', async () => {
     // Arrange
     const runner = vi.fn(async () => {
       throw new Error('boom');
     });
-    const tool = createApplyPatchToolDefinition({ enabled: true }, { runner });
+    const tool = createApplyPatchToolDefinition({ runner });
 
     // Act and assert
     await expect(
@@ -115,7 +118,7 @@ describe('apply_patch tool', () => {
   it('renders calls and results', async () => {
     // Arrange
     const runner = vi.fn(async () => ({ added: ['created.txt'], modified: [], deleted: [] }));
-    const tool = createApplyPatchToolDefinition({ enabled: true }, { runner });
+    const tool = createApplyPatchToolDefinition({ runner });
     const theme = createTheme();
     const renderContext = createRenderContext(false);
     const patch = lines('*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch');

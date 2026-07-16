@@ -4,12 +4,11 @@ import { InvalidHunkError, InvalidPatchError, parsePatch } from '#pi-toolbox/fea
 import { lines } from '#test/utils/lines.js';
 
 describe('apply_patch parser', () => {
-  it('parses add, delete, update, move, and environment id hunks', () => {
+  it('parses add, delete, update, and move hunks', () => {
     // Arrange
     const patch = lines(
       '*** Begin Patch',
-      '*** Environment ID: local',
-      '*** Add File: created.txt',
+      '*** Add File: @created.txt',
       '+created',
       '*** Delete File: obsolete.txt',
       '*** Update File: old.txt',
@@ -24,7 +23,6 @@ describe('apply_patch parser', () => {
     const result = parsePatch(patch);
 
     // Assert
-    expect(result.environmentId).toBe('local');
     expect(result.hunks).toEqual([
       { type: 'add', path: 'created.txt', contents: 'created\n' },
       { type: 'delete', path: 'obsolete.txt' },
@@ -44,18 +42,16 @@ describe('apply_patch parser', () => {
     ]);
   });
 
-  it('accepts heredoc-wrapped patch text', () => {
-    // Arrange
-    const patch = lines("<<'EOF'", '*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch', 'EOF');
-
-    // Act and assert
-    expect(parsePatch(patch).hunks).toEqual([{ type: 'add', path: 'created.txt', contents: 'created\n' }]);
-  });
-
   it.each([
     [
       'missing begin marker',
       lines('bad', '*** End Patch'),
+      InvalidPatchError,
+      "The first line of the patch must be '*** Begin Patch'",
+    ],
+    [
+      'heredoc wrapper',
+      lines("<<'EOF'", '*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch', 'EOF'),
       InvalidPatchError,
       "The first line of the patch must be '*** Begin Patch'",
     ],
@@ -72,10 +68,22 @@ describe('apply_patch parser', () => {
       "'*** Frobnicate File: a' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'",
     ],
     [
+      'missing space after path marker',
+      lines('*** Begin Patch', '*** Add File:a', '+x', '*** End Patch'),
+      InvalidHunkError,
+      "'*** Add File:a' is not a valid hunk header",
+    ],
+    [
       'empty update hunk',
       lines('*** Begin Patch', '*** Update File: a', '*** End Patch'),
       InvalidHunkError,
       "Update file hunk for path 'a' is empty",
+    ],
+    [
+      'empty file path',
+      lines('*** Begin Patch', '*** Add File: ', '+x', '*** End Patch'),
+      InvalidHunkError,
+      "Path after '*** Add File:' cannot be empty",
     ],
   ])('rejects %s', (_name, patch, errorConstructor, message) => {
     // Act and assert

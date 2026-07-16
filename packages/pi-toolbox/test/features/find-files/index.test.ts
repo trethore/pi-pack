@@ -17,23 +17,12 @@ import {
 } from '#test/utils/tool-test-helpers.js';
 
 describe('find_files tool', () => {
-  it('does not register when disabled', () => {
+  it('registers the find_files tool', () => {
     // Arrange
     const pi = createPi();
 
     // Act
-    registerFindFilesTool(pi.extensionApi, { findFiles: { enabled: false, defaultLimit: 100 } });
-
-    // Assert
-    expect(pi.tools).toEqual([]);
-  });
-
-  it('registers the find_files tool when enabled', () => {
-    // Arrange
-    const pi = createPi();
-
-    // Act
-    registerFindFilesTool(pi.extensionApi, { findFiles: { enabled: true, defaultLimit: 100 } });
+    registerFindFilesTool(pi.extensionApi, { enabled: true, defaultLimit: 100 });
 
     // Assert
     expect(pi.tools.map((tool) => tool.name)).toEqual(['find_files']);
@@ -118,6 +107,20 @@ src/index.ts`,
 
     // Assert
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ patterns: [], paths: ['.'] }));
+  });
+
+  it('uses ctx.cwd and strips a leading at-sign from search paths', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'src'));
+    const runner = vi.fn(async () => ({ files: [], limited: false }));
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { runner });
+
+    // Act
+    await tool.execute('call-id', { paths: ['@src'] }, undefined, undefined, { cwd } as never);
+
+    // Assert
+    expect(runner).toHaveBeenCalledWith(expect.objectContaining({ cwd, paths: ['src'] }));
   });
 
   it('deduplicates files returned through overlapping search paths in details', async () => {

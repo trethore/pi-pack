@@ -1,5 +1,4 @@
 import { formatRipgrepPaths } from '#src/utils/paths.js';
-import { formatRipgrepDepthArgs } from '#src/utils/ripgrep-depth.js';
 import { formatRipgrepExclusionGlobArgs, formatRipgrepHiddenArgs } from '#src/utils/ripgrep-visibility.js';
 
 export interface RipgrepSearchFilterArgsOptions {
@@ -15,7 +14,7 @@ export interface RipgrepSearchArgsOptions extends RipgrepSearchFilterArgsOptions
 
 export function formatRipgrepSearchFilterArgs(options: RipgrepSearchFilterArgsOptions): string[] {
   return [
-    ...formatRipgrepDepthArgs(options.depth),
+    ...(options.depth === undefined ? [] : ['--max-depth', String(options.depth)]),
     ...formatRipgrepHiddenArgs(options.visibleOnly),
     ...options.globs.flatMap((glob) => ['-g', glob]),
     ...formatRipgrepExclusionGlobArgs(options.visibleOnly),

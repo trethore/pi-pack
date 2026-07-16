@@ -1,11 +1,19 @@
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import type { Component } from '@earendil-works/pi-tui';
-import { expect } from 'vitest';
+import { afterEach, expect } from 'vitest';
 
 const RENDER_WIDTH = 240;
+const temporaryDirectories = new Set<string>();
+
+afterEach(() => {
+  for (const directory of temporaryDirectories) {
+    rmSync(directory, { force: true, recursive: true });
+  }
+  temporaryDirectories.clear();
+});
 
 export function createPi() {
   const state = {
@@ -83,5 +91,7 @@ export function renderToolResult<TResult>(
 }
 
 export function makeTempDir(prefix: string): string {
-  return mkdtempSync(path.join(tmpdir(), prefix));
+  const directory = mkdtempSync(path.join(tmpdir(), prefix));
+  temporaryDirectories.add(directory);
+  return directory;
 }

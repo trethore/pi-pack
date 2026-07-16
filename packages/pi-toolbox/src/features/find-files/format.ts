@@ -1,10 +1,15 @@
 import { createCompactPathFormatter } from '#src/utils/paths.js';
-import { sortedItems } from '#src/utils/sorted-items.js';
 
 export interface FindFilesFormatOptions {
   paths: readonly string[];
   files: readonly string[];
   limited?: boolean;
+}
+
+export interface FindFilesDisplay {
+  files: string[][];
+  count: number;
+  limited: boolean;
 }
 
 interface TreeNode {
@@ -17,20 +22,24 @@ interface CompressedNode {
   node: TreeNode;
 }
 
-export function countFindFiles(files: readonly string[], paths: readonly string[] = ['.']): number {
-  return normalizeFiles(files, paths).length;
+export function createFindFilesDisplay(options: FindFilesFormatOptions): FindFilesDisplay {
+  const files = normalizeFiles(options.files, options.paths);
+  return { files, count: files.length, limited: options.limited ?? false };
 }
 
 export function formatFindFilesResult(options: FindFilesFormatOptions): string {
-  const root = createNode();
-  const files = normalizeFiles(options.files, options.paths);
+  return formatFindFilesDisplay(createFindFilesDisplay(options));
+}
 
-  for (const file of files) {
+export function formatFindFilesDisplay(display: FindFilesDisplay): string {
+  const root = createNode();
+
+  for (const file of display.files) {
     addPath(root, file);
   }
 
-  const footer = options.limited ? ['[more files available]'] : [];
-  return [`found=${files.length}`, ...formatChildren(root, 0), ...footer].join('\n');
+  const footer = display.limited ? ['[more files available]'] : [];
+  return [`found=${display.count}`, ...formatChildren(root, 0), ...footer].join('\n');
 }
 
 function createNode(): TreeNode {
@@ -47,7 +56,7 @@ function normalizeFiles(files: readonly string[], paths: readonly string[]): str
     if (parts.length > 0) uniqueFiles.set(displayPath, parts);
   }
 
-  return sortedItems(uniqueFiles.entries(), ([left], [right]) => left.localeCompare(right)).map(([, parts]) => parts);
+  return [...uniqueFiles.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, parts]) => parts);
 }
 
 function splitDisplayPath(displayPath: string): string[] {
@@ -101,7 +110,7 @@ function joinPathLabel(left: string, right: string): string {
 }
 
 function sortedEntries(children: Map<string, TreeNode>): [string, TreeNode][] {
-  return sortedItems(children.entries(), ([leftName, leftNode], [rightName, rightNode]) => {
+  return [...children.entries()].sort(([leftName, leftNode], [rightName, rightNode]) => {
     if (leftNode.isFile !== rightNode.isFile) return leftNode.isFile ? -1 : 1;
     return leftName.localeCompare(rightName);
   });

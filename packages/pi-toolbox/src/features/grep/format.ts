@@ -1,5 +1,4 @@
 import { createCompactPathFormatter } from '#src/utils/paths.js';
-import { sortedItems } from '#src/utils/sorted-items.js';
 
 interface GrepMatch {
   file: string;
@@ -85,7 +84,7 @@ function normalizeMatches(matches: readonly GrepMatch[], paths: readonly string[
     normalizedMatches.push(normalizedMatch);
   }
 
-  return sortedItems(normalizedMatches, compareMatches);
+  return normalizedMatches.sort(compareMatches);
 }
 
 function compareMatches(left: GrepMatch, right: GrepMatch): number {

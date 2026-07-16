@@ -35,8 +35,6 @@ export async function runRipgrepFindFiles(options: RunRipgrepFindFilesOptions): 
 function buildRipgrepArgs(options: RunRipgrepFindFilesOptions): string[] {
   return [
     '--files',
-    '--sort',
-    'path',
     ...formatRipgrepSearchArgs({
       depth: options.depth,
       globs: options.patterns,

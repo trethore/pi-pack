@@ -63,12 +63,13 @@ export function runRipgrepLines<T>(options: RunRipgrepLinesOptions<T>): Promise<
 
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk: string) => {
-      if (settled) return;
+      if (settled || limited) return;
 
       stdoutBuffer += chunk;
       collectCompleteLines();
       if (items.length >= collectionLimit) {
         limited = true;
+        stdoutBuffer = '';
         child.kill();
       }
     });

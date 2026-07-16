@@ -1,54 +1,53 @@
 import type { ExtensionAPI, Theme, ToolDefinition, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
 import { Text } from '@earendil-works/pi-tui';
-import { Type } from 'typebox';
+import { type Static, Type } from 'typebox';
 
-import type { ApplyPatchToolConfig } from '#src/config/schema.js';
 import { applyPatch, type ApplyPatchOptions, type ApplyPatchResult } from '#src/features/apply-patch/apply.js';
 import { countApplyPatchSummary, formatApplyPatchSummary } from '#src/features/apply-patch/format.js';
 import { formatPatchParseError, InvalidHunkError, InvalidPatchError } from '#src/features/apply-patch/parser.js';
-import {
-  cloneJsonSchema,
-  createTextToolDefinition,
-  formatToolCall,
-  readJsonDefinition,
-} from '#src/utils/tool-definition.js';
+import { normalizeToolPath } from '#src/utils/paths.js';
+import { createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { formatTextToolResult } from '#src/utils/tool-results.js';
 
-const APPLY_PATCH_TOOL_DEFINITION = readApplyPatchDefinition();
+const APPLY_PATCH_PARAMETERS = Type.Object(
+  {
+    patch: Type.String({ description: 'Patch to apply.' }),
+    workdir: Type.Optional(
+      Type.String({
+        description:
+          'Optional working directory for resolving relative paths in the patch. If omitted, paths are resolved against the current working directory.',
+      })
+    ),
+  },
+  { additionalProperties: false }
+);
 
-interface ApplyPatchParameters {
-  patch: string;
-  workdir?: string;
-}
+const APPLY_PATCH_TOOL_DEFINITION = {
+  name: 'apply_patch',
+  label: 'apply_patch',
+  description: [
+    'Apply a patch using a simplified, file-oriented diff format.',
+    'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',
+    'Add targets and move destinations must not already exist.',
+    'Automatically creates parent directories. Optionally, specify a working directory to resolve relative paths.',
+  ].join('\n'),
+  promptSnippet: 'Apply add, update, delete, and move file edits from a patch',
+  promptGuidelines: [
+    'Use `apply_patch` to edit file contents or file paths using the Codex apply_patch format.',
+    'The `apply_patch` input must start with `*** Begin Patch\n` and end with `*** End Patch\n`.',
+    '`apply_patch` supports `*** Add File:`, `*** Delete File:`, and `*** Update File:` hunks with optional `*** Move to:`.',
+    '`apply_patch` requires add targets and move destinations not to exist.',
+    'Relative paths passed to `apply_patch` are resolved against `workdir` when provided; otherwise, they are resolved against the current working directory.',
+  ],
+};
 
-interface ApplyPatchDefinition {
-  name: string;
-  label: string;
-  description: string | string[];
-  promptSnippet: string;
-  promptGuidelines: string[];
-  parameters: ApplyPatchParametersJsonSchema;
-}
-
-interface NormalizedApplyPatchDefinition extends Omit<ApplyPatchDefinition, 'description'> {
-  description: string;
-}
-
-interface ApplyPatchParametersJsonSchema {
-  type: 'object';
-  additionalProperties: boolean;
-  required: string[];
-  properties: {
-    patch: Record<string, unknown>;
-    workdir: Record<string, unknown>;
-  };
-}
+type ApplyPatchParameters = Static<typeof APPLY_PATCH_PARAMETERS>;
 
 interface TextRenderContext {
   lastComponent?: unknown;
 }
 
-type ApplyPatchParametersSchema = ReturnType<typeof createApplyPatchParametersSchema>;
+type ApplyPatchParametersSchema = typeof APPLY_PATCH_PARAMETERS;
 type ApplyPatchRunner = (options: ApplyPatchOptions) => Promise<ApplyPatchResult>;
 
 export interface ApplyPatchToolDetails extends ApplyPatchResult {
@@ -60,24 +59,21 @@ export interface ApplyPatchToolOptions {
   runner?: ApplyPatchRunner;
 }
 
-export function registerApplyPatchTool(pi: ExtensionAPI, config: { applyPatch: ApplyPatchToolConfig }): void {
-  if (!config.applyPatch.enabled) return;
-  pi.registerTool(createApplyPatchToolDefinition(config.applyPatch));
+export function registerApplyPatchTool(pi: ExtensionAPI): void {
+  pi.registerTool(createApplyPatchToolDefinition());
 }
 
 export function createApplyPatchToolDefinition(
-  _config: ApplyPatchToolConfig,
   options: ApplyPatchToolOptions = {}
 ): ToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined> {
-  const cwd = options.cwd ?? process.cwd();
   const runner = options.runner ?? applyPatch;
-  const parameters = createApplyPatchParametersSchema();
 
   const tool = createTextToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined>({
     metadata: APPLY_PATCH_TOOL_DEFINITION,
-    parameters,
-    async execute(_toolCallId, params) {
+    parameters: APPLY_PATCH_PARAMETERS,
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
+        const cwd = options.cwd ?? ctx.cwd;
         const result = await runner({ cwd, patch: params.patch, workdir: normalizeWorkdir(params.workdir) });
         return {
           content: [
@@ -106,21 +102,10 @@ export function createApplyPatchToolDefinition(
   };
 }
 
-function readApplyPatchDefinition(): NormalizedApplyPatchDefinition {
-  const definition = readJsonDefinition<ApplyPatchDefinition>(new URL('apply-patch-definition.json', import.meta.url));
-  return {
-    ...definition,
-    description: Array.isArray(definition.description) ? definition.description.join('\n') : definition.description,
-  };
-}
-
-function createApplyPatchParametersSchema() {
-  return Type.Unsafe<ApplyPatchParameters>(cloneJsonSchema(APPLY_PATCH_TOOL_DEFINITION.parameters));
-}
-
 function normalizeWorkdir(workdir: string | undefined): string | undefined {
-  const trimmed = workdir?.trim();
-  return trimmed === undefined || trimmed.length === 0 ? undefined : trimmed;
+  if (workdir === undefined) return undefined;
+  const normalized = normalizeToolPath(workdir);
+  return normalized.length === 0 ? undefined : normalized;
 }
 
 function formatApplyPatchCall(args: ApplyPatchParameters | undefined, theme: Theme): string {

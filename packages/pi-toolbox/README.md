@@ -80,6 +80,8 @@ Project configuration overrides global configuration. See [`pi-toolbox.example.j
 
 Applies structured file edits using the Codex apply-patch format.
 
+`*** Add File:` targets and `*** Move to:` destinations must not already exist. The operation is serialized with Pi's file mutation queue and rolls back completed writes if a later filesystem operation fails.
+
 | Argument  | Required | Description                                                                                                          |
 | --------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
 | `patch`   | Yes      | Patch text starting with `*** Begin Patch` and ending with `*** End Patch`.                                          |
