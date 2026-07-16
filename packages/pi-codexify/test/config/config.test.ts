@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { resetConfigTestEnvironment } from '@trethore/pi-shared/test/config-test-helpers.js';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import * as configTest from '#test/utils/config-test-helpers.js';
 
@@ -11,11 +12,7 @@ const CODEXIFY_DEFAULT_CONFIG = {
 };
 
 describe('loadConfig', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.doUnmock('node:os');
-    vi.resetModules();
-  });
+  afterEach(resetConfigTestEnvironment);
 
   it('loads defaults when no config files exist', async () => {
     const loaded = await loadConfigForFreshProject();

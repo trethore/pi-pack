@@ -33,6 +33,12 @@ export function importWithHome<TModule>(homeDir: string, importModule: () => Pro
   return importModule();
 }
 
+export function resetConfigTestEnvironment(): void {
+  vi.unstubAllEnvs();
+  vi.doUnmock('node:os');
+  vi.resetModules();
+}
+
 export function createConfigTestFileHelpers(options: ConfigTestFileHelpersOptions) {
   return {
     makeTempDir(): string {
