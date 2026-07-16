@@ -16,6 +16,7 @@ const TOOLBOX_DEFAULT_CONFIG = {
 
 describe('loadConfig', () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.doUnmock('node:os');
     vi.resetModules();
   });

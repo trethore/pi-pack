@@ -24,6 +24,7 @@ export function createConfigTestHelpers<TModule>(options: ConfigTestHelpersOptio
 
 export function importWithHome<TModule>(homeDir: string, importModule: () => Promise<TModule>): Promise<TModule> {
   vi.resetModules();
+  vi.stubEnv('PI_CODING_AGENT_DIR', path.join(homeDir, '.pi', 'agent'));
   vi.doMock('node:os', async (importOriginal) => ({
     ...(await importOriginal<typeof import('node:os')>()),
     homedir: () => homeDir,

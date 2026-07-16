@@ -14,7 +14,7 @@ Tiny and token-efficient MCP adapter for Pi.
 
 Pi-specific config is loaded from:
 
-1. `~/.pi/agent/pi-tiny-mcp.jsonc`
+1. `$PI_CODING_AGENT_DIR/pi-tiny-mcp.jsonc` (defaults to `~/.pi/agent/pi-tiny-mcp.jsonc`)
 2. `<project>/.pi/pi-tiny-mcp.jsonc`
 
 Standard MCP servers are also read by default from:

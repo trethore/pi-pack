@@ -10,6 +10,7 @@ type LoadedPiCutConfig = Awaited<ReturnType<typeof loadProjectConfig>>['config']
 
 describe('loadConfig', () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.doUnmock('node:os');
     vi.resetModules();
   });

@@ -6,7 +6,7 @@ Cost-cutting strategies.
 
 `pi-cut` reads JSONC config from:
 
-1. `~/.pi/agent/pi-cut.jsonc`
+1. `$PI_CODING_AGENT_DIR/pi-cut.jsonc` (defaults to `~/.pi/agent/pi-cut.jsonc`)
 2. `.pi/pi-cut.jsonc`
 
 Project config overrides global config. See [`pi-cut.example.jsonc`](./pi-cut.example.jsonc) for a copyable template.

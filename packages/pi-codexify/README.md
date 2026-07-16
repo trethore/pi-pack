@@ -35,7 +35,7 @@ Control commands update `pi-codexify.jsonc`. If a trusted project config exists,
 
 Supported config locations:
 
-- Global: `~/.pi/agent/pi-codexify.jsonc`
+- Global: `$PI_CODING_AGENT_DIR/pi-codexify.jsonc` (defaults to `~/.pi/agent/pi-codexify.jsonc`)
 - Project: `.pi/pi-codexify.jsonc`
 
 Project config overrides global config when the project is trusted.

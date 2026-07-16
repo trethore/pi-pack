@@ -6,7 +6,7 @@ Inject command output in your prompt files via templates.
 
 `pi-command-template` reads JSONC config from:
 
-1. `~/.pi/agent/pi-command-template.jsonc`
+1. `$PI_CODING_AGENT_DIR/pi-command-template.jsonc` (defaults to `~/.pi/agent/pi-command-template.jsonc`)
 2. `.pi/pi-command-template.jsonc`
 
 Project config overrides global config. See [`pi-command-template.example.jsonc`](./pi-command-template.example.jsonc) for a copyable template.

@@ -6,7 +6,7 @@ Various and useful tools.
 
 `pi-toolbox` reads JSONC config from:
 
-1. `~/.pi/agent/pi-toolbox.jsonc`
+1. `$PI_CODING_AGENT_DIR/pi-toolbox.jsonc` (defaults to `~/.pi/agent/pi-toolbox.jsonc`)
 2. `.pi/pi-toolbox.jsonc`
 
 Project config overrides global config. See [`pi-toolbox.example.jsonc`](./pi-toolbox.example.jsonc) for a copyable template.

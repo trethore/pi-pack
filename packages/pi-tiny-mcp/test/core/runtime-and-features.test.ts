@@ -15,6 +15,7 @@ describe('runtime and feature tests', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     vi.doUnmock('node:os');
     vi.resetModules();
   });

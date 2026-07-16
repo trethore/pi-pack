@@ -6,7 +6,7 @@ Disable pi tools with wildcard masks.
 
 `pi-toolmask` reads JSONC config from:
 
-1. `~/.pi/agent/pi-toolmask.jsonc`
+1. `$PI_CODING_AGENT_DIR/pi-toolmask.jsonc` (defaults to `~/.pi/agent/pi-toolmask.jsonc`)
 2. `.pi/pi-toolmask.jsonc`
 
 Project config overrides global config. See [`pi-toolmask.example.jsonc`](./pi-toolmask.example.jsonc) for a copyable template.
