@@ -28,7 +28,7 @@ describe('find_files tool', () => {
     expect(pi.tools.map((tool) => tool.name)).toEqual(['find_files']);
   });
 
-  it('defines optional patterns, limit, and depth in the tool schema', () => {
+  it('defines optional search parameters in the tool schema', () => {
     // Arrange and act
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 42 });
     const parameters = tool.parameters as never as {
@@ -37,6 +37,8 @@ describe('find_files tool', () => {
         patterns: { description: string };
         limit: { description: string };
         depth: { minimum: number; description: string };
+        noIgnore: { description: string };
+        visibleOnly: { description: string };
       };
     };
 
@@ -54,6 +56,12 @@ describe('find_files tool', () => {
         description:
           'Maximum directory traversal depth relative to each search path. If provided, passes `--max-depth <depth>`. If omitted, traversal is unlimited.',
       })
+    );
+    expect(parameters.properties.noIgnore.description).toBe(
+      'Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted or false, ignore rules remain active.'
+    );
+    expect(parameters.properties.visibleOnly.description).toBe(
+      'Search only non-hidden files and directories. If omitted or false, hidden files are included.'
     );
   });
 

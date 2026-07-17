@@ -18,7 +18,7 @@ export function createNoIgnoreSchema() {
   return Type.Optional(
     Type.Boolean({
       description:
-        'Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted, defaults to false.',
+        'Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted or false, ignore rules remain active.',
     })
   );
 }
@@ -26,8 +26,7 @@ export function createNoIgnoreSchema() {
 export function createVisibleOnlySchema() {
   return Type.Optional(
     Type.Boolean({
-      description:
-        'Search only non-hidden files and directories. If omitted or false, hidden files are included by default.',
+      description: 'Search only non-hidden files and directories. If omitted or false, hidden files are included.',
     })
   );
 }
