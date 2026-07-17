@@ -9,19 +9,6 @@ import { normalizeToolPath } from '#src/utils/paths.js';
 import { createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { formatTextToolResult } from '#src/utils/tool-results.js';
 
-const APPLY_PATCH_PARAMETERS = Type.Object(
-  {
-    patch: Type.String({ description: 'Patch to apply.' }),
-    workdir: Type.Optional(
-      Type.String({
-        description:
-          'Optional working directory for resolving relative paths in the patch. If omitted, paths are resolved against the current working directory.',
-      })
-    ),
-  },
-  { additionalProperties: false }
-);
-
 const APPLY_PATCH_TOOL_DEFINITION = {
   name: 'apply_patch',
   label: 'apply_patch',
@@ -40,6 +27,19 @@ const APPLY_PATCH_TOOL_DEFINITION = {
     'Relative paths passed to `apply_patch` are resolved against `workdir` when provided; otherwise, they are resolved against the current working directory.',
   ],
 };
+
+const APPLY_PATCH_PARAMETERS = Type.Object(
+  {
+    patch: Type.String({ description: 'Patch to apply.' }),
+    workdir: Type.Optional(
+      Type.String({
+        description:
+          'Optional working directory for resolving relative paths in the patch. If omitted, paths are resolved against the current working directory.',
+      })
+    ),
+  },
+  { additionalProperties: false }
+);
 
 type ApplyPatchParameters = Static<typeof APPLY_PATCH_PARAMETERS>;
 
