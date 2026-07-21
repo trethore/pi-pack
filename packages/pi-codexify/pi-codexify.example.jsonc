@@ -1,7 +1,7 @@
 {
   "enabled": true,
 
-  "codex": {
+  "controls": {
     "enabled": true,
 
     // Controls OpenAI Responses / Codex-style payload text verbosity.
@@ -17,6 +17,9 @@
     // In project config, null also disables an inherited global override.
     "reasoningSummary": "auto",
 
+    // Enables the native OpenAI Codex web_search tool.
+    "webSearch": true,
+
     // Controls Responses API service tier for supported Codex payloads.
     // Supported values: "default", "priority".
     // "priority" requests priority processing.
@@ -24,19 +27,10 @@
     "serviceTier": "default"
   },
 
-  "usage": {
-    // Enables /codexify usage.
-    "enabled": true
-  },
+  // Enables /codexify usage.
+  "usage": true,
 
-  "reset": {
-    // Enables /codexify reset use|details.
-    // /codexify reset use always asks for confirmation before consuming a credit.
-    "enabled": true
-  },
-
-  "webSearch": {
-    // Enables the native OpenAI Codex web_search tool.
-    "enabled": true
-  }
+  // Enables /codexify reset use|details.
+  // /codexify reset use always asks for confirmation before consuming a credit.
+  "reset": true
 }

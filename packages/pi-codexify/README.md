@@ -58,25 +58,21 @@ Project configuration overrides global configuration when the project is trusted
 ```jsonc
 {
   "enabled": true,
-  "codex": {
+  "controls": {
     "enabled": true,
     "verbosity": "medium",
     "reasoningSummary": "auto",
     "serviceTier": "default",
+    "webSearch": true,
   },
-  "usage": {
-    "enabled": true,
-  },
-  "reset": {
-    "enabled": true,
-  },
-  "webSearch": {
-    "enabled": true,
-  },
+  "usage": true,
+  "reset": true,
 }
 ```
 
-Omitted or `null` control values leave the provider payload unchanged. In project configuration, `null` disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` while preserving other reasoning fields.
+Everything under `controls` modifies outgoing provider payloads. Setting `controls.enabled` to `false` disables all payload modifications, including native web search.
+
+Omitted or `null` optional control values leave the provider payload unchanged. In project configuration, `null` disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` while preserving other reasoning fields. The `usage` and `reset` booleans control their corresponding subcommands.
 
 ## Commands
 

@@ -13,54 +13,47 @@ describe('updateJsoncFile', () => {
 
     // Act
     await updateJsoncFile(filePath, [
-      { path: ['codex', 'verbosity'], value: 'high' },
-      { path: ['webSearch', 'enabled'], value: false },
+      { path: ['controls', 'verbosity'], value: 'high' },
+      { path: ['controls', 'webSearch'], value: false },
     ]);
 
     // Assert
     expect(readFileSync(filePath, 'utf8')).toBe(
-      `{
-  "codex": {
-    "verbosity": "high"
-  },
-  "webSearch": {
-    "enabled": false
-  }
-}
-`
+      lines('{', '  "controls": {', '    "verbosity": "high",', '    "webSearch": false', '  }', '}')
     );
   });
 
   it('removes configured empty parent objects after deleting values', async () => {
     // Arrange
     const filePath = path.join(makeTempDir(), 'pi-codexify.jsonc');
-    writeFileSync(filePath, '{\n  "codex": {\n    "verbosity": "low"\n  },\n  "enabled": true\n}\n');
+    writeFileSync(filePath, lines('{', '  "controls": {', '    "verbosity": "low"', '  },', '  "enabled": true', '}'));
 
     // Act
-    await updateJsoncFile(filePath, [{ path: ['codex', 'verbosity'], value: undefined }], [['codex']]);
+    await updateJsoncFile(filePath, [{ path: ['controls', 'verbosity'], value: undefined }], [['controls']]);
 
     // Assert
-    expect(readFileSync(filePath, 'utf8')).toBe(`{
-  "enabled": true
-}
-`);
+    expect(readFileSync(filePath, 'utf8')).toBe(lines('{', '  "enabled": true', '}'));
   });
 
   it('preserves detected indentation and end of line style', async () => {
     // Arrange
     const filePath = path.join(makeTempDir(), 'pi-codexify.jsonc');
-    writeFileSync(filePath, '{\r\n\t"codex": {\r\n\t\t"verbosity": "low"\r\n\t}\r\n}\r\n');
+    writeFileSync(filePath, '{\r\n\t"controls": {\r\n\t\t"verbosity": "low"\r\n\t}\r\n}\r\n');
 
     // Act
-    await updateJsoncFile(filePath, [{ path: ['codex', 'reasoningSummary'], value: 'auto' }]);
+    await updateJsoncFile(filePath, [{ path: ['controls', 'reasoningSummary'], value: 'auto' }]);
 
     // Assert
     expect(readFileSync(filePath, 'utf8')).toBe(
-      '{\r\n\t"codex": {\r\n\t\t"verbosity": "low",\r\n\t\t"reasoningSummary": "auto"\r\n\t}\r\n}\r\n'
+      '{\r\n\t"controls": {\r\n\t\t"verbosity": "low",\r\n\t\t"reasoningSummary": "auto"\r\n\t}\r\n}\r\n'
     );
   });
 });
 
 function makeTempDir(): string {
   return mkdtempSync(path.join(tmpdir(), 'pi-codexify-test-'));
+}
+
+function lines(...values: string[]): string {
+  return `${values.join('\n')}\n`;
 }

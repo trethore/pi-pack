@@ -2,7 +2,7 @@ import { createConfigTestHelpers } from '@trethore/pi-shared/test/config-test-he
 
 const { importConfigWithHome, makeTempDir, writeGlobalConfig, writeProjectConfig } = createConfigTestHelpers({
   configFileName: 'pi-codexify.jsonc',
-  importConfig: () => import('#pi-codexify/config/config.js'),
+  importConfig: () => import('#pi-codexify/config/load.js'),
   tempPrefix: 'pi-codexify-test-',
 });
 
