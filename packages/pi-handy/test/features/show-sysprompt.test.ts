@@ -4,7 +4,7 @@ import {
   formatToolSchemas,
   getShowSyspromptArgumentCompletions,
   handleShowSyspromptCommand,
-} from '#pi-handy/features/show-sysprompt/index.js';
+} from '#pi-handy/features/show-sysprompt.js';
 import type { ExtensionAPI, ToolInfo } from '@earendil-works/pi-coding-agent';
 
 describe('show sysprompt command', () => {

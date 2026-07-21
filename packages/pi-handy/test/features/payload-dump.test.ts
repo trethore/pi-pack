@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { dumpProviderPayload, stringifyPayload } from '#pi-handy/features/payload-dump/index.js';
+import { dumpProviderPayload, stringifyPayload } from '#pi-handy/features/payload-dump.js';
 
 describe('payload dump command', () => {
   it('dumps provider request payload to the agent directory', async () => {

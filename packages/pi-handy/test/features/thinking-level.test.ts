@@ -5,7 +5,7 @@ import {
   getThinkingLevelArgumentCompletions,
   handleThinkingLevelCommand,
   registerThinkingLevelCommand,
-} from '#pi-handy/features/thinking-level/index.js';
+} from '#pi-handy/features/thinking-level.js';
 
 type TestModel = {
   id: string;

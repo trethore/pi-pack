@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldNewLines } from '#pi-cut/features/new-lines-folding/fold-new-lines.js';
+import { foldNewLines } from '#pi-cut/features/fold-new-lines.js';
 
 const defaultConfig = {
   enabled: true,

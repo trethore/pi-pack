@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanTerminalOutput } from '#pi-cut/features/terminal-cleanup/clean-terminal-output.js';
+import { cleanTerminalOutput } from '#pi-cut/features/clean-terminal-output.js';
 
 describe('cleanTerminalOutput', () => {
   it('strips ANSI escape sequences when enabled', () => {

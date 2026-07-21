@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { formatTimeTaken, registerTimeTakenFeature } from '#pi-handy/features/time-taken/index.js';
+import { formatTimeTaken, registerTimeTakenFeature } from '#pi-handy/features/time-taken.js';
 
 describe('time taken feature', () => {
   afterEach(() => {
