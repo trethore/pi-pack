@@ -1,3 +1,4 @@
+import { TOOL_NAME } from '#src/features/find-files/constants.js';
 import { toResolvedDisplayPath } from '#src/utils/paths.js';
 import { formatRipgrepSearchArgs } from '#src/utils/ripgrep-args.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
@@ -20,7 +21,7 @@ export interface RipgrepFindFilesResult {
 
 export async function runRipgrepFindFiles(options: RunRipgrepFindFilesOptions): Promise<RipgrepFindFilesResult> {
   const result = await runRipgrepLines({
-    toolName: 'find_files',
+    toolName: TOOL_NAME,
     cwd: options.cwd,
     args: buildRipgrepArgs(options),
     limit: options.limit,

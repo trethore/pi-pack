@@ -9,9 +9,11 @@ import { normalizeToolPath } from '#src/utils/paths.js';
 import { createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { formatTextToolResult } from '#src/utils/tool-results.js';
 
+const TOOL_NAME = 'apply_patch';
+
 const APPLY_PATCH_TOOL_DEFINITION = {
-  name: 'apply_patch',
-  label: 'apply_patch',
+  name: TOOL_NAME,
+  label: TOOL_NAME,
   description: [
     'Apply a patch using a simplified, file-oriented diff format.',
     'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',

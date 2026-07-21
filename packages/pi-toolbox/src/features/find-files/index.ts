@@ -2,6 +2,7 @@ import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-cod
 import { type Static, Type } from 'typebox';
 
 import type { FindFilesToolConfig } from '#src/config/schema.js';
+import { TOOL_NAME } from '#src/features/find-files/constants.js';
 import { createFindFilesDisplay, formatFindFilesDisplay } from '#src/features/find-files/format.js';
 import { formatStringList, normalizeOptionalPathList, normalizeOptionalStringList } from '#src/utils/string-list.js';
 import {
@@ -19,8 +20,8 @@ import {
 } from '#src/features/find-files/ripgrep.js';
 
 const FIND_FILES_TOOL_DEFINITION = {
-  name: 'find_files',
-  label: 'find_files',
+  name: TOOL_NAME,
+  label: TOOL_NAME,
   description:
     'Find files recursively under search roots using `rg --files`, optionally filtered by ripgrep-style glob patterns.',
   promptSnippet: 'Find files by path and filters',

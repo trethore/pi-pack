@@ -2,6 +2,7 @@ import type { ExtensionAPI, Theme, ToolDefinition } from '@earendil-works/pi-cod
 import { type Static, Type } from 'typebox';
 
 import type { GrepToolConfig } from '#src/config/schema.js';
+import { TOOL_NAME } from '#src/features/grep/constants.js';
 import { createGrepDisplay, formatGrepDisplay } from '#src/features/grep/format.js';
 import {
   formatOptionalStringListFlag,
@@ -21,8 +22,8 @@ import {
 import { runRipgrepGrep, type RipgrepGrepResult, type RunRipgrepGrepOptions } from '#src/features/grep/ripgrep.js';
 
 const GREP_TOOL_DEFINITION = {
-  name: 'grep',
-  label: 'grep',
+  name: TOOL_NAME,
+  label: TOOL_NAME,
   description: "Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)>.",
   promptSnippet: 'Search file contents by regex(es)',
   promptGuidelines: [
@@ -69,7 +70,7 @@ export function createGrepToolDefinition(
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const cwd = options.cwd ?? ctx.cwd;
       const preparedParams = prepareGrepParameters(params, config);
-      await assertSearchPaths(cwd, preparedParams.paths, { toolName: 'grep' });
+      await assertSearchPaths(cwd, preparedParams.paths, { toolName: TOOL_NAME });
 
       const result = await runner({
         cwd,
@@ -166,7 +167,7 @@ function prepareGrepParameters(params: GrepParameters, config: GrepToolConfig): 
   return {
     regexes: normalizeRequiredStringList(params.regexes, {
       name: 'regexes',
-      toolName: 'grep',
+      toolName: TOOL_NAME,
     }),
     paths: normalizeOptionalPathList(params.paths, ['.']),
     globs: normalizeOptionalStringList(params.globs, []),
@@ -184,7 +185,7 @@ function formatGrepCall(args: GrepParameters | undefined, theme: Theme): string 
   const searchPaths = formatStringList(args?.paths, '.');
   const flags = formatGrepFlags(args);
   return formatToolCall(theme, {
-    toolName: 'grep',
+    toolName: TOOL_NAME,
     query: regexes,
     paths: searchPaths,
     flags,

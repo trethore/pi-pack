@@ -1,3 +1,4 @@
+import { TOOL_NAME } from '#src/features/grep/constants.js';
 import { formatRipgrepPaths, toResolvedDisplayPath } from '#src/utils/paths.js';
 import { formatRipgrepSearchFilterArgs } from '#src/utils/ripgrep-args.js';
 import { runRipgrepLines } from '#src/utils/ripgrep-runner.js';
@@ -44,7 +45,7 @@ type RipgrepJsonEvent = RipgrepJsonMatch | RipgrepJsonOther;
 
 export async function runRipgrepGrep(options: RunRipgrepGrepOptions): Promise<RipgrepGrepResult> {
   const result = await runRipgrepLines({
-    toolName: 'grep',
+    toolName: TOOL_NAME,
     cwd: options.cwd,
     args: buildRipgrepArgs(options),
     limit: calculateCollectionLimit(options),
