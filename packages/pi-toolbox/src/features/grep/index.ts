@@ -12,7 +12,7 @@ import {
   normalizeRequiredStringList,
 } from '#src/utils/string-list.js';
 import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
-import { HIDDEN_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
+import { SUMMARY_ONLY_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
 import {
   createNoIgnoreSchema,
   createSearchDepthSchema,
@@ -108,7 +108,7 @@ export function createGrepToolDefinition(
       };
     },
     formatCall: formatGrepCall,
-    collapsedResultLines: HIDDEN_COLLAPSED_RESULT_LINES,
+    collapsedResultLines: SUMMARY_ONLY_COLLAPSED_RESULT_LINES,
   });
 }
 

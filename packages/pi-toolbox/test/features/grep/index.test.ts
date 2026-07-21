@@ -9,7 +9,7 @@ import {
   createLineOutput,
   createRenderContext,
   createTheme,
-  expectHiddenCollapsedOutputWithExpansionHint,
+  expectSummaryOnlyCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
   renderComponent,
   renderToolResult,
@@ -290,7 +290,7 @@ src/index.ts
     );
   });
 
-  it('hides collapsed results and renders an expansion hint', () => {
+  it('shows only the summary for collapsed results and renders an expansion hint', () => {
     // Arrange
     const tool = createGrepToolDefinition(DEFAULT_GREP_CONFIG);
     const output = createLineOutput(25);
@@ -306,7 +306,7 @@ src/index.ts
     );
 
     // Assert
-    expectHiddenCollapsedOutputWithExpansionHint(rendered, 25);
+    expectSummaryOnlyCollapsedOutputWithExpansionHint(rendered, 25);
   });
 
   it('fails when the search path does not exist', async () => {

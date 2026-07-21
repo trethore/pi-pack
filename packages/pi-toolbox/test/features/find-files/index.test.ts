@@ -10,7 +10,7 @@ import {
   createLineOutput,
   createRenderContext,
   createTheme,
-  expectHiddenCollapsedOutputWithExpansionHint,
+  expectSummaryOnlyCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
   renderComponent,
   renderToolResult,
@@ -258,7 +258,7 @@ src/index.ts`,
     expect(rendered).toContain('<toolOutput> (limit 20, depth 2, noIgnore, visibleOnly)</toolOutput>');
   });
 
-  it('hides collapsed results and renders an expansion hint', () => {
+  it('shows only the summary for collapsed results and renders an expansion hint', () => {
     // Arrange
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
     const output = createLineOutput(25);
@@ -274,7 +274,7 @@ src/index.ts`,
     );
 
     // Assert
-    expectHiddenCollapsedOutputWithExpansionHint(rendered, 25);
+    expectSummaryOnlyCollapsedOutputWithExpansionHint(rendered, 25);
   });
 
   it('renders expanded results with the full output returned to the model', () => {
@@ -299,7 +299,7 @@ src/index.ts`,
     expect(rendered).not.toContain('to expand');
   });
 
-  it('hides collapsed zero results but renders failed result text', () => {
+  it('shows collapsed zero results and failed result text', () => {
     // Arrange
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 });
 
@@ -323,9 +323,8 @@ src/index.ts`,
     );
 
     // Assert
-    expect(zeroResult).not.toContain('<toolOutput>paths=. count=0</toolOutput>');
-    expect(zeroResult).toContain('1 more lines');
-    expect(zeroResult).toContain('to expand');
+    expect(zeroResult).toContain('<toolOutput>paths=. count=0</toolOutput>');
+    expect(zeroResult).not.toContain('to expand');
     expect(failedResult).toContain('<toolOutput>find_files failed: rg executable not found</toolOutput>');
   });
 
