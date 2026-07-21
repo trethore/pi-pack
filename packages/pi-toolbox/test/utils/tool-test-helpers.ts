@@ -71,11 +71,10 @@ export function createLineOutput(lineCount: number): string {
   return Array.from({ length: lineCount }, (_value, index) => `line ${index + 1}`).join('\n');
 }
 
-export function expectCollapsedOutputWithExpansionHint(rendered: string): void {
-  expect(rendered).toContain('<toolOutput>line 1</toolOutput>');
-  expect(rendered).toContain('<toolOutput>line 10</toolOutput>');
-  expect(rendered).not.toContain('line 11');
-  expect(rendered).toContain('15 more lines');
+export function expectHiddenCollapsedOutputWithExpansionHint(rendered: string, lineCount: number): void {
+  expect(rendered).not.toContain('<toolOutput>line 1</toolOutput>');
+  expect(rendered).not.toContain(`<toolOutput>line ${lineCount}</toolOutput>`);
+  expect(rendered).toContain(`${lineCount} more lines`);
   expect(rendered).toContain('to expand');
 }
 

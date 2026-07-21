@@ -2,6 +2,7 @@ import type { Theme, ToolRenderResultOptions } from '@earendil-works/pi-coding-a
 import { formatKeybindingText } from '@trethore/pi-shared/ui/keybindings.js';
 
 const DEFAULT_COLLAPSED_RESULT_LINES = 10;
+export const HIDDEN_COLLAPSED_RESULT_LINES = 0;
 
 export interface TextToolResult {
   content: Array<{ type: string; text?: string }>;

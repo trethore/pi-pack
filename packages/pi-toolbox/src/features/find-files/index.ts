@@ -11,6 +11,7 @@ import {
   createVisibleOnlySchema,
 } from '#src/utils/search-schema.js';
 import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
+import { HIDDEN_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
 import {
   runRipgrepFindFiles,
   type RipgrepFindFilesResult,
@@ -105,6 +106,7 @@ export function createFindFilesToolDefinition(
       };
     },
     formatCall: formatFindFilesCall,
+    collapsedResultLines: HIDDEN_COLLAPSED_RESULT_LINES,
   });
 }
 

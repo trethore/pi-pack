@@ -9,6 +9,7 @@ import { formatTextToolResult, type TextToolResult } from '#src/utils/tool-resul
 
 interface TextRenderContext {
   lastComponent?: unknown;
+  isError?: boolean;
 }
 
 interface TextToolMetadata {
@@ -24,6 +25,7 @@ interface CreateTextToolDefinitionOptions<TParameters extends TSchema, TDetails>
   parameters: TParameters;
   execute: ToolDefinition<TParameters, TDetails>['execute'];
   formatCall: (args: Static<TParameters> | undefined, theme: Theme) => string;
+  collapsedResultLines?: number;
 }
 
 export function createTextToolDefinition<TParameters extends TSchema, TDetails>(
@@ -41,7 +43,7 @@ export function createTextToolDefinition<TParameters extends TSchema, TDetails>(
       return renderTextCall(args, theme, context, options.formatCall);
     },
     renderResult(result, resultOptions, theme, context) {
-      return renderTextResult(result, resultOptions, theme, context);
+      return renderTextResult(result, resultOptions, theme, context, options.collapsedResultLines);
     },
   };
 }
@@ -59,9 +61,11 @@ function renderTextResult(
   result: TextToolResult,
   options: ToolRenderResultOptions,
   theme: Theme,
-  context: TextRenderContext
+  context: TextRenderContext,
+  collapsedResultLines?: number
 ): Text {
-  return renderText(context, formatTextToolResult(result, options, theme));
+  const visibleCollapsedResultLines = context.isError ? undefined : collapsedResultLines;
+  return renderText(context, formatTextToolResult(result, options, theme, visibleCollapsedResultLines));
 }
 
 export async function assertSearchPaths(
