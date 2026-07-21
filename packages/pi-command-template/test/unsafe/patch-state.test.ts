@@ -1,45 +1,67 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { disableUnsafePiCommandTemplatePatch, installUnsafePiCommandTemplatePatch } from '#src/unsafe/index.js';
 import { getUnsafePatchState, transformUnsafeContent } from '#src/unsafe/patch-state.js';
 
+const firstId = 'test:first';
+const secondId = 'test:second';
+
+function installTestTransformers(): void {
+  installUnsafePiCommandTemplatePatch(firstId, ({ content }) => `${content} first`);
+  installUnsafePiCommandTemplatePatch(secondId, ({ content }) => `${content} second`);
+}
+
 describe('unsafe patch state', () => {
-  it('composes transformers by id and disables one without clearing others', () => {
-    const firstId = 'test:first';
-    const secondId = 'test:second';
+  afterEach(() => {
     disableUnsafePiCommandTemplatePatch(firstId);
     disableUnsafePiCommandTemplatePatch(secondId);
+  });
 
-    installUnsafePiCommandTemplatePatch(firstId, ({ content }) => `${content} first`);
-    installUnsafePiCommandTemplatePatch(secondId, ({ content }) => `${content} second`);
+  it('composes transformers by id', () => {
+    // Arrange
+    installTestTransformers();
 
-    expect(transformUnsafeContent({ surface: 'system', content: 'value' })).toBe('value first second');
+    // Act
+    const output = transformUnsafeContent({ surface: 'system', content: 'value' });
 
+    // Assert
+    expect(output).toBe('value first second');
+  });
+
+  it('disables one transformer without clearing others', () => {
+    // Arrange
+    installTestTransformers();
+
+    // Act
     disableUnsafePiCommandTemplatePatch(firstId);
+    const output = transformUnsafeContent({ surface: 'system', content: 'value' });
 
-    expect(transformUnsafeContent({ surface: 'system', content: 'value' })).toBe('value second');
-
-    disableUnsafePiCommandTemplatePatch(secondId);
+    // Assert
+    expect(output).toBe('value second');
   });
 
   it('replaces migrated legacy transformers on install', () => {
-    const id = 'test:current';
+    // Arrange
     const state = getUnsafePatchState();
     state.transformers.set('legacy', ({ content }) => `${content} legacy`);
 
-    installUnsafePiCommandTemplatePatch(id, ({ content }) => `${content} current`);
+    // Act
+    installUnsafePiCommandTemplatePatch(firstId, ({ content }) => `${content} current`);
+    const output = transformUnsafeContent({ surface: 'system', content: 'value' });
 
-    expect(transformUnsafeContent({ surface: 'system', content: 'value' })).toBe('value current');
-
-    disableUnsafePiCommandTemplatePatch(id);
+    // Assert
+    expect(output).toBe('value current');
   });
 
   it('clears migrated legacy transformers on disable', () => {
-    const id = 'test:disabled';
+    // Arrange
     const state = getUnsafePatchState();
     state.transformers.set('legacy', ({ content }) => `${content} legacy`);
 
-    disableUnsafePiCommandTemplatePatch(id);
+    // Act
+    disableUnsafePiCommandTemplatePatch(firstId);
+    const output = transformUnsafeContent({ surface: 'system', content: 'value' });
 
-    expect(transformUnsafeContent({ surface: 'system', content: 'value' })).toBe('value');
+    // Assert
+    expect(output).toBe('value');
   });
 });

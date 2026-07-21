@@ -36,12 +36,14 @@ function createFakeContext(messages: Array<{ message: string; severity: 'warning
 
 describe('registerCommandTemplateDiagnostics', () => {
   it('deduplicates startup diagnostics and reports late diagnostics', () => {
+    // Arrange
     const diagnostics: CommandDiagnostic[] = [{ severity: 'warning', message: 'startup warning' }];
     const messages: Array<{ message: string; severity: 'warning' | 'error' }> = [];
     const { handlers, pi } = createFakePi();
     const reporter = registerCommandTemplateDiagnostics(pi as unknown as ExtensionAPI, () => diagnostics);
     const context = createFakeContext(messages);
 
+    // Act
     handlers[0]?.handler({}, context);
     handlers[1]?.handler({}, context);
     reporter.reportDiagnostic({
@@ -51,6 +53,7 @@ describe('registerCommandTemplateDiagnostics', () => {
       path: 'AGENTS.md',
     });
 
+    // Assert
     expect(messages).toEqual([
       { message: 'startup warning', severity: 'warning' },
       { message: 'late warning (contextFiles: AGENTS.md)', severity: 'warning' },
@@ -58,6 +61,7 @@ describe('registerCommandTemplateDiagnostics', () => {
   });
 
   it('does not mark diagnostics as reported before a context is available', () => {
+    // Arrange
     const diagnostics: CommandDiagnostic[] = [];
     const messages: Array<{ message: string; severity: 'warning' | 'error' }> = [];
     const { handlers, pi } = createFakePi();
@@ -65,9 +69,12 @@ describe('registerCommandTemplateDiagnostics', () => {
     const earlyDiagnostic: CommandDiagnostic = { severity: 'warning', message: 'early warning' };
 
     diagnostics.push(earlyDiagnostic);
+
+    // Act
     reporter.reportDiagnostic(earlyDiagnostic);
     handlers[0]?.handler({}, createFakeContext(messages));
 
+    // Assert
     expect(messages).toEqual([{ message: 'early warning', severity: 'warning' }]);
   });
 });

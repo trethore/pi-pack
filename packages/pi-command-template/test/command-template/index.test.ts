@@ -6,6 +6,7 @@ import { getUnsafePatchState } from '#src/unsafe/patch-state.js';
 
 describe('registerCommandTemplate', () => {
   it('removes its process-wide transformer before extension reload', () => {
+    // Arrange
     const handlers = new Map<string, (event: { reason: string }, context: unknown) => void>();
     const pi = {
       on: (event: string, handler: (event: { reason: string }, context: unknown) => void) => {
@@ -15,11 +16,13 @@ describe('registerCommandTemplate', () => {
 
     registerCommandTemplate(pi as unknown as ExtensionAPI, defaultConfig);
     const extensionId = getExtensionCwd();
+    const wasRegisteredBeforeReload = getUnsafePatchState().transformers.has(extensionId);
 
-    expect(getUnsafePatchState().transformers.has(extensionId)).toBe(true);
-
+    // Act
     handlers.get('session_shutdown')?.({ reason: 'reload' }, {});
 
+    // Assert
+    expect(wasRegisteredBeforeReload).toBe(true);
     expect(getUnsafePatchState().transformers.has(extensionId)).toBe(false);
   });
 });

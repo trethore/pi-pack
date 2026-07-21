@@ -9,11 +9,14 @@ describe('shared config locations', () => {
   });
 
   it('respects the Pi agent directory override', () => {
+    // Arrange
     vi.stubEnv('PI_CODING_AGENT_DIR', '/tmp/custom-pi-agent');
 
+    // Act
     const globalConfigPath = getGlobalConfigPath('extension.jsonc');
     const configPaths = getConfigPaths('/tmp/project', 'extension.jsonc');
 
+    // Assert
     expect(globalConfigPath).toBe(path.join('/tmp/custom-pi-agent', 'extension.jsonc'));
     expect(configPaths).toEqual([
       path.join('/tmp/custom-pi-agent', 'extension.jsonc'),

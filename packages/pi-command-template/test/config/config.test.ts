@@ -15,14 +15,17 @@ function createWorkspace(config: string): string {
 
 describe('loadConfig', () => {
   it('merges partial project config with defaults', () => {
+    // Arrange
     const workspace = createWorkspace(`{
       "surfaces": { "skills": false },
       "execution": { "timeoutMs": 1234 },
       "templates": { "node-version": ["node", "--version"] }
     }`);
 
+    // Act
     const loadedConfig = loadConfig(workspace);
 
+    // Assert
     expect(loadedConfig.config.surfaces.skills).toBe(false);
     expect(loadedConfig.config.surfaces.system).toBe(false);
     expect(loadedConfig.config.execution.timeoutMs).toBe(1234);
@@ -33,25 +36,31 @@ describe('loadConfig', () => {
   });
 
   it('rejects invalid template names and invalid execution values', () => {
+    // Arrange
     const workspace = createWorkspace(`{
       "execution": { "timeoutMs": 0 },
       "templates": { "bad name": "node --version" }
     }`);
 
+    // Act
     const loadedConfig = loadConfig(workspace);
 
+    // Assert
     expect(loadedConfig.config.execution.timeoutMs).toBe(3000);
     expect(loadedConfig.config.templates).toEqual({});
     expect(loadedConfig.errors).toHaveLength(2);
   });
 
   it('rejects array commands without an executable', () => {
+    // Arrange
     const workspace = createWorkspace(`{
       "templates": { "empty-command": [""] }
     }`);
 
+    // Act
     const loadedConfig = loadConfig(workspace);
 
+    // Assert
     expect(loadedConfig.config.templates).toEqual({});
     expect(loadedConfig.errors).toHaveLength(1);
   });

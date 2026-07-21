@@ -4,6 +4,7 @@ import { CommandCache } from '#src/core/command-cache.js';
 
 describe('CommandCache', () => {
   it('runs a command once and reuses the cached output', () => {
+    // Arrange
     const cache = new CommandCache({
       config: {
         ...defaultConfig,
@@ -14,9 +15,11 @@ describe('CommandCache', () => {
       extensionCwd: process.cwd(),
     });
 
+    // Act
     const firstOutput = cache.getOutput('node');
     const secondOutput = cache.getOutput('node');
 
+    // Assert
     expect(firstOutput).toBe(secondOutput);
     expect(firstOutput).toMatch(/^v\d+/);
   });
