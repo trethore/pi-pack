@@ -169,7 +169,19 @@ function credits(body: unknown): ResetCredit[] {
 function isoDate(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value.trim() : date.toISOString();
+  if (Number.isNaN(date.getTime())) return value.trim();
+
+  const offsetMinutes = -date.getTimezoneOffset();
+  const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+  const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+  const offsetRemainingMinutes = Math.abs(offsetMinutes) % 60;
+  const localDate = new Date(date.getTime() + offsetMinutes * 60_000);
+
+  return `${localDate.toISOString().slice(0, -1)}${offsetSign}${padNumber(offsetHours)}:${padNumber(offsetRemainingMinutes)}`;
+}
+
+function padNumber(value: number): string {
+  return value.toString().padStart(2, '0');
 }
 
 function formatBody(body: unknown): string {

@@ -136,18 +136,18 @@ describe('reset credit details command', () => {
     // Assert
     expectResetCreditListRequest(fetchMock);
     expect(result.availableCount).toBe(1);
-    expect(result.credits).toEqual([
+    expect(result.credits.map(({ id, used }) => ({ id, used }))).toEqual([
       {
         id: 'RateLimitResetCredit_1234567890',
         used: false,
-        expiresAt: '2026-07-12T15:30:00.000Z',
       },
       {
         id: 'RateLimitResetCredit_used',
         used: true,
-        expiresAt: '2026-07-10T08:00:00.000Z',
       },
     ]);
+    expectLocalIsoDate(result.credits[0].expiresAt, '2026-07-12T15:30:00.000Z');
+    expectLocalIsoDate(result.credits[1].expiresAt, '2026-07-10T08:00:00.000Z');
   });
 
   it('refreshes an expired Codex OAuth token before requesting reset credit details', async () => {
@@ -271,4 +271,13 @@ function expectResetCreditListRequest(fetchMock: ReturnType<typeof vi.fn>, acces
       Authorization: `Bearer ${accessToken}`,
     },
   });
+}
+
+function expectLocalIsoDate(actual: string | undefined, source: string): void {
+  expect(actual).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}$/);
+  expect(new Date(actual!).toISOString()).toBe(source);
+
+  const offsetMatch = actual!.match(/([+-])(\d{2}):(\d{2})$/)!;
+  const offsetMinutes = (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3])) * (offsetMatch[1] === '+' ? 1 : -1);
+  expect(offsetMinutes).toBe(-new Date(source).getTimezoneOffset());
 }
