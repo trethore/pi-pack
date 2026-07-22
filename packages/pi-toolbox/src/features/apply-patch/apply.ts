@@ -393,7 +393,7 @@ function computeChunkReplacement(
 
   const match = findChunkMatch(originalLines, chunk, searchStartIndex);
   if (match === undefined) {
-    throw new ApplyPatchError(`Failed to find expected lines in ${filePath}:\n${chunk.oldLines.join('\n')}`);
+    throw new ApplyPatchError(`Failed to find expected lines in ${filePath}`);
   }
 
   return {

@@ -156,7 +156,8 @@ describe('applyPatch', () => {
   it('rejects missing context and keeps the file unchanged', async () => {
     // Arrange
     const cwd = makeTempDir();
-    writeFileSync(path.join(cwd, 'modify.txt'), 'line1\nline2\n');
+    const filePath = path.join(cwd, 'modify.txt');
+    writeFileSync(filePath, 'line1\nline2\n');
     const patch = lines(
       '*** Begin Patch',
       '*** Update File: modify.txt',
@@ -166,9 +167,13 @@ describe('applyPatch', () => {
       '*** End Patch'
     );
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow('Failed to find expected lines');
-    expect(readFileSync(path.join(cwd, 'modify.txt'), 'utf8')).toBe('line1\nline2\n');
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow(`Failed to find expected lines in ${filePath}`);
+    await expect(operation).rejects.not.toThrow('missing');
+    expect(readFileSync(filePath, 'utf8')).toBe('line1\nline2\n');
   });
 
   it('rejects deleting a directory', async () => {
