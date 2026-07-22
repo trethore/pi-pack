@@ -1,6 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { CommandDiagnostic } from '#src/core/diagnostics.js';
-import { formatCommandDiagnostic } from '#src/core/diagnostics.js';
 
 export interface CommandTemplateDiagnosticReporter {
   reportDiagnostic(diagnostic: CommandDiagnostic): void;
@@ -16,7 +15,7 @@ export function registerCommandTemplateDiagnostics(
   const reportDiagnostic = (diagnostic: CommandDiagnostic) => {
     if (!latestContext) return;
 
-    const message = formatCommandDiagnostic(diagnostic);
+    const message = diagnostic.message;
     if (reported.has(message)) return;
     reported.add(message);
     latestContext.ui.notify(message, diagnostic.severity);

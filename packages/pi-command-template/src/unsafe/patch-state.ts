@@ -4,7 +4,6 @@ import type { RenderSurface } from '#src/core/types.js';
 export interface UnsafeTransformInput {
   surface: RenderSurface;
   content: string;
-  path?: string;
 }
 
 export type UnsafeContentTransformer = (input: UnsafeTransformInput) => string;

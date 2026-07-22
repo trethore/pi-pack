@@ -69,7 +69,6 @@ function installAgentsFilesPatch(state: UnsafePatchState, prototype: ResourceLoa
             content: transformUnsafeContent({
               surface: 'contextFiles',
               content: file.content,
-              path: file.path,
             }),
           })),
         };
@@ -93,7 +92,6 @@ function installPromptsPatch(state: UnsafePatchState, prototype: ResourceLoaderP
             content: transformUnsafeContent({
               surface: 'promptTemplates',
               content: prompt.content,
-              path: prompt.filePath,
             }),
           })),
         };
@@ -117,7 +115,6 @@ function installSkillsPatch(state: UnsafePatchState, prototype: ResourceLoaderPr
             description: transformUnsafeContent({
               surface: 'skills',
               content: skill.description,
-              path: skill.filePath,
             }),
           })),
         };

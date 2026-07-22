@@ -69,8 +69,8 @@ describe('renderCommandTemplates', () => {
     });
 
     // Act
-    const firstOutput = renderer.render('first {{counter}}', { surface: 'promptTemplates' });
-    const secondOutput = renderer.render('second {{counter}}', { surface: 'promptTemplates' });
+    const firstOutput = renderer.render('first {{counter}}');
+    const secondOutput = renderer.render('second {{counter}}');
 
     // Assert
     expect(firstOutput).toBe('first run-1');

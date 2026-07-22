@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import type { PiCommandTemplateConfig, TemplateCommand } from '#src/config/schema.js';
 import type { CommandDiagnostic } from '#src/core/diagnostics.js';
-import type { RenderContext } from '#src/core/types.js';
 
 export interface CommandRunResult {
   output: string;
@@ -15,7 +14,6 @@ interface RunCommandOptions {
   extensionCwd: string;
   name: string;
   command: TemplateCommand;
-  context?: RenderContext;
 }
 
 export function runTemplateCommand(options: RunCommandOptions): CommandRunResult {
@@ -146,8 +144,6 @@ function createCommandDiagnostic(options: RunCommandOptions, message: string): C
   return {
     severity: 'warning',
     template: options.name,
-    surface: options.context?.surface,
-    path: options.context?.path,
     message,
   };
 }

@@ -16,9 +16,9 @@ export function registerCommandTemplate(pi: ExtensionAPI, config: PiCommandTempl
     extensionCwd,
     onDiagnostic: reportDiagnostic,
   });
-  const installResult = installUnsafePiCommandTemplatePatch(extensionCwd, ({ surface, content, path }) => {
+  const installResult = installUnsafePiCommandTemplatePatch(extensionCwd, ({ surface, content }) => {
     if (!isSurfaceEnabled(config, surface)) return content;
-    return renderer.render(content, { surface, path });
+    return renderer.render(content);
   });
   pi.on('session_shutdown', (event) => {
     if (event.reason === 'reload') disableUnsafePiCommandTemplatePatch(extensionCwd);

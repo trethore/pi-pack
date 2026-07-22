@@ -1,7 +1,6 @@
 import type { PiCommandTemplateConfig } from '#src/config/schema.js';
 import { runTemplateCommand } from '#src/core/command-runner.js';
 import type { CommandDiagnostic } from '#src/core/diagnostics.js';
-import type { RenderContext } from '#src/core/types.js';
 
 export interface CommandCacheOptions {
   config: PiCommandTemplateConfig;
@@ -16,7 +15,7 @@ export class CommandCache {
 
   constructor(private readonly options: CommandCacheOptions) {}
 
-  getOutput(name: string, context?: RenderContext): string | undefined {
+  getOutput(name: string): string | undefined {
     const cached = this.outputs.get(name);
     if (cached !== undefined) return cached;
 
@@ -29,7 +28,6 @@ export class CommandCache {
       extensionCwd: this.options.extensionCwd,
       name,
       command,
-      context,
     });
     this.outputs.set(name, result.output);
     this.diagnostics.push(...result.diagnostics);

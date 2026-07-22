@@ -49,14 +49,12 @@ describe('registerCommandTemplateDiagnostics', () => {
     reporter.reportDiagnostic({
       severity: 'warning',
       message: 'late warning',
-      surface: 'contextFiles',
-      path: 'AGENTS.md',
     });
 
     // Assert
     expect(messages).toEqual([
       { message: 'startup warning', severity: 'warning' },
-      { message: 'late warning (contextFiles: AGENTS.md)', severity: 'warning' },
+      { message: 'late warning', severity: 'warning' },
     ]);
   });
 

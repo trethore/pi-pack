@@ -60,20 +60,17 @@ describe('runTemplateCommand', () => {
       extensionCwd,
       name: 'fail',
       command,
-      context: { surface: 'contextFiles', path: 'AGENTS.md' },
     });
 
     // Assert
     expect(result.output).toBe('[pi-command-template error: {{fail}}]');
-    expect(result.diagnostics).toMatchObject([
+    expect(result.diagnostics).toEqual([
       {
         severity: 'warning',
         template: 'fail',
-        surface: 'contextFiles',
-        path: 'AGENTS.md',
+        message: 'pi-command-template command {{fail}} exited with status 2.',
       },
     ]);
-    expect(result.diagnostics[0]?.message).toContain('exited with status 2');
   });
 
   it('truncates long output', () => {

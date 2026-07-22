@@ -9,13 +9,8 @@ export type RenderSurface =
   | 'skills'
   | 'skillInvocation';
 
-export interface RenderContext {
-  surface: RenderSurface;
-  path?: string;
-}
-
 export interface CommandTemplateRenderer {
-  render(content: string, context: RenderContext): string;
+  render(content: string): string;
   getDiagnostics(): CommandDiagnostic[];
 }
 
