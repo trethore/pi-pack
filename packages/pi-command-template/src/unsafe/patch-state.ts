@@ -1,5 +1,5 @@
 import type { PromptTemplate, Skill } from '@earendil-works/pi-coding-agent';
-import type { RenderSurface } from '#src/core/types.js';
+import type { RenderSurface } from '#src/core/surfaces.js';
 
 export interface UnsafeTransformInput {
   surface: RenderSurface;

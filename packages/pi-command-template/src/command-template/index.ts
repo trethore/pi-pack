@@ -4,7 +4,7 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import type { PiCommandTemplateConfig } from '#src/config/schema.js';
 import type { CommandDiagnostic } from '#src/core/diagnostics.js';
 import { createCommandTemplateRenderer } from '#src/core/render-template.js';
-import type { RenderSurface } from '#src/core/types.js';
+import { isRenderSurfaceEnabled } from '#src/core/surfaces.js';
 import { registerCommandTemplateDiagnostics } from '#src/command-template/diagnostics.js';
 import { disableUnsafePiCommandTemplatePatch, installUnsafePiCommandTemplatePatch } from '#src/unsafe/index.js';
 
@@ -17,7 +17,7 @@ export function registerCommandTemplate(pi: ExtensionAPI, config: PiCommandTempl
     onDiagnostic: reportDiagnostic,
   });
   const installResult = installUnsafePiCommandTemplatePatch(extensionCwd, ({ surface, content }) => {
-    if (!isSurfaceEnabled(config, surface)) return content;
+    if (!isRenderSurfaceEnabled(config.surfaces, surface)) return content;
     return renderer.render(content);
   });
   pi.on('session_shutdown', (event) => {
@@ -41,9 +41,4 @@ export function getExtensionCwd(): string {
 
 function createStartupDiagnostic(message: string, severity: CommandDiagnostic['severity']): CommandDiagnostic {
   return { severity, message };
-}
-
-function isSurfaceEnabled(config: PiCommandTemplateConfig, surface: RenderSurface): boolean {
-  if (surface === 'skillInvocation') return config.surfaces.skills;
-  return config.surfaces[surface];
 }

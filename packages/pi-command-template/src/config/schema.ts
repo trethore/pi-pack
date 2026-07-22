@@ -1,7 +1,9 @@
 import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
 
-export type TemplateSurface = 'system' | 'appendSystem' | 'contextFiles' | 'promptTemplates' | 'skills';
+export const surfaceNames = ['system', 'appendSystem', 'contextFiles', 'promptTemplates', 'skills'] as const;
+
+export type TemplateSurface = (typeof surfaceNames)[number];
 
 type ExecutionCwd = 'workspace' | 'extension' | string;
 
@@ -14,7 +16,7 @@ export interface PiCommandTemplateConfig {
   templates: Record<string, TemplateCommand>;
 }
 
-type SurfaceConfig = Record<TemplateSurface, boolean>;
+export type SurfaceConfig = Record<TemplateSurface, boolean>;
 
 interface ExecutionConfig {
   timeoutMs: number;
@@ -54,14 +56,6 @@ export const defaultConfig: PiCommandTemplateConfig = {
   },
   templates: {},
 };
-
-export const surfaceNames = [
-  'system',
-  'appendSystem',
-  'contextFiles',
-  'promptTemplates',
-  'skills',
-] as const satisfies readonly TemplateSurface[];
 
 export const positiveIntegerSchema = defineConfigSchema(z.number().int().positive(), 'expected positive integer');
 
