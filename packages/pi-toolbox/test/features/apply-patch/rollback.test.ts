@@ -36,8 +36,11 @@ describe('applyPatch rollback', () => {
       '*** End Patch'
     );
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow('Failed to commit patch: simulated write failure');
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow('Failed to commit patch: simulated write failure');
     expect(existsSync(path.join(cwd, 'first.txt'))).toBe(false);
     expect(existsSync(path.join(cwd, 'second.txt'))).toBe(false);
   });

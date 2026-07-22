@@ -109,10 +109,17 @@ describe('apply_patch tool', () => {
     });
     const tool = createApplyPatchToolDefinition({ runner });
 
-    // Act and assert
-    await expect(
-      tool.execute('call-id', { patch: lines('*** Begin Patch', '*** End Patch') }, undefined, undefined, {} as never)
-    ).rejects.toThrow('apply_patch failed: boom');
+    // Act
+    const operation = tool.execute(
+      'call-id',
+      { patch: lines('*** Begin Patch', '*** End Patch') },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    await expect(operation).rejects.toThrow('apply_patch failed: boom');
   });
 
   it('renders calls and results', async () => {

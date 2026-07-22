@@ -356,10 +356,17 @@ src/index.ts`,
     writeFileSync(path.join(cwd, 'file.txt'), 'content');
     const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 100 }, { cwd });
 
-    // Act and assert
-    await expect(
-      tool.execute('call-id', { patterns: ['**/*.ts'], paths: ['file.txt'] }, undefined, undefined, {} as never)
-    ).rejects.toThrow('search path is not a directory');
+    // Act
+    const operation = tool.execute(
+      'call-id',
+      { patterns: ['**/*.ts'], paths: ['file.txt'] },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    await expect(operation).rejects.toThrow('search path is not a directory');
   });
 });
 

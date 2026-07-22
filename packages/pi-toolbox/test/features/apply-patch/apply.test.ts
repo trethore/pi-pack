@@ -148,8 +148,11 @@ describe('applyPatch', () => {
       '*** End Patch'
     );
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow('Failed to read file to update');
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow('Failed to read file to update');
     expect(readFileSync(path.join(cwd, 'modify.txt'), 'utf8')).toBe('line1\nline2\n');
   });
 
@@ -182,8 +185,11 @@ describe('applyPatch', () => {
     mkdirSync(path.join(cwd, 'dir'));
     const patch = lines('*** Begin Patch', '*** Delete File: dir', '*** End Patch');
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow(`Failed to delete file ${path.join(cwd, 'dir')}`);
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow(`Failed to delete file ${path.join(cwd, 'dir')}`);
   });
 
   it('rejects adding a file that already exists', async () => {
@@ -192,8 +198,11 @@ describe('applyPatch', () => {
     writeFileSync(path.join(cwd, 'existing.txt'), 'original\n');
     const patch = lines('*** Begin Patch', '*** Add File: existing.txt', '+replacement', '*** End Patch');
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow('path already exists');
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow('path already exists');
     expect(readFileSync(path.join(cwd, 'existing.txt'), 'utf8')).toBe('original\n');
   });
 
@@ -212,8 +221,11 @@ describe('applyPatch', () => {
       '*** End Patch'
     );
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow('destination already exists');
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow('destination already exists');
     expect(readFileSync(path.join(cwd, 'source.txt'), 'utf8')).toBe('source\n');
     expect(readFileSync(path.join(cwd, 'destination.txt'), 'utf8')).toBe('destination\n');
   });
@@ -230,8 +242,11 @@ describe('applyPatch', () => {
       '*** End Patch'
     );
 
-    // Act and assert
-    await expect(applyPatch({ cwd, patch })).rejects.toThrow('conflicts with planned file');
+    // Act
+    const operation = applyPatch({ cwd, patch });
+
+    // Assert
+    await expect(operation).rejects.toThrow('conflicts with planned file');
     expect(existsSync(path.join(cwd, 'parent'))).toBe(false);
   });
 

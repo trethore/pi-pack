@@ -86,8 +86,11 @@ describe('apply_patch parser', () => {
       "Path after '*** Add File:' cannot be empty",
     ],
   ])('rejects %s', (_name, patch, errorConstructor, message) => {
-    // Act and assert
-    expect(() => parsePatch(patch)).toThrow(errorConstructor);
-    expect(() => parsePatch(patch)).toThrow(message);
+    // Act
+    const operation = () => parsePatch(patch);
+
+    // Assert
+    expect(operation).toThrow(errorConstructor);
+    expect(operation).toThrow(message);
   });
 });

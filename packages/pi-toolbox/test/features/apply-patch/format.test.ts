@@ -12,10 +12,14 @@ describe('apply_patch format', () => {
       deleted: ['deleted.txt'],
     };
 
-    // Act and assert
-    expect(formatApplyPatchSummary(summary)).toBe(
+    // Act
+    const formattedSummary = formatApplyPatchSummary(summary);
+    const summaryCount = countApplyPatchSummary(summary);
+
+    // Assert
+    expect(formattedSummary).toBe(
       lines('Success. Updated the following files:', 'A created.txt', 'M modified.txt', 'D deleted.txt')
     );
-    expect(countApplyPatchSummary(summary)).toBe(3);
+    expect(summaryCount).toBe(3);
   });
 });

@@ -164,18 +164,21 @@ describe('thinking level command', () => {
     const piApi = createRegisteredCommandApi();
     registerThinkingLevelCommand(piApi.extensionApi);
 
-    // Act and assert
-    expect(piApi.command?.getArgumentCompletions?.('')).toEqual([
+    // Act
+    const initialCompletions = piApi.command?.getArgumentCompletions?.('');
+    piApi.emitSessionStart({ id: 'claude-sonnet-4-5', reasoning: true });
+    const sessionCompletions = piApi.command?.getArgumentCompletions?.('h');
+    piApi.emitModelSelect({ id: 'gpt-5.2', reasoning: true, thinkingLevelMap: { xhigh: 'xhigh' } });
+    const modelCompletions = piApi.command?.getArgumentCompletions?.('x');
+
+    // Assert
+    expect(initialCompletions).toEqual([
       { value: 'off', label: 'off', description: 'Disable model thinking/reasoning' },
     ]);
-
-    piApi.emitSessionStart({ id: 'claude-sonnet-4-5', reasoning: true });
-    expect(piApi.command?.getArgumentCompletions?.('h')).toEqual([
+    expect(sessionCompletions).toEqual([
       { value: 'high', label: 'high', description: 'Use high model thinking/reasoning' },
     ]);
-
-    piApi.emitModelSelect({ id: 'gpt-5.2', reasoning: true, thinkingLevelMap: { xhigh: 'xhigh' } });
-    expect(piApi.command?.getArgumentCompletions?.('x')).toEqual([
+    expect(modelCompletions).toEqual([
       {
         value: 'xhigh',
         label: 'xhigh',

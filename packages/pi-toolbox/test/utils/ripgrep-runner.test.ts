@@ -146,8 +146,11 @@ describe('runRipgrepLines', () => {
     const controller = new AbortController();
     controller.abort();
 
-    // Act and assert
-    await expect(runLines({ signal: controller.signal })).rejects.toThrow('Operation aborted');
+    // Act
+    const result = runLines({ signal: controller.signal });
+
+    // Assert
+    await expect(result).rejects.toThrow('Operation aborted');
     expect(spawnMock).not.toHaveBeenCalled();
   });
 
