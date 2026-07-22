@@ -8,6 +8,7 @@ import { formatPatchParseError, InvalidHunkError, InvalidPatchError } from '#src
 import { normalizeToolPath } from '#src/utils/paths.js';
 import { createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { formatTextToolResult } from '#src/utils/tool-results.js';
+import type { ToolOutputTruncationDetails } from '#src/utils/output-limits.js';
 
 const TOOL_NAME = 'apply_patch';
 
@@ -52,7 +53,7 @@ interface TextRenderContext {
 type ApplyPatchParametersSchema = typeof APPLY_PATCH_PARAMETERS;
 type ApplyPatchRunner = (options: ApplyPatchOptions) => Promise<ApplyPatchResult>;
 
-export interface ApplyPatchToolDetails extends ApplyPatchResult {
+export interface ApplyPatchToolDetails extends ApplyPatchResult, ToolOutputTruncationDetails {
   count: number;
 }
 

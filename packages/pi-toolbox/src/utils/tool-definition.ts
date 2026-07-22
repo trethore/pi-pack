@@ -6,6 +6,7 @@ import { Text } from '@earendil-works/pi-tui';
 import type { Static, TSchema } from 'typebox';
 
 import { formatTextToolResult, type TextToolResult } from '#src/utils/tool-results.js';
+import type { ToolOutputTruncationDetails } from '#src/utils/output-limits.js';
 
 interface TextRenderContext {
   lastComponent?: unknown;
@@ -28,9 +29,10 @@ interface CreateTextToolDefinitionOptions<TParameters extends TSchema, TDetails>
   collapsedResultLines?: number;
 }
 
-export function createTextToolDefinition<TParameters extends TSchema, TDetails>(
-  options: CreateTextToolDefinitionOptions<TParameters, TDetails>
-): ToolDefinition<TParameters, TDetails> {
+export function createTextToolDefinition<
+  TParameters extends TSchema,
+  TDetails extends ToolOutputTruncationDetails | undefined,
+>(options: CreateTextToolDefinitionOptions<TParameters, TDetails>): ToolDefinition<TParameters, TDetails> {
   return {
     name: options.metadata.name,
     label: options.metadata.label,

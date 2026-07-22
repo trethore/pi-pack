@@ -14,6 +14,11 @@ import {
 import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { SUMMARY_ONLY_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
 import {
+  limitAndPersistToolOutput,
+  TOOL_OUTPUT_LIMIT_DESCRIPTION,
+  type ToolOutputTruncationDetails,
+} from '#src/utils/output-limits.js';
+import {
   createNoIgnoreSchema,
   createSearchDepthSchema,
   createSearchPathsSchema,
@@ -24,7 +29,7 @@ import { runRipgrepGrep, type RipgrepGrepResult, type RunRipgrepGrepOptions } fr
 const GREP_TOOL_DEFINITION = {
   name: TOOL_NAME,
   label: TOOL_NAME,
-  description: "Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)>.",
+  description: `Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)>. ${TOOL_OUTPUT_LIMIT_DESCRIPTION}`,
   promptSnippet: 'Search file contents by regex(es)',
   promptGuidelines: [
     'Use `grep` for fast content search when you know the text or regular expressions to find.',
@@ -42,7 +47,7 @@ interface PreparedGrepParameters extends Required<Omit<GrepParameters, 'limitPer
 type GrepParametersSchema = ReturnType<typeof createGrepParametersSchema>;
 type GrepRunner = (options: RunRipgrepGrepOptions) => Promise<RipgrepGrepResult>;
 
-export interface GrepToolDetails {
+export interface GrepToolDetails extends ToolOutputTruncationDetails {
   count: number;
   files: number;
   limited: boolean;
@@ -92,18 +97,20 @@ export function createGrepToolDefinition(
         limitPerFile: preparedParams.limitPerFile,
         limited: result.limited,
       });
+      const output = await limitAndPersistToolOutput(formatGrepDisplay(display), TOOL_NAME);
 
       return {
         content: [
           {
             type: 'text',
-            text: formatGrepDisplay(display),
+            text: output.text,
           },
         ],
         details: {
           count: display.matches.length,
           files: display.files,
-          limited: result.limited,
+          limited: result.limited || output.details !== undefined,
+          ...output.details,
         },
       };
     },

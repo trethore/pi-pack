@@ -14,6 +14,11 @@ import {
 import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { SUMMARY_ONLY_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
 import {
+  limitAndPersistToolOutput,
+  TOOL_OUTPUT_LIMIT_DESCRIPTION,
+  type ToolOutputTruncationDetails,
+} from '#src/utils/output-limits.js';
+import {
   runRipgrepFindFiles,
   type RipgrepFindFilesResult,
   type RunRipgrepFindFilesOptions,
@@ -22,8 +27,7 @@ import {
 const FIND_FILES_TOOL_DEFINITION = {
   name: TOOL_NAME,
   label: TOOL_NAME,
-  description:
-    'Find files recursively under search roots using `rg --files`, optionally filtered by ripgrep-style glob patterns.',
+  description: `Find files recursively under search roots using \`rg --files\`, optionally filtered by ripgrep-style glob patterns. ${TOOL_OUTPUT_LIMIT_DESCRIPTION}`,
   promptSnippet: 'Find files by path and filters',
   promptGuidelines: [
     'Use `find_files` for fast file discovery before reading or searching files.',
@@ -42,7 +46,7 @@ interface PreparedFindFilesParameters extends Required<Omit<FindFilesParameters,
 type FindFilesParametersSchema = ReturnType<typeof createFindFilesParametersSchema>;
 type FindFilesRunner = (options: RunRipgrepFindFilesOptions) => Promise<RipgrepFindFilesResult>;
 
-export interface FindFilesToolDetails {
+export interface FindFilesToolDetails extends ToolOutputTruncationDetails {
   paths: string[];
   count: number;
   limited: boolean;
@@ -91,18 +95,20 @@ export function createFindFilesToolDefinition(
         files: result.files,
         limited: result.limited,
       });
+      const output = await limitAndPersistToolOutput(formatFindFilesDisplay(display), TOOL_NAME);
 
       return {
         content: [
           {
             type: 'text',
-            text: formatFindFilesDisplay(display),
+            text: output.text,
           },
         ],
         details: {
           paths: preparedParams.paths,
           count: display.count,
-          limited: result.limited,
+          limited: result.limited || output.details !== undefined,
+          ...output.details,
         },
       };
     },

@@ -139,7 +139,7 @@ test/find-files.test.ts
 [more files available]
 ```
 
-When more files exist beyond `limit`, the output ends with `[more files available]`.
+When more files exist beyond `limit`, the output ends with `[more files available]`. Formatted output is truncated using Pi's default 2,000-line/50KB limit. If that limit is reached, the complete output is saved to a temporary file and its path is included in the result.
 
 ### `grep`
 
@@ -187,7 +187,7 @@ src/index.ts
 [more matches available]
 ```
 
-When more matches exist beyond `limit`, the output ends with `[more matches available]`. When more matches exist beyond `limitPerFile`, the file section ends with `[more matches in this file]`. Long matching lines are clipped to `maxCharsPerMatch` without an extra marker.
+When more matches exist beyond `limit`, the output ends with `[more matches available]`. When more matches exist beyond `limitPerFile`, the file section ends with `[more matches in this file]`. Long matching lines are clipped to `maxCharsPerMatch` without an extra marker. Formatted output is truncated using Pi's default 2,000-line/50KB limit. If that limit is reached, the complete output is saved to a temporary file and its path is included in the result.
 
 ## License
 

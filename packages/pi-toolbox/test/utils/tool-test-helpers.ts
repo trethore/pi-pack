@@ -1,7 +1,8 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, type TruncationResult } from '@earendil-works/pi-coding-agent';
 import type { Component } from '@earendil-works/pi-tui';
 import { afterEach, expect } from 'vitest';
 
@@ -93,4 +94,69 @@ export function makeTempDir(prefix: string): string {
   const directory = mkdtempSync(path.join(tmpdir(), prefix));
   temporaryDirectories.add(directory);
   return directory;
+}
+
+export function trackTempDir(directory: string): void {
+  temporaryDirectories.add(directory);
+}
+
+interface PersistedTruncatedResult {
+  content: Array<{ type: string; text?: string }>;
+  details?: PersistedTruncatedDetails;
+}
+
+interface PersistedTruncatedDetails {
+  limited: boolean;
+  truncation?: TruncationResult;
+  fullOutputPath?: string;
+}
+
+export function expectPersistedTruncatedResult(
+  result: PersistedTruncatedResult,
+  options: { truncatedBy: 'lines' | 'bytes'; fullOutputIncludes: string[] }
+): string {
+  const outputText = requireTextOutput(result);
+  const details = requirePersistedTruncatedDetails(result);
+  expect(details.limited).toBe(true);
+  const truncation = requireTruncation(details);
+  expect(truncation.truncatedBy).toBe(options.truncatedBy);
+  expect(truncation.content.split('\n').length).toBeLessThanOrEqual(DEFAULT_MAX_LINES);
+  expect(Buffer.byteLength(truncation.content, 'utf8')).toBeLessThanOrEqual(DEFAULT_MAX_BYTES);
+
+  const fullOutputPath = requireFullOutputPath(details);
+  trackTempDir(path.dirname(fullOutputPath));
+  expect(outputText).toContain('[Output truncated:');
+  expect(outputText).toContain(`Full output: ${fullOutputPath}]`);
+
+  const fullOutput = readFileSync(fullOutputPath, 'utf8');
+  expectTextIncludes(fullOutput, options.fullOutputIncludes);
+
+  return fullOutputPath;
+}
+
+function requireTextOutput(result: PersistedTruncatedResult): string {
+  const output = result.content[0];
+  if (output?.type !== 'text' || output.text === undefined) throw new Error('expected text output');
+  return output.text;
+}
+
+function requirePersistedTruncatedDetails(result: PersistedTruncatedResult): PersistedTruncatedDetails {
+  if (!result.details) throw new Error('expected result details');
+  return result.details;
+}
+
+function requireTruncation(details: PersistedTruncatedDetails): TruncationResult {
+  if (!details.truncation) throw new Error('expected truncation details');
+  return details.truncation;
+}
+
+function requireFullOutputPath(details: PersistedTruncatedDetails): string {
+  if (!details.fullOutputPath) throw new Error('expected full output path');
+  return details.fullOutputPath;
+}
+
+function expectTextIncludes(text: string, expectedTexts: readonly string[]): void {
+  for (const expectedText of expectedTexts) {
+    expect(text).toContain(expectedText);
+  }
 }

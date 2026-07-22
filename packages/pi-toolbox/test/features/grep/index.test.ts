@@ -9,6 +9,7 @@ import {
   createLineOutput,
   createRenderContext,
   createTheme,
+  expectPersistedTruncatedResult,
   expectSummaryOnlyCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
   renderComponent,
@@ -259,6 +260,34 @@ src/index.ts
     expect(output.text).toContain('c.txt\n1: needle c1');
     expect(output.text).toContain('[more matches in this file]');
     expect(output.text).not.toContain('[more matches available]');
+  });
+
+  it('keeps formatted results within the default Pi output limits', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const matches = Array.from({ length: 1000 }, (_value, index) => ({
+      file: `file-${index}.txt`,
+      line: index + 1,
+      text: 'x'.repeat(100),
+    }));
+    const runner = vi.fn(async () => ({ matches, limited: false }));
+    const tool = createGrepToolDefinition(
+      { enabled: true, defaultLimit: 1000, defaultMaxCharsPerMatch: 200 },
+      { cwd, runner }
+    );
+
+    // Act
+    const result = await tool.execute('call-id', { regexes: ['x'] }, undefined, undefined, {} as never);
+
+    // Assert
+    const fullOutputPath = expectPersistedTruncatedResult(result, {
+      truncatedBy: 'bytes',
+      fullOutputIncludes: ['matches=1000 files=1000', 'file-999.txt\n1000:'],
+    });
+
+    const rendered = renderToolResult(tool.renderResult, result, { expanded: false, isPartial: false });
+    expect(rendered).toContain(`Full output: ${fullOutputPath}`);
+    expect(rendered).toContain('Truncated:');
   });
 
   it('renders active call flags', () => {

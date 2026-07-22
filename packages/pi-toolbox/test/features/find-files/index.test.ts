@@ -10,6 +10,7 @@ import {
   createLineOutput,
   createRenderContext,
   createTheme,
+  expectPersistedTruncatedResult,
   expectSummaryOnlyCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
   renderComponent,
@@ -232,6 +233,27 @@ pi-toolbox/src/index.ts
       text: `found=1
 src/index.ts`,
     });
+  });
+
+  it('keeps formatted results within the default Pi output limits', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    const files = Array.from({ length: 1000 }, (_value, index) => `directory-${index}/${'x'.repeat(100)}-${index}.txt`);
+    const runner = vi.fn(async () => ({ files, limited: false }));
+    const tool = createFindFilesToolDefinition({ enabled: true, defaultLimit: 1000 }, { cwd, runner });
+
+    // Act
+    const result = await tool.execute('call-id', {}, undefined, undefined, {} as never);
+
+    // Assert
+    const fullOutputPath = expectPersistedTruncatedResult(result, {
+      truncatedBy: 'bytes',
+      fullOutputIncludes: ['found=1000', `${'x'.repeat(100)}-999.txt`],
+    });
+
+    const rendered = renderToolResult(tool.renderResult, result, { expanded: false, isPartial: false });
+    expect(rendered).toContain(`Full output: ${fullOutputPath}`);
+    expect(rendered).toContain('Truncated:');
   });
 
   it('renders active call flags', () => {
