@@ -54,7 +54,6 @@ describe('renderCommandTemplates', () => {
     const renderer = createCommandTemplateRenderer({
       config: {
         ...defaultConfig,
-        execution: { ...defaultConfig.execution, shell: false },
         templates: {
           counter: [
             'node',

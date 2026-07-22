@@ -8,8 +8,7 @@ describe('CommandCache', () => {
     const cache = new CommandCache({
       config: {
         ...defaultConfig,
-        execution: { ...defaultConfig.execution, shell: false },
-        templates: { node: 'node --version' },
+        templates: { node: ['node', '--version'] },
       },
       workspaceCwd: process.cwd(),
       extensionCwd: process.cwd(),

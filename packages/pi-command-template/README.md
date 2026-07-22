@@ -42,9 +42,6 @@ Create `.pi/pi-command-template.jsonc`:
   "surfaces": {
     "contextFiles": true,
   },
-  "execution": {
-    "shell": false,
-  },
   "templates": {
     "node-version": ["node", "--version"],
   },
@@ -84,7 +81,7 @@ All rendering surfaces and shell execution are disabled by default. Enable only 
     "timeoutMs": 3000,
     "maxOutputChars": 20000,
     "cwd": "workspace",
-    "shell": true,
+    "allowShell": true,
   },
   "templates": {
     "osname": ". /etc/os-release && printf '%s\\n' \"$PRETTY_NAME\"",
@@ -109,18 +106,20 @@ Commands run once per extension load or reload and are cached by template name.
 
 Output is `stdout + stderr`, with one trailing line ending removed. If output exceeds `execution.maxOutputChars`, it is truncated and a warning is reported.
 
-`execution.shell` controls how command strings run:
+Template command values select their execution mode:
 
-- `true`: run through the shell, enabling pipes, redirects, variables, `&&`, and shell builtins.
-- `false`: parse into a direct executable and arguments.
+- Arrays such as `["node", "--version"]` run directly as an executable and arguments.
+- Non-empty strings such as `"git branch --show-current"` run through the shell.
 
-Template commands can also be arrays such as `["node", "--version"]`. Array commands always run directly and are preferred when shell features are not needed.
+String commands require `execution.allowShell: true`. Shell execution is disabled by default. It enables shell syntax such as pipes, redirects, variables, `&&`, and builtins.
+
+The removed `execution.shell` setting is not supported. Use arrays for direct execution and `execution.allowShell` to permit string shell commands.
 
 Failed commands are replaced with a marker such as `[pi-command-template error: {{node-version}}]`, and a diagnostic is reported.
 
 ## Security
 
-Enabling a surface allows content from that surface to trigger any matching configured command. Commands use the configured working directory and can read or execute workspace-controlled files. Only enable this extension, its surfaces, and shell execution for resources and workspaces you trust.
+Enabling a surface allows content from that surface to trigger any matching configured command. Commands use the configured working directory and can read or execute workspace-controlled files. Only enable this extension, its surfaces, and `execution.allowShell` for resources and workspaces you trust.
 
 ## Behavior and limitations
 

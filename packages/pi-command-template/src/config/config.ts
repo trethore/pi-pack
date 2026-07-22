@@ -68,8 +68,13 @@ function mergeConfig(
     mergeField(section, 'cwd', `${sectionName}.cwd`, cwdSchema, configPath, errors, (value) => {
       target.execution.cwd = value;
     });
-    mergeField(section, 'shell', `${sectionName}.shell`, booleanSchema, configPath, errors, (value) => {
-      target.execution.shell = value;
+    mergeField(section, 'allowShell', `${sectionName}.allowShell`, booleanSchema, configPath, errors, (value) => {
+      target.execution.allowShell = value;
+    });
+    mergeField(section, 'shell', `${sectionName}.shell`, booleanSchema, configPath, errors, () => {
+      errors.push(
+        `${EXTENSION_NAME} config ignored removed ${sectionName}.shell value in ${configPath}; use ${sectionName}.allowShell instead.`
+      );
     });
   });
 

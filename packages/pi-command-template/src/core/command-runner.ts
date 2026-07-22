@@ -17,10 +17,21 @@ interface RunCommandOptions {
 }
 
 export function runTemplateCommand(options: RunCommandOptions): CommandRunResult {
+  if (typeof options.command === 'string' && !options.config.execution.allowShell) {
+    return {
+      output: createCommandFailureOutput(options.name),
+      diagnostics: [
+        createCommandDiagnostic(
+          options,
+          `pi-command-template command {{${options.name}}} requires execution.allowShell to run string shell commands.`
+        ),
+      ],
+    };
+  }
+
   const cwd = resolveExecutionCwd(options.config.execution.cwd, options.workspaceCwd, options.extensionCwd);
   const spawnOptions = {
     cwd,
-    shell: typeof options.command === 'string' && options.config.execution.shell,
     encoding: 'utf8' as const,
     timeout: options.config.execution.timeoutMs,
     maxBuffer: Math.max(options.config.execution.maxOutputChars * 4, 1024),
@@ -42,7 +53,7 @@ function createResultOutput(
   const stderr = typeof result.stderr === 'string' ? result.stderr : '';
   const output = trimOneTrailingLineEnding(`${stdout}${stderr}`);
 
-  if (isCommandFailure(result)) return `[pi-command-template error: {{${options.name}}}]`;
+  if (isCommandFailure(result)) return createCommandFailureOutput(options.name);
   if (output.length <= options.config.execution.maxOutputChars) return output;
 
   diagnostics.push(
@@ -97,17 +108,11 @@ function runSpawnCommand(
   options: Parameters<typeof spawnSync>[2]
 ): ReturnType<typeof spawnSync> {
   if (Array.isArray(command)) return spawnDirect(command, options);
-  if (options?.shell) return spawnSync(command, options);
-  try {
-    return spawnDirect(parseCommandArgs(command), options);
-  } catch (error) {
-    return createSpawnErrorResult(error);
-  }
+  return spawnSync(command, { ...options, shell: true });
 }
 
 function spawnDirect(command: string[], options: Parameters<typeof spawnSync>[2]): ReturnType<typeof spawnSync> {
-  const args = [...command];
-  const file = args.shift();
+  const [file, ...args] = command;
   if (!file) {
     return {
       stdout: '',
@@ -120,18 +125,6 @@ function spawnDirect(command: string[], options: Parameters<typeof spawnSync>[2]
     } as ReturnType<typeof spawnSync>;
   }
   return spawnSync(file, args, { ...options, shell: false });
-}
-
-function createSpawnErrorResult(error: unknown): ReturnType<typeof spawnSync> {
-  return {
-    stdout: '',
-    stderr: '',
-    status: 1,
-    signal: null,
-    output: ['', '', ''],
-    pid: 0,
-    error: error instanceof Error ? error : new Error(String(error)),
-  } as ReturnType<typeof spawnSync>;
 }
 
 function resolveExecutionCwd(value: string, workspaceCwd: string, extensionCwd: string): string {
@@ -148,76 +141,8 @@ function createCommandDiagnostic(options: RunCommandOptions, message: string): C
   };
 }
 
-interface ParseState {
-  args: string[];
-  current: string;
-  quote?: string;
-  escaped: boolean;
-  argStarted: boolean;
-}
-
-function parseCommandArgs(argsString: string): string[] {
-  const state: ParseState = { args: [], current: '', escaped: false, argStarted: false };
-  for (const char of argsString) applyCommandArgChar(state, char);
-  if (state.escaped) state.current += '\\';
-  if (state.quote) throw new Error(`unterminated ${state.quote} quote`);
-  pushCurrentArg(state);
-  return state.args;
-}
-
-function applyCommandArgChar(state: ParseState, char: string): void {
-  if (consumeEscapedChar(state, char)) return;
-  if (startEscape(state, char)) return;
-  if (consumeQuotedChar(state, char)) return;
-  if (startQuote(state, char)) return;
-  if (consumeWhitespace(state, char)) return;
-  state.current += char;
-  state.argStarted = true;
-}
-
-function consumeEscapedChar(state: ParseState, char: string): boolean {
-  if (!state.escaped) return false;
-  state.current += char;
-  state.escaped = false;
-  state.argStarted = true;
-  return true;
-}
-
-function startEscape(state: ParseState, char: string): boolean {
-  if (char !== '\\' || state.quote === "'") return false;
-  state.escaped = true;
-  state.argStarted = true;
-  return true;
-}
-
-function consumeQuotedChar(state: ParseState, char: string): boolean {
-  if (!state.quote) return false;
-  if (char === state.quote) {
-    state.quote = undefined;
-  } else {
-    state.current += char;
-  }
-  return true;
-}
-
-function startQuote(state: ParseState, char: string): boolean {
-  if (char !== '"' && char !== "'") return false;
-  state.quote = char;
-  state.argStarted = true;
-  return true;
-}
-
-function consumeWhitespace(state: ParseState, char: string): boolean {
-  if (!/\s/.test(char)) return false;
-  pushCurrentArg(state);
-  return true;
-}
-
-function pushCurrentArg(state: ParseState): void {
-  if (!state.argStarted) return;
-  state.args.push(state.current);
-  state.current = '';
-  state.argStarted = false;
+function createCommandFailureOutput(name: string): string {
+  return `[pi-command-template error: {{${name}}}]`;
 }
 
 function trimOneTrailingLineEnding(value: string): string {

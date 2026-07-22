@@ -22,7 +22,7 @@ interface ExecutionConfig {
   timeoutMs: number;
   maxOutputChars: number;
   cwd: ExecutionCwd;
-  shell: boolean;
+  allowShell: boolean;
 }
 
 export type PartialPiCommandTemplateConfig = Partial<{
@@ -32,6 +32,7 @@ export type PartialPiCommandTemplateConfig = Partial<{
     timeoutMs: unknown;
     maxOutputChars: unknown;
     cwd: unknown;
+    allowShell: unknown;
     shell: unknown;
   }>;
   templates: unknown;
@@ -52,7 +53,7 @@ export const defaultConfig: PiCommandTemplateConfig = {
     timeoutMs: 3000,
     maxOutputChars: 20_000,
     cwd: 'workspace',
-    shell: false,
+    allowShell: false,
   },
   templates: {},
 };
@@ -61,9 +62,9 @@ export const positiveIntegerSchema = defineConfigSchema(z.number().int().positiv
 
 export const cwdSchema = defineConfigSchema(z.string().min(1), 'expected non-empty string');
 
-const templateCommandSchema = z.union([z.string(), z.tuple([z.string().min(1)]).rest(z.string())]);
+const templateCommandSchema = z.union([z.string().regex(/\S/), z.tuple([z.string().min(1)]).rest(z.string())]);
 
 export const templatesSchema = defineConfigSchema(
   z.record(z.string().regex(/^[A-Za-z0-9_-]+$/), templateCommandSchema),
-  'expected object mapping template names to command strings or non-empty string arrays; names may contain letters, digits, underscores, and hyphens'
+  'expected object mapping template names to non-empty command strings or non-empty string arrays; names may contain letters, digits, underscores, and hyphens'
 );

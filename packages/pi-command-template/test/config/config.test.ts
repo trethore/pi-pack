@@ -1,5 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -18,7 +17,7 @@ describe('loadConfig', () => {
     // Arrange
     const workspace = createWorkspace(`{
       "surfaces": { "skills": false },
-      "execution": { "timeoutMs": 1234 },
+      "execution": { "timeoutMs": 1234, "allowShell": true },
       "templates": { "node-version": ["node", "--version"] }
     }`);
 
@@ -30,15 +29,29 @@ describe('loadConfig', () => {
     expect(loadedConfig.config.surfaces.system).toBe(false);
     expect(loadedConfig.config.execution.timeoutMs).toBe(1234);
     expect(loadedConfig.config.execution.maxOutputChars).toBe(20_000);
-    expect(loadedConfig.config.execution.shell).toBe(false);
+    expect(loadedConfig.config.execution.allowShell).toBe(true);
     expect(loadedConfig.config.templates['node-version']).toEqual(['node', '--version']);
     expect(loadedConfig.errors).toEqual([]);
+  });
+
+  it('rejects the removed shell setting', () => {
+    // Arrange
+    const workspace = createWorkspace(`{
+      "execution": { "shell": true }
+    }`);
+
+    // Act
+    const loadedConfig = loadConfig(workspace);
+
+    // Assert
+    expect(loadedConfig.config.execution.allowShell).toBe(false);
+    expect(loadedConfig.errors[0]).toContain('use execution.allowShell instead');
   });
 
   it('rejects invalid template names and invalid execution values', () => {
     // Arrange
     const workspace = createWorkspace(`{
-      "execution": { "timeoutMs": 0 },
+      "execution": { "timeoutMs": 0, "allowShell": "yes" },
       "templates": { "bad name": "node --version" }
     }`);
 
@@ -47,14 +60,18 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loadedConfig.config.execution.timeoutMs).toBe(3000);
+    expect(loadedConfig.config.execution.allowShell).toBe(false);
     expect(loadedConfig.config.templates).toEqual({});
-    expect(loadedConfig.errors).toHaveLength(2);
+    expect(loadedConfig.errors).toHaveLength(3);
   });
 
-  it('rejects array commands without an executable', () => {
+  it.each([
+    ['empty string commands', '""'],
+    ['array commands without an executable', '[""]'],
+  ])('rejects %s', (_description, command) => {
     // Arrange
     const workspace = createWorkspace(`{
-      "templates": { "empty-command": [""] }
+      "templates": { "empty-command": ${command} }
     }`);
 
     // Act

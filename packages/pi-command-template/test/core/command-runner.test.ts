@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -17,7 +17,7 @@ describe('runTemplateCommand', () => {
     const result = runTemplateCommand({
       config: {
         ...defaultConfig,
-        execution: { ...defaultConfig.execution, shell: true },
+        execution: { ...defaultConfig.execution, allowShell: true },
         templates: {},
       },
       workspaceCwd,
@@ -46,6 +46,28 @@ describe('runTemplateCommand', () => {
 
     // Assert
     expect(result.output).toBe('hello world');
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('runs string commands through the shell when allowed', () => {
+    // Arrange
+    const command = 'printf hello | tr a-z A-Z';
+
+    // Act
+    const result = runTemplateCommand({
+      config: {
+        ...defaultConfig,
+        execution: { ...defaultConfig.execution, allowShell: true },
+        templates: {},
+      },
+      workspaceCwd,
+      extensionCwd,
+      name: 'shell',
+      command,
+    });
+
+    // Assert
+    expect(result.output).toBe('HELLO');
     expect(result.diagnostics).toEqual([]);
   });
 
@@ -119,41 +141,28 @@ describe('runTemplateCommand', () => {
     expect(result.output).toBe(commandCwd);
   });
 
-  it('preserves empty quoted arguments in direct command strings', () => {
+  it('blocks string commands when shell execution is disabled', () => {
     // Arrange
-    const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'pi-command-template-args-'));
-    const scriptPath = path.join(temporaryDirectory, 'print-args.cjs');
-    writeFileSync(scriptPath, 'process.stdout.write(JSON.stringify(process.argv.slice(2)))');
+    const command = 'printf hello';
 
     // Act
     const result = runTemplateCommand({
       config: { ...defaultConfig, templates: {} },
       workspaceCwd,
       extensionCwd,
-      name: 'args',
-      command: `${process.execPath} ${scriptPath} "" tail`,
-    });
-
-    // Assert
-    expect(result.output).toBe('["","tail"]');
-    expect(result.diagnostics).toEqual([]);
-  });
-
-  it('reports unterminated quotes in direct command strings', () => {
-    // Arrange
-    const command = 'node "unterminated';
-
-    // Act
-    const result = runTemplateCommand({
-      config: { ...defaultConfig, templates: {} },
-      workspaceCwd,
-      extensionCwd,
-      name: 'quote',
+      name: 'shell-disabled',
       command,
     });
 
     // Assert
-    expect(result.output).toBe('[pi-command-template error: {{quote}}]');
-    expect(result.diagnostics[0]?.message).toContain('unterminated " quote');
+    expect(result.output).toBe('[pi-command-template error: {{shell-disabled}}]');
+    expect(result.diagnostics).toEqual([
+      {
+        severity: 'warning',
+        template: 'shell-disabled',
+        message:
+          'pi-command-template command {{shell-disabled}} requires execution.allowShell to run string shell commands.',
+      },
+    ]);
   });
 });
