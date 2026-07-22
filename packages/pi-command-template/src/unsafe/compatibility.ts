@@ -18,7 +18,7 @@ export function checkUnsafeCompatibility(): CompatibilityCheckResult {
   }
 
   if (!isSupportedPiVersion(VERSION)) {
-    warnings.push(`pi-command-template: declared support is Pi >=0.80.8 <1; current Pi version is ${VERSION}.`);
+    warnings.push(`pi-command-template: declared support is Pi >=0.81.1 <1; current Pi version is ${VERSION}.`);
   }
 
   return { warnings, errors };
@@ -29,7 +29,7 @@ function isSupportedPiVersion(version: string): boolean {
   if (!match) return false;
 
   const versionParts = match.slice(1).map(Number);
-  const minimumParts = [0, 80, 8];
+  const minimumParts = [0, 81, 1];
   if (versionParts[0] !== 0) return false;
 
   for (const [index, minimumPart] of minimumParts.entries()) {

@@ -13,7 +13,7 @@ Tiny and token-efficient MCP adapter for Pi.
 
 ## Installation
 
-Requires Pi `>=0.80.8 <1`.
+Requires Pi `>=0.81.1 <1`.
 
 From the `pi-pack` repository root, install globally:
 
