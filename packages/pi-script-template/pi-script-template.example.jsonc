@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "surfaces": {
+    "system": true,
+    "appendSystem": true,
+    "contextFiles": true,
+    "promptTemplates": true,
+    "skills": true
+  },
+  "execution": {
+    "timeoutMs": 3000,
+    "maxOutputChars": 20000
+  }
+}

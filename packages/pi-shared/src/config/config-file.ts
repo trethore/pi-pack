@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
+import { getErrorMessage, isMissingPathError } from '@trethore/pi-shared/error.js';
 import { isRecord } from '@trethore/pi-shared/object.js';
 
 export interface LoadedExtensionConfig<TConfig> {
@@ -35,10 +36,16 @@ export function readJsoncConfigFile<T extends Record<string, unknown>>(
   extensionName: string,
   errors: string[]
 ): T | undefined {
-  if (!existsSync(configPath)) return undefined;
+  let contents: string;
+  try {
+    contents = readFileSync(configPath, 'utf8');
+  } catch (error) {
+    if (isMissingPathError(error)) return undefined;
+    errors.push(`${extensionName} config ignored: could not read ${configPath}: ${getErrorMessage(error)}.`);
+    return undefined;
+  }
 
   const parseErrors: ParseError[] = [];
-  const contents = readFileSync(configPath, 'utf8');
   const parsed = parse(contents, parseErrors, {
     allowTrailingComma: true,
     disallowComments: false,

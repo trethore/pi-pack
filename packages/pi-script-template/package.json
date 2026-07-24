@@ -1,0 +1,29 @@
+{
+  "name": "@trethore/pi-script-template",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Inject Node.js script output into Pi prompt resources.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "templates"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.82.0 <1"
+  },
+  "dependencies": {
+    "@trethore/pi-shared": "*"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-script-template/*": "./src/*",
+    "#test/*": "./test/*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}
