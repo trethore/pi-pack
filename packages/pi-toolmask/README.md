@@ -11,7 +11,7 @@ Wildcard masks for disabling Pi tools.
 
 ## Installation
 
-Requires Pi `>=0.81.1 <1`.
+Requires Pi `>=0.82.0 <1`.
 
 From the `pi-pack` repository root, install globally:
 
