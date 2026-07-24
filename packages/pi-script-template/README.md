@@ -97,6 +97,8 @@ All rendering surfaces are disabled by default.
 
 Scripts run through `process.execPath` with no shell. Their working directory is the directory containing the script.
 
+Each template runs at most once per workspace and trust scope. Its output is reused for subsequent resource reads so prompt content remains stable for model prompt caching. Reloading the extension creates a new cache.
+
 The following environment variables are available:
 
 - `PI_WORKSPACE_CWD`: active Pi workspace

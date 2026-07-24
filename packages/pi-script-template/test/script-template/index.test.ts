@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { DefaultResourceLoader, type ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createConfigTestFileHelpers } from '@trethore/pi-shared/test/config-test-helpers.js';
 import { removePiContentTransformer } from '@trethore/pi-shared/unsafe/content-transform.js';
@@ -68,5 +68,34 @@ describe('registerScriptTemplate', () => {
 
     // Assert
     expect(output).toBe('global');
+  });
+
+  it('keeps repeated resource reads stable for prompt caching', () => {
+    // Arrange
+    const { workspace } = createEnvironment();
+    const scriptsDirectory = path.join(workspace, '.pi', 'script-templates');
+    const counterPath = path.join(scriptsDirectory, 'counter.txt');
+    writeFileSync(counterPath, '0');
+    writeFileSync(
+      path.join(scriptsDirectory, 'counter.mjs'),
+      'import fs from "node:fs"; const path = new URL("counter.txt", import.meta.url); const next = Number(fs.readFileSync(path, "utf8")) + 1; fs.writeFileSync(path, String(next)); process.stdout.write(String(next));'
+    );
+    registerScriptTemplate(createPi(), workspace);
+    const resourceLoader = {
+      agentsFiles: [{ path: 'AGENTS.md', content: '{{counter}}' }],
+      cwd: workspace,
+      settingsManager: { isProjectTrusted: () => true },
+    };
+    const prototype = DefaultResourceLoader.prototype as unknown as {
+      getAgentsFiles(this: typeof resourceLoader): { agentsFiles: Array<{ path: string; content: string }> };
+    };
+
+    // Act
+    const firstContent = prototype.getAgentsFiles.call(resourceLoader).agentsFiles[0]?.content;
+    const secondContent = prototype.getAgentsFiles.call(resourceLoader).agentsFiles[0]?.content;
+
+    // Assert
+    expect([firstContent, secondContent]).toEqual(['1', '1']);
+    expect(readFileSync(counterPath, 'utf8')).toBe('1');
   });
 });
