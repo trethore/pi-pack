@@ -9,6 +9,13 @@ import { afterEach, expect } from 'vitest';
 const RENDER_WIDTH = 240;
 const temporaryDirectories = new Set<string>();
 
+type ToolResultRenderer<TResult> = (
+  result: TResult,
+  options: { expanded: boolean; isPartial: boolean },
+  theme: never,
+  context: never
+) => Component;
+
 afterEach(() => {
   for (const directory of temporaryDirectories) {
     rmSync(directory, { force: true, recursive: true });
@@ -80,14 +87,22 @@ export function expectSummaryOnlyCollapsedOutputWithExpansionHint(rendered: stri
 }
 
 export function renderToolResult<TResult>(
-  renderResult:
-    | ((result: TResult, options: { expanded: boolean; isPartial: boolean }, theme: never, context: never) => Component)
-    | undefined,
+  renderResult: ToolResultRenderer<TResult> | undefined,
   result: TResult,
   options: { expanded: boolean; isPartial: boolean },
   isError = false
 ): string {
   return renderComponent(renderResult?.(result, options, createTheme(), createRenderContext(isError)));
+}
+
+export function expectCollapsedTruncatedResult<TResult>(
+  renderResult: ToolResultRenderer<TResult> | undefined,
+  result: TResult,
+  fullOutputPath: string
+): void {
+  const rendered = renderToolResult(renderResult, result, { expanded: false, isPartial: false });
+  expect(rendered).toContain(`Full output: ${fullOutputPath}`);
+  expect(rendered).toContain('Truncated:');
 }
 
 export function makeTempDir(prefix: string): string {

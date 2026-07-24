@@ -9,6 +9,7 @@ import {
   createLineOutput,
   createRenderContext,
   createTheme,
+  expectCollapsedTruncatedResult,
   expectPersistedTruncatedResult,
   expectSummaryOnlyCollapsedOutputWithExpansionHint,
   makeTempDir as makePrefixedTempDir,
@@ -286,9 +287,7 @@ src/index.ts
       fullOutputIncludes: ['matches=1000 files=1000', 'file-999.txt\n1000:'],
     });
 
-    const rendered = renderToolResult(tool.renderResult, result, { expanded: false, isPartial: false });
-    expect(rendered).toContain(`Full output: ${fullOutputPath}`);
-    expect(rendered).toContain('Truncated:');
+    expectCollapsedTruncatedResult(tool.renderResult, result, fullOutputPath);
   });
 
   it('renders active call flags', () => {
