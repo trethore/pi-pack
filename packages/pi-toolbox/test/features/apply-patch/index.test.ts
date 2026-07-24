@@ -16,26 +16,31 @@ describe('apply_patch tool', () => {
     expect(pi.tools.map((tool) => tool.name)).toEqual(['apply_patch']);
   });
 
-  it('defines patch as required and workdir as optional in the tool schema', () => {
+  it('defines a strict-compatible constrained sampling schema', () => {
     // Arrange and act
     const tool = createApplyPatchToolDefinition();
     const parameters = tool.parameters as never as {
       required: string[];
       properties: {
         patch: { type: string; description: string };
-        workdir: { type: string; description: string };
+        workdir: { anyOf: Array<{ type: string }>; description: string };
       };
     };
 
     // Assert
-    expect(parameters.required).toEqual(['patch']);
+    expect(tool.constrainedSampling).toEqual({ type: 'json_schema', strict: 'prefer' });
+    expect(parameters.required).toEqual(['patch', 'workdir']);
     expect(parameters.properties.patch).toEqual(
       expect.objectContaining({
         type: 'string',
         description: 'Patch to apply.',
       })
     );
-    expect(parameters.properties.workdir.type).toBe('string');
+    expect(parameters.properties.workdir).toEqual({
+      anyOf: [{ type: 'string' }, { type: 'null' }],
+      description:
+        'Working directory for resolving relative paths in the patch. Set to null to use the current working directory.',
+    });
   });
 
   it('joins multiline definition descriptions', () => {
@@ -96,7 +101,7 @@ describe('apply_patch tool', () => {
     const patch = lines('*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch');
 
     // Act
-    await tool.execute('call-id', { patch }, undefined, undefined, { cwd: '/session/project' } as never);
+    await tool.execute('call-id', { patch, workdir: null }, undefined, undefined, { cwd: '/session/project' } as never);
 
     // Assert
     expect(runner).toHaveBeenCalledWith({ cwd: '/session/project', patch, workdir: undefined });
@@ -112,7 +117,7 @@ describe('apply_patch tool', () => {
     // Act
     const operation = tool.execute(
       'call-id',
-      { patch: lines('*** Begin Patch', '*** End Patch') },
+      { patch: lines('*** Begin Patch', '*** End Patch'), workdir: null },
       undefined,
       undefined,
       {} as never
@@ -131,8 +136,8 @@ describe('apply_patch tool', () => {
     const patch = lines('*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch');
 
     // Act
-    const callText = renderComponent(tool.renderCall?.({ patch }, theme, renderContext));
-    const result = await tool.execute('call-id', { patch }, undefined, undefined, {} as never);
+    const callText = renderComponent(tool.renderCall?.({ patch, workdir: null }, theme, renderContext));
+    const result = await tool.execute('call-id', { patch, workdir: null }, undefined, undefined, {} as never);
     const resultText = renderComponent(tool.renderResult?.(result, { expanded: true } as never, theme, renderContext));
 
     // Assert

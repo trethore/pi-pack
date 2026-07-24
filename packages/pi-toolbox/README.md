@@ -82,10 +82,10 @@ Applies structured file edits using the Codex apply-patch format.
 
 `*** Add File:` targets and `*** Move to:` destinations must not already exist. The operation is serialized with Pi's file mutation queue and rolls back completed writes if a later filesystem operation fails.
 
-| Argument  | Required | Description                                                                                                          |
-| --------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `patch`   | Yes      | Patch text starting with `*** Begin Patch` and ending with `*** End Patch`.                                          |
-| `workdir` | No       | Directory used to resolve relative paths. Defaults to the current working directory; absolute paths remain absolute. |
+| Argument  | Required | Description                                                                               |
+| --------- | -------- | ----------------------------------------------------------------------------------------- |
+| `patch`   | Yes      | Patch text starting with `*** Begin Patch` and ending with `*** End Patch`.               |
+| `workdir` | Yes      | Directory used to resolve relative paths, or `null` to use the current working directory. |
 
 Example call:
 

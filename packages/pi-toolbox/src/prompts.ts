@@ -22,7 +22,7 @@ export const APPLY_PATCH_PROMPT = {
   parameters: {
     patch: 'Patch to apply.',
     workdir:
-      'Optional working directory for resolving relative paths in the patch. If omitted, paths are resolved against the current working directory.',
+      'Working directory for resolving relative paths in the patch. Set to null to use the current working directory.',
   },
 };
 

@@ -22,11 +22,9 @@ const APPLY_PATCH_TOOL_DEFINITION = {
 const APPLY_PATCH_PARAMETERS = Type.Object(
   {
     patch: Type.String({ description: APPLY_PATCH_PROMPT.parameters.patch }),
-    workdir: Type.Optional(
-      Type.String({
-        description: APPLY_PATCH_PROMPT.parameters.workdir,
-      })
-    ),
+    workdir: Type.Union([Type.String(), Type.Null()], {
+      description: APPLY_PATCH_PROMPT.parameters.workdir,
+    }),
   },
   { additionalProperties: false }
 );
@@ -86,14 +84,18 @@ export function createApplyPatchToolDefinition(
 
   return {
     ...tool,
+    constrainedSampling: {
+      type: 'json_schema',
+      strict: 'prefer',
+    },
     renderResult(result, resultOptions, theme, context) {
       return renderApplyPatchResult(result, resultOptions, theme, context);
     },
   };
 }
 
-function normalizeWorkdir(workdir: string | undefined): string | undefined {
-  if (workdir === undefined) return undefined;
+function normalizeWorkdir(workdir: string | null | undefined): string | undefined {
+  if (workdir === undefined || workdir === null) return undefined;
   const normalized = normalizeToolPath(workdir);
   return normalized.length === 0 ? undefined : normalized;
 }
