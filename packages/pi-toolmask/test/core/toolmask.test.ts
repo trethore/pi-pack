@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PiToolmaskConfig } from '#pi-toolmask/config/schema.js';
-import { applyToolmask } from '#pi-toolmask/core/toolmask.js';
-
-const defaultConfig: PiToolmaskConfig = {
-  enabled: true,
-  masks: [],
-  enforceBeforeAgentStart: true,
-  notify: false,
-};
+import { applyToolmask, compileToolmask } from '#pi-toolmask/core/toolmask.js';
 
 describe('applyToolmask', () => {
   it('disables active tools matching masks', () => {
@@ -16,7 +8,7 @@ describe('applyToolmask', () => {
     const { calls, pi } = createToolmaskPi(['read', 'bash', 'write', 'mcp_read_docs']);
 
     // Act
-    const result = applyToolmask(pi, { ...defaultConfig, masks: ['bash', 'mcp_*'] });
+    const result = applyToolmask(pi, compileToolmask(['bash', 'mcp_*']));
 
     // Assert
     expect(result).toEqual({
@@ -33,7 +25,7 @@ describe('applyToolmask', () => {
     const { calls, pi } = createToolmaskPi(['read', 'bash']);
 
     // Act
-    const result = applyToolmask(pi, { ...defaultConfig, masks: ['write'] });
+    const result = applyToolmask(pi, compileToolmask(['write']));
 
     // Assert
     expect(result.changed).toBe(false);
@@ -45,7 +37,7 @@ describe('applyToolmask', () => {
     const { calls, pi } = createToolmaskPi(['read', 'bash']);
 
     // Act
-    const result = applyToolmask(pi, { ...defaultConfig, masks: ['*'] });
+    const result = applyToolmask(pi, compileToolmask(['*']));
 
     // Assert
     expect(result.nextActiveTools).toEqual([]);
@@ -57,7 +49,7 @@ describe('applyToolmask', () => {
     const { calls, pi } = createToolmaskPi(['read', 'bash', 'write', 'edit']);
 
     // Act
-    const result = applyToolmask(pi, { ...defaultConfig, masks: ['*', '!read'] });
+    const result = applyToolmask(pi, compileToolmask(['*', '!read']));
 
     // Assert
     expect(result.nextActiveTools).toEqual(['read']);
@@ -70,7 +62,7 @@ describe('applyToolmask', () => {
     const { calls, pi } = createToolmaskPi(['read', 'bash']);
 
     // Act
-    const result = applyToolmask(pi, { ...defaultConfig, masks: ['!read'] });
+    const result = applyToolmask(pi, compileToolmask(['!read']));
 
     // Assert
     expect(result.changed).toBe(false);

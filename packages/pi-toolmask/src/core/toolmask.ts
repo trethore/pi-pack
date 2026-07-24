@@ -1,7 +1,8 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
-import type { PiToolmaskConfig } from '#src/config/schema.js';
 import { createWildcardMatcher, isNegatedWildcardPattern, stripWildcardNegation } from '#src/core/wildcard.js';
+
+export type Toolmask = (toolName: string) => boolean;
 
 export interface ToolmaskResult {
   activeTools: string[];
@@ -12,10 +13,9 @@ export interface ToolmaskResult {
 
 export function applyToolmask(
   pi: Pick<ExtensionAPI, 'getActiveTools' | 'setActiveTools'>,
-  config: PiToolmaskConfig
+  isToolMasked: Toolmask
 ): ToolmaskResult {
   const activeTools = pi.getActiveTools();
-  const isToolMasked = createToolmaskMatcher(config.masks);
   const nextActiveTools: string[] = [];
   const maskedTools: string[] = [];
 
@@ -36,7 +36,7 @@ export function applyToolmask(
   return { activeTools, nextActiveTools, maskedTools, changed };
 }
 
-function createToolmaskMatcher(masks: readonly string[]): (toolName: string) => boolean {
+export function compileToolmask(masks: readonly string[]): Toolmask {
   const positiveMasks: string[] = [];
   const negativeMasks: string[] = [];
 
