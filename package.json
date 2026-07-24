@@ -49,7 +49,8 @@
     "install:local:pi-toolbox": "pi install -l ./packages/pi-toolbox",
     "install:global:pi-toolmask": "pi install ./packages/pi-toolmask",
     "install:local:pi-toolmask": "pi install -l ./packages/pi-toolmask",
-    "jscpd": "jscpd packages scripts --format typescript --no-tips"
+    "jscpd": "jscpd packages scripts --format typescript --no-tips",
+    "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.82.0 <1"
@@ -70,6 +71,7 @@
     "@earendil-works/pi-coding-agent": ">=0.82.0 <1",
     "@eslint/js": "9.39.4",
     "@types/node": "^22.19.19",
+    "@vitest/coverage-v8": "4.1.5",
     "eslint": "9.39.4",
     "eslint-plugin-unicorn": "64.0.0",
     "jscpd": "^5.0.9",

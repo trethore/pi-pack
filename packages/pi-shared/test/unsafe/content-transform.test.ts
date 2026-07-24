@@ -15,16 +15,30 @@ const firstId = 'test:first';
 const secondId = 'test:second';
 
 interface FakeResourceLoader {
-  systemPrompt: string;
+  systemPrompt: string | undefined;
+  appendSystemPrompt: string[];
   agentsFiles: Array<{ path: string; content: string }>;
+  prompts: Array<{ name: string; content: string; filePath: string }>;
+  promptDiagnostics: unknown[];
+  skills: Array<{ name: string; description: string; filePath: string }>;
+  skillDiagnostics: unknown[];
   cwd: string;
   settingsManager: { isProjectTrusted(): boolean };
 }
 
 interface FakeResourceLoaderPrototype {
   getSystemPrompt(this: FakeResourceLoader): string;
+  getAppendSystemPrompt(this: FakeResourceLoader): string[];
   getAgentsFiles(this: FakeResourceLoader): {
     agentsFiles: Array<{ path: string; content: string }>;
+  };
+  getPrompts(this: FakeResourceLoader): {
+    prompts: Array<{ name: string; content: string; filePath: string }>;
+    diagnostics: unknown[];
+  };
+  getSkills(this: FakeResourceLoader): {
+    skills: Array<{ name: string; description: string; filePath: string }>;
+    diagnostics: unknown[];
   };
 }
 
@@ -35,7 +49,12 @@ function createPi(): ExtensionAPI {
 function createFakeResourceLoader(): FakeResourceLoader {
   return {
     systemPrompt: 'system',
+    appendSystemPrompt: ['first', 'second'],
     agentsFiles: [{ path: 'AGENTS.md', content: 'agents' }],
+    prompts: [{ name: 'prompt', content: 'prompt content', filePath: 'prompt.md' }],
+    promptDiagnostics: [],
+    skills: [{ name: 'skill', description: 'skill description', filePath: 'SKILL.md' }],
+    skillDiagnostics: [],
     cwd: '/workspace',
     settingsManager: { isProjectTrusted: () => true },
   };
@@ -167,6 +186,68 @@ describe('shared Pi content transforms', () => {
 
     // Assert
     expect(agentsFiles).toBe(resourceLoader.agentsFiles);
+  });
+
+  it('transforms appended prompts, prompt templates, and skill descriptions', () => {
+    registerPiContentTransformer(createPi(), {
+      id: firstId,
+      transform: ({ surface, content }) => `${surface}:${content}`,
+    });
+    const prototype = getFakeResourceLoaderPrototype();
+    const resourceLoader = createFakeResourceLoader();
+
+    const appended = prototype.getAppendSystemPrompt.call(resourceLoader);
+    const prompts = prototype.getPrompts.call(resourceLoader);
+    const skills = prototype.getSkills.call(resourceLoader);
+
+    expect(appended).toEqual(['appendSystemPrompt:first', 'appendSystemPrompt:second']);
+    expect(prompts).toEqual({
+      prompts: [{ name: 'prompt', content: 'promptTemplate:prompt content', filePath: 'prompt.md' }],
+      diagnostics: [],
+    });
+    expect(skills).toEqual({
+      skills: [{ name: 'skill', description: 'skillDescription:skill description', filePath: 'SKILL.md' }],
+      diagnostics: [],
+    });
+  });
+
+  it('preserves append, prompt, and skill collections when no transformer changes them', () => {
+    registerPiContentTransformer(createPi(), {
+      id: firstId,
+      transform: ({ content }) => content,
+    });
+    const prototype = getFakeResourceLoaderPrototype();
+    const resourceLoader = createFakeResourceLoader();
+
+    const appended = prototype.getAppendSystemPrompt.call(resourceLoader);
+    const prompts = prototype.getPrompts.call(resourceLoader);
+    const skills = prototype.getSkills.call(resourceLoader);
+
+    expect(appended).toBe(resourceLoader.appendSystemPrompt);
+    expect(prompts.prompts).toBe(resourceLoader.prompts);
+    expect(skills.skills).toBe(resourceLoader.skills);
+  });
+
+  it('returns untransformed resources when no transformers are registered', () => {
+    const prototype = getFakeResourceLoaderPrototype();
+    const resourceLoader = createFakeResourceLoader();
+
+    expect(prototype.getAppendSystemPrompt.call(resourceLoader)).toBe(resourceLoader.appendSystemPrompt);
+    expect(prototype.getAgentsFiles.call(resourceLoader).agentsFiles).toBe(resourceLoader.agentsFiles);
+    expect(prototype.getPrompts.call(resourceLoader).prompts).toBe(resourceLoader.prompts);
+    expect(prototype.getSkills.call(resourceLoader).skills).toBe(resourceLoader.skills);
+  });
+
+  it('preserves an undefined system prompt', () => {
+    registerPiContentTransformer(createPi(), {
+      id: firstId,
+      transform: ({ content }) => `${content} changed`,
+    });
+    const prototype = getFakeResourceLoaderPrototype();
+    const resourceLoader = createFakeResourceLoader();
+    resourceLoader.systemPrompt = undefined;
+
+    expect(prototype.getSystemPrompt.call(resourceLoader)).toBeUndefined();
   });
 
   it('preserves explicit skill invocation arguments', () => {

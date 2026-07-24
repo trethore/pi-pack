@@ -95,7 +95,72 @@ describe('codexify reset command', () => {
   });
 });
 
-function registerTestCodexifyCommand(): RegisteredCommand {
+describe('codexify command routing', () => {
+  it('warns when the extension is disabled', async () => {
+    const config = createConfig();
+    config.enabled = false;
+    const command = registerTestCodexifyCommand(config);
+    const ctx = createCommandContext(true);
+
+    await command.handler('status', ctx);
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith('pi-codexify is disabled in pi-codexify.jsonc.', 'warning');
+  });
+
+  it.each(['', 'help', 'unknown'])('shows help for %j', async (args) => {
+    const command = registerTestCodexifyCommand();
+    const ctx = createCommandContext(true);
+
+    await command.handler(args, ctx);
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining('pi-codexify commands'),
+      args === 'unknown' ? 'warning' : 'info'
+    );
+  });
+
+  it('shows enabled and disabled status sections', async () => {
+    const enabledCommand = registerTestCodexifyCommand();
+    const enabledContext = createCommandContext(true);
+    await enabledCommand.handler('status', enabledContext);
+    expect(enabledContext.ui.notify).toHaveBeenCalledWith(expect.stringContaining('controls enabled: yes'), 'info');
+    expect(enabledContext.ui.notify).toHaveBeenCalledWith(expect.stringContaining('Codex controls'), 'info');
+
+    const disabledConfig = createConfig();
+    disabledConfig.controls.enabled = false;
+    disabledConfig.usage = false;
+    disabledConfig.reset = false;
+    const disabledCommand = registerTestCodexifyCommand(disabledConfig);
+    const disabledContext = createCommandContext(true);
+    await disabledCommand.handler('status', disabledContext);
+    expect(disabledContext.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining('controls enabled: no\nusage command enabled: no\nreset command enabled: no'),
+      'info'
+    );
+  });
+
+  it.each(['usage', 'reset'] as const)('warns when %s is disabled', async (name) => {
+    const config = createConfig();
+    config[name] = false;
+    const command = registerTestCodexifyCommand(config);
+    const ctx = createCommandContext(true);
+
+    await command.handler(name, ctx);
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith(`codexify ${name} is disabled in pi-codexify.jsonc.`, 'warning');
+  });
+
+  it.each(['verbosity', 'reasoning-summary', 'service-tier'] as const)('routes %s controls', async (name) => {
+    const command = registerTestCodexifyCommand();
+    const ctx = createCommandContext(true);
+
+    await command.handler(`  ${name}  `, ctx);
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining('Codex controls'), 'info');
+  });
+});
+
+function registerTestCodexifyCommand(config = createConfig()): RegisteredCommand {
   let command: RegisteredCommand | undefined;
   registerCommand(
     {
@@ -103,11 +168,18 @@ function registerTestCodexifyCommand(): RegisteredCommand {
         command = registeredCommand;
       },
     } as ExtensionAPI,
-    defaultConfig
+    config
   );
 
   if (!command) throw new Error('codexify command was not registered');
   return command;
+}
+
+function createConfig() {
+  return {
+    ...defaultConfig,
+    controls: { ...defaultConfig.controls },
+  };
 }
 
 function createCommandContext(confirmed: boolean): ReturnType<typeof createContext> & ExtensionCommandContext {
