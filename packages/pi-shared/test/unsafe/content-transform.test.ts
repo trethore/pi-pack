@@ -64,6 +64,15 @@ function getFakeResourceLoaderPrototype(): FakeResourceLoaderPrototype {
   return DefaultResourceLoader.prototype as unknown as FakeResourceLoaderPrototype;
 }
 
+function getSupplementalResources(resourceLoader: FakeResourceLoader) {
+  const prototype = getFakeResourceLoaderPrototype();
+  return {
+    appended: prototype.getAppendSystemPrompt.call(resourceLoader),
+    prompts: prototype.getPrompts.call(resourceLoader),
+    skills: prototype.getSkills.call(resourceLoader),
+  };
+}
+
 describe('shared Pi content transforms', () => {
   afterEach(() => {
     removePiContentTransformer(firstId);
@@ -193,12 +202,8 @@ describe('shared Pi content transforms', () => {
       id: firstId,
       transform: ({ surface, content }) => `${surface}:${content}`,
     });
-    const prototype = getFakeResourceLoaderPrototype();
     const resourceLoader = createFakeResourceLoader();
-
-    const appended = prototype.getAppendSystemPrompt.call(resourceLoader);
-    const prompts = prototype.getPrompts.call(resourceLoader);
-    const skills = prototype.getSkills.call(resourceLoader);
+    const { appended, prompts, skills } = getSupplementalResources(resourceLoader);
 
     expect(appended).toEqual(['appendSystemPrompt:first', 'appendSystemPrompt:second']);
     expect(prompts).toEqual({
@@ -216,12 +221,8 @@ describe('shared Pi content transforms', () => {
       id: firstId,
       transform: ({ content }) => content,
     });
-    const prototype = getFakeResourceLoaderPrototype();
     const resourceLoader = createFakeResourceLoader();
-
-    const appended = prototype.getAppendSystemPrompt.call(resourceLoader);
-    const prompts = prototype.getPrompts.call(resourceLoader);
-    const skills = prototype.getSkills.call(resourceLoader);
+    const { appended, prompts, skills } = getSupplementalResources(resourceLoader);
 
     expect(appended).toBe(resourceLoader.appendSystemPrompt);
     expect(prompts.prompts).toBe(resourceLoader.prompts);

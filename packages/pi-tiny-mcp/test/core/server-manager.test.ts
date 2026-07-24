@@ -53,20 +53,21 @@ vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
 }));
 
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
+import { createDeferred } from '@trethore/pi-shared/test/deferred.js';
 
 import { McpServerManager } from '#pi-tiny-mcp/core/server-manager.js';
 
-describe('McpServerManager connections', () => {
-  beforeEach(() => {
-    sdk.clients.length = 0;
-    sdk.nextClients.length = 0;
-    sdk.streamableTransports.length = 0;
-    sdk.sseTransports.length = 0;
-    sdk.stdioTransports.length = 0;
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
+beforeEach(() => {
+  sdk.clients.length = 0;
+  sdk.nextClients.length = 0;
+  sdk.streamableTransports.length = 0;
+  sdk.sseTransports.length = 0;
+  sdk.stdioTransports.length = 0;
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
+describe('McpServerManager connections', () => {
   it('rejects definitions without a command or URL', async () => {
     const manager = new McpServerManager();
 
@@ -156,16 +157,6 @@ describe('McpServerManager connections', () => {
 });
 
 describe('McpServerManager HTTP authentication and fallback', () => {
-  beforeEach(() => {
-    sdk.clients.length = 0;
-    sdk.nextClients.length = 0;
-    sdk.streamableTransports.length = 0;
-    sdk.sseTransports.length = 0;
-    sdk.stdioTransports.length = 0;
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
-
   it('creates streamable HTTP transports with interpolated headers and literal bearer tokens', async () => {
     vi.stubEnv('MCP_HOST', 'example.test');
     vi.stubEnv('MCP_HEADER', 'header-value');
@@ -267,15 +258,6 @@ describe('McpServerManager HTTP authentication and fallback', () => {
 });
 
 describe('McpServerManager usage and lifecycle', () => {
-  beforeEach(() => {
-    sdk.clients.length = 0;
-    sdk.nextClients.length = 0;
-    sdk.streamableTransports.length = 0;
-    sdk.sseTransports.length = 0;
-    sdk.stdioTransports.length = 0;
-    vi.restoreAllMocks();
-  });
-
   it('tracks tool and resource usage for success and failure', async () => {
     const manager = new McpServerManager();
     const client = getNextClient();
@@ -374,12 +356,4 @@ function getNextClient(): ReturnType<typeof createMockClient> {
   const client = createMockClient();
   sdk.nextClients.push(client);
   return client;
-}
-
-function createDeferred(): { promise: Promise<void>; resolve: () => void } {
-  let resolve!: () => void;
-  const promise = new Promise<void>((resolvePromise) => {
-    resolve = resolvePromise;
-  });
-  return { promise, resolve };
 }
