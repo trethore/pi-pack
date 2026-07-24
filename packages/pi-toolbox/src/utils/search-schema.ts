@@ -1,5 +1,7 @@
 import { Type } from 'typebox';
 
+import { SEARCH_PROMPT } from '#src/prompts.js';
+
 export function createSearchPathsSchema(description: string) {
   return Type.Optional(Type.Array(Type.String(), { minItems: 1, description }));
 }
@@ -8,8 +10,7 @@ export function createSearchDepthSchema() {
   return Type.Optional(
     Type.Integer({
       minimum: 1,
-      description:
-        'Maximum directory traversal depth relative to each search path. If provided, passes `--max-depth <depth>`. If omitted, traversal is unlimited.',
+      description: SEARCH_PROMPT.parameters.depth,
     })
   );
 }
@@ -17,8 +18,7 @@ export function createSearchDepthSchema() {
 export function createNoIgnoreSchema() {
   return Type.Optional(
     Type.Boolean({
-      description:
-        'Include files ignored by .gitignore, .ignore, or other ripgrep ignore rules. If true, passes `--no-ignore`. If omitted or false, ignore rules remain active.',
+      description: SEARCH_PROMPT.parameters.noIgnore,
     })
   );
 }
@@ -26,7 +26,7 @@ export function createNoIgnoreSchema() {
 export function createVisibleOnlySchema() {
   return Type.Optional(
     Type.Boolean({
-      description: 'Search only non-hidden files and directories. If omitted or false, hidden files are included.',
+      description: SEARCH_PROMPT.parameters.visibleOnly,
     })
   );
 }

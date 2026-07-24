@@ -2,15 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  formatSize,
-  truncateHead,
-  type TruncationResult,
-} from '@earendil-works/pi-coding-agent';
-
-export const TOOL_OUTPUT_LIMIT_DESCRIPTION = `Output is truncated to ${DEFAULT_MAX_LINES} lines or ${formatSize(DEFAULT_MAX_BYTES)} (whichever is hit first). If truncated, the complete output is saved to a temporary file.`;
+import { formatSize, truncateHead, type TruncationResult } from '@earendil-works/pi-coding-agent';
 
 export interface ToolOutputTruncationDetails {
   truncation?: TruncationResult;

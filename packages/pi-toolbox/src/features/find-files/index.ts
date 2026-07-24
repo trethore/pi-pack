@@ -4,6 +4,7 @@ import { type Static, Type } from 'typebox';
 import type { FindFilesToolConfig } from '#src/config/schema.js';
 import { TOOL_NAME } from '#src/features/find-files/constants.js';
 import { createFindFilesDisplay, formatFindFilesDisplay } from '#src/features/find-files/format.js';
+import { FIND_FILES_PROMPT } from '#src/prompts.js';
 import { formatStringList, normalizeOptionalPathList, normalizeOptionalStringList } from '#src/utils/string-list.js';
 import {
   createNoIgnoreSchema,
@@ -13,11 +14,7 @@ import {
 } from '#src/utils/search-schema.js';
 import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { SUMMARY_ONLY_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
-import {
-  limitAndPersistToolOutput,
-  TOOL_OUTPUT_LIMIT_DESCRIPTION,
-  type ToolOutputTruncationDetails,
-} from '#src/utils/output-limits.js';
+import { limitAndPersistToolOutput, type ToolOutputTruncationDetails } from '#src/utils/output-limits.js';
 import {
   runRipgrepFindFiles,
   type RipgrepFindFilesResult,
@@ -27,13 +24,7 @@ import {
 const FIND_FILES_TOOL_DEFINITION = {
   name: TOOL_NAME,
   label: TOOL_NAME,
-  description: `Find files recursively under search roots using \`rg --files\`, optionally filtered by ripgrep-style glob patterns. ${TOOL_OUTPUT_LIMIT_DESCRIPTION}`,
-  promptSnippet: 'Find files by path and filters',
-  promptGuidelines: [
-    'Use `find_files` for fast file discovery before reading or searching files.',
-    'Use `find_files.paths` as search roots and `find_files.patterns` as optional `rg -g` filters.',
-    '`find_files` always excludes `.git` internals from results.',
-  ],
+  ...FIND_FILES_PROMPT.tool,
 };
 
 type FindFilesParameters = Static<ReturnType<typeof createFindFilesParametersSchema>>;
@@ -123,18 +114,15 @@ function createFindFilesParametersSchema(defaultLimit: number) {
       patterns: Type.Optional(
         Type.Array(Type.String(), {
           minItems: 1,
-          description:
-            'Optional ripgrep-style glob filter(s) passed with `-g`. Prefix with `!` to exclude. If omitted, all discovered files are returned.',
+          description: FIND_FILES_PROMPT.parameters.patterns,
         })
       ),
-      paths: createSearchPathsSchema(
-        'Search root(s). Provide one or more directories. If omitted, the current working directory is used.'
-      ),
+      paths: createSearchPathsSchema(FIND_FILES_PROMPT.parameters.paths),
       limit: Type.Optional(
         Type.Integer({
           minimum: 1,
           maximum: 1000,
-          description: `Maximum number of files to return. If omitted, the default limit is ${defaultLimit}.`,
+          description: FIND_FILES_PROMPT.parameters.limit(defaultLimit),
         })
       ),
       depth: createSearchDepthSchema(),

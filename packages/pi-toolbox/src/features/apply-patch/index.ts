@@ -5,6 +5,7 @@ import { type Static, Type } from 'typebox';
 import { applyPatch, type ApplyPatchOptions, type ApplyPatchResult } from '#src/features/apply-patch/apply.js';
 import { countApplyPatchSummary, formatApplyPatchSummary } from '#src/features/apply-patch/format.js';
 import { formatPatchParseError, InvalidHunkError, InvalidPatchError } from '#src/features/apply-patch/parser.js';
+import { APPLY_PATCH_PROMPT } from '#src/prompts.js';
 import { normalizeToolPath } from '#src/utils/paths.js';
 import { createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { formatTextToolResult } from '#src/utils/tool-results.js';
@@ -15,29 +16,15 @@ const TOOL_NAME = 'apply_patch';
 const APPLY_PATCH_TOOL_DEFINITION = {
   name: TOOL_NAME,
   label: TOOL_NAME,
-  description: [
-    'Apply a patch using a simplified, file-oriented diff format.',
-    'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',
-    'Add targets and move destinations must not already exist.',
-    'Automatically creates parent directories. Optionally, specify a working directory to resolve relative paths.',
-  ].join('\n'),
-  promptSnippet: 'Apply add, update, delete, and move file edits from a patch',
-  promptGuidelines: [
-    'Use `apply_patch` to edit file contents or file paths using the Codex apply_patch format.',
-    'The `apply_patch` input must start with `*** Begin Patch\n` and end with `*** End Patch\n`.',
-    '`apply_patch` supports `*** Add File:`, `*** Delete File:`, and `*** Update File:` hunks with optional `*** Move to:`.',
-    '`apply_patch` requires add targets and move destinations not to exist.',
-    'Relative paths passed to `apply_patch` are resolved against `workdir` when provided; otherwise, they are resolved against the current working directory.',
-  ],
+  ...APPLY_PATCH_PROMPT.tool,
 };
 
 const APPLY_PATCH_PARAMETERS = Type.Object(
   {
-    patch: Type.String({ description: 'Patch to apply.' }),
+    patch: Type.String({ description: APPLY_PATCH_PROMPT.parameters.patch }),
     workdir: Type.Optional(
       Type.String({
-        description:
-          'Optional working directory for resolving relative paths in the patch. If omitted, paths are resolved against the current working directory.',
+        description: APPLY_PATCH_PROMPT.parameters.workdir,
       })
     ),
   },

@@ -4,6 +4,7 @@ import { type Static, Type } from 'typebox';
 import type { GrepToolConfig } from '#src/config/schema.js';
 import { TOOL_NAME } from '#src/features/grep/constants.js';
 import { createGrepDisplay, formatGrepDisplay } from '#src/features/grep/format.js';
+import { GREP_PROMPT } from '#src/prompts.js';
 import {
   formatOptionalStringListFlag,
   formatStringList,
@@ -13,11 +14,7 @@ import {
 } from '#src/utils/string-list.js';
 import { assertSearchPaths, createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { SUMMARY_ONLY_COLLAPSED_RESULT_LINES } from '#src/utils/tool-results.js';
-import {
-  limitAndPersistToolOutput,
-  TOOL_OUTPUT_LIMIT_DESCRIPTION,
-  type ToolOutputTruncationDetails,
-} from '#src/utils/output-limits.js';
+import { limitAndPersistToolOutput, type ToolOutputTruncationDetails } from '#src/utils/output-limits.js';
 import {
   createNoIgnoreSchema,
   createSearchDepthSchema,
@@ -29,12 +26,7 @@ import { runRipgrepGrep, type RipgrepGrepResult, type RunRipgrepGrepOptions } fr
 const GREP_TOOL_DEFINITION = {
   name: TOOL_NAME,
   label: TOOL_NAME,
-  description: `Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)>. ${TOOL_OUTPUT_LIMIT_DESCRIPTION}`,
-  promptSnippet: 'Search file contents by regex(es)',
-  promptGuidelines: [
-    'Use `grep` for fast content search when you know the text or regular expressions to find.',
-    '`grep` always excludes `.git` internals from results.',
-  ],
+  ...GREP_PROMPT.tool,
 };
 
 type GrepParameters = Static<ReturnType<typeof createGrepParametersSchema>>;
@@ -124,31 +116,27 @@ function createGrepParametersSchema(config: GrepToolConfig) {
     {
       regexes: Type.Array(Type.String(), {
         minItems: 1,
-        description:
-          'Ripgrep-compatible regex pattern(s) to search for. Provide one or more regexes; each regex is passed with `-e` and multiple regexes use OR semantics. Searches are line-oriented; inline flags like `(?i)` can be used.',
+        description: GREP_PROMPT.parameters.regexes,
       }),
-      paths: createSearchPathsSchema(
-        'Path(s) to search in. Provide one or more directories or files. If omitted, the current working directory is used.'
-      ),
+      paths: createSearchPathsSchema(GREP_PROMPT.parameters.paths),
       globs: Type.Optional(
         Type.Array(Type.String(), {
           minItems: 1,
-          description:
-            'Glob filter(s) passed with `-g`. Prefix exclusions with `!`. If omitted, no glob filters are applied.',
+          description: GREP_PROMPT.parameters.globs,
         })
       ),
       limit: Type.Optional(
         Type.Integer({
           minimum: 1,
           maximum: 1000,
-          description: `Maximum number of matching lines to return globally. If omitted, defaults to ${config.defaultLimit}.`,
+          description: GREP_PROMPT.parameters.limit(config.defaultLimit),
         })
       ),
       limitPerFile: Type.Optional(
         Type.Integer({
           minimum: 1,
           maximum: 1000,
-          description: `Maximum number of matching lines to return per file. If omitted, defaults to ${formatDefaultLimitPerFileValue(config.defaultLimitPerFile)}.`,
+          description: GREP_PROMPT.parameters.limitPerFile(config.defaultLimitPerFile),
         })
       ),
       depth: createSearchDepthSchema(),
@@ -156,7 +144,7 @@ function createGrepParametersSchema(config: GrepToolConfig) {
         Type.Integer({
           minimum: 100,
           maximum: 2000,
-          description: `Maximum number of characters to show per matching line. If omitted, defaults to ${config.defaultMaxCharsPerMatch}.`,
+          description: GREP_PROMPT.parameters.maxCharsPerMatch(config.defaultMaxCharsPerMatch),
         })
       ),
       noIgnore: createNoIgnoreSchema(),
@@ -164,10 +152,6 @@ function createGrepParametersSchema(config: GrepToolConfig) {
     },
     { additionalProperties: false }
   );
-}
-
-function formatDefaultLimitPerFileValue(defaultLimitPerFile: number | undefined): string {
-  return defaultLimitPerFile === undefined ? 'no per-file limit' : String(defaultLimitPerFile);
 }
 
 function prepareGrepParameters(params: GrepParameters, config: GrepToolConfig): PreparedGrepParameters {
