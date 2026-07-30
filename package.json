@@ -9,7 +9,7 @@
     "pi-package"
   ],
   "engines": {
-    "node": ">=22 <25"
+    "node": "^22.19.0 || ^24.0.0 || ^26.0.0"
   },
   "workspaces": [
     "packages/*"
@@ -55,9 +55,6 @@
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.83.0 <1"
   },
-  "overrides": {
-    "@hono/node-server": "2.0.11"
-  },
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",
     "#pi-codexify/*": "./packages/pi-codexify/src/*",
@@ -69,10 +66,10 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.83.0 <1",
-    "@eslint/js": "9.39.4",
+    "@eslint/js": "10.0.1",
     "@types/node": "^22.19.19",
     "@vitest/coverage-v8": "4.1.5",
-    "eslint": "9.39.4",
+    "eslint": "10.8.0",
     "eslint-plugin-unicorn": "64.0.0",
     "jscpd": "^5.0.9",
     "knip": "^6.11.0",
