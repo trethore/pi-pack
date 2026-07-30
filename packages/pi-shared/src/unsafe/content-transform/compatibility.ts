@@ -18,7 +18,7 @@ export function checkPiContentTransformCompatibility(): PiContentTransformCompat
   }
 
   if (!isSupportedPiVersion(VERSION)) {
-    warnings.push(`pi-shared: Pi content transforms support Pi >=0.82.0 <1; current Pi version is ${VERSION}.`);
+    warnings.push(`pi-shared: Pi content transforms support Pi >=0.83.0 <1; current Pi version is ${VERSION}.`);
   }
 
   return { warnings, errors };
@@ -29,5 +29,5 @@ function isSupportedPiVersion(version: string): boolean {
   if (!match) return false;
 
   const [major, minor] = match.slice(1).map(Number);
-  return major === 0 && minor !== undefined && minor >= 82;
+  return major === 0 && minor !== undefined && minor >= 83;
 }

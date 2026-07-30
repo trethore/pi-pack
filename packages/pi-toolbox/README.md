@@ -11,7 +11,7 @@ Useful file-editing and search tools for Pi.
 
 ## Installation
 
-Requires Pi `>=0.82.0 <1`.
+Requires Pi `>=0.83.0 <1`.
 
 From the `pi-pack` repository root, install globally:
 
