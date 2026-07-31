@@ -5,7 +5,7 @@ import type { PiBashCommandsConfig } from '#pi-bash-commands/config/schema.js';
 import { registerBashCommands } from '#pi-bash-commands/index.js';
 
 describe('registerBashCommands', () => {
-  it('injects PATH into bash calls and appends prompt guidance once', async () => {
+  it('injects PATH into bash calls and appends prompt guidance', async () => {
     // Arrange
     const harness = createHarness();
     registerBashCommands(harness.pi, config());
@@ -13,22 +13,39 @@ describe('registerBashCommands', () => {
     // Act
     await harness.emit('session_start', { reason: 'startup' });
 
-    const firstPrompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
-    const repeatedPrompt = await harness.emit('before_agent_start', {
-      systemPrompt: firstPrompt?.systemPrompt,
-    });
+    const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
     const bashCall = { type: 'tool_call', toolName: 'bash', toolCallId: '1', input: { command: 'example arg' } };
     const readCall = { type: 'tool_call', toolName: 'read', toolCallId: '2', input: { path: 'file' } };
     await harness.emit('tool_call', bashCall);
     await harness.emit('tool_call', readCall);
 
     // Assert
-    expect(firstPrompt?.systemPrompt).toContain('## Bash Commands');
-    expect(repeatedPrompt).toBeUndefined();
+    expect(prompt?.systemPrompt).toContain('## Bash Commands');
     expect(bashCall.input.command).toContain('@trethore/pi-bash-commands:path');
     expect(bashCall.input.command.endsWith('example arg')).toBe(true);
     expect(readCall.input).toEqual({ path: 'file' });
     expect(harness.notify).not.toHaveBeenCalled();
+    await harness.emit('session_shutdown', { reason: 'quit' });
+  });
+
+  it('produces a stable prompt with one guidance section for every agent run', async () => {
+    // Arrange
+    const harness = createHarness();
+    registerBashCommands(harness.pi, config());
+    await harness.emit('session_start', { reason: 'startup' });
+
+    // Act
+    const firstAgentRun = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+    const secondAgentRun = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+    const repeatedHandlerInFirstRun = await harness.emit('before_agent_start', {
+      systemPrompt: firstAgentRun?.systemPrompt,
+    });
+
+    // Assert
+    expect(firstAgentRun?.systemPrompt).toBe(secondAgentRun?.systemPrompt);
+    expect(countOccurrences(firstAgentRun?.systemPrompt ?? '', '## Bash Commands')).toBe(1);
+    expect(countOccurrences(secondAgentRun?.systemPrompt ?? '', '## Bash Commands')).toBe(1);
+    expect(repeatedHandlerInFirstRun).toBeUndefined();
     await harness.emit('session_shutdown', { reason: 'quit' });
   });
 
@@ -171,4 +188,8 @@ function config(): PiBashCommandsConfig {
       },
     ],
   };
+}
+
+function countOccurrences(value: string, search: string): number {
+  return value.split(search).length - 1;
 }

@@ -6,7 +6,7 @@ import {
 } from '#pi-bash-commands-cli/shared/defaults';
 
 export const PI_FIND_DESCRIPTION =
-  'Find files recursively under search roots using rg --files, optionally filtered by ripgrep-style glob patterns.';
+  'Find files recursively under search roots using `rg --files`, optionally filtered by ripgrep-style glob patterns. Use for file discovery; prefer it over `find` or `rg --files` when its options are sufficient because it produces bounded, token-efficient output.';
 
 export function createPiFindHelp(defaults: FindCliDefaults = DEFAULT_FIND_CLI_DEFAULTS): string {
   return `
@@ -27,7 +27,7 @@ Options:
 }
 
 export const PI_GREP_DESCRIPTION =
-  "Search file contents using ripgrep: rg --json -n -e '<regex>' -g '<glob>' <path(s)>";
+  "Search file contents using ripgrep via `rg --json -n -e '<regex>' -g '<glob>' <path(s)>`. Use for repository content searches; prefer it over raw `rg` when its options are sufficient because it produces bounded, token-efficient output.";
 
 export function createPiGrepHelp(defaults: GrepCliDefaults = DEFAULT_GREP_CLI_DEFAULTS): string {
   const limitPerFileDefault =
