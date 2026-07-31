@@ -4,21 +4,11 @@ import { registerEnabledFeatures, type ExtensionFeature } from '@trethore/pi-sha
 import { loadConfig } from '#src/config/config.js';
 import type { PiToolboxConfig } from '#src/config/schema.js';
 import { registerApplyPatchTool } from '#src/features/apply-patch/index.js';
-import { registerFindFilesTool } from '#src/features/find-files/index.js';
-import { registerGrepTool } from '#src/features/grep/index.js';
 
 const FEATURES: readonly ExtensionFeature<PiToolboxConfig>[] = [
   {
     isEnabled: (config) => config.enabled && config.applyPatch.enabled,
     register: registerApplyPatchTool,
-  },
-  {
-    isEnabled: (config) => config.enabled && config.findFiles.enabled,
-    register: (pi, config) => registerFindFilesTool(pi, config.findFiles),
-  },
-  {
-    isEnabled: (config) => config.enabled && config.grep.enabled,
-    register: (pi, config) => registerGrepTool(pi, config.grep),
   },
 ];
 

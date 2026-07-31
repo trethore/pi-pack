@@ -1,13 +1,10 @@
 # pi-toolbox
 
-Useful file-editing and search tools for Pi.
+Useful file-editing tools for Pi.
 
 ## Features
 
 - `apply_patch`: structured multi-file editing with the Codex patch format.
-- `find_files`: low-token file discovery powered by `rg --files`.
-- `grep`: low-token content search powered by `rg --json -n`.
-- Configurable result limits and output clipping.
 
 ## Installation
 
@@ -33,17 +30,7 @@ pi -e ./packages/pi-toolbox
 
 ## Quick start
 
-All tools are enabled by default. After loading the extension, Pi can call `apply_patch`, `find_files`, and `grep` directly.
-
-Example `find_files` arguments:
-
-```jsonc
-{
-  "patterns": ["**/*.ts", "!**/*.d.ts"],
-  "paths": ["src", "test"],
-  "depth": 2,
-}
-```
+The `apply_patch` tool is enabled by default.
 
 ## Configuration
 
@@ -59,17 +46,6 @@ Project configuration overrides global configuration. See [`pi-toolbox.example.j
   "enabled": true,
   "applyPatch": {
     "enabled": true,
-  },
-  "findFiles": {
-    "enabled": true,
-    "defaultLimit": 100,
-  },
-  "grep": {
-    "enabled": true,
-    "defaultLimit": 200,
-    // Omit defaultLimitPerFile for no per-file default limit.
-    // "defaultLimitPerFile": 30,
-    "defaultMaxCharsPerMatch": 200,
   },
 }
 ```
@@ -102,92 +78,6 @@ Example output:
 Success. Updated the following files:
 M README.md
 ```
-
-### `find_files`
-
-Discovers files with `rg --files`.
-
-| Argument      | Required | Default                  | Description                                                                 |
-| ------------- | -------- | ------------------------ | --------------------------------------------------------------------------- |
-| `patterns`    | No       | All files                | Ripgrep-style glob filters passed with `-g`; prefix exclusions with `!`.    |
-| `paths`       | No       | Current directory        | Search root directories.                                                    |
-| `limit`       | No       | `findFiles.defaultLimit` | Maximum files to return, from `1` to `1000`.                                |
-| `depth`       | No       | Unlimited                | Maximum traversal depth relative to each search root.                       |
-| `noIgnore`    | No       | `false`                  | Include files ignored by `.gitignore` and `.ignore`.                        |
-| `visibleOnly` | No       | `false`                  | Exclude hidden files and directories. `.git` internals are always excluded. |
-
-Example calls:
-
-```jsonc
-// Find TypeScript files two levels deep, excluding declarations.
-{ "patterns": ["**/*.ts", "!**/*.d.ts"], "paths": ["src", "test"], "depth": 2 }
-
-// Include ignored files but keep hidden files and directories excluded.
-{ "patterns": ["**/*"], "noIgnore": true, "visibleOnly": true }
-```
-
-Example output:
-
-```text
-found=4
-src/
-  index.ts
-  agent/
-    find-files.ts
-    tools.ts
-test/find-files.test.ts
-[more files available]
-```
-
-When more files exist beyond `limit`, the output ends with `[more files available]`. Formatted output is truncated using Pi's default 2,000-line/50KB limit. If that limit is reached, the complete output is saved to a temporary file and its path is included in the result.
-
-### `grep`
-
-Searches file contents with `rg --json -n`.
-
-| Argument           | Required | Default                         | Description                                                                 |
-| ------------------ | -------- | ------------------------------- | --------------------------------------------------------------------------- |
-| `regexes`          | Yes      | -                               | Regex patterns passed with `-e`.                                            |
-| `paths`            | No       | Current directory               | Directories or files to search.                                             |
-| `globs`            | No       | All files                       | Glob filters passed with `-g`; prefix exclusions with `!`.                  |
-| `limit`            | No       | `grep.defaultLimit`             | Maximum matching lines to return, from `1` to `1000`.                       |
-| `limitPerFile`     | No       | Configured default or unlimited | Maximum matching lines to return per file.                                  |
-| `depth`            | No       | Unlimited                       | Maximum traversal depth relative to each search root.                       |
-| `maxCharsPerMatch` | No       | `grep.defaultMaxCharsPerMatch`  | Maximum characters per matching line, from `100` to `2000`.                 |
-| `noIgnore`         | No       | `false`                         | Include files ignored by `.gitignore` and `.ignore`.                        |
-| `visibleOnly`      | No       | `false`                         | Exclude hidden files and directories. `.git` internals are always excluded. |
-
-Example calls:
-
-```jsonc
-// Search TypeScript sources, excluding tests, with per-file limiting.
-{
-  "regexes": ["TODO|FIXME"],
-  "paths": ["src"],
-  "globs": ["**/*.ts", "!**/*.test.ts"],
-  "limitPerFile": 3,
-}
-
-// Search ignored files but skip hidden files and directories.
-{ "regexes": ["API_KEY"], "noIgnore": true, "visibleOnly": true }
-```
-
-Example output:
-
-```text
-matches=5 files=2
-src/agent/tools.ts
-12: export const findFilesTool = ...
-18: export const grepTool = ...
-25: very long line clipped by maxCharsPerMatch, once it hits the char limit, it ends: abcdefabcdefabcd
-[more matches in this file]
-src/index.ts
-4: import { grepTool } from "#src/agent/tools"
-9: tools: [findFilesTool, grepTool]
-[more matches available]
-```
-
-When more matches exist beyond `limit`, the output ends with `[more matches available]`. When more matches exist beyond `limitPerFile`, the file section ends with `[more matches in this file]`. Long matching lines are clipped to `maxCharsPerMatch` without an extra marker. Formatted output is truncated using Pi's default 2,000-line/50KB limit. If that limit is reached, the complete output is saved to a temporary file and its path is included in the result.
 
 ## License
 

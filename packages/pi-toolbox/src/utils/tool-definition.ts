@@ -1,12 +1,8 @@
-import { stat } from 'node:fs/promises';
-import path from 'node:path';
-
 import type { Theme, ToolDefinition, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
 import { Text } from '@earendil-works/pi-tui';
 import type { Static, TSchema } from 'typebox';
 
 import { formatTextToolResult, type TextToolResult } from '#src/utils/tool-results.js';
-import type { ToolOutputTruncationDetails } from '#src/utils/output-limits.js';
 
 interface TextRenderContext {
   lastComponent?: unknown;
@@ -29,10 +25,9 @@ interface CreateTextToolDefinitionOptions<TParameters extends TSchema, TDetails>
   collapsedResultLines?: number;
 }
 
-export function createTextToolDefinition<
-  TParameters extends TSchema,
-  TDetails extends ToolOutputTruncationDetails | undefined,
->(options: CreateTextToolDefinitionOptions<TParameters, TDetails>): ToolDefinition<TParameters, TDetails> {
+export function createTextToolDefinition<TParameters extends TSchema, TDetails>(
+  options: CreateTextToolDefinitionOptions<TParameters, TDetails>
+): ToolDefinition<TParameters, TDetails> {
   return {
     name: options.metadata.name,
     label: options.metadata.label,
@@ -70,14 +65,6 @@ function renderTextResult(
   return renderText(context, formatTextToolResult(result, options, theme, visibleCollapsedResultLines));
 }
 
-export async function assertSearchPaths(
-  cwd: string,
-  searchPaths: readonly string[],
-  options: { toolName: string; requireDirectory?: boolean }
-): Promise<void> {
-  await Promise.all(searchPaths.map((searchPath) => assertSearchPath(resolveSearchPath(cwd, searchPath), options)));
-}
-
 export function formatToolCall(
   theme: Theme,
   options: { toolName: string; query: string; paths: string; flags: string }
@@ -97,26 +84,4 @@ function renderText(context: TextRenderContext, value: string): Text {
   const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
   text.setText(value);
   return text;
-}
-
-function resolveSearchPath(cwd: string, searchPath: string): string {
-  return path.resolve(cwd, searchPath);
-}
-
-async function assertSearchPath(
-  searchPath: string,
-  options: { toolName: string; requireDirectory?: boolean }
-): Promise<void> {
-  let stats;
-  try {
-    stats = await stat(searchPath);
-  } catch (error) {
-    throw new Error(`${options.toolName} failed: search path does not exist: ${searchPath}`, {
-      cause: error,
-    });
-  }
-
-  if (options.requireDirectory === true && !stats.isDirectory()) {
-    throw new Error(`${options.toolName} failed: search path is not a directory: ${searchPath}`);
-  }
 }

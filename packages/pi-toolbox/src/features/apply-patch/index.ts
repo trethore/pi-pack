@@ -9,7 +9,6 @@ import { APPLY_PATCH_PROMPT } from '#src/prompts.js';
 import { normalizeToolPath } from '#src/utils/paths.js';
 import { createTextToolDefinition, formatToolCall } from '#src/utils/tool-definition.js';
 import { formatTextToolResult } from '#src/utils/tool-results.js';
-import type { ToolOutputTruncationDetails } from '#src/utils/output-limits.js';
 
 const TOOL_NAME = 'apply_patch';
 
@@ -38,7 +37,7 @@ interface TextRenderContext {
 type ApplyPatchParametersSchema = typeof APPLY_PATCH_PARAMETERS;
 type ApplyPatchRunner = (options: ApplyPatchOptions) => Promise<ApplyPatchResult>;
 
-export interface ApplyPatchToolDetails extends ApplyPatchResult, ToolOutputTruncationDetails {
+export interface ApplyPatchToolDetails extends ApplyPatchResult {
   count: number;
 }
 

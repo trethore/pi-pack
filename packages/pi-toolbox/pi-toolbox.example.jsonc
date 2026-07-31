@@ -5,20 +5,5 @@
   // apply_patch tool for structured file edits.
   "applyPatch": {
     "enabled": true
-  },
-
-  // find_files tool powered by rg --files.
-  "findFiles": {
-    "enabled": true,
-    "defaultLimit": 100
-  },
-
-  // grep tool powered by rg -n.
-  "grep": {
-    "enabled": true,
-    "defaultLimit": 200,
-    // Omit defaultLimitPerFile for no per-file default limit.
-    // "defaultLimitPerFile": 30,
-    "defaultMaxCharsPerMatch": 200
   }
 }
