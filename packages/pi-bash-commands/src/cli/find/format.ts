@@ -16,14 +16,11 @@ export function formatFindResult(options: {
   limited: boolean;
 }): string {
   const files = normalizeFiles(options.files, options.paths);
-  const root = createNode();
-  for (const file of files) addPath(root, file);
+  const formattedFiles = formatFiles(files);
 
-  return [
-    `found=${files.length}`,
-    ...formatChildren(root, 0),
-    ...(options.limited ? ['[more files available]'] : []),
-  ].join('\n');
+  return [`found=${files.length}`, ...formattedFiles, ...(options.limited ? ['[more files available]'] : [])].join(
+    '\n'
+  );
 }
 
 function createNode(): TreeNode {
@@ -49,6 +46,19 @@ function splitDisplayPath(displayPath: string): string[] {
 
   const [firstPart, ...remainingParts] = parts;
   return firstPart === undefined ? ['/'] : [`/${firstPart}`, ...remainingParts];
+}
+
+function formatFiles(files: readonly string[][]): string[] {
+  const flatFiles = files.map((file) => file.join('/'));
+  const treeFiles = formatTreeFiles(files);
+
+  return flatFiles.join('\n').length <= treeFiles.join('\n').length ? flatFiles : treeFiles;
+}
+
+function formatTreeFiles(files: readonly string[][]): string[] {
+  const root = createNode();
+  for (const file of files) addPath(root, file);
+  return formatChildren(root, 0);
 }
 
 function addPath(root: TreeNode, parts: readonly string[]): void {

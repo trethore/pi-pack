@@ -69,6 +69,41 @@ describe('search CLIs', () => {
     expect(output.stdout()).toContain('[more files available]\n');
   });
 
+  it('uses the shorter flat format for wide file trees', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'a'));
+    mkdirSync(path.join(cwd, 'b'));
+    writeFileSync(path.join(cwd, 'a', 'x.ts'), 'export {};');
+    writeFileSync(path.join(cwd, 'b', 'y.ts'), 'export {};');
+    const output = createOutput();
+
+    // Act
+    const code = await runPiFindCli(['--patterns', '*.ts'], { cwd, io: output.io });
+
+    // Assert
+    expect(code).toBe(0);
+    expect(output.stdout()).toBe(['found=2', 'a/x.ts', 'b/y.ts', ''].join('\n'));
+    expect(output.stderr()).toBe('');
+  });
+
+  it('uses the shorter tree format for deeply shared paths', async () => {
+    // Arrange
+    const cwd = makeTempDir();
+    mkdirSync(path.join(cwd, 'src', 'components'), { recursive: true });
+    writeFileSync(path.join(cwd, 'src', 'components', 'button.ts'), 'export {};');
+    writeFileSync(path.join(cwd, 'src', 'components', 'input.ts'), 'export {};');
+    const output = createOutput();
+
+    // Act
+    const code = await runPiFindCli(['--patterns', '*.ts'], { cwd, io: output.io });
+
+    // Assert
+    expect(code).toBe(0);
+    expect(output.stdout()).toBe(['found=2', 'src/components/', '  button.ts', '  input.ts', ''].join('\n'));
+    expect(output.stderr()).toBe('');
+  });
+
   it('searches, groups, limits, and clips grep matches', async () => {
     // Arrange
     const cwd = makeTempDir();
