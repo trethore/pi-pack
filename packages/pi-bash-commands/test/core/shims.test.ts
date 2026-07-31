@@ -12,8 +12,13 @@ let activeShims: CommandShims | undefined;
 
 describe('createShimScript', () => {
   it('quotes fixed values and forwards runtime arguments', () => {
-    const script = createShimScript(command({ args: ["fixed's value"], env: { EXAMPLE: "env's value" } }));
+    // Arrange
+    const configuredCommand = command({ args: ["fixed's value"], env: { EXAMPLE: "env's value" } });
 
+    // Act
+    const script = createShimScript(configuredCommand);
+
+    // Assert
     expect(script).toContain(String.raw`EXAMPLE='env'\''s value'`);
     expect(script).toContain(String.raw`'fixed'\''s value' "$@"`);
   });
@@ -26,15 +31,18 @@ describe('createCommandShims', () => {
   });
 
   it('executes fixed args, runtime args, and configured environment', async () => {
+    // Arrange
     const script = 'console.log(JSON.stringify({ args: process.argv.slice(1), env: process.env.EXAMPLE }))';
     activeShims = await createCommandShims([
       command({ args: ['-e', script, 'fixed'], env: { EXAMPLE: 'configured' } }),
     ]);
 
+    // Act
     const result = await spawnShellCommand(
       `${quoteShell(`${activeShims.directory}/example`)} ${quoteShell('runtime value')}`
     );
 
+    // Assert
     expect(result).toEqual({
       code: 0,
       stdout: `${JSON.stringify({ args: ['fixed', 'runtime value'], env: 'configured' })}\n`,
@@ -43,35 +51,55 @@ describe('createCommandShims', () => {
   });
 
   it('removes the private directory on dispose', async () => {
+    // Arrange
     activeShims = await createCommandShims([command()]);
     const directory = activeShims.directory;
 
+    // Act
     await activeShims.dispose();
     activeShims = undefined;
 
+    // Assert
     expect(existsSync(directory)).toBe(false);
   });
 
   it('resolves a shim only after PATH is injected into a bash command', async () => {
+    // Arrange
     const commandName = 'pi-bash-commands-test-command';
     const script = 'console.log(process.argv[1])';
     activeShims = await createCommandShims([command({ name: commandName, args: ['-e', script] })]);
     const originalPath = process.env.PATH;
 
+    // Act
     const unavailable = await spawnShellCommand(`command -v ${commandName}`);
     const available = await spawnShellCommand(prependBashCommandsPath(`${commandName} runtime`, activeShims.directory));
 
+    // Assert
     expect(unavailable.code).not.toBe(0);
     expect(available).toEqual({ code: 0, stdout: 'runtime\n', stderr: '' });
     expect(process.env.PATH).toBe(originalPath);
   });
 
   it('rejects a missing executable before creating shims', async () => {
-    await expect(createCommandShims([command({ command: '/missing/pi-bash-commands-executable' })])).rejects.toThrow();
+    // Arrange
+    const configuredCommand = command({ command: '/missing/pi-bash-commands-executable' });
+
+    // Act
+    const shims = createCommandShims([configuredCommand]);
+
+    // Assert
+    await expect(shims).rejects.toThrow();
   });
 
   it('rejects a directory as an executable', async () => {
-    await expect(createCommandShims([command({ command: process.cwd() })])).rejects.toThrow('not a file');
+    // Arrange
+    const configuredCommand = command({ command: process.cwd() });
+
+    // Act
+    const shims = createCommandShims([configuredCommand]);
+
+    // Assert
+    await expect(shims).rejects.toThrow('not a file');
   });
 });
 

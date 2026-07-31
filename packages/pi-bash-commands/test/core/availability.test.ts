@@ -10,6 +10,7 @@ describe('isBuiltInBashAvailable', () => {
     { active: ['bash'], source: 'extension', expected: false },
     { active: ['bash'], source: 'builtin', expected: true },
   ])('returns $expected for active=$active source=$source', ({ active, source, expected }) => {
+    // Arrange
     const pi = {
       getActiveTools: () => active,
       getAllTools: () =>
@@ -25,6 +26,10 @@ describe('isBuiltInBashAvailable', () => {
           : [],
     } as unknown as Pick<ExtensionAPI, 'getActiveTools' | 'getAllTools'>;
 
-    expect(isBuiltInBashAvailable(pi)).toBe(expected);
+    // Act
+    const available = isBuiltInBashAvailable(pi);
+
+    // Assert
+    expect(available).toBe(expected);
   });
 });

@@ -6,8 +6,11 @@ import { registerBashCommands } from '#pi-bash-commands/index.js';
 
 describe('registerBashCommands', () => {
   it('injects PATH into bash calls and appends prompt guidance once', async () => {
+    // Arrange
     const harness = createHarness();
     registerBashCommands(harness.pi, config());
+
+    // Act
     await harness.emit('session_start', { reason: 'startup' });
 
     const firstPrompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
@@ -19,6 +22,7 @@ describe('registerBashCommands', () => {
     await harness.emit('tool_call', bashCall);
     await harness.emit('tool_call', readCall);
 
+    // Assert
     expect(firstPrompt?.systemPrompt).toContain('## Bash Commands');
     expect(repeatedPrompt).toBeUndefined();
     expect(bashCall.input.command).toContain('@trethore/pi-bash-commands:path');
@@ -29,12 +33,15 @@ describe('registerBashCommands', () => {
   });
 
   it('warns and remains inactive without the active built-in bash tool', async () => {
+    // Arrange
     const harness = createHarness({ activeTools: ['read'] });
     registerBashCommands(harness.pi, config());
 
+    // Act
     await harness.emit('session_start', { reason: 'startup' });
     const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
 
+    // Assert
     expect(prompt).toBeUndefined();
     expect(harness.notify).toHaveBeenCalledTimes(1);
     expect(harness.notify).toHaveBeenCalledWith(
@@ -44,13 +51,16 @@ describe('registerBashCommands', () => {
   });
 
   it('does not add situational commands to the prompt', async () => {
+    // Arrange
     const harness = createHarness();
     const situationalConfig = config();
     situationalConfig.commands[0].prompt = undefined;
     registerBashCommands(harness.pi, situationalConfig);
 
+    // Act
     const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
 
+    // Assert
     expect(prompt).toBeUndefined();
   });
 });

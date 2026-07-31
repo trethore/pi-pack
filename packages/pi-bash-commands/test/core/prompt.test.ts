@@ -5,14 +5,17 @@ import { BASH_COMMANDS_PROMPT_MARKER, buildBashCommandsPrompt } from '#pi-bash-c
 
 describe('buildBashCommandsPrompt', () => {
   it('formats populated prompt metadata in command order', () => {
+    // Arrange
     const commands = [
       command('first', { description: 'First description', usage: 'first [file]' }),
       command('situational'),
       command('third', { usage: 'third --help' }),
     ];
 
+    // Act
     const prompt = buildBashCommandsPrompt(commands);
 
+    // Assert
     expect(prompt).toBe(`${BASH_COMMANDS_PROMPT_MARKER}
 ## Bash Commands
 
@@ -30,12 +33,14 @@ Usage: third --help`);
   });
 
   it('returns no prompt for situational or disabled commands', () => {
-    expect(
-      buildBashCommandsPrompt([
-        command('situational'),
-        { ...command('disabled', { usage: 'disabled' }), enabled: false },
-      ])
-    ).toBeUndefined();
+    // Arrange
+    const commands = [command('situational'), { ...command('disabled', { usage: 'disabled' }), enabled: false }];
+
+    // Act
+    const prompt = buildBashCommandsPrompt(commands);
+
+    // Assert
+    expect(prompt).toBeUndefined();
   });
 });
 

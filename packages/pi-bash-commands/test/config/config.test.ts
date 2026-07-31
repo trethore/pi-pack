@@ -14,14 +14,18 @@ describe('loadConfig', () => {
   afterEach(resetConfigTestEnvironment);
 
   it('loads defaults without configuration files', async () => {
+    // Arrange
     const { loadConfig } = await importConfig(makeTempDir());
 
+    // Act
     const loaded = loadConfig(makeTempDir());
 
+    // Assert
     expect(loaded).toEqual({ config: { enabled: true, commands: [] }, errors: [] });
   });
 
   it('normalizes command defaults and empty prompt metadata', async () => {
+    // Arrange
     const homeDir = makeTempDir();
     const cwd = makeTempDir();
     writeProjectConfig(
@@ -35,8 +39,10 @@ describe('loadConfig', () => {
     );
     const { loadConfig } = await importConfig(homeDir);
 
+    // Act
     const loaded = loadConfig(cwd);
 
+    // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.commands).toEqual([
       {
@@ -59,20 +65,24 @@ describe('loadConfig', () => {
   });
 
   it('replaces global commands with project commands', async () => {
+    // Arrange
     const homeDir = makeTempDir();
     const cwd = makeTempDir();
     writeGlobalConfig(homeDir, JSON.stringify({ commands: [{ name: 'global', command: process.execPath }] }));
     writeProjectConfig(cwd, JSON.stringify({ commands: [{ name: 'project', command: process.execPath }] }));
     const { loadConfig } = await importConfig(homeDir);
 
+    // Act
     const loaded = loadConfig(cwd);
     const globalOnly = loadConfig(cwd, { includeProject: false });
 
+    // Assert
     expect(loaded.config.commands.map((command) => command.name)).toEqual(['project']);
     expect(globalOnly.config.commands.map((command) => command.name)).toEqual(['global']);
   });
 
   it('keeps valid entries while reporting invalid entries', async () => {
+    // Arrange
     const homeDir = makeTempDir();
     const cwd = makeTempDir();
     writeProjectConfig(
@@ -89,8 +99,10 @@ describe('loadConfig', () => {
     );
     const { loadConfig } = await importConfig(homeDir);
 
+    // Act
     const loaded = loadConfig(cwd);
 
+    // Assert
     expect(loaded.config.commands.map((command) => command.name)).toEqual(['valid']);
     expect(loaded.errors).toHaveLength(4);
     expect(loaded.errors).toEqual([
