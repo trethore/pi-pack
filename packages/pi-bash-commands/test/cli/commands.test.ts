@@ -69,13 +69,21 @@ describe('search CLIs', () => {
     expect(output.stdout()).toContain('[more files available]\n');
   });
 
-  it('uses the shorter flat format for wide file trees', async () => {
+  it.each([
+    {
+      description: 'uses the shorter flat format for wide file trees',
+      files: ['a/x.ts', 'b/y.ts'],
+      expectedOutput: ['found=2', 'a/x.ts', 'b/y.ts', ''].join('\n'),
+    },
+    {
+      description: 'uses the shorter tree format for deeply shared paths',
+      files: ['src/components/button.ts', 'src/components/input.ts'],
+      expectedOutput: ['found=2', 'src/components/', '  button.ts', '  input.ts', ''].join('\n'),
+    },
+  ])('$description', async ({ files, expectedOutput }) => {
     // Arrange
     const cwd = makeTempDir();
-    mkdirSync(path.join(cwd, 'a'));
-    mkdirSync(path.join(cwd, 'b'));
-    writeFileSync(path.join(cwd, 'a', 'x.ts'), 'export {};');
-    writeFileSync(path.join(cwd, 'b', 'y.ts'), 'export {};');
+    writeFixtureFiles(cwd, files);
     const output = createOutput();
 
     // Act
@@ -83,24 +91,7 @@ describe('search CLIs', () => {
 
     // Assert
     expect(code).toBe(0);
-    expect(output.stdout()).toBe(['found=2', 'a/x.ts', 'b/y.ts', ''].join('\n'));
-    expect(output.stderr()).toBe('');
-  });
-
-  it('uses the shorter tree format for deeply shared paths', async () => {
-    // Arrange
-    const cwd = makeTempDir();
-    mkdirSync(path.join(cwd, 'src', 'components'), { recursive: true });
-    writeFileSync(path.join(cwd, 'src', 'components', 'button.ts'), 'export {};');
-    writeFileSync(path.join(cwd, 'src', 'components', 'input.ts'), 'export {};');
-    const output = createOutput();
-
-    // Act
-    const code = await runPiFindCli(['--patterns', '*.ts'], { cwd, io: output.io });
-
-    // Assert
-    expect(code).toBe(0);
-    expect(output.stdout()).toBe(['found=2', 'src/components/', '  button.ts', '  input.ts', ''].join('\n'));
+    expect(output.stdout()).toBe(expectedOutput);
     expect(output.stderr()).toBe('');
   });
 
@@ -171,6 +162,14 @@ function makeTempDir(): string {
   const directory = mkdtempSync(path.join(tmpdir(), 'pi-bash-commands-cli-test-'));
   tempDirectories.push(directory);
   return directory;
+}
+
+function writeFixtureFiles(cwd: string, files: readonly string[]): void {
+  for (const file of files) {
+    const filePath = path.join(cwd, file);
+    mkdirSync(path.dirname(filePath), { recursive: true });
+    writeFileSync(filePath, 'export {};');
+  }
 }
 
 function createOutput(): { io: CliIo; stdout(): string; stderr(): string } {

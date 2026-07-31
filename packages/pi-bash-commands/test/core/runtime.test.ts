@@ -2,9 +2,9 @@ import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-a
 import { createDeferred } from '@trethore/pi-shared/test/deferred.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { PiBashCommandsConfig } from '#pi-bash-commands/config/schema.js';
 import { createBashCommandsRuntime } from '#pi-bash-commands/core/runtime.js';
 import type { CommandShims } from '#pi-bash-commands/core/shims.js';
+import { createTestConfig } from '#test/utils/config.js';
 
 const mocks = vi.hoisted(() => ({
   createCommandShims: vi.fn(),
@@ -24,7 +24,7 @@ describe('createBashCommandsRuntime', () => {
     const setup = createDeferred<CommandShims>();
     const shims = createShims();
     mocks.createCommandShims.mockReturnValue(setup.promise);
-    const runtime = createBashCommandsRuntime(createPi(), config());
+    const runtime = createBashCommandsRuntime(createPi(), createTestConfig());
 
     // Act
     const first = runtime.ensure(createContext());
@@ -44,7 +44,7 @@ describe('createBashCommandsRuntime', () => {
     const setup = createDeferred<CommandShims>();
     const shims = createShims();
     mocks.createCommandShims.mockReturnValue(setup.promise);
-    const runtime = createBashCommandsRuntime(createPi(), config());
+    const runtime = createBashCommandsRuntime(createPi(), createTestConfig());
 
     // Act
     const pendingEnsure = runtime.ensure(createContext());
@@ -61,7 +61,7 @@ describe('createBashCommandsRuntime', () => {
     // Arrange
     mocks.createCommandShims.mockRejectedValue(new Error('setup failed'));
     const notify = vi.fn();
-    const runtime = createBashCommandsRuntime(createPi(), config());
+    const runtime = createBashCommandsRuntime(createPi(), createTestConfig());
     const ctx = createContext(notify);
 
     // Act
@@ -99,16 +99,5 @@ function createShims(): CommandShims {
   return {
     directory: '/temporary/pi-bash-commands',
     dispose: vi.fn(async () => {}),
-  };
-}
-
-function config(): PiBashCommandsConfig {
-  return {
-    enabled: true,
-    builtIns: {
-      'pi-find': { enabled: false, defaultLimit: 100 },
-      'pi-grep': { enabled: false, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
-    },
-    commands: [{ enabled: true, name: 'example', command: process.execPath, args: [], env: {} }],
   };
 }

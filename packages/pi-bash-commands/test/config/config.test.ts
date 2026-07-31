@@ -41,13 +41,10 @@ describe('loadConfig', () => {
     { value: { 'pi-find': true, 'pi-grep': false }, expectedEnabled: { find: true, grep: false } },
   ])('normalizes builtIns value $value', async ({ value, expectedEnabled }) => {
     // Arrange
-    const homeDir = makeTempDir();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ builtIns: value }));
-    const { loadConfig } = await importConfig(homeDir);
+    const projectConfig = { builtIns: value };
 
     // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -59,26 +56,20 @@ describe('loadConfig', () => {
 
   it('loads built-in default settings and enables object entries by default', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        builtIns: {
-          'pi-find': { defaultLimit: 25 },
-          'pi-grep': {
-            enabled: true,
-            defaultLimit: 50,
-            defaultLimitPerFile: 3,
-            defaultMaxCharsPerMatch: 500,
-          },
+    const projectConfig = {
+      builtIns: {
+        'pi-find': { defaultLimit: 25 },
+        'pi-grep': {
+          enabled: true,
+          defaultLimit: 50,
+          defaultLimitPerFile: 3,
+          defaultMaxCharsPerMatch: 500,
         },
-      })
-    );
-    const { loadConfig } = await importConfig(homeDir);
+      },
+    };
 
     // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -113,13 +104,10 @@ describe('loadConfig', () => {
 
   it('reports invalid built-in selections while keeping valid entries', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    const cwd = makeTempDir();
-    writeProjectConfig(cwd, JSON.stringify({ builtIns: { 'pi-find': true, 'pi-grep': 'yes', unknown: true } }));
-    const { loadConfig } = await importConfig(homeDir);
+    const projectConfig = { builtIns: { 'pi-find': true, 'pi-grep': 'yes', unknown: true } };
 
     // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
     expect(loaded.config.builtIns).toEqual({
@@ -134,25 +122,19 @@ describe('loadConfig', () => {
 
   it('keeps built-in defaults while reporting invalid default settings', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        builtIns: {
-          'pi-find': { enabled: 'yes', defaultLimit: 0 },
-          'pi-grep': {
-            defaultLimit: 1001,
-            defaultLimitPerFile: 0,
-            defaultMaxCharsPerMatch: 99,
-          },
+    const projectConfig = {
+      builtIns: {
+        'pi-find': { enabled: 'yes', defaultLimit: 0 },
+        'pi-grep': {
+          defaultLimit: 1001,
+          defaultLimitPerFile: 0,
+          defaultMaxCharsPerMatch: 99,
         },
-      })
-    );
-    const { loadConfig } = await importConfig(homeDir);
+      },
+    };
 
     // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
     expect(loaded.config.builtIns).toEqual({
@@ -170,21 +152,15 @@ describe('loadConfig', () => {
 
   it('normalizes command defaults and empty prompt metadata', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        commands: [
-          { name: 'example', command: process.execPath, prompt: { description: '  Run it.  ', usage: ' ' } },
-          { name: 'situational', command: process.execPath, prompt: {} },
-        ],
-      })
-    );
-    const { loadConfig } = await importConfig(homeDir);
+    const projectConfig = {
+      commands: [
+        { name: 'example', command: process.execPath, prompt: { description: '  Run it.  ', usage: ' ' } },
+        { name: 'situational', command: process.execPath, prompt: {} },
+      ],
+    };
 
     // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
     expect(loaded.errors).toEqual([]);
@@ -227,25 +203,19 @@ describe('loadConfig', () => {
 
   it('keeps valid entries while reporting invalid entries', async () => {
     // Arrange
-    const homeDir = makeTempDir();
-    const cwd = makeTempDir();
-    writeProjectConfig(
-      cwd,
-      JSON.stringify({
-        commands: [
-          { name: 'valid', command: process.execPath },
-          { name: 'relative', command: 'node' },
-          { name: 'bad/name', command: process.execPath },
-          { name: 'valid', command: process.execPath },
-          { name: 'bad-env', command: process.execPath, env: { 'BAD-NAME': 'value' } },
-          { name: 'pi-grep', command: process.execPath },
-        ],
-      })
-    );
-    const { loadConfig } = await importConfig(homeDir);
+    const projectConfig = {
+      commands: [
+        { name: 'valid', command: process.execPath },
+        { name: 'relative', command: 'node' },
+        { name: 'bad/name', command: process.execPath },
+        { name: 'valid', command: process.execPath },
+        { name: 'bad-env', command: process.execPath, env: { 'BAD-NAME': 'value' } },
+        { name: 'pi-grep', command: process.execPath },
+      ],
+    };
 
     // Act
-    const loaded = loadConfig(cwd);
+    const loaded = await loadProjectConfig(projectConfig);
 
     // Assert
     expect(loaded.config.commands.map((command) => command.name)).toEqual(['valid']);
@@ -262,4 +232,12 @@ describe('loadConfig', () => {
 
 async function importConfig(homeDir: string) {
   return importWithHome(homeDir, () => import('#pi-bash-commands/config/config.js'));
+}
+
+async function loadProjectConfig(projectConfig: unknown) {
+  const homeDir = makeTempDir();
+  const cwd = makeTempDir();
+  writeProjectConfig(cwd, JSON.stringify(projectConfig));
+  const { loadConfig } = await importConfig(homeDir);
+  return loadConfig(cwd);
 }

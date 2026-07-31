@@ -1,8 +1,8 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { PiBashCommandsConfig } from '#pi-bash-commands/config/schema.js';
 import { registerBashCommands } from '#pi-bash-commands/index.js';
+import { createTestConfig } from '#test/utils/config.js';
 
 describe('registerBashCommands', () => {
   it('injects PATH into bash calls and appends prompt guidance', async () => {
@@ -170,24 +170,8 @@ function createHarness(options: { activeTools?: string[]; source?: string } = {}
   };
 }
 
-function config(): PiBashCommandsConfig {
-  return {
-    enabled: true,
-    builtIns: {
-      'pi-find': { enabled: false, defaultLimit: 100 },
-      'pi-grep': { enabled: false, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
-    },
-    commands: [
-      {
-        enabled: true,
-        name: 'example',
-        command: process.execPath,
-        args: [],
-        env: {},
-        prompt: { description: 'Example command.' },
-      },
-    ],
-  };
+function config() {
+  return createTestConfig({ prompt: { description: 'Example command.' } });
 }
 
 function countOccurrences(value: string, search: string): number {
