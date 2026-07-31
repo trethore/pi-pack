@@ -36,13 +36,13 @@ Look root and packages `package.json` to discover scripts, paths, and dependenci
 ## Development and Code Quality
 
 - Do not use relative imports; instead use absolute ones.
-- Do not add comments unless documentation is explicitly requested by the user.
+- Do not add comments unless its for test sections or documentation is explicitly requested by the user.
 
 ## Testing
 
 Tests should be easy to scan and understand. Follow these guidelines:
 
-- Use clear Arrange / Act / Assert sections for any non-trivial test, while allowing small one-line tests to remain compact.
+- Use clear Arrange / Act / Assert sections.
 - Prefer meaningful local variable names that clearly describe the role of each value in the scenario.
 - Use `it.each` for repetitive input/output test cases.
 
