@@ -10,6 +10,9 @@ export function getProjectConfigPath(cwd: string, configFileName: string): strin
   return path.join(cwd, '.pi', configFileName);
 }
 
-export function getConfigPaths(cwd: string, configFileName: string): string[] {
-  return [getGlobalConfigPath(configFileName), getProjectConfigPath(cwd, configFileName)];
+export function getConfigPaths(cwd: string, configFileName: string, includeProject = true): string[] {
+  const globalConfigPath = getGlobalConfigPath(configFileName);
+  if (!includeProject) return [globalConfigPath];
+
+  return [globalConfigPath, getProjectConfigPath(cwd, configFileName)];
 }

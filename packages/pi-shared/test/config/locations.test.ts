@@ -15,6 +15,7 @@ describe('shared config locations', () => {
     // Act
     const globalConfigPath = getGlobalConfigPath('extension.jsonc');
     const configPaths = getConfigPaths('/tmp/project', 'extension.jsonc');
+    const globalConfigPaths = getConfigPaths('/tmp/project', 'extension.jsonc', false);
 
     // Assert
     expect(globalConfigPath).toBe(path.join('/tmp/custom-pi-agent', 'extension.jsonc'));
@@ -22,5 +23,6 @@ describe('shared config locations', () => {
       path.join('/tmp/custom-pi-agent', 'extension.jsonc'),
       path.join('/tmp/project', '.pi', 'extension.jsonc'),
     ]);
+    expect(globalConfigPaths).toEqual([path.join('/tmp/custom-pi-agent', 'extension.jsonc')]);
   });
 });

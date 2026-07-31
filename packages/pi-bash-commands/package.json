@@ -1,0 +1,30 @@
+{
+  "name": "@trethore/pi-bash-commands",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Expose commands only to Pi's built-in bash tool.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "bash",
+    "commands"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.83.0 <1"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-bash-commands/*": "./src/*",
+    "#test/*": "./test/*"
+  },
+  "dependencies": {
+    "@trethore/pi-shared": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

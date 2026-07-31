@@ -1,0 +1,111 @@
+import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { PiBashCommandsConfig } from '#pi-bash-commands/config/schema.js';
+import { registerBashCommands } from '#pi-bash-commands/index.js';
+
+describe('registerBashCommands', () => {
+  it('injects PATH into bash calls and appends prompt guidance once', async () => {
+    const harness = createHarness();
+    registerBashCommands(harness.pi, config());
+    await harness.emit('session_start', { reason: 'startup' });
+
+    const firstPrompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+    const repeatedPrompt = await harness.emit('before_agent_start', {
+      systemPrompt: firstPrompt?.systemPrompt,
+    });
+    const bashCall = { type: 'tool_call', toolName: 'bash', toolCallId: '1', input: { command: 'example arg' } };
+    const readCall = { type: 'tool_call', toolName: 'read', toolCallId: '2', input: { path: 'file' } };
+    await harness.emit('tool_call', bashCall);
+    await harness.emit('tool_call', readCall);
+
+    expect(firstPrompt?.systemPrompt).toContain('## Bash Commands');
+    expect(repeatedPrompt).toBeUndefined();
+    expect(bashCall.input.command).toContain('@trethore/pi-bash-commands:path');
+    expect(bashCall.input.command.endsWith('example arg')).toBe(true);
+    expect(readCall.input).toEqual({ path: 'file' });
+    expect(harness.notify).not.toHaveBeenCalled();
+    await harness.emit('session_shutdown', { reason: 'quit' });
+  });
+
+  it('warns and remains inactive without the active built-in bash tool', async () => {
+    const harness = createHarness({ activeTools: ['read'] });
+    registerBashCommands(harness.pi, config());
+
+    await harness.emit('session_start', { reason: 'startup' });
+    const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+
+    expect(prompt).toBeUndefined();
+    expect(harness.notify).toHaveBeenCalledTimes(1);
+    expect(harness.notify).toHaveBeenCalledWith(
+      expect.stringContaining('built-in bash tool is unavailable'),
+      'warning'
+    );
+  });
+
+  it('does not add situational commands to the prompt', async () => {
+    const harness = createHarness();
+    const situationalConfig = config();
+    situationalConfig.commands[0].prompt = undefined;
+    registerBashCommands(harness.pi, situationalConfig);
+
+    const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+
+    expect(prompt).toBeUndefined();
+  });
+});
+
+type HandlerResult = { systemPrompt: string } | undefined;
+type Handler = (event: unknown, ctx: ExtensionContext) => HandlerResult | Promise<HandlerResult>;
+
+function createHarness(options: { activeTools?: string[]; source?: string } = {}) {
+  const handlers = new Map<string, Handler[]>();
+  const notify = vi.fn();
+  const activeTools = options.activeTools ?? ['read', 'bash'];
+  const source = options.source ?? 'builtin';
+  const pi = {
+    on(event: string, handler: Handler) {
+      const eventHandlers = handlers.get(event) ?? [];
+      eventHandlers.push(handler);
+      handlers.set(event, eventHandlers);
+    },
+    getActiveTools: () => activeTools,
+    getAllTools: () => [
+      {
+        name: 'bash',
+        description: '',
+        parameters: {},
+        sourceInfo: { path: '', source, scope: 'temporary', origin: 'top-level' },
+      },
+    ],
+  } as unknown as ExtensionAPI;
+  const ctx = { ui: { notify } } as unknown as ExtensionContext;
+
+  return {
+    pi,
+    notify,
+    async emit(event: string, payload: unknown): Promise<HandlerResult> {
+      let result: HandlerResult;
+      for (const handler of handlers.get(event) ?? []) {
+        result = await handler(payload, ctx);
+      }
+      return result;
+    },
+  };
+}
+
+function config(): PiBashCommandsConfig {
+  return {
+    enabled: true,
+    commands: [
+      {
+        enabled: true,
+        name: 'example',
+        command: process.execPath,
+        args: [],
+        env: {},
+        prompt: { description: 'Example command.' },
+      },
+    ],
+  };
+}
