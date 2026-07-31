@@ -1,7 +1,13 @@
 import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { z } from '@trethore/pi-shared/config/schema.js';
+import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
 
-import type { BuiltInCommandName } from '#src/core/built-in-command-names.js';
+import { LIMIT_RANGE, MAX_CHARS_PER_MATCH_RANGE } from '#src/cli/shared/limits.js';
+import {
+  DEFAULT_FIND_CLI_DEFAULTS,
+  DEFAULT_GREP_CLI_DEFAULTS,
+  type FindCliDefaults,
+  type GrepCliDefaults,
+} from '#src/cli/shared/defaults.js';
 
 interface BashCommandPromptConfig {
   description?: string;
@@ -17,9 +23,22 @@ export interface BashCommandConfig {
   prompt?: BashCommandPromptConfig;
 }
 
+export interface PiFindBuiltInConfig extends FindCliDefaults {
+  enabled: boolean;
+}
+
+export interface PiGrepBuiltInConfig extends GrepCliDefaults {
+  enabled: boolean;
+}
+
+export interface BuiltInsConfig {
+  'pi-find': PiFindBuiltInConfig;
+  'pi-grep': PiGrepBuiltInConfig;
+}
+
 export interface PiBashCommandsConfig {
   enabled: boolean;
-  builtIns: Record<BuiltInCommandName, boolean>;
+  builtIns: BuiltInsConfig;
   commands: BashCommandConfig[];
 }
 
@@ -34,11 +53,27 @@ export type LoadedConfig = LoadedExtensionConfig<PiBashCommandsConfig>;
 export const defaultConfig: PiBashCommandsConfig = {
   enabled: true,
   builtIns: {
-    'pi-find': true,
-    'pi-grep': true,
+    'pi-find': {
+      enabled: true,
+      ...DEFAULT_FIND_CLI_DEFAULTS,
+    },
+    'pi-grep': {
+      enabled: true,
+      ...DEFAULT_GREP_CLI_DEFAULTS,
+    },
   },
   commands: [],
 };
+
+export const limitSchema = defineConfigSchema(
+  z.number().int().min(LIMIT_RANGE.minimum).max(LIMIT_RANGE.maximum),
+  `expected integer between ${LIMIT_RANGE.minimum} and ${LIMIT_RANGE.maximum}`
+);
+
+export const maxCharsPerMatchSchema = defineConfigSchema(
+  z.number().int().min(MAX_CHARS_PER_MATCH_RANGE.minimum).max(MAX_CHARS_PER_MATCH_RANGE.maximum),
+  `expected integer between ${MAX_CHARS_PER_MATCH_RANGE.minimum} and ${MAX_CHARS_PER_MATCH_RANGE.maximum}`
+);
 
 const promptSchema = z
   .object({

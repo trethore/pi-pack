@@ -1,10 +1,17 @@
 import { parseArgs } from 'node:util';
 
 import {
-  DEFAULT_FIND_LIMIT,
-  DEFAULT_GREP_LIMIT,
-  DEFAULT_MAX_CHARS_PER_MATCH,
-} from '#pi-bash-commands-cli/shared/constants';
+  LIMIT_RANGE,
+  MAX_CHARS_PER_MATCH_RANGE,
+  parseIntegerInRange,
+  type IntegerRange,
+} from '#pi-bash-commands-cli/shared/limits';
+import {
+  DEFAULT_FIND_CLI_DEFAULTS,
+  DEFAULT_GREP_CLI_DEFAULTS,
+  type FindCliDefaults,
+  type GrepCliDefaults,
+} from '#pi-bash-commands-cli/shared/defaults';
 
 export interface FindCliOptions {
   patterns: string[];
@@ -38,7 +45,10 @@ const SEARCH_OPTIONS = {
   help: { type: 'boolean', short: 'h' },
 } as const;
 
-export function parseFindCliOptions(args: readonly string[]): ParsedCliOptions<FindCliOptions> {
+export function parseFindCliOptions(
+  args: readonly string[],
+  defaults: FindCliDefaults = DEFAULT_FIND_CLI_DEFAULTS
+): ParsedCliOptions<FindCliOptions> {
   const parsed = parseArgs({
     args,
     allowPositionals: false,
@@ -57,9 +67,8 @@ export function parseFindCliOptions(args: readonly string[]): ParsedCliOptions<F
       patterns: normalizeStringList(parsed.values.patterns),
       paths: normalizePathList(parsed.values.paths),
       limit: parseIntegerOption('limit', parsed.values.limit, {
-        defaultValue: DEFAULT_FIND_LIMIT,
-        minimum: 1,
-        maximum: 1000,
+        defaultValue: defaults.defaultLimit,
+        ...LIMIT_RANGE,
       }),
       depth: parseOptionalIntegerOption('depth', parsed.values.depth, { minimum: 1 }),
       noIgnore: parsed.values['no-ignore'] ?? false,
@@ -68,7 +77,10 @@ export function parseFindCliOptions(args: readonly string[]): ParsedCliOptions<F
   };
 }
 
-export function parseGrepCliOptions(args: readonly string[]): ParsedCliOptions<GrepCliOptions> {
+export function parseGrepCliOptions(
+  args: readonly string[],
+  defaults: GrepCliDefaults = DEFAULT_GREP_CLI_DEFAULTS
+): ParsedCliOptions<GrepCliOptions> {
   const parsed = parseArgs({
     args,
     allowPositionals: false,
@@ -94,19 +106,16 @@ export function parseGrepCliOptions(args: readonly string[]): ParsedCliOptions<G
       paths: normalizePathList(parsed.values.paths),
       globs: normalizeStringList(parsed.values.globs),
       limit: parseIntegerOption('limit', parsed.values.limit, {
-        defaultValue: DEFAULT_GREP_LIMIT,
-        minimum: 1,
-        maximum: 1000,
+        defaultValue: defaults.defaultLimit,
+        ...LIMIT_RANGE,
       }),
-      limitPerFile: parseOptionalIntegerOption('limit-per-file', parsed.values['limit-per-file'], {
-        minimum: 1,
-        maximum: 1000,
-      }),
+      limitPerFile:
+        parseOptionalIntegerOption('limit-per-file', parsed.values['limit-per-file'], LIMIT_RANGE) ??
+        defaults.defaultLimitPerFile,
       depth: parseOptionalIntegerOption('depth', parsed.values.depth, { minimum: 1 }),
       maxCharsPerMatch: parseIntegerOption('max-chars-per-match', parsed.values['max-chars-per-match'], {
-        defaultValue: DEFAULT_MAX_CHARS_PER_MATCH,
-        minimum: 100,
-        maximum: 2000,
+        defaultValue: defaults.defaultMaxCharsPerMatch,
+        ...MAX_CHARS_PER_MATCH_RANGE,
       }),
       noIgnore: parsed.values['no-ignore'] ?? false,
       visibleOnly: parsed.values['visible-only'] ?? false,
@@ -134,7 +143,7 @@ function normalizeList(values: readonly string[] | undefined, normalize: (value:
 function parseIntegerOption(
   name: string,
   value: string | undefined,
-  options: { defaultValue: number; minimum: number; maximum?: number }
+  options: IntegerRange & { defaultValue: number }
 ): number {
   return parseOptionalIntegerOption(name, value, options) ?? options.defaultValue;
 }
@@ -142,16 +151,12 @@ function parseIntegerOption(
 function parseOptionalIntegerOption(
   name: string,
   value: string | undefined,
-  options: { minimum: number; maximum?: number }
+  options: IntegerRange
 ): number | undefined {
   if (value === undefined) return undefined;
 
-  const parsed = Number(value);
-  if (
-    !Number.isInteger(parsed) ||
-    parsed < options.minimum ||
-    (options.maximum !== undefined && parsed > options.maximum)
-  ) {
+  const parsed = parseIntegerInRange(value, options);
+  if (parsed === undefined) {
     const range =
       options.maximum === undefined
         ? `at least ${options.minimum}`

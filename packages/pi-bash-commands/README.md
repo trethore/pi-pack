@@ -45,7 +45,19 @@ When project configuration defines `commands`, it replaces the global command ar
 ```jsonc
 {
   "enabled": true,
-  "builtIns": true,
+  "builtIns": {
+    "pi-find": {
+      "enabled": true,
+      "defaultLimit": 100,
+    },
+    "pi-grep": {
+      "enabled": true,
+      "defaultLimit": 200,
+      // Omit defaultLimitPerFile for no per-file default limit.
+      // "defaultLimitPerFile": 30,
+      "defaultMaxCharsPerMatch": 200,
+    },
+  },
   "commands": [
     {
       "enabled": true,
@@ -80,14 +92,33 @@ When project configuration defines `commands`, it replaces the global command ar
 
 ```jsonc
 {
-  // An object is an allowlist. Omitted commands are disabled.
+  // An object is an allowlist. Boolean entries use built-in defaults.
   "builtIns": {
     "pi-grep": true,
   },
 }
 ```
 
-Available built-ins are `pi-find` and `pi-grep`. Their names are reserved and cannot be used by configured commands. When project configuration defines `builtIns`, it replaces the inherited global built-in selection.
+```jsonc
+{
+  // Object entries are enabled by default and can customize search defaults.
+  "builtIns": {
+    "pi-find": {
+      "defaultLimit": 250,
+    },
+    "pi-grep": {
+      "enabled": true,
+      "defaultLimit": 300,
+      "defaultLimitPerFile": 5,
+      "defaultMaxCharsPerMatch": 500,
+    },
+  },
+}
+```
+
+`pi-find.defaultLimit`, `pi-grep.defaultLimit`, and `pi-grep.defaultLimitPerFile` accept integers from `1` to `1000`. `pi-grep.defaultMaxCharsPerMatch` accepts integers from `100` to `2000`. Explicit command-line options override configured defaults.
+
+Available built-ins are `pi-find` and `pi-grep`. Their names are reserved and cannot be used by configured commands. When project configuration defines `builtIns`, it replaces the inherited global built-in selection and settings.
 
 `command` must be an absolute executable path. `args`, `env`, and `prompt` are optional. Arguments supplied in a bash call are appended after configured fixed arguments.
 

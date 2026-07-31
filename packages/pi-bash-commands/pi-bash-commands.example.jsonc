@@ -2,9 +2,21 @@
   // Enable the extension.
   "enabled": true,
 
-  // Enable all bundled commands. Use false to disable all built-ins.
-  // An object is an allowlist, for example: { "pi-grep": true }.
-  "builtIns": true,
+  // Configure bundled commands. Use true or false to enable or disable all built-ins.
+  // An object is an allowlist, so omitted built-ins are disabled.
+  "builtIns": {
+    "pi-find": {
+      "enabled": true,
+      "defaultLimit": 100
+    },
+    "pi-grep": {
+      "enabled": true,
+      "defaultLimit": 200,
+      // Omit defaultLimitPerFile for no per-file default limit.
+      // "defaultLimitPerFile": 30,
+      "defaultMaxCharsPerMatch": 200
+    }
+  },
 
   // Commands exposed only to Pi's built-in bash tool.
   // A project commands array replaces the global commands array.

@@ -24,7 +24,10 @@ describe('loadConfig', () => {
     expect(loaded).toEqual({
       config: {
         enabled: true,
-        builtIns: { 'pi-find': true, 'pi-grep': true },
+        builtIns: {
+          'pi-find': { enabled: true, defaultLimit: 100 },
+          'pi-grep': { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+        },
         commands: [],
       },
       errors: [],
@@ -32,11 +35,11 @@ describe('loadConfig', () => {
   });
 
   it.each([
-    { value: true, expected: { 'pi-find': true, 'pi-grep': true } },
-    { value: false, expected: { 'pi-find': false, 'pi-grep': false } },
-    { value: { 'pi-grep': true }, expected: { 'pi-find': false, 'pi-grep': true } },
-    { value: { 'pi-find': true, 'pi-grep': false }, expected: { 'pi-find': true, 'pi-grep': false } },
-  ])('normalizes builtIns value $value', async ({ value, expected }) => {
+    { value: true, expectedEnabled: { find: true, grep: true } },
+    { value: false, expectedEnabled: { find: false, grep: false } },
+    { value: { 'pi-grep': true }, expectedEnabled: { find: false, grep: true } },
+    { value: { 'pi-find': true, 'pi-grep': false }, expectedEnabled: { find: true, grep: false } },
+  ])('normalizes builtIns value $value', async ({ value, expectedEnabled }) => {
     // Arrange
     const homeDir = makeTempDir();
     const cwd = makeTempDir();
@@ -48,22 +51,64 @@ describe('loadConfig', () => {
 
     // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.config.builtIns).toEqual(expected);
+    expect(loaded.config.builtIns).toEqual({
+      'pi-find': { enabled: expectedEnabled.find, defaultLimit: 100 },
+      'pi-grep': { enabled: expectedEnabled.grep, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+    });
   });
 
-  it('replaces the inherited built-in selection with a project allowlist', async () => {
+  it('loads built-in default settings and enables object entries by default', async () => {
     // Arrange
     const homeDir = makeTempDir();
     const cwd = makeTempDir();
-    writeGlobalConfig(homeDir, JSON.stringify({ builtIns: { 'pi-find': true } }));
-    writeProjectConfig(cwd, JSON.stringify({ builtIns: { 'pi-grep': true } }));
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({
+        builtIns: {
+          'pi-find': { defaultLimit: 25 },
+          'pi-grep': {
+            enabled: true,
+            defaultLimit: 50,
+            defaultLimitPerFile: 3,
+            defaultMaxCharsPerMatch: 500,
+          },
+        },
+      })
+    );
     const { loadConfig } = await importConfig(homeDir);
 
     // Act
     const loaded = loadConfig(cwd);
 
     // Assert
-    expect(loaded.config.builtIns).toEqual({ 'pi-find': false, 'pi-grep': true });
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.config.builtIns).toEqual({
+      'pi-find': { enabled: true, defaultLimit: 25 },
+      'pi-grep': {
+        enabled: true,
+        defaultLimit: 50,
+        defaultLimitPerFile: 3,
+        defaultMaxCharsPerMatch: 500,
+      },
+    });
+  });
+
+  it('replaces inherited built-in selection and settings with a project allowlist', async () => {
+    // Arrange
+    const homeDir = makeTempDir();
+    const cwd = makeTempDir();
+    writeGlobalConfig(homeDir, JSON.stringify({ builtIns: { 'pi-find': { defaultLimit: 25 } } }));
+    writeProjectConfig(cwd, JSON.stringify({ builtIns: { 'pi-grep': { defaultLimit: 50 } } }));
+    const { loadConfig } = await importConfig(homeDir);
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.builtIns).toEqual({
+      'pi-find': { enabled: false, defaultLimit: 100 },
+      'pi-grep': { enabled: true, defaultLimit: 50, defaultMaxCharsPerMatch: 200 },
+    });
   });
 
   it('reports invalid built-in selections while keeping valid entries', async () => {
@@ -77,10 +122,49 @@ describe('loadConfig', () => {
     const loaded = loadConfig(cwd);
 
     // Assert
-    expect(loaded.config.builtIns).toEqual({ 'pi-find': true, 'pi-grep': false });
+    expect(loaded.config.builtIns).toEqual({
+      'pi-find': { enabled: true, defaultLimit: 100 },
+      'pi-grep': { enabled: false, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+    });
     expect(loaded.errors).toEqual([
       expect.stringContaining('invalid builtIns.pi-grep value'),
       expect.stringContaining('unknown built-in command "unknown"'),
+    ]);
+  });
+
+  it('keeps built-in defaults while reporting invalid default settings', async () => {
+    // Arrange
+    const homeDir = makeTempDir();
+    const cwd = makeTempDir();
+    writeProjectConfig(
+      cwd,
+      JSON.stringify({
+        builtIns: {
+          'pi-find': { enabled: 'yes', defaultLimit: 0 },
+          'pi-grep': {
+            defaultLimit: 1001,
+            defaultLimitPerFile: 0,
+            defaultMaxCharsPerMatch: 99,
+          },
+        },
+      })
+    );
+    const { loadConfig } = await importConfig(homeDir);
+
+    // Act
+    const loaded = loadConfig(cwd);
+
+    // Assert
+    expect(loaded.config.builtIns).toEqual({
+      'pi-find': { enabled: true, defaultLimit: 100 },
+      'pi-grep': { enabled: true, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+    });
+    expect(loaded.errors).toEqual([
+      expect.stringContaining('invalid builtIns.pi-find.enabled value'),
+      expect.stringContaining('invalid builtIns.pi-find.defaultLimit value'),
+      expect.stringContaining('invalid builtIns.pi-grep.defaultLimit value'),
+      expect.stringContaining('invalid builtIns.pi-grep.defaultLimitPerFile value'),
+      expect.stringContaining('invalid builtIns.pi-grep.defaultMaxCharsPerMatch value'),
     ]);
   });
 

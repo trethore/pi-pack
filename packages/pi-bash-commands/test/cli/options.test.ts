@@ -68,6 +68,35 @@ describe('CLI options', () => {
     });
   });
 
+  it('uses configured defaults while explicit options take precedence', () => {
+    // Arrange and act
+    const findDefaults = parseFindCliOptions([], { defaultLimit: 25 });
+    const grepDefaults = parseGrepCliOptions(['--regexes', 'value'], {
+      defaultLimit: 50,
+      defaultLimitPerFile: 3,
+      defaultMaxCharsPerMatch: 500,
+    });
+    const explicitGrepOptions = parseGrepCliOptions(
+      ['--regexes', 'value', '--limit', '75', '--limit-per-file', '5', '--max-chars-per-match', '700'],
+      {
+        defaultLimit: 50,
+        defaultLimitPerFile: 3,
+        defaultMaxCharsPerMatch: 500,
+      }
+    );
+
+    // Assert
+    expect(findDefaults).toMatchObject({ help: false, options: { limit: 25 } });
+    expect(grepDefaults).toMatchObject({
+      help: false,
+      options: { limit: 50, limitPerFile: 3, maxCharsPerMatch: 500 },
+    });
+    expect(explicitGrepOptions).toMatchObject({
+      help: false,
+      options: { limit: 75, limitPerFile: 5, maxCharsPerMatch: 700 },
+    });
+  });
+
   it('requires a non-empty grep regex and validates numeric ranges', () => {
     expect(() => parseGrepCliOptions([])).toThrow('regexes must contain at least one non-empty string');
     expect(() => parseGrepCliOptions(['--regexes', 'value', '--limit', '0'])).toThrow(

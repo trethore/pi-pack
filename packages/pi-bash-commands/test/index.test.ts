@@ -68,7 +68,10 @@ describe('registerBashCommands', () => {
     // Arrange
     const harness = createHarness();
     const builtInConfig = config();
-    builtInConfig.builtIns = { 'pi-find': false, 'pi-grep': true };
+    builtInConfig.builtIns = {
+      'pi-find': { enabled: false, defaultLimit: 100 },
+      'pi-grep': { enabled: true, defaultLimit: 50, defaultLimitPerFile: 3, defaultMaxCharsPerMatch: 500 },
+    };
     builtInConfig.commands = [];
     registerBashCommands(harness.pi, builtInConfig);
 
@@ -78,6 +81,9 @@ describe('registerBashCommands', () => {
     // Assert
     expect(prompt?.systemPrompt).toContain('### pi-grep');
     expect(prompt?.systemPrompt).toContain('Usage: pi-grep --regexes <regex> [options]');
+    expect(prompt?.systemPrompt).toContain('Defaults to 50.');
+    expect(prompt?.systemPrompt).toContain('Defaults to 3.');
+    expect(prompt?.systemPrompt).toContain('Defaults to 500.');
     expect(prompt?.systemPrompt).not.toContain('### pi-find');
     await harness.emit('session_shutdown', { reason: 'quit' });
   });
@@ -150,7 +156,10 @@ function createHarness(options: { activeTools?: string[]; source?: string } = {}
 function config(): PiBashCommandsConfig {
   return {
     enabled: true,
-    builtIns: { 'pi-find': false, 'pi-grep': false },
+    builtIns: {
+      'pi-find': { enabled: false, defaultLimit: 100 },
+      'pi-grep': { enabled: false, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+    },
     commands: [
       {
         enabled: true,

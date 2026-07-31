@@ -105,7 +105,10 @@ function createShims(): CommandShims {
 function config(): PiBashCommandsConfig {
   return {
     enabled: true,
-    builtIns: { 'pi-find': false, 'pi-grep': false },
+    builtIns: {
+      'pi-find': { enabled: false, defaultLimit: 100 },
+      'pi-grep': { enabled: false, defaultLimit: 200, defaultMaxCharsPerMatch: 200 },
+    },
     commands: [{ enabled: true, name: 'example', command: process.execPath, args: [], env: {} }],
   };
 }

@@ -1,3 +1,0 @@
-export const DEFAULT_FIND_LIMIT = 100;
-export const DEFAULT_GREP_LIMIT = 200;
-export const DEFAULT_MAX_CHARS_PER_MATCH = 200;

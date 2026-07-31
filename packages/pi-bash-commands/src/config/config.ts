@@ -8,15 +8,20 @@ import { getBashCommandsConfigPaths } from '#src/config/locations.js';
 import {
   bashCommandSchema,
   defaultConfig,
+  limitSchema,
+  maxCharsPerMatchSchema,
   type BashCommandConfig,
+  type BuiltInsConfig,
   type LoadedConfig,
   type PartialPiBashCommandsConfig,
+  type PiFindBuiltInConfig,
+  type PiGrepBuiltInConfig,
   type PiBashCommandsConfig,
 } from '#src/config/schema.js';
-import { BUILT_IN_COMMAND_NAMES, isBuiltInCommandName } from '#src/core/built-in-command-names.js';
+import { isBuiltInCommandName } from '#src/core/built-in-command-names.js';
 
 const EXTENSION_NAME = 'pi-bash-commands';
-const { mergeEnabledField } = createConfigMerger(EXTENSION_NAME);
+const { mergeEnabledField, mergeField } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
   return loadJsoncExtensionConfig({
@@ -29,7 +34,7 @@ export function loadConfig(cwd: string, options: { includeProject?: boolean } = 
 }
 
 function cloneDefaultConfig(): PiBashCommandsConfig {
-  return { ...defaultConfig, builtIns: { ...defaultConfig.builtIns }, commands: [] };
+  return { ...defaultConfig, builtIns: createBuiltInsConfig(true), commands: [] };
 }
 
 function mergeConfig(
@@ -68,26 +73,103 @@ function mergeBuiltIns(
   }
 
   const builtIns = createBuiltInsConfig(false);
-  for (const [name, enabled] of Object.entries(source.builtIns)) {
+  for (const [name, value] of Object.entries(source.builtIns)) {
     if (!isBuiltInCommandName(name)) {
       errors.push(
         `${EXTENSION_NAME} config ignored unknown built-in command ${JSON.stringify(name)} in ${configPath}.`
       );
       continue;
     }
-    if (typeof enabled !== 'boolean') {
-      errors.push(
-        `${EXTENSION_NAME} config ignored invalid builtIns.${name} value in ${configPath}; expected boolean.`
-      );
-      continue;
-    }
-    builtIns[name] = enabled;
+    mergeBuiltInConfig(builtIns, name, value, configPath, errors);
   }
   target.builtIns = builtIns;
 }
 
-function createBuiltInsConfig(enabled: boolean): PiBashCommandsConfig['builtIns'] {
-  return Object.fromEntries(BUILT_IN_COMMAND_NAMES.map((name) => [name, enabled])) as PiBashCommandsConfig['builtIns'];
+function mergeBuiltInConfig(
+  target: BuiltInsConfig,
+  name: keyof BuiltInsConfig,
+  source: unknown,
+  configPath: string,
+  errors: string[]
+): void {
+  if (typeof source === 'boolean') {
+    target[name].enabled = source;
+    return;
+  }
+  if (!isRecord(source)) {
+    errors.push(
+      `${EXTENSION_NAME} config ignored invalid builtIns.${name} value in ${configPath}; expected boolean or object.`
+    );
+    return;
+  }
+
+  target[name].enabled = true;
+  if (name === 'pi-find') {
+    mergeFindBuiltInConfig(target[name], source, configPath, errors);
+    return;
+  }
+  mergeGrepBuiltInConfig(target[name], source, configPath, errors);
+}
+
+function mergeFindBuiltInConfig(
+  target: PiFindBuiltInConfig,
+  source: Record<string, unknown>,
+  configPath: string,
+  errors: string[]
+): void {
+  mergeLimitedBuiltInConfig(target, source, 'builtIns.pi-find', configPath, errors);
+}
+
+function mergeGrepBuiltInConfig(
+  target: PiGrepBuiltInConfig,
+  source: Record<string, unknown>,
+  configPath: string,
+  errors: string[]
+): void {
+  const label = 'builtIns.pi-grep';
+  mergeLimitedBuiltInConfig(target, source, label, configPath, errors);
+  mergeField(
+    source,
+    'defaultLimitPerFile',
+    `${label}.defaultLimitPerFile`,
+    limitSchema,
+    configPath,
+    errors,
+    (value) => {
+      target.defaultLimitPerFile = value;
+    }
+  );
+  mergeField(
+    source,
+    'defaultMaxCharsPerMatch',
+    `${label}.defaultMaxCharsPerMatch`,
+    maxCharsPerMatchSchema,
+    configPath,
+    errors,
+    (value) => {
+      target.defaultMaxCharsPerMatch = value;
+    }
+  );
+}
+
+function mergeLimitedBuiltInConfig(
+  target: { enabled: boolean; defaultLimit: number },
+  source: Record<string, unknown>,
+  label: string,
+  configPath: string,
+  errors: string[]
+): void {
+  mergeEnabledField(target, source, `${label}.enabled`, configPath, errors);
+  mergeField(source, 'defaultLimit', `${label}.defaultLimit`, limitSchema, configPath, errors, (value) => {
+    target.defaultLimit = value;
+  });
+}
+
+function createBuiltInsConfig(enabled: boolean): BuiltInsConfig {
+  return {
+    'pi-find': { ...defaultConfig.builtIns['pi-find'], enabled },
+    'pi-grep': { ...defaultConfig.builtIns['pi-grep'], enabled },
+  };
 }
 
 function parseCommands(values: unknown[], configPath: string, errors: string[]): BashCommandConfig[] {
