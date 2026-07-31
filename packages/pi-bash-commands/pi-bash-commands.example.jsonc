@@ -2,6 +2,10 @@
   // Enable the extension.
   "enabled": true,
 
+  // Enable all bundled commands. Use false to disable all built-ins.
+  // An object is an allowlist, for example: { "pi-grep": true }.
+  "builtIns": true,
+
   // Commands exposed only to Pi's built-in bash tool.
   // A project commands array replaces the global commands array.
   "commands": [

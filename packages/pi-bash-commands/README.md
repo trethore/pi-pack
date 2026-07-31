@@ -1,10 +1,11 @@
 # pi-bash-commands
 
-Expose configured commands only to Pi's active built-in bash tool.
+Expose bundled and configured commands only to Pi's active built-in bash tool.
 
 ## Features
 
 - Adds command shims to PATH only for LLM-issued bash tool calls.
+- Includes `pi-find` and `pi-grep`, compact ripgrep-powered search commands.
 - Leaves the Pi process, parent shell, and user `!`/`!!` commands unchanged.
 - Supports fixed arguments and per-command environment variables.
 - Optionally describes selected commands in the system prompt.
@@ -44,6 +45,7 @@ When project configuration defines `commands`, it replaces the global command ar
 ```jsonc
 {
   "enabled": true,
+  "builtIns": true,
   "commands": [
     {
       "enabled": true,
@@ -59,6 +61,33 @@ When project configuration defines `commands`, it replaces the global command ar
   ],
 }
 ```
+
+`builtIns` controls the commands bundled with this extension:
+
+```jsonc
+{
+  // Enable every bundled command. This is the default.
+  "builtIns": true,
+}
+```
+
+```jsonc
+{
+  // Disable every bundled command while retaining configured commands.
+  "builtIns": false,
+}
+```
+
+```jsonc
+{
+  // An object is an allowlist. Omitted commands are disabled.
+  "builtIns": {
+    "pi-grep": true,
+  },
+}
+```
+
+Available built-ins are `pi-find` and `pi-grep`. Their names are reserved and cannot be used by configured commands. When project configuration defines `builtIns`, it replaces the inherited global built-in selection.
 
 `command` must be an absolute executable path. `args`, `env`, and `prompt` are optional. Arguments supplied in a bash call are appended after configured fixed arguments.
 
@@ -79,6 +108,53 @@ Usage: example-name [options]
 ```
 
 Commands without prompt metadata remain available. Their purpose can be provided by the user or discovered through `-h`, `--help`, or equivalent help output.
+
+Multiline descriptions are displayed below a `Description:` heading. Multiline usage values are inserted verbatim, allowing a command's `--help` output to be used directly as prompt guidance.
+
+## Built-in commands
+
+Both commands use the ripgrep executable provided by `@vscode/ripgrep`. List options are repeatable.
+
+### `pi-find`
+
+```text
+Usage: pi-find [options]
+
+Find files recursively under search roots using rg --files.
+
+Options:
+  --patterns <glob>   Ripgrep-style glob filter. Repeat for multiple filters.
+                      Prefix exclusions with !.
+  --paths <path>      Search root. Repeat for multiple roots. Defaults to .
+  --limit <number>    Maximum number of files to return. Defaults to 100.
+  --depth <number>    Maximum traversal depth relative to each search root.
+  --no-ignore         Include files excluded by ignore files.
+  --visible-only      Exclude hidden files and directories.
+  -h, --help          Show this help.
+```
+
+### `pi-grep`
+
+```text
+Usage: pi-grep --regexes <regex> [options]
+
+Search file contents using ripgrep regular expressions.
+
+Options:
+  --regexes <regex>               Regular expression to search for. Repeat for multiple expressions.
+  --paths <path>                  File or directory to search. Repeat for multiple paths. Defaults to .
+  --globs <glob>                  Ripgrep-style glob filter. Repeat for multiple filters.
+                                  Prefix exclusions with !.
+  --limit <number>                Maximum matching lines to return globally. Defaults to 200.
+  --limit-per-file <number>       Maximum matching lines to return per file.
+  --depth <number>                Maximum traversal depth relative to each search path.
+  --max-chars-per-match <number>  Maximum characters shown per matching line. Defaults to 200.
+  --no-ignore                     Include files excluded by ignore files.
+  --visible-only                  Exclude hidden files and directories.
+  -h, --help                      Show this help.
+```
+
+The commands enforce their requested result limits but do not apply Pi tool-output truncation or persist overflow to temporary files. Final output handling belongs to the Bash tool.
 
 ## Scope and limitations
 

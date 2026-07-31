@@ -42,6 +42,24 @@ Usage: third --help`);
     // Assert
     expect(prompt).toBeUndefined();
   });
+
+  it('formats multiline descriptions as blocks and multiline usage verbatim', () => {
+    // Arrange
+    const commands = [
+      command('example', {
+        description: 'First line.\nSecond line.',
+        usage: 'Usage: example [options]\n\nOptions:\n  -h, --help',
+      }),
+    ];
+
+    // Act
+    const prompt = buildBashCommandsPrompt(commands);
+
+    // Assert
+    expect(prompt).toContain('Description:\nFirst line.\nSecond line.');
+    expect(prompt).toContain('Usage: example [options]\n\nOptions:\n  -h, --help');
+    expect(prompt).not.toContain('Usage: Usage:');
+  });
 });
 
 function command(name: string, prompt?: BashCommandConfig['prompt']): BashCommandConfig {

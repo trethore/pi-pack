@@ -1,6 +1,8 @@
 import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
 import { z } from '@trethore/pi-shared/config/schema.js';
 
+import type { BuiltInCommandName } from '#src/core/built-in-command-names.js';
+
 interface BashCommandPromptConfig {
   description?: string;
   usage?: string;
@@ -17,11 +19,13 @@ export interface BashCommandConfig {
 
 export interface PiBashCommandsConfig {
   enabled: boolean;
+  builtIns: Record<BuiltInCommandName, boolean>;
   commands: BashCommandConfig[];
 }
 
 export type PartialPiBashCommandsConfig = Partial<{
   enabled: unknown;
+  builtIns: unknown;
   commands: unknown;
 }>;
 
@@ -29,6 +33,10 @@ export type LoadedConfig = LoadedExtensionConfig<PiBashCommandsConfig>;
 
 export const defaultConfig: PiBashCommandsConfig = {
   enabled: true,
+  builtIns: {
+    'pi-find': true,
+    'pi-grep': true,
+  },
   commands: [],
 };
 

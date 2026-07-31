@@ -63,6 +63,49 @@ describe('registerBashCommands', () => {
     // Assert
     expect(prompt).toBeUndefined();
   });
+
+  it('adds enabled built-in commands and their help to the prompt', async () => {
+    // Arrange
+    const harness = createHarness();
+    const builtInConfig = config();
+    builtInConfig.builtIns = { 'pi-find': false, 'pi-grep': true };
+    builtInConfig.commands = [];
+    registerBashCommands(harness.pi, builtInConfig);
+
+    // Act
+    const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+
+    // Assert
+    expect(prompt?.systemPrompt).toContain('### pi-grep');
+    expect(prompt?.systemPrompt).toContain('Usage: pi-grep --regexes <regex> [options]');
+    expect(prompt?.systemPrompt).not.toContain('### pi-find');
+    await harness.emit('session_shutdown', { reason: 'quit' });
+  });
+
+  it('uses the active config values when handling events', async () => {
+    // Arrange
+    const harness = createHarness();
+    const activeConfig = config();
+    registerBashCommands(harness.pi, activeConfig);
+    activeConfig.commands = [
+      {
+        enabled: true,
+        name: 'updated',
+        command: process.execPath,
+        args: [],
+        env: {},
+        prompt: { description: 'Updated command.' },
+      },
+    ];
+
+    // Act
+    const prompt = await harness.emit('before_agent_start', { systemPrompt: 'base' });
+
+    // Assert
+    expect(prompt?.systemPrompt).toContain('Description: Updated command.');
+    expect(prompt?.systemPrompt).not.toContain('Description: Example command.');
+    await harness.emit('session_shutdown', { reason: 'quit' });
+  });
 });
 
 type HandlerResult = { systemPrompt: string } | undefined;
@@ -107,6 +150,7 @@ function createHarness(options: { activeTools?: string[]; source?: string } = {}
 function config(): PiBashCommandsConfig {
   return {
     enabled: true,
+    builtIns: { 'pi-find': false, 'pi-grep': false },
     commands: [
       {
         enabled: true,

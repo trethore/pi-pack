@@ -3,6 +3,7 @@ import { getErrorMessage } from '@trethore/pi-shared/error.js';
 
 import type { PiBashCommandsConfig } from '#src/config/schema.js';
 import { isBuiltInBashAvailable } from '#src/core/availability.js';
+import { createBashCommands } from '#src/core/built-ins.js';
 import { createCommandShims, type CommandShims } from '#src/core/shims.js';
 
 export interface BashCommandsRuntime {
@@ -37,8 +38,13 @@ export function createBashCommandsRuntime(
 }
 
 async function ensureRuntime(state: RuntimeState, ctx: ExtensionContext): Promise<CommandShims | undefined> {
-  const commands = state.config.commands.filter((command) => command.enabled);
-  if (!state.config.enabled || commands.length === 0) {
+  if (!state.config.enabled) {
+    await disposeShims(state);
+    return;
+  }
+
+  const commands = createBashCommands(state.config).filter((command) => command.enabled);
+  if (commands.length === 0) {
     await disposeShims(state);
     return;
   }

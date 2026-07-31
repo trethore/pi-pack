@@ -22,7 +22,15 @@ function hasPrompt(command: BashCommandConfig): boolean {
 
 function formatCommandPrompt(command: BashCommandConfig): string {
   const lines = [`### ${command.name}`];
-  if (command.prompt?.description) lines.push('', `Description: ${command.prompt.description}`);
-  if (command.prompt?.usage) lines.push('', `Usage: ${command.prompt.usage}`);
+  if (command.prompt?.description) lines.push('', ...formatDescription(command.prompt.description));
+  if (command.prompt?.usage) lines.push('', ...formatUsage(command.prompt.usage));
   return lines.join('\n');
+}
+
+function formatDescription(description: string): string[] {
+  return description.includes('\n') ? ['Description:', description] : [`Description: ${description}`];
+}
+
+function formatUsage(usage: string): string[] {
+  return usage.includes('\n') ? [usage] : [`Usage: ${usage}`];
 }

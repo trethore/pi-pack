@@ -3,6 +3,7 @@ import { createActiveConfig } from '@trethore/pi-shared/config/active-config.js'
 
 import { loadConfig } from '#src/config/config.js';
 import type { PiBashCommandsConfig } from '#src/config/schema.js';
+import { createBashCommands } from '#src/core/built-ins.js';
 import { BASH_COMMANDS_PROMPT_MARKER, buildBashCommandsPrompt } from '#src/core/prompt.js';
 import { createBashCommandsRuntime } from '#src/core/runtime.js';
 import { prependBashCommandsPath } from '#src/core/shell.js';
@@ -28,7 +29,7 @@ export function registerBashCommands(pi: ExtensionAPI, config: PiBashCommandsCon
     const shims = await runtime.ensure(ctx);
     if (!shims || event.systemPrompt.includes(BASH_COMMANDS_PROMPT_MARKER)) return;
 
-    const prompt = buildBashCommandsPrompt(config.commands);
+    const prompt = buildBashCommandsPrompt(createBashCommands(config));
     if (!prompt) return;
     return { systemPrompt: `${event.systemPrompt}\n\n${prompt}` };
   });
