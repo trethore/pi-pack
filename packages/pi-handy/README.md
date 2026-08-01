@@ -6,7 +6,6 @@ Handy controls and diagnostics for Pi.
 
 - Inspects or changes the active model thinking level.
 - Displays the active system prompt and tool schemas.
-- Dumps the next provider request payload.
 - Reports the total duration of an agent run.
 
 ## Installation
@@ -38,7 +37,6 @@ All features are enabled by default. After loading the extension, try:
 ```text
 /thinkinglevel
 /showsysprompt
-/payloaddump
 ```
 
 ## Configuration
@@ -61,9 +59,6 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
   "showSysprompt": {
     "enabled": true,
   },
-  "payloadDump": {
-    "enabled": true,
-  },
   "timeTaken": {
     "enabled": true,
   },
@@ -76,7 +71,6 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 | -------------------------------- | ---------------------------------------------------------------- |
 | `/thinkinglevel [level]`         | Inspect or set the current model thinking level.                 |
 | `/showsysprompt [prompt\|tools]` | Display the current system prompt, active tool schemas, or both. |
-| `/payloaddump`                   | Dump the next LLM provider request payload.                      |
 
 ## Feature reference
 
@@ -101,12 +95,6 @@ The output is stored as display-only session entries and is never added to LLM c
 /showsysprompt prompt
 /showsysprompt tools
 ```
-
-### Payload dump
-
-`/payloaddump` dumps the next LLM provider request payload to `$PI_CODING_AGENT_DIR/.payload-dump-<ISO-TIMESTAMP>`. `PI_CODING_AGENT_DIR` defaults to `~/.pi/agent`.
-
-Colons in the timestamp are replaced with hyphens so the filename works on Windows.
 
 ### Time taken notification
 
