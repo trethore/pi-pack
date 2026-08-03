@@ -8,6 +8,10 @@ export const LIMIT_RANGE = {
   maximum: 1000,
 } as const satisfies IntegerRange;
 
+export const DEPTH_RANGE = {
+  minimum: 1,
+} as const satisfies IntegerRange;
+
 export const MAX_CHARS_PER_MATCH_RANGE = {
   minimum: 100,
   maximum: 2000,

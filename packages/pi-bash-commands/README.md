@@ -156,11 +156,13 @@ Find files recursively under search roots using rg --files.
 Options:
   --patterns <glob>   Ripgrep-style glob filter. Repeat for multiple filters.
                       Prefix exclusions with !.
-  --paths <path>      Search root. Repeat for multiple roots. Defaults to .
-  --limit <number>    Maximum number of files to return. Defaults to 100.
-  --depth <number>    Maximum traversal depth relative to each search root.
-  --no-ignore         Include files excluded by ignore files.
-  --visible-only      Exclude hidden files and directories.
+  --paths <path>      Search directory. Repeat for multiple directories.
+                      Defaults to the current directory.
+  --limit <number>    Maximum number of files to return. Integer from 1 to 1000.
+                      Defaults to 100.
+  --depth <number>    Maximum traversal depth from each search directory. Integer at least 1.
+  --no-ignore         Include files excluded by ignore files. The .git directory remains excluded.
+  --visible-only      Search only visible files and directories.
   -h, --help          Show this help.
 ```
 
@@ -173,15 +175,18 @@ Search file contents using ripgrep regular expressions.
 
 Options:
   --regexes <regex>               Regular expression to search for. Repeat for multiple expressions.
-  --paths <path>                  File or directory to search. Repeat for multiple paths. Defaults to .
+  --paths <path>                  File or directory to search. Repeat for multiple paths.
+                                  Defaults to the current directory.
   --globs <glob>                  Ripgrep-style glob filter. Repeat for multiple filters.
                                   Prefix exclusions with !.
-  --limit <number>                Maximum matching lines to return globally. Defaults to 200.
-  --limit-per-file <number>       Maximum matching lines to return per file.
-  --depth <number>                Maximum traversal depth relative to each search path.
-  --max-chars-per-match <number>  Maximum characters shown per matching line. Defaults to 200.
-  --no-ignore                     Include files excluded by ignore files.
-  --visible-only                  Exclude hidden files and directories.
+  --limit <number>                Maximum matching lines to return globally. Integer from 1 to 1000.
+                                  Defaults to 200.
+  --limit-per-file <number>       Maximum matching lines to return per file. Integer from 1 to 1000.
+  --depth <number>                Maximum traversal depth from each search path. Integer at least 1.
+  --max-chars-per-match <number>  Maximum characters shown per matching line. Integer from 100 to 2000.
+                                  Defaults to 200.
+  --no-ignore                     Include files excluded by ignore files. The .git directory remains excluded.
+  --visible-only                  Search only visible files and directories.
   -h, --help                      Show this help.
 ```
 

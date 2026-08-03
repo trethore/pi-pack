@@ -4,6 +4,7 @@ import {
   type FindCliDefaults,
   type GrepCliDefaults,
 } from '#pi-bash-commands-cli/shared/defaults';
+import { DEPTH_RANGE, LIMIT_RANGE, MAX_CHARS_PER_MATCH_RANGE } from '#pi-bash-commands-cli/shared/limits';
 
 export const PI_FIND_DESCRIPTION =
   'Find files recursively under search roots using `rg --files`, optionally filtered by ripgrep-style glob patterns. Use for file discovery; prefer it over `find` or `rg --files` when its options are sufficient because it produces bounded, token-efficient output.';
@@ -17,11 +18,13 @@ Find files recursively under search roots using rg --files.
 Options:
   --patterns <glob>   Ripgrep-style glob filter. Repeat for multiple filters.
                       Prefix exclusions with !.
-  --paths <path>      Search root. Repeat for multiple roots. Defaults to .
-  --limit <number>    Maximum number of files to return. Defaults to ${defaults.defaultLimit}.
-  --depth <number>    Maximum traversal depth relative to each search root.
-  --no-ignore         Include files excluded by ignore files.
-  --visible-only      Exclude hidden files and directories.
+  --paths <path>      Search directory. Repeat for multiple directories.
+                      Defaults to the current directory.
+  --limit <number>    Maximum number of files to return. Integer from ${LIMIT_RANGE.minimum} to ${LIMIT_RANGE.maximum}.
+                      Defaults to ${defaults.defaultLimit}.
+  --depth <number>    Maximum traversal depth from each search directory. Integer at least ${DEPTH_RANGE.minimum}.
+  --no-ignore         Include files excluded by ignore files. The .git directory remains excluded.
+  --visible-only      Search only visible files and directories.
   -h, --help          Show this help.
 `.trim();
 }
@@ -39,15 +42,18 @@ Search file contents using ripgrep regular expressions.
 
 Options:
   --regexes <regex>               Regular expression to search for. Repeat for multiple expressions.
-  --paths <path>                  File or directory to search. Repeat for multiple paths. Defaults to .
+  --paths <path>                  File or directory to search. Repeat for multiple paths.
+                                  Defaults to the current directory.
   --globs <glob>                  Ripgrep-style glob filter. Repeat for multiple filters.
                                   Prefix exclusions with !.
-  --limit <number>                Maximum matching lines to return globally. Defaults to ${defaults.defaultLimit}.
-  --limit-per-file <number>       Maximum matching lines to return per file.${limitPerFileDefault}
-  --depth <number>                Maximum traversal depth relative to each search path.
-  --max-chars-per-match <number>  Maximum characters shown per matching line. Defaults to ${defaults.defaultMaxCharsPerMatch}.
-  --no-ignore                     Include files excluded by ignore files.
-  --visible-only                  Exclude hidden files and directories.
+  --limit <number>                Maximum matching lines to return globally. Integer from ${LIMIT_RANGE.minimum} to ${LIMIT_RANGE.maximum}.
+                                  Defaults to ${defaults.defaultLimit}.
+  --limit-per-file <number>       Maximum matching lines to return per file. Integer from ${LIMIT_RANGE.minimum} to ${LIMIT_RANGE.maximum}.${limitPerFileDefault}
+  --depth <number>                Maximum traversal depth from each search path. Integer at least ${DEPTH_RANGE.minimum}.
+  --max-chars-per-match <number>  Maximum characters shown per matching line. Integer from ${MAX_CHARS_PER_MATCH_RANGE.minimum} to ${MAX_CHARS_PER_MATCH_RANGE.maximum}.
+                                  Defaults to ${defaults.defaultMaxCharsPerMatch}.
+  --no-ignore                     Include files excluded by ignore files. The .git directory remains excluded.
+  --visible-only                  Search only visible files and directories.
   -h, --help                      Show this help.
 `.trim();
 }
