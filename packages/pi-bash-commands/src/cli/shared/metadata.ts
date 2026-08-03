@@ -16,9 +16,9 @@ Usage: pi-find [options]
 Find files recursively under search roots using rg --files.
 
 Options:
-  --patterns <glob>   Ripgrep-style glob filter. Repeat for multiple filters.
+  --patterns <glob>   Ripgrep-style glob filter. Repeat --patterns for each filter.
                       Prefix exclusions with !.
-  --paths <path>      Search directory. Repeat for multiple directories.
+  --paths <path>      Search directory. Repeat --paths for each search directory.
                       Defaults to the current directory.
   --limit <number>    Maximum number of files to return. Integer from ${LIMIT_RANGE.minimum} to ${LIMIT_RANGE.maximum}.
                       Defaults to ${defaults.defaultLimit}.
@@ -30,7 +30,7 @@ Options:
 }
 
 export const PI_GREP_DESCRIPTION =
-  "Search file contents using ripgrep via `rg --json -n -e '<regex>' -g '<glob>' <path(s)>`. Use for repository content searches; prefer it over raw `rg` when its options are sufficient because it produces bounded, token-efficient output.";
+  "Search file contents using ripgrep via `rg --json -n -e '<regex>' -g '<glob>' <path(s)>`. Use to explore text across files; prefer it over raw `rg` when its options are sufficient because it produces bounded, token-efficient output.";
 
 export function createPiGrepHelp(defaults: GrepCliDefaults = DEFAULT_GREP_CLI_DEFAULTS): string {
   const limitPerFileDefault =
@@ -41,10 +41,10 @@ Usage: pi-grep --regexes <regex> [options]
 Search file contents using ripgrep regular expressions.
 
 Options:
-  --regexes <regex>               Regular expression to search for. Repeat for multiple expressions.
-  --paths <path>                  File or directory to search. Repeat for multiple paths.
+  --regexes <regex>               Regular expression to search for. Repeat --regexes for each expression.
+  --paths <path>                  File or directory to search. Repeat --paths for each path.
                                   Defaults to the current directory.
-  --globs <glob>                  Ripgrep-style glob filter. Repeat for multiple filters.
+  --globs <glob>                  Ripgrep-style glob filter. Repeat --globs for each filter.
                                   Prefix exclusions with !.
   --limit <number>                Maximum matching lines to return globally. Integer from ${LIMIT_RANGE.minimum} to ${LIMIT_RANGE.maximum}.
                                   Defaults to ${defaults.defaultLimit}.

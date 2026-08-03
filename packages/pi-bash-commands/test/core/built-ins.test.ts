@@ -41,7 +41,7 @@ describe('createBashCommands', () => {
       'Find files recursively under search roots using `rg --files`, optionally filtered by ripgrep-style glob patterns. Use for file discovery; prefer it over `find` or `rg --files` when its options are sufficient because it produces bounded, token-efficient output.'
     );
     expect(commands[1]?.prompt?.description).toBe(
-      "Search file contents using ripgrep via `rg --json -n -e '<regex>' -g '<glob>' <path(s)>`. Use for repository content searches; prefer it over raw `rg` when its options are sufficient because it produces bounded, token-efficient output."
+      "Search file contents using ripgrep via `rg --json -n -e '<regex>' -g '<glob>' <path(s)>`. Use to explore text across files; prefer it over raw `rg` when its options are sufficient because it produces bounded, token-efficient output."
     );
     expect(commands[0]?.prompt?.usage).toBe(PI_FIND_HELP);
     expect(commands[1]?.prompt?.usage).toBe(PI_GREP_HELP);

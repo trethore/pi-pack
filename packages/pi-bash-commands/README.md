@@ -154,9 +154,9 @@ Usage: pi-find [options]
 Find files recursively under search roots using rg --files.
 
 Options:
-  --patterns <glob>   Ripgrep-style glob filter. Repeat for multiple filters.
+  --patterns <glob>   Ripgrep-style glob filter. Repeat --patterns for each filter.
                       Prefix exclusions with !.
-  --paths <path>      Search directory. Repeat for multiple directories.
+  --paths <path>      Search directory. Repeat --paths for each search directory.
                       Defaults to the current directory.
   --limit <number>    Maximum number of files to return. Integer from 1 to 1000.
                       Defaults to 100.
@@ -174,10 +174,10 @@ Usage: pi-grep --regexes <regex> [options]
 Search file contents using ripgrep regular expressions.
 
 Options:
-  --regexes <regex>               Regular expression to search for. Repeat for multiple expressions.
-  --paths <path>                  File or directory to search. Repeat for multiple paths.
+  --regexes <regex>               Regular expression to search for. Repeat --regexes for each expression.
+  --paths <path>                  File or directory to search. Repeat --paths for each path.
                                   Defaults to the current directory.
-  --globs <glob>                  Ripgrep-style glob filter. Repeat for multiple filters.
+  --globs <glob>                  Ripgrep-style glob filter. Repeat --globs for each filter.
                                   Prefix exclusions with !.
   --limit <number>                Maximum matching lines to return globally. Integer from 1 to 1000.
                                   Defaults to 200.
