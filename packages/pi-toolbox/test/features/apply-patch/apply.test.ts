@@ -132,7 +132,7 @@ describe('applyPatch', () => {
     expect(readFileSync(path.join(cwd, 'no-newline.txt'), 'utf8')).toBe('first line\nsecond line\n');
   });
 
-  it('fails before mutating files when preflight detects a later error', async () => {
+  it('retains earlier successful changes when a later hunk fails', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'modify.txt'), 'line1\nline2\n');
@@ -154,7 +154,7 @@ describe('applyPatch', () => {
 
     // Assert
     await expect(operation).rejects.toThrow('Failed to read file to update');
-    expect(readFileSync(path.join(cwd, 'modify.txt'), 'utf8')).toBe('line1\nline2\n');
+    expect(readFileSync(path.join(cwd, 'modify.txt'), 'utf8')).toBe('line1\nchanged\n');
   });
 
   it('rejects missing context and keeps the file unchanged', async () => {
@@ -175,8 +175,7 @@ describe('applyPatch', () => {
     const operation = applyPatch({ cwd, patch });
 
     // Assert
-    await expect(operation).rejects.toThrow(`Failed to find expected lines in ${filePath}`);
-    await expect(operation).rejects.not.toThrow('missing');
+    await expect(operation).rejects.toThrow(`Failed to find expected lines in ${filePath}:\nmissing`);
     expect(readFileSync(filePath, 'utf8')).toBe('line1\nline2\n');
   });
 
@@ -193,21 +192,21 @@ describe('applyPatch', () => {
     await expect(operation).rejects.toThrow(`Failed to delete file ${path.join(cwd, 'dir')}`);
   });
 
-  it('rejects adding a file that already exists', async () => {
+  it('overwrites an existing file with an add hunk', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'existing.txt'), 'original\n');
     const patch = lines('*** Begin Patch', '*** Add File: existing.txt', '+replacement', '*** End Patch');
 
     // Act
-    const operation = applyPatch({ cwd, patch });
+    const result = await applyPatch({ cwd, patch });
 
     // Assert
-    await expect(operation).rejects.toThrow('path already exists');
-    expect(readFileSync(path.join(cwd, 'existing.txt'), 'utf8')).toBe('original\n');
+    expect(result).toEqual({ added: ['existing.txt'], modified: [], deleted: [] });
+    expect(readFileSync(path.join(cwd, 'existing.txt'), 'utf8')).toBe('replacement\n');
   });
 
-  it('rejects moving a file over an existing destination', async () => {
+  it('overwrites an existing move destination', async () => {
     // Arrange
     const cwd = makeTempDir();
     writeFileSync(path.join(cwd, 'source.txt'), 'source\n');
@@ -223,32 +222,12 @@ describe('applyPatch', () => {
     );
 
     // Act
-    const operation = applyPatch({ cwd, patch });
+    const result = await applyPatch({ cwd, patch });
 
     // Assert
-    await expect(operation).rejects.toThrow('destination already exists');
-    expect(readFileSync(path.join(cwd, 'source.txt'), 'utf8')).toBe('source\n');
-    expect(readFileSync(path.join(cwd, 'destination.txt'), 'utf8')).toBe('destination\n');
-  });
-
-  it('rejects planned file paths that conflict as parent and child', async () => {
-    // Arrange
-    const cwd = makeTempDir();
-    const patch = lines(
-      '*** Begin Patch',
-      '*** Add File: parent',
-      '+parent',
-      '*** Add File: parent/child.txt',
-      '+child',
-      '*** End Patch'
-    );
-
-    // Act
-    const operation = applyPatch({ cwd, patch });
-
-    // Assert
-    await expect(operation).rejects.toThrow('conflicts with planned file');
-    expect(existsSync(path.join(cwd, 'parent'))).toBe(false);
+    expect(result).toEqual({ added: [], modified: ['destination.txt'], deleted: [] });
+    expect(existsSync(path.join(cwd, 'source.txt'))).toBe(false);
+    expect(readFileSync(path.join(cwd, 'destination.txt'), 'utf8')).toBe('moved\n');
   });
 
   it('waits for Pi file mutations targeting the same path', async () => {

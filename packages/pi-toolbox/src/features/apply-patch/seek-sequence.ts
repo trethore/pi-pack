@@ -1,3 +1,34 @@
+const UNICODE_PUNCTUATION_REPLACEMENTS: Readonly<Record<string, string>> = {
+  '\u2010': '-',
+  '\u2011': '-',
+  '\u2012': '-',
+  '\u2013': '-',
+  '\u2014': '-',
+  '\u2015': '-',
+  '\u2212': '-',
+  '\u2018': "'",
+  '\u2019': "'",
+  '\u201A': "'",
+  '\u201B': "'",
+  '\u201C': '"',
+  '\u201D': '"',
+  '\u201E': '"',
+  '\u201F': '"',
+  '\u00A0': ' ',
+  '\u2002': ' ',
+  '\u2003': ' ',
+  '\u2004': ' ',
+  '\u2005': ' ',
+  '\u2006': ' ',
+  '\u2007': ' ',
+  '\u2008': ' ',
+  '\u2009': ' ',
+  '\u200A': ' ',
+  '\u202F': ' ',
+  '\u205F': ' ',
+  '\u3000': ' ',
+};
+
 export function seekSequence(
   lines: readonly string[],
   pattern: readonly string[],
@@ -11,8 +42,14 @@ export function seekSequence(
 
   return (
     findMatch(lines, pattern, searchStart, (value) => value) ??
-    findMatch(lines, pattern, searchStart, (value) => value.trimEnd())
+    findMatch(lines, pattern, searchStart, (value) => value.trimEnd()) ??
+    findMatch(lines, pattern, searchStart, (value) => value.trim()) ??
+    findMatch(lines, pattern, searchStart, normalizeUnicodePunctuation)
   );
+}
+
+function normalizeUnicodePunctuation(value: string): string {
+  return [...value.trim()].map((character) => UNICODE_PUNCTUATION_REPLACEMENTS[character] ?? character).join('');
 }
 
 function findMatch(

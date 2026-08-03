@@ -22,10 +22,10 @@ import { applyPatch } from '#pi-toolbox/features/apply-patch/apply.js';
 import { lines } from '#test/utils/lines.js';
 import { makeTempDir } from '#test/utils/tool-test-helpers.js';
 
-describe('applyPatch rollback', () => {
-  it('restores earlier operations when a later write fails', async () => {
+describe('applyPatch partial failure', () => {
+  it('retains earlier operations when a later write fails', async () => {
     // Arrange
-    const cwd = makeTempDir('pi-toolbox-apply-patch-rollback-test-');
+    const cwd = makeTempDir('pi-toolbox-apply-patch-partial-failure-test-');
     fsMockState.failedWritePath = path.join(cwd, 'second.txt');
     const patch = lines(
       '*** Begin Patch',
@@ -40,8 +40,10 @@ describe('applyPatch rollback', () => {
     const operation = applyPatch({ cwd, patch });
 
     // Assert
-    await expect(operation).rejects.toThrow('Failed to commit patch: simulated write failure');
-    expect(existsSync(path.join(cwd, 'first.txt'))).toBe(false);
+    await expect(operation).rejects.toThrow(
+      `Failed to write file ${fsMockState.failedWritePath}: simulated write failure`
+    );
+    expect(existsSync(path.join(cwd, 'first.txt'))).toBe(true);
     expect(existsSync(path.join(cwd, 'second.txt'))).toBe(false);
   });
 });

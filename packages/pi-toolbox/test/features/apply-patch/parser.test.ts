@@ -24,7 +24,7 @@ describe('apply_patch parser', () => {
 
     // Assert
     expect(result.hunks).toEqual([
-      { type: 'add', path: 'created.txt', contents: 'created\n' },
+      { type: 'add', path: '@created.txt', contents: 'created\n' },
       { type: 'delete', path: 'obsolete.txt' },
       {
         type: 'update',
@@ -46,12 +46,6 @@ describe('apply_patch parser', () => {
     [
       'missing begin marker',
       lines('bad', '*** End Patch'),
-      InvalidPatchError,
-      "The first line of the patch must be '*** Begin Patch'",
-    ],
-    [
-      'heredoc wrapper',
-      lines("<<'EOF'", '*** Begin Patch', '*** Add File: created.txt', '+created', '*** End Patch', 'EOF'),
       InvalidPatchError,
       "The first line of the patch must be '*** Begin Patch'",
     ],
@@ -92,5 +86,40 @@ describe('apply_patch parser', () => {
     // Assert
     expect(operation).toThrow(errorConstructor);
     expect(operation).toThrow(message);
+  });
+
+  it.each(['<<EOF', "<<'EOF'", '<<"EOF"'])('accepts a %s heredoc wrapper', (heredocMarker) => {
+    // Arrange
+    const patch = lines(
+      heredocMarker,
+      '*** Begin Patch',
+      '*** Add File: created.txt',
+      '+created',
+      '*** End Patch',
+      'EOF'
+    );
+
+    // Act
+    const result = parsePatch(patch);
+
+    // Assert
+    expect(result.hunks).toEqual([{ type: 'add', path: 'created.txt', contents: 'created\n' }]);
+  });
+
+  it('silently accepts an environment ID preamble', () => {
+    // Arrange
+    const patch = lines(
+      '*** Begin Patch',
+      '*** Environment ID: remote',
+      '*** Add File: created.txt',
+      '+created',
+      '*** End Patch'
+    );
+
+    // Act
+    const result = parsePatch(patch);
+
+    // Assert
+    expect(result.hunks).toEqual([{ type: 'add', path: 'created.txt', contents: 'created\n' }]);
   });
 });

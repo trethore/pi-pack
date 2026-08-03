@@ -1,7 +1,6 @@
-import { normalizeToolPath } from '#src/utils/paths.js';
-
 const BEGIN_PATCH_MARKER = '*** Begin Patch';
 const END_PATCH_MARKER = '*** End Patch';
+const ENVIRONMENT_ID_MARKER = '*** Environment ID:';
 const ADD_FILE_MARKER = '*** Add File: ';
 const DELETE_FILE_MARKER = '*** Delete File: ';
 const UPDATE_FILE_MARKER = '*** Update File: ';
@@ -61,10 +60,19 @@ export interface ApplyPatchArgs {
 }
 
 export function parsePatch(patch: string): ApplyPatchArgs {
-  const lines = splitPatchLines(patch.trim());
+  const lines = splitPatchLines(unwrapPatchInput(patch));
   let remainingLines = checkPatchBoundaries(lines);
   let lineNumber = 2;
   const hunks: Hunk[] = [];
+
+  if (remainingLines[0]?.trim().startsWith(ENVIRONMENT_ID_MARKER) === true) {
+    validateEnvironmentId(remainingLines[0] ?? '');
+    remainingLines = remainingLines.slice(1);
+    lineNumber += 1;
+    if (remainingLines[0]?.trim().startsWith(ENVIRONMENT_ID_MARKER) === true) {
+      throw new InvalidPatchError('apply_patch environment_id cannot be specified more than once');
+    }
+  }
 
   while (remainingLines.length > 0) {
     const parsed = parseOneHunk(remainingLines, lineNumber);
@@ -88,6 +96,30 @@ export function hunkDisplayPath(hunk: Hunk): string {
 
 function splitPatchLines(patch: string): string[] {
   return patch.length === 0 ? [] : patch.split(/\r?\n/);
+}
+
+function unwrapPatchInput(patch: string): string {
+  const trimmedPatch = patch.trim();
+  const lines = splitPatchLines(trimmedPatch);
+  const firstLine = lines[0];
+  const lastLine = lines.at(-1);
+
+  if (
+    lines.length >= 4 &&
+    (firstLine === '<<EOF' || firstLine === "<<'EOF'" || firstLine === '<<"EOF"') &&
+    lastLine?.endsWith('EOF') === true
+  ) {
+    return lines.slice(1, -1).join('\n').trim();
+  }
+
+  return trimmedPatch;
+}
+
+function validateEnvironmentId(line: string): void {
+  const environmentId = line.trim().slice(ENVIRONMENT_ID_MARKER.length).trim();
+  if (environmentId.length === 0) {
+    throw new InvalidPatchError('apply_patch environment_id cannot be empty');
+  }
 }
 
 function checkPatchBoundaries(lines: string[]): string[] {
@@ -142,7 +174,7 @@ function parseUpdateFileHunk(
 ): { hunk: Hunk; parsedLines: number } {
   let remainingLines = lines.slice(1);
   let parsedLines = 1;
-  const movePath = parsePathMarker(remainingLines[0], MOVE_TO_MARKER, lineNumber + 1);
+  const movePath = parsePathMarker(remainingLines[0]?.trimEnd(), MOVE_TO_MARKER, lineNumber + 1);
 
   if (movePath !== undefined) {
     remainingLines = remainingLines.slice(1);
@@ -265,7 +297,7 @@ function parsePathMarker(line: string | undefined, marker: string, lineNumber: n
   const header = marker.trimEnd();
   if (line === header) throwEmptyPath(marker, lineNumber);
   if (line?.startsWith(marker) !== true) return undefined;
-  const filePath = normalizeToolPath(line.slice(marker.length));
+  const filePath = line.slice(marker.length);
   if (filePath.length === 0) {
     throwEmptyPath(marker, lineNumber);
   }

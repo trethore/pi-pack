@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { withFileMutationQueue } from '@earendil-works/pi-coding-agent';
@@ -19,18 +19,6 @@ export interface ApplyPatchResult {
   deleted: string[];
 }
 
-type PlannedOperation =
-  | { type: 'write'; path: string; content: string }
-  | { type: 'delete'; path: string }
-  | { type: 'move'; sourcePath: string; destinationPath: string; content: string };
-
-interface PlannedPatch {
-  operations: PlannedOperation[];
-  summary: ApplyPatchResult;
-}
-
-type FileSnapshot = { exists: false } | { exists: true; content: string; mode: number };
-
 class ApplyPatchError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -43,16 +31,7 @@ export async function applyPatch(options: ApplyPatchOptions): Promise<ApplyPatch
   const effectiveCwd = resolveWorkdir(options.cwd, options.workdir);
   const mutationPaths = await collectMutationPaths(args.hunks, effectiveCwd);
 
-  return withFileMutationQueues(mutationPaths, async () => {
-    const plannedPatch = await planPatch(args.hunks, effectiveCwd);
-
-    if (plannedPatch.operations.length === 0) {
-      throw new ApplyPatchError('No files were modified.');
-    }
-
-    await commitPatch(plannedPatch.operations);
-    return plannedPatch.summary;
-  });
+  return withFileMutationQueues(mutationPaths, () => applyHunks(args.hunks, effectiveCwd));
 }
 
 function resolveWorkdir(cwd: string, workdir: string | undefined): string {
@@ -93,197 +72,66 @@ function withFileMutationQueues<T>(filePaths: readonly string[], operation: () =
   return withFileMutationQueue(filePath, () => withFileMutationQueues(filePaths, operation, index + 1));
 }
 
-async function planPatch(hunks: readonly Hunk[], cwd: string): Promise<PlannedPatch> {
-  const state = new Map<string, string | null>();
-  const operations: PlannedOperation[] = [];
+async function applyHunks(hunks: readonly Hunk[], cwd: string): Promise<ApplyPatchResult> {
+  if (hunks.length === 0) throw new ApplyPatchError('No files were modified.');
+
   const summary: ApplyPatchResult = { added: [], modified: [], deleted: [] };
 
   for (const hunk of hunks) {
     if (hunk.type === 'add') {
       const targetPath = resolvePatchPath(cwd, hunk.path);
-      await assertAvailableFilePath(targetPath, state, `Failed to add file ${targetPath}: path already exists`);
-      state.set(targetPath, hunk.contents);
-      operations.push({ type: 'write', path: targetPath, content: hunk.contents });
+      await writeTextFile(targetPath, hunk.contents);
       summary.added.push(hunkDisplayPath(hunk));
     } else if (hunk.type === 'delete') {
       const targetPath = resolvePatchPath(cwd, hunk.path);
-      await assertExistingFileForDelete(targetPath, state);
-      state.set(targetPath, null);
-      operations.push({ type: 'delete', path: targetPath });
+      await removeFile(targetPath, `Failed to delete file ${targetPath}`);
       summary.deleted.push(hunkDisplayPath(hunk));
     } else {
-      await planUpdateHunk(hunk, cwd, state, operations);
+      await applyUpdateHunk(hunk, cwd);
       summary.modified.push(hunkDisplayPath(hunk));
     }
   }
 
-  return { operations, summary };
+  return summary;
 }
 
-async function planUpdateHunk(
-  hunk: Extract<Hunk, { type: 'update' }>,
-  cwd: string,
-  state: Map<string, string | null>,
-  operations: PlannedOperation[]
-): Promise<void> {
+async function applyUpdateHunk(hunk: Extract<Hunk, { type: 'update' }>, cwd: string): Promise<void> {
   const targetPath = resolvePatchPath(cwd, hunk.path);
-  const newContents = await deriveNewContentsFromChunks(targetPath, hunk.chunks, state);
+  const newContents = await deriveNewContentsFromChunks(targetPath, hunk.chunks);
 
   if (hunk.movePath === undefined) {
-    state.set(targetPath, newContents);
-    operations.push({ type: 'write', path: targetPath, content: newContents });
+    await writeTextFile(targetPath, newContents);
     return;
   }
 
   const destinationPath = resolvePatchPath(cwd, hunk.movePath);
-  if (destinationPath !== targetPath) {
-    await assertAvailableFilePath(
-      destinationPath,
-      state,
-      `Failed to move file to ${destinationPath}: destination already exists`
-    );
-  }
-  state.set(destinationPath, newContents);
-  if (destinationPath !== targetPath) state.set(targetPath, null);
-  operations.push({ type: 'move', sourcePath: targetPath, destinationPath, content: newContents });
-}
-
-async function commitPatch(operations: readonly PlannedOperation[]): Promise<void> {
-  const snapshots = await captureSnapshots(operations);
-  const possiblyMutatedPaths = new Set<string>();
-
-  try {
-    for (const operation of operations) {
-      recordPossiblyMutatedPaths(possiblyMutatedPaths, operation);
-      await commitOperation(operation);
-    }
-  } catch (error) {
-    const rollbackErrors = await rollbackFiles(possiblyMutatedPaths, snapshots);
-    const rollbackSuffix = rollbackErrors.length === 0 ? '' : ` Rollback failed: ${rollbackErrors.join('; ')}`;
-    throw new ApplyPatchError(`Failed to commit patch: ${formatErrorMessage(error)}.${rollbackSuffix}`, {
-      cause: error,
-    });
-  }
-}
-
-function recordPossiblyMutatedPaths(paths: Set<string>, operation: PlannedOperation): void {
-  for (const filePath of operationPaths(operation)) {
-    paths.add(filePath);
-  }
-}
-
-async function commitOperation(operation: PlannedOperation): Promise<void> {
-  if (operation.type === 'write') {
-    await writeTextFile(operation.path, operation.content);
-    return;
-  }
-  if (operation.type === 'delete') {
-    await unlink(operation.path);
-    return;
-  }
-
-  await writeTextFile(operation.destinationPath, operation.content);
-  if (operation.sourcePath !== operation.destinationPath) await unlink(operation.sourcePath);
-}
-
-async function captureSnapshots(operations: readonly PlannedOperation[]): Promise<Map<string, FileSnapshot>> {
-  const filePaths = new Set(operations.flatMap((operation) => operationPaths(operation)));
-  const snapshots = new Map<string, FileSnapshot>();
-
-  for (const filePath of filePaths) {
-    snapshots.set(filePath, await captureSnapshot(filePath));
-  }
-
-  return snapshots;
-}
-
-async function captureSnapshot(filePath: string): Promise<FileSnapshot> {
-  try {
-    const stats = await stat(filePath);
-    if (stats.isDirectory()) throw new ApplyPatchError(`Failed to snapshot ${filePath}: path is a directory`);
-    return { exists: true, content: await readFile(filePath, 'utf8'), mode: stats.mode & 0o7777 };
-  } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') return { exists: false };
-    throw error;
-  }
-}
-
-function operationPaths(operation: PlannedOperation): string[] {
-  if (operation.type === 'write' || operation.type === 'delete') return [operation.path];
-  return operation.sourcePath === operation.destinationPath
-    ? [operation.sourcePath]
-    : [operation.sourcePath, operation.destinationPath];
-}
-
-async function rollbackFiles(
-  possiblyMutatedPaths: ReadonlySet<string>,
-  snapshots: ReadonlyMap<string, FileSnapshot>
-): Promise<string[]> {
-  const rollbackErrors: string[] = [];
-  const filePaths = [...possiblyMutatedPaths];
-
-  for (let index = filePaths.length - 1; index >= 0; index -= 1) {
-    const filePath = filePaths[index];
-    if (filePath === undefined) continue;
-    const snapshot = snapshots.get(filePath);
-    if (snapshot === undefined) continue;
-
-    try {
-      await restoreSnapshot(filePath, snapshot);
-    } catch (error) {
-      rollbackErrors.push(`${filePath}: ${formatErrorMessage(error)}`);
-    }
-  }
-
-  return rollbackErrors;
-}
-
-async function restoreSnapshot(filePath: string, snapshot: FileSnapshot): Promise<void> {
-  if (!snapshot.exists) {
-    try {
-      await unlink(filePath);
-    } catch (error) {
-      if (!isMissingPathError(error)) throw error;
-    }
-    return;
-  }
-
-  await writeTextFile(filePath, snapshot.content);
-  await chmod(filePath, snapshot.mode);
+  await writeTextFile(destinationPath, newContents);
+  await removeFile(targetPath, `Failed to remove original ${targetPath}`);
 }
 
 async function writeTextFile(filePath: string, content: string): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, content, 'utf8');
+  try {
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(filePath, content, 'utf8');
+  } catch (error) {
+    throw new ApplyPatchError(`Failed to write file ${filePath}: ${formatErrorMessage(error)}`, { cause: error });
+  }
 }
 
 function resolvePatchPath(cwd: string, patchPath: string): string {
   return path.resolve(cwd, patchPath);
 }
 
-async function assertExistingFileForDelete(filePath: string, state: Map<string, string | null>): Promise<void> {
-  if (state.has(filePath)) {
-    const content = state.get(filePath);
-    if (content === null) throw new ApplyPatchError(`Failed to delete file ${filePath}`);
-    if (content !== undefined) return;
-  }
-
-  await assertNotDirectory(filePath, `Failed to delete file ${filePath}`);
+async function removeFile(filePath: string, message: string): Promise<void> {
+  await assertNotDirectory(filePath, message);
   try {
-    await readFile(filePath, 'utf8');
+    await unlink(filePath);
   } catch (error) {
-    throw new ApplyPatchError(`Failed to delete file ${filePath}`, { cause: error });
+    throw new ApplyPatchError(message, { cause: error });
   }
 }
 
-async function readExistingFileForUpdate(filePath: string, state: Map<string, string | null>): Promise<string> {
-  if (state.has(filePath)) {
-    const content = state.get(filePath);
-    if (content === null)
-      throw new ApplyPatchError(`Failed to read file to update ${filePath}: No such file or directory`);
-    if (content !== undefined) return content;
-  }
-
+async function readExistingFileForUpdate(filePath: string): Promise<string> {
   try {
     return await readFile(filePath, 'utf8');
   } catch (error) {
@@ -291,43 +139,6 @@ async function readExistingFileForUpdate(filePath: string, state: Map<string, st
       cause: error,
     });
   }
-}
-
-async function assertAvailableFilePath(
-  filePath: string,
-  state: Map<string, string | null>,
-  message: string
-): Promise<void> {
-  const conflictingPath = findConflictingPlannedFilePath(filePath, state);
-  if (conflictingPath !== undefined) {
-    throw new ApplyPatchError(`${message}; conflicts with planned file ${conflictingPath}`);
-  }
-  if (state.has(filePath)) {
-    if (state.get(filePath) === null) return;
-    throw new ApplyPatchError(message);
-  }
-
-  try {
-    await stat(filePath);
-    throw new ApplyPatchError(message);
-  } catch (error) {
-    if (error instanceof ApplyPatchError) throw error;
-    if (isNodeError(error) && error.code === 'ENOENT') return;
-    throw new ApplyPatchError(`Failed to inspect file ${filePath}: ${formatErrorMessage(error)}`, { cause: error });
-  }
-}
-
-function findConflictingPlannedFilePath(
-  filePath: string,
-  state: ReadonlyMap<string, string | null>
-): string | undefined {
-  for (const [plannedPath, content] of state) {
-    if (content === null || plannedPath === filePath) continue;
-    if (filePath.startsWith(`${plannedPath}${path.sep}`) || plannedPath.startsWith(`${filePath}${path.sep}`)) {
-      return plannedPath;
-    }
-  }
-  return undefined;
 }
 
 async function assertNotDirectory(filePath: string, message: string): Promise<void> {
@@ -341,12 +152,8 @@ async function assertNotDirectory(filePath: string, message: string): Promise<vo
   }
 }
 
-async function deriveNewContentsFromChunks(
-  filePath: string,
-  chunks: readonly UpdateFileChunk[],
-  state: Map<string, string | null>
-): Promise<string> {
-  const originalContents = await readExistingFileForUpdate(filePath, state);
+async function deriveNewContentsFromChunks(filePath: string, chunks: readonly UpdateFileChunk[]): Promise<string> {
+  const originalContents = await readExistingFileForUpdate(filePath);
   const originalLines = originalContents.split('\n');
   if (originalLines.at(-1) === '') originalLines.pop();
 
@@ -393,7 +200,7 @@ function computeChunkReplacement(
 
   const match = findChunkMatch(originalLines, chunk, searchStartIndex);
   if (match === undefined) {
-    throw new ApplyPatchError(`Failed to find expected lines in ${filePath}`);
+    throw new ApplyPatchError(`Failed to find expected lines in ${filePath}:\n${chunk.oldLines.join('\n')}`);
   }
 
   return {
