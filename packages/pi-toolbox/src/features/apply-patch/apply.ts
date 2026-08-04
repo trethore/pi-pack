@@ -19,6 +19,29 @@ export interface ApplyPatchResult {
   deleted: string[];
 }
 
+export class ApplyPatchFailure extends Error {
+  readonly completed: ApplyPatchResult;
+  readonly hunk: Hunk;
+  readonly writtenMoveDestination?: string;
+
+  constructor(
+    completed: ApplyPatchResult,
+    hunk: Hunk,
+    cause: unknown,
+    options: { writtenMoveDestination?: string } = {}
+  ) {
+    super(formatErrorMessage(cause), { cause });
+    this.name = 'ApplyPatchFailure';
+    this.completed = {
+      added: [...completed.added],
+      modified: [...completed.modified],
+      deleted: [...completed.deleted],
+    };
+    this.hunk = hunk;
+    this.writtenMoveDestination = options.writtenMoveDestination;
+  }
+}
+
 class ApplyPatchError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -78,17 +101,23 @@ async function applyHunks(hunks: readonly Hunk[], cwd: string): Promise<ApplyPat
   const summary: ApplyPatchResult = { added: [], modified: [], deleted: [] };
 
   for (const hunk of hunks) {
-    if (hunk.type === 'add') {
-      const targetPath = resolvePatchPath(cwd, hunk.path);
-      await writeTextFile(targetPath, hunk.contents);
-      summary.added.push(hunkDisplayPath(hunk));
-    } else if (hunk.type === 'delete') {
-      const targetPath = resolvePatchPath(cwd, hunk.path);
-      await removeFile(targetPath, `Failed to delete file ${targetPath}`);
-      summary.deleted.push(hunkDisplayPath(hunk));
-    } else {
-      await applyUpdateHunk(hunk, cwd);
-      summary.modified.push(hunkDisplayPath(hunk));
+    try {
+      if (hunk.type === 'add') {
+        const targetPath = resolvePatchPath(cwd, hunk.path);
+        await writeTextFile(targetPath, hunk.contents);
+        summary.added.push(hunkDisplayPath(hunk));
+      } else if (hunk.type === 'delete') {
+        const targetPath = resolvePatchPath(cwd, hunk.path);
+        await removeFile(targetPath, `Failed to delete file ${targetPath}`);
+        summary.deleted.push(hunkDisplayPath(hunk));
+      } else {
+        await applyUpdateHunk(hunk, cwd);
+        summary.modified.push(hunkDisplayPath(hunk));
+      }
+    } catch (error) {
+      throw new ApplyPatchFailure(summary, hunk, error, {
+        writtenMoveDestination: error instanceof MoveSourceRemovalError ? error.writtenMoveDestination : undefined,
+      });
     }
   }
 
@@ -106,7 +135,21 @@ async function applyUpdateHunk(hunk: Extract<Hunk, { type: 'update' }>, cwd: str
 
   const destinationPath = resolvePatchPath(cwd, hunk.movePath);
   await writeTextFile(destinationPath, newContents);
-  await removeFile(targetPath, `Failed to remove original ${targetPath}`);
+  try {
+    await removeFile(targetPath, `Failed to remove original ${targetPath}`);
+  } catch (error) {
+    throw new MoveSourceRemovalError(error, destinationPath);
+  }
+}
+
+class MoveSourceRemovalError extends Error {
+  constructor(
+    cause: unknown,
+    readonly writtenMoveDestination: string
+  ) {
+    super(formatErrorMessage(cause), { cause });
+    this.name = 'MoveSourceRemovalError';
+  }
 }
 
 async function writeTextFile(filePath: string, content: string): Promise<void> {

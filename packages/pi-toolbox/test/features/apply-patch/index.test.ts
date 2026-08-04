@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { ApplyPatchFailure } from '#pi-toolbox/features/apply-patch/apply.js';
 import { createApplyPatchToolDefinition, registerApplyPatchTool } from '#pi-toolbox/features/apply-patch/index.js';
 import { lines } from '#test/utils/lines.js';
 import { createPi, createRenderContext, createTheme, renderComponent } from '#test/utils/tool-test-helpers.js';
@@ -52,7 +53,7 @@ describe('apply_patch tool', () => {
       lines(
         'Apply a patch using a simplified, file-oriented diff format.',
         'Patch must start with `*** Begin Patch` and end with `*** End Patch`. Supported hunks are `*** Add File:`, `*** Delete File:`, and `*** Update File:` with optional `*** Move to:`.',
-        'Add targets and move destinations must not already exist.',
+        'Add hunks overwrite existing files, and move destinations are overwritten if they already exist.',
         'Automatically creates parent directories. Optionally, specify a working directory to resolve relative paths.'
       )
     );
@@ -89,7 +90,7 @@ describe('apply_patch tool', () => {
     expect(result.content).toEqual([
       {
         type: 'text',
-        text: 'Success.',
+        text: lines('Patch applied:', 'A created.txt', 'M modified.txt', 'D deleted.txt'),
       },
     ]);
   });
@@ -107,7 +108,7 @@ describe('apply_patch tool', () => {
     expect(runner).toHaveBeenCalledWith({ cwd: '/session/project', patch, workdir: undefined });
   });
 
-  it('wraps runner errors with the tool name', async () => {
+  it('formats runner errors as patch failures', async () => {
     // Arrange
     const runner = vi.fn(async () => {
       throw new Error('boom');
@@ -124,7 +125,38 @@ describe('apply_patch tool', () => {
     );
 
     // Assert
-    await expect(operation).rejects.toThrow('apply_patch failed: boom');
+    await expect(operation).rejects.toThrow(lines('Patch failed:', 'boom'));
+  });
+
+  it('reports completed changes when the runner partially applies a patch', async () => {
+    // Arrange
+    const runner = vi.fn(async () => {
+      throw new ApplyPatchFailure(
+        { added: ['created.txt'], modified: [], deleted: [] },
+        { type: 'delete', path: 'missing.txt' },
+        new Error('Failed to delete file /workspace/missing.txt')
+      );
+    });
+    const tool = createApplyPatchToolDefinition({ runner });
+
+    // Act
+    const operation = tool.execute(
+      'call-id',
+      { patch: lines('*** Begin Patch', '*** End Patch'), workdir: null },
+      undefined,
+      undefined,
+      {} as never
+    );
+
+    // Assert
+    await expect(operation).rejects.toThrow(
+      lines(
+        'Patch partially applied:',
+        'A created.txt',
+        '',
+        'Failed to delete file missing.txt: Failed to delete file /workspace/missing.txt'
+      )
+    );
   });
 
   it('renders calls and results', async () => {
@@ -142,7 +174,37 @@ describe('apply_patch tool', () => {
 
     // Assert
     expect(callText).toContain('<toolTitle>apply_patch</toolTitle><toolOutput> in .</toolOutput>');
-    expect(resultText).toContain('<toolOutput>Success. Updated the following files:</toolOutput>');
+    expect(resultText).toContain('<toolOutput>Patch applied:</toolOutput>');
     expect(resultText).toContain('<toolOutput>A created.txt</toolOutput>');
+  });
+
+  it('renders tool errors unchanged', () => {
+    // Arrange
+    const tool = createApplyPatchToolDefinition();
+    const theme = createTheme();
+    const renderContext = createRenderContext(true);
+    const errorResult = {
+      content: [
+        {
+          type: 'text',
+          text: lines(
+            'Patch failed:',
+            'Failed to update file file.txt: Failed to find expected lines in /workspace/file.txt'
+          ),
+        },
+      ],
+      details: {},
+    } as never;
+
+    // Act
+    const resultText = renderComponent(
+      tool.renderResult?.(errorResult, { expanded: false } as never, theme, renderContext)
+    );
+
+    // Assert
+    expect(resultText).toContain('<toolOutput>Patch failed:</toolOutput>');
+    expect(resultText).toContain(
+      '<toolOutput>Failed to update file file.txt: Failed to find expected lines in /workspace/file.txt</toolOutput>'
+    );
   });
 });

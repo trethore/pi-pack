@@ -2,8 +2,17 @@ import type { ExtensionAPI, Theme, ToolDefinition, ToolRenderResultOptions } fro
 import { Text } from '@earendil-works/pi-tui';
 import { type Static, Type } from 'typebox';
 
-import { applyPatch, type ApplyPatchOptions, type ApplyPatchResult } from '#src/features/apply-patch/apply.js';
-import { countApplyPatchSummary, formatApplyPatchSummary } from '#src/features/apply-patch/format.js';
+import {
+  ApplyPatchFailure,
+  applyPatch,
+  type ApplyPatchOptions,
+  type ApplyPatchResult,
+} from '#src/features/apply-patch/apply.js';
+import {
+  countApplyPatchSummary,
+  formatApplyPatchFailure,
+  formatApplyPatchSummary,
+} from '#src/features/apply-patch/format.js';
 import { formatPatchParseError, InvalidHunkError, InvalidPatchError } from '#src/features/apply-patch/parser.js';
 import { APPLY_PATCH_PROMPT } from '#src/prompts.js';
 import { normalizeToolPath } from '#src/utils/paths.js';
@@ -66,7 +75,7 @@ export function createApplyPatchToolDefinition(
           content: [
             {
               type: 'text',
-              text: 'Success.',
+              text: formatApplyPatchSummary(result),
             },
           ],
           details: {
@@ -75,7 +84,7 @@ export function createApplyPatchToolDefinition(
           },
         };
       } catch (error) {
-        throw new Error(`apply_patch failed: ${formatApplyPatchError(error)}`, { cause: error });
+        throw new Error(formatApplyPatchError(error), { cause: error });
       }
     },
     formatCall: formatApplyPatchCall,
@@ -109,6 +118,12 @@ function formatApplyPatchCall(args: ApplyPatchParameters | undefined, theme: The
 }
 
 function formatApplyPatchError(error: unknown): string {
+  if (error instanceof ApplyPatchFailure) return formatApplyPatchFailure(error);
+  const message = formatUnhandledApplyPatchError(error);
+  return `Patch failed:\n${message}`;
+}
+
+function formatUnhandledApplyPatchError(error: unknown): string {
   if (error instanceof InvalidPatchError || error instanceof InvalidHunkError) return formatPatchParseError(error);
   return error instanceof Error ? error.message : String(error);
 }
@@ -120,20 +135,6 @@ function renderApplyPatchResult(
   context: TextRenderContext
 ): Text {
   const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
-  text.setText(formatTextToolResult(formatApplyPatchRenderResult(result), options, theme));
+  text.setText(formatTextToolResult(result, options, theme));
   return text;
-}
-
-function formatApplyPatchRenderResult(
-  result: Awaited<ReturnType<ToolDefinition<ApplyPatchParametersSchema, ApplyPatchToolDetails | undefined>['execute']>>
-) {
-  if (result.details === undefined) return result;
-  return {
-    content: [
-      {
-        type: 'text',
-        text: formatApplyPatchSummary(result.details),
-      },
-    ],
-  };
 }
