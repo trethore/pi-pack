@@ -10,7 +10,7 @@ Handy controls and diagnostics for Pi.
 
 ## Installation
 
-Requires Pi `>=0.83.0 <1`.
+Requires Pi `>=0.84.0 <1`.
 
 From the `pi-pack` repository root, install globally:
 
