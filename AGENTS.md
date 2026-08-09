@@ -13,7 +13,6 @@ pi-pack/                            # You are here!
     pi-codexify/
     pi-script-template/
     pi-handy/
-    pi-tiny-mcp/
     pi-toolbox/
     pi-toolmask/
     pi-shared/                      # Shared utilities and types for Pi extensions
