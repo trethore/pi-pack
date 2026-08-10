@@ -75,12 +75,12 @@ describe('implementation prompt feature', () => {
 
     // Act
     registerImplementationPromptFeature(pi, config);
-    shortcuts.get('ctrl+alt+i')?.({ isIdle: () => true, ui: { setEditorText: vi.fn() } });
+    shortcuts.get('ctrl+shift+i')?.({ isIdle: () => true, ui: { setEditorText: vi.fn() } });
     const setEditorText = vi.fn();
-    shortcuts.get('ctrl+i')?.({ ui: { getEditorText: () => 'Existing', setEditorText } });
+    shortcuts.get('ctrl+alt+i')?.({ ui: { getEditorText: () => 'Existing', setEditorText } });
 
     // Assert
-    expect([...shortcuts.keys()]).toEqual(['ctrl+alt+i', 'ctrl+i']);
+    expect([...shortcuts.keys()]).toEqual(['ctrl+shift+i', 'ctrl+alt+i']);
     expect(sendUserMessage).toHaveBeenCalledWith('Custom message');
     expect(setEditorText).toHaveBeenCalledWith('Existing\n\nCustom message');
   });
