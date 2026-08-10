@@ -2,12 +2,6 @@
   // Master switch for pi-handy.
   "enabled": true,
 
-  // Ctrl+Shift+I sends this message. Ctrl+Alt+I appends it to the prompt box.
-  "implementationPrompt": {
-    "enabled": true,
-    "message": "Proceed with the implementation."
-  },
-
   // /thinkinglevel <level>
   "thinkingLevel": {
     "enabled": true

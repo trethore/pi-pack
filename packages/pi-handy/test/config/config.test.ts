@@ -30,7 +30,6 @@ describe('pi-handy config', () => {
     expect(loadedConfig).toEqual({
       config: {
         enabled: true,
-        implementationPrompt: { enabled: true, message: 'Proceed with the implementation.' },
         thinkingLevel: { enabled: true },
         showSysprompt: { enabled: true },
         timeTaken: { enabled: true },
@@ -44,12 +43,9 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeFileSync(
       globalConfigPath,
-      '{ "enabled": false, "implementationPrompt": { "enabled": false, "message": "Global message" }, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false }, "timeTaken": { "enabled": false } }'
+      '{ "enabled": false, "thinkingLevel": { "enabled": false }, "showSysprompt": { "enabled": false }, "timeTaken": { "enabled": false } }'
     );
-    writeProjectConfig(
-      projectDirectory,
-      '{ "enabled": true, "implementationPrompt": { "enabled": true, "message": "Project message" }, "thinkingLevel": { "enabled": true } }'
-    );
+    writeProjectConfig(projectDirectory, '{ "enabled": true, "thinkingLevel": { "enabled": true } }');
 
     // Act
     const loadedConfig = loadConfig(projectDirectory);
@@ -57,7 +53,6 @@ describe('pi-handy config', () => {
     // Assert
     expect(loadedConfig.config).toEqual({
       enabled: true,
-      implementationPrompt: { enabled: true, message: 'Project message' },
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: false },
       timeTaken: { enabled: false },
@@ -69,7 +64,7 @@ describe('pi-handy config', () => {
     const projectDirectory = makeTempProject();
     writeProjectConfig(
       projectDirectory,
-      '{ "enabled": "yes", "implementationPrompt": false, "thinkingLevel": false, "showSysprompt": false, "timeTaken": false }'
+      '{ "enabled": "yes", "thinkingLevel": false, "showSysprompt": false, "timeTaken": false }'
     );
 
     // Act
@@ -78,31 +73,16 @@ describe('pi-handy config', () => {
     // Assert
     expect(loadedConfig.config).toEqual({
       enabled: true,
-      implementationPrompt: { enabled: true, message: 'Proceed with the implementation.' },
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: true },
       timeTaken: { enabled: true },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
-      expect.stringContaining('invalid implementationPrompt value'),
       expect.stringContaining('invalid thinkingLevel value'),
       expect.stringContaining('invalid showSysprompt value'),
       expect.stringContaining('invalid timeTaken value'),
     ]);
-  });
-
-  it('reports an invalid implementation prompt message and keeps the previous value', () => {
-    // Arrange
-    const projectDirectory = makeTempProject();
-    writeProjectConfig(projectDirectory, '{ "implementationPrompt": { "message": "  " } }');
-
-    // Act
-    const loadedConfig = loadConfig(projectDirectory);
-
-    // Assert
-    expect(loadedConfig.config.implementationPrompt.message).toBe('Proceed with the implementation.');
-    expect(loadedConfig.errors).toEqual([expect.stringContaining('invalid implementationPrompt.message value')]);
   });
 });
 
