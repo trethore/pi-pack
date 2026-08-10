@@ -7,6 +7,7 @@ Handy controls and diagnostics for Pi.
 - Inspects or changes the active model thinking level.
 - Displays the active system prompt and tool schemas.
 - Reports the total duration of an agent run.
+- Sends or appends a configurable implementation prompt with hotkeys.
 
 ## Installation
 
@@ -53,6 +54,10 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 ```jsonc
 {
   "enabled": true,
+  "implementationPrompt": {
+    "enabled": true,
+    "message": "Proceed with the implementation.",
+  },
   "thinkingLevel": {
     "enabled": true,
   },
@@ -73,6 +78,12 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 | `/showsysprompt [prompt\|tools]` | Display the current system prompt, active tool schemas, or both. |
 
 ## Feature reference
+
+### Implementation prompt
+
+`Ctrl+Shift+I` clears the prompt box and sends only the configured message. If the agent is busy, the message is sent as steering input. `Ctrl+Alt+I` appends the message to the prompt box, separated from existing text by a blank line.
+
+The default message is `Proceed with the implementation.` and can be changed with `implementationPrompt.message`.
 
 ### Thinking level
 
