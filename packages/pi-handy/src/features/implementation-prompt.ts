@@ -11,12 +11,12 @@ type AppendImplementationPromptContext = {
 };
 
 export function registerImplementationPromptFeature(pi: ImplementationPromptApi, config: PiHandyConfig): void {
-  pi.registerShortcut(Key.ctrlShift('i'), {
+  pi.registerShortcut(Key.ctrlAlt('i'), {
     description: 'Send implementation prompt',
     handler: (ctx) => sendImplementationPrompt(pi, ctx, config.implementationPrompt.message),
   });
 
-  pi.registerShortcut(Key.ctrlAlt('i'), {
+  pi.registerShortcut(Key.ctrl('i'), {
     description: 'Append implementation prompt',
     handler: (ctx) => appendImplementationPrompt(ctx, config.implementationPrompt.message),
   });

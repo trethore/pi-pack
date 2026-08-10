@@ -81,7 +81,7 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 
 ### Implementation prompt
 
-`Ctrl+Shift+I` clears the prompt box and sends only the configured message. If the agent is busy, the message is sent as steering input. `Ctrl+Alt+I` appends the message to the prompt box, separated from existing text by a blank line.
+`Ctrl+Alt+I` clears the prompt box and sends only the configured message. If the agent is busy, the message is sent as steering input. `Ctrl+I` appends the message to the prompt box, separated from existing text by a blank line.
 
 The default message is `Proceed with the implementation.` and can be changed with `implementationPrompt.message`.
 
