@@ -1,5 +1,5 @@
-import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import type { EnabledConfig, PartialEnabledConfig } from '@trethore/pi-shared/config/schema.js';
+import type { LoadedExtensionConfig } from '@trethore/shared/config/config-file.js';
+import type { EnabledConfig, PartialEnabledConfig } from '@trethore/shared/config/schema.js';
 
 export interface PiHandyConfig {
   enabled: boolean;

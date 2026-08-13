@@ -1,4 +1,4 @@
-import type { PiContentSurface } from '@trethore/pi-shared/unsafe/content-transform.js';
+import type { PiContentSurface } from '@trethore/shared/unsafe/content-transform.js';
 import type { SurfaceConfig, TemplateSurface } from '#src/config/schema.js';
 
 export const templateSurfaceByPiContentSurface = {

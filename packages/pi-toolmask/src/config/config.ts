@@ -1,5 +1,5 @@
-import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { booleanSchema, createConfigMerger } from '@trethore/pi-shared/config/schema.js';
+import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { booleanSchema, createConfigMerger } from '@trethore/shared/config/schema.js';
 
 import { getToolmaskConfigPaths } from '#src/config/locations.js';
 import {

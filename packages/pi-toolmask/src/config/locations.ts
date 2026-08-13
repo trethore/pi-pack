@@ -1,4 +1,4 @@
-import { getConfigPaths as getSharedConfigPaths } from '@trethore/pi-shared/config/locations.js';
+import { getConfigPaths as getSharedConfigPaths } from '@trethore/shared/config/locations.js';
 
 const CONFIG_FILE_NAME = 'pi-toolmask.jsonc';
 

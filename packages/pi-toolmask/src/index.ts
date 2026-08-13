@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
-import { registerConfigDiagnostics } from '@trethore/pi-shared/config/diagnostics.js';
+import { registerConfigDiagnostics } from '@trethore/shared/config/diagnostics.js';
 
 import { loadConfig } from '#src/config/config.js';
 import type { PiToolmaskConfig } from '#src/config/schema.js';

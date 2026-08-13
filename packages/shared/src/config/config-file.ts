@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
-import { getErrorMessage, isMissingPathError } from '@trethore/pi-shared/error.js';
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { getErrorMessage, isMissingPathError } from '@trethore/shared/error.js';
+import { isRecord } from '@trethore/shared/object.js';
 
 export interface LoadedExtensionConfig<TConfig> {
   config: TConfig;

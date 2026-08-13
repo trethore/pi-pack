@@ -1,5 +1,5 @@
-import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { booleanSchema, createConfigMerger, defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
+import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { booleanSchema, createConfigMerger, defineConfigSchema, z } from '@trethore/shared/config/schema.js';
 import { getConfigPaths } from '#src/config/paths.js';
 import {
   defaultConfig,

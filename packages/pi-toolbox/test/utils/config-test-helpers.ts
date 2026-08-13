@@ -1,4 +1,4 @@
-import { createConfigTestHelpers } from '@trethore/pi-shared/test/config-test-helpers.js';
+import { createConfigTestHelpers } from '@trethore/shared/test/config-test-helpers.js';
 
 const { importConfigWithHome, makeTempDir, writeGlobalConfig, writeProjectConfig } = createConfigTestHelpers({
   configFileName: 'pi-toolbox.jsonc',

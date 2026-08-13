@@ -13,7 +13,7 @@ interface TimeoutTransformState {
   transformers: Map<string, TimeoutTransformer>;
 }
 
-const PATCH_STATE_KEY = Symbol.for('trethore.pi-shared.timeout-transform.patch-state');
+const PATCH_STATE_KEY = Symbol.for('trethore.shared.timeout-transform.patch-state');
 
 type GlobalWithPatchState = typeof globalThis & {
   [PATCH_STATE_KEY]?: TimeoutTransformState;

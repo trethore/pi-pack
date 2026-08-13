@@ -1,6 +1,6 @@
 import type { CredentialStore, OAuthCredential } from '@earendil-works/pi-ai';
 import { readStoredCredential, type ModelRegistry } from '@earendil-works/pi-coding-agent';
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { isRecord } from '@trethore/shared/object.js';
 
 export const CODEX_PROVIDER = 'openai-codex';
 

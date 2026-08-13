@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 
-import { updateJsoncFile } from '@trethore/pi-shared/config/write-jsonc.js';
+import { updateJsoncFile } from '@trethore/shared/config/write-jsonc.js';
 import { GLOBAL_CONFIG_PATH, getProjectConfigPath } from '#src/config/paths.js';
 import type { CodexReasoningSummary, CodexServiceTier, CodexVerbosity } from '#src/config/types.js';
 

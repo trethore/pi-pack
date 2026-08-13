@@ -5,6 +5,15 @@ import { createApplyPatchToolDefinition, registerApplyPatchTool } from '#pi-tool
 import { lines } from '#test/utils/lines.js';
 import { createPi, createRenderContext, createTheme, renderComponent } from '#test/utils/tool-test-helpers.js';
 
+const executeEmptyPatch = (tool: ReturnType<typeof createApplyPatchToolDefinition>) =>
+  tool.execute(
+    'call-id',
+    { patch: lines('*** Begin Patch', '*** End Patch'), workdir: null },
+    undefined,
+    undefined,
+    {} as never
+  );
+
 describe('apply_patch tool', () => {
   it('registers the apply_patch tool', () => {
     // Arrange
@@ -116,13 +125,7 @@ describe('apply_patch tool', () => {
     const tool = createApplyPatchToolDefinition({ runner });
 
     // Act
-    const operation = tool.execute(
-      'call-id',
-      { patch: lines('*** Begin Patch', '*** End Patch'), workdir: null },
-      undefined,
-      undefined,
-      {} as never
-    );
+    const operation = executeEmptyPatch(tool);
 
     // Assert
     await expect(operation).rejects.toThrow(lines('Patch failed:', 'boom'));
@@ -140,13 +143,7 @@ describe('apply_patch tool', () => {
     const tool = createApplyPatchToolDefinition({ runner });
 
     // Act
-    const operation = tool.execute(
-      'call-id',
-      { patch: lines('*** Begin Patch', '*** End Patch'), workdir: null },
-      undefined,
-      undefined,
-      {} as never
-    );
+    const operation = executeEmptyPatch(tool);
 
     // Assert
     await expect(operation).rejects.toThrow(

@@ -1,4 +1,4 @@
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { isRecord } from '@trethore/shared/object.js';
 import { z } from 'zod';
 
 export { z } from 'zod';

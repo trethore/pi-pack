@@ -19,7 +19,7 @@
     "#pi-handy/*": "./src/*"
   },
   "dependencies": {
-    "@trethore/pi-shared": "*",
+    "@trethore/shared": "*",
     "typebox": "^1.1.34"
   },
   "pi": {

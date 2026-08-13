@@ -1,5 +1,5 @@
 import { isToolCallEventType, type ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { createActiveConfig } from '@trethore/pi-shared/config/active-config.js';
+import { createActiveConfig } from '@trethore/shared/config/active-config.js';
 
 import { loadConfig } from '#src/config/config.js';
 import type { PiBashCommandsConfig } from '#src/config/schema.js';

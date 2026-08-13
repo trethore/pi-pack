@@ -7,7 +7,7 @@ import {
   type AgentSessionPrototype,
   type PiContentTransformInput,
   type PiContentTransformMetadata,
-} from '@trethore/pi-shared/unsafe/content-transform/state.js';
+} from '@trethore/shared/unsafe/content-transform/state.js';
 
 export function transformExpandedSkillContent(
   originalText: string,
@@ -37,9 +37,7 @@ export function installSkillInvocationContentTransform(): string[] {
   const prototype = AgentSession.prototype as unknown as AgentSessionPrototype;
 
   if (typeof prototype._expandSkillCommand !== 'function') {
-    return [
-      'pi-shared: AgentSession._expandSkillCommand unavailable; explicit skill invocation transforms are disabled.',
-    ];
+    return ['shared: AgentSession._expandSkillCommand unavailable; explicit skill invocation transforms are disabled.'];
   }
 
   if (state.installed.has('AgentSession._expandSkillCommand')) return [];

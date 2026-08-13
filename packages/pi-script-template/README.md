@@ -124,7 +124,7 @@ process.stdout.write(branch.trim());
 
 Script templates are arbitrary Node.js programs. Only install global scripts you trust, and only trust projects whose `.pi/script-templates` contents you intend to execute.
 
-The extension uses the shared `pi-shared` compatibility layer to transform resources before they enter model context. That layer patches Pi prototypes process-wide because Pi does not currently expose equivalent resource transformation hooks.
+The extension uses the shared `shared` compatibility layer to transform resources before they enter model context. That layer patches Pi prototypes process-wide because Pi does not currently expose equivalent resource transformation hooks.
 
 ## License
 

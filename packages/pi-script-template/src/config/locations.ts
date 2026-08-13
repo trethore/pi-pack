@@ -1,4 +1,4 @@
-import { getGlobalConfigPath, getProjectConfigPath } from '@trethore/pi-shared/config/locations.js';
+import { getGlobalConfigPath, getProjectConfigPath } from '@trethore/shared/config/locations.js';
 
 const CONFIG_FILE_NAME = 'pi-script-template.jsonc';
 

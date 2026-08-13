@@ -1,5 +1,5 @@
-import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
+import type { LoadedExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { defineConfigSchema, z } from '@trethore/shared/config/schema.js';
 
 export interface PiToolmaskConfig {
   enabled: boolean;

@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { getConfigPaths, getGlobalConfigPath } from '@trethore/pi-shared/config/locations.js';
+import { getConfigPaths, getGlobalConfigPath } from '@trethore/shared/config/locations.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('shared config locations', () => {

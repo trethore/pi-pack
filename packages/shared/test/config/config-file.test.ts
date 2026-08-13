@@ -2,12 +2,12 @@ import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readJsoncConfigFile } from '@trethore/pi-shared/config/config-file.js';
+import { readJsoncConfigFile } from '@trethore/shared/config/config-file.js';
 
 describe('readJsoncConfigFile', () => {
   it('reports unreadable configuration paths', () => {
     // Arrange
-    const root = mkdtempSync(path.join(tmpdir(), 'pi-shared-config-file-'));
+    const root = mkdtempSync(path.join(tmpdir(), 'shared-config-file-'));
     const configPath = path.join(root, 'config.jsonc');
     const errors: string[] = [];
     mkdirSync(configPath);

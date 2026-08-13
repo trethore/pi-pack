@@ -19,7 +19,7 @@
     "#test/*": "./test/*"
   },
   "dependencies": {
-    "@trethore/pi-shared": "*"
+    "@trethore/shared": "*"
   },
   "pi": {
     "extensions": [

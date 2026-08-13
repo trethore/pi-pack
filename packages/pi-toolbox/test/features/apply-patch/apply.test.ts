@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { withFileMutationQueue } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it } from 'vitest';
-import { createDeferred } from '@trethore/pi-shared/test/deferred.js';
+import { createDeferred } from '@trethore/shared/test/deferred.js';
 
 import { applyPatch } from '#pi-toolbox/features/apply-patch/apply.js';
 import { lines } from '#test/utils/lines.js';

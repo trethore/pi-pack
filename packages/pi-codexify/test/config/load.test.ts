@@ -1,4 +1,4 @@
-import { resetConfigTestEnvironment } from '@trethore/pi-shared/test/config-test-helpers.js';
+import { resetConfigTestEnvironment } from '@trethore/shared/test/config-test-helpers.js';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import * as configTest from '#test/utils/config-test-helpers.js';

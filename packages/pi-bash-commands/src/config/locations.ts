@@ -1,4 +1,4 @@
-import { getConfigPaths } from '@trethore/pi-shared/config/locations.js';
+import { getConfigPaths } from '@trethore/shared/config/locations.js';
 
 const CONFIG_FILE_NAME = 'pi-bash-commands.jsonc';
 

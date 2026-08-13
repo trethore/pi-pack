@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { registerTimeoutTransformer } from '@trethore/pi-shared/unsafe/timeout-transform.js';
+import { registerTimeoutTransformer } from '@trethore/shared/unsafe/timeout-transform.js';
 import type { WebSocketCacheTtlFeatureConfig } from '#src/config/schema.js';
 
 const TRANSFORMER_ID = 'pi-handy:websocket-cache-ttl';

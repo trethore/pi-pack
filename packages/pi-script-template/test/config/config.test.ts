@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createConfigTestFileHelpers } from '@trethore/pi-shared/test/config-test-helpers.js';
+import { createConfigTestFileHelpers } from '@trethore/shared/test/config-test-helpers.js';
 import { loadConfig } from '#src/config/config.js';
 
 const { makeTempDir, writeProjectConfig } = createConfigTestFileHelpers({

@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { registerPiContentTransformer } from '@trethore/pi-shared/unsafe/content-transform.js';
-import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { registerPiContentTransformer } from '@trethore/shared/unsafe/content-transform.js';
+import { getErrorMessage } from '@trethore/shared/error.js';
 import { loadConfig } from '#src/config/config.js';
 import { surfaceNames, type PiScriptTemplateConfig } from '#src/config/schema.js';
 import type { ScriptTemplateDiagnostic } from '#src/core/diagnostics.js';

@@ -1,4 +1,4 @@
-import type { LoadedExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
+import type { LoadedExtensionConfig } from '@trethore/shared/config/config-file.js';
 
 export const verbosityValues = ['low', 'medium', 'high'] as const;
 export const reasoningSummaryValues = ['auto', 'concise', 'detailed', 'none'] as const;

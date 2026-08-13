@@ -1,5 +1,5 @@
 import type { Theme, ToolRenderResultOptions } from '@earendil-works/pi-coding-agent';
-import { formatKeybindingText } from '@trethore/pi-shared/ui/keybindings.js';
+import { formatKeybindingText } from '@trethore/shared/ui/keybindings.js';
 
 const DEFAULT_COLLAPSED_RESULT_LINES = 10;
 

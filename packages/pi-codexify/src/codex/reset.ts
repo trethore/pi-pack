@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
-import { getErrorMessage } from '@trethore/pi-shared/error.js';
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { getErrorMessage } from '@trethore/shared/error.js';
+import { isRecord } from '@trethore/shared/object.js';
 import { backendUrl, formatResponseStatus, readResponseBody } from '#src/codex/backend.js';
 import { CODEX_PROVIDER, getCodexCredential, type CodexCredentialContext } from '#src/codex/credentials.js';
 

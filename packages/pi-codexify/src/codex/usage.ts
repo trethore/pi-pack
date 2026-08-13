@@ -1,5 +1,5 @@
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
-import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { getErrorMessage } from '@trethore/shared/error.js';
 import { backendUrl } from '#src/codex/backend.js';
 import {
   CODEX_PROVIDER,

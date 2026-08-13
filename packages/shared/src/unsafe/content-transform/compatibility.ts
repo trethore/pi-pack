@@ -10,15 +10,15 @@ export function checkPiContentTransformCompatibility(): PiContentTransformCompat
   const errors: string[] = [];
 
   if (!DefaultResourceLoader?.prototype) {
-    errors.push('pi-shared: DefaultResourceLoader is unavailable; Pi content transforms cannot be installed.');
+    errors.push('shared: DefaultResourceLoader is unavailable; Pi content transforms cannot be installed.');
   }
 
   if (!AgentSession?.prototype) {
-    warnings.push('pi-shared: AgentSession is unavailable; explicit skill invocation transforms are disabled.');
+    warnings.push('shared: AgentSession is unavailable; explicit skill invocation transforms are disabled.');
   }
 
   if (!isSupportedPiVersion(VERSION)) {
-    warnings.push(`pi-shared: Pi content transforms support Pi >=0.84.0 <1; current Pi version is ${VERSION}.`);
+    warnings.push(`shared: Pi content transforms support Pi >=0.84.0 <1; current Pi version is ${VERSION}.`);
   }
 
   return { warnings, errors };

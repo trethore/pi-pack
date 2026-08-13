@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { registerTimeoutTransformer, removeTimeoutTransformer } from '@trethore/pi-shared/unsafe/timeout-transform.js';
+import { registerTimeoutTransformer, removeTimeoutTransformer } from '@trethore/shared/unsafe/timeout-transform.js';
 
 const transformerId = 'test:timeout';
 let originalSetTimeout: typeof globalThis.setTimeout;

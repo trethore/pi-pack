@@ -1,6 +1,6 @@
 import type { ExtensionAPI, Theme, ToolInfo } from '@earendil-works/pi-coding-agent';
 import { Box, Text } from '@earendil-works/pi-tui';
-import { formatKeybindingText } from '@trethore/pi-shared/ui/keybindings.js';
+import { formatKeybindingText } from '@trethore/shared/ui/keybindings.js';
 import type { TArray, TEnum, TLiteral, TObject, TSchema, TSchemaOptions, TUnion } from 'typebox';
 
 const SYSTEM_PROMPT_ENTRY_TYPE = 'pi-handy-system-prompt';

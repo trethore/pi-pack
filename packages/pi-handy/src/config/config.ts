@@ -1,5 +1,5 @@
-import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { createConfigMerger, defineConfigSchema, z } from '@trethore/pi-shared/config/schema.js';
+import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createConfigMerger, defineConfigSchema, z } from '@trethore/shared/config/schema.js';
 import { getHandyConfigPaths } from '#src/config/locations.js';
 import { defaultConfig, type LoadedConfig, type PartialPiHandyConfig, type PiHandyConfig } from '#src/config/schema.js';
 

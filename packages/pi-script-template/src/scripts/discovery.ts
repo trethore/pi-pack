@@ -1,6 +1,6 @@
 import { readdirSync, type Dirent } from 'node:fs';
 import path from 'node:path';
-import { getErrorMessage, isMissingPathError } from '@trethore/pi-shared/error.js';
+import { getErrorMessage, isMissingPathError } from '@trethore/shared/error.js';
 import type { ScriptTemplateDiagnostic } from '#src/core/diagnostics.js';
 import { getGlobalScriptTemplatesDirectory, getProjectScriptTemplatesDirectory } from '#src/scripts/locations.js';
 import type { ScriptScope, TemplateScript } from '#src/scripts/types.js';

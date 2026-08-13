@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
-import { createDeferred } from '@trethore/pi-shared/test/deferred.js';
+import { createDeferred } from '@trethore/shared/test/deferred.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createBashCommandsRuntime } from '#pi-bash-commands/core/runtime.js';

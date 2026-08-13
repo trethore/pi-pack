@@ -18,7 +18,7 @@
     "#pi-cut/*": "./src/*"
   },
   "dependencies": {
-    "@trethore/pi-shared": "*"
+    "@trethore/shared": "*"
   },
   "pi": {
     "extensions": [

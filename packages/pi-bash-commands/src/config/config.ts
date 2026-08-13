@@ -1,8 +1,8 @@
 import path from 'node:path';
 
-import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
-import { createConfigMerger } from '@trethore/pi-shared/config/schema.js';
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createConfigMerger } from '@trethore/shared/config/schema.js';
+import { isRecord } from '@trethore/shared/object.js';
 
 import { getBashCommandsConfigPaths } from '#src/config/locations.js';
 import {

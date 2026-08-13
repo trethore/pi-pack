@@ -1,4 +1,4 @@
-import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { getErrorMessage } from '@trethore/shared/error.js';
 
 import type { ParsedCliOptions } from '#pi-bash-commands-cli/shared/options';
 

@@ -2,9 +2,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { DefaultResourceLoader, type ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createConfigTestFileHelpers } from '@trethore/pi-shared/test/config-test-helpers.js';
-import { removePiContentTransformer } from '@trethore/pi-shared/unsafe/content-transform.js';
-import { transformPiContent } from '@trethore/pi-shared/unsafe/content-transform/state.js';
+import { createConfigTestFileHelpers } from '@trethore/shared/test/config-test-helpers.js';
+import { removePiContentTransformer } from '@trethore/shared/unsafe/content-transform.js';
+import { transformPiContent } from '@trethore/shared/unsafe/content-transform/state.js';
 import { registerScriptTemplate } from '#src/script-template/index.js';
 
 const transformerId = '@trethore/pi-script-template';

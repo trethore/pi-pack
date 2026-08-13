@@ -1,19 +1,19 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { checkPiContentTransformCompatibility } from '@trethore/pi-shared/unsafe/content-transform/compatibility.js';
-import { installResourceLoaderContentTransform } from '@trethore/pi-shared/unsafe/content-transform/resource-loader.js';
-import { installSkillInvocationContentTransform } from '@trethore/pi-shared/unsafe/content-transform/skill-invocation.js';
+import { checkPiContentTransformCompatibility } from '@trethore/shared/unsafe/content-transform/compatibility.js';
+import { installResourceLoaderContentTransform } from '@trethore/shared/unsafe/content-transform/resource-loader.js';
+import { installSkillInvocationContentTransform } from '@trethore/shared/unsafe/content-transform/skill-invocation.js';
 import {
   getPiContentTransformState,
   type PiContentTransformInput,
   type PiContentTransformer,
-} from '@trethore/pi-shared/unsafe/content-transform/state.js';
+} from '@trethore/shared/unsafe/content-transform/state.js';
 
 export type {
   PiContentSurface,
   PiContentTransformInput,
   PiContentTransformMetadata,
   PiContentTransformer,
-} from '@trethore/pi-shared/unsafe/content-transform/state.js';
+} from '@trethore/shared/unsafe/content-transform/state.js';
 
 export interface PiContentTransformRegistrationResult {
   installed: boolean;
@@ -44,7 +44,7 @@ export function registerPiContentTransformer(
       warnings.push(...installResourceLoaderContentTransform(), ...installSkillInvocationContentTransform());
     } catch (error) {
       errors.push(
-        `pi-shared: failed to install Pi content transforms: ${error instanceof Error ? error.message : String(error)}`
+        `shared: failed to install Pi content transforms: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

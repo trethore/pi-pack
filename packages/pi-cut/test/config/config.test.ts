@@ -1,4 +1,4 @@
-import { createConfigTestFileHelpers, importWithHome } from '@trethore/pi-shared/test/config-test-helpers.js';
+import { createConfigTestFileHelpers, importWithHome } from '@trethore/shared/test/config-test-helpers.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { makeTempDir, writeProjectConfig } = createConfigTestFileHelpers({

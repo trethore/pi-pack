@@ -1,5 +1,5 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { isRecord } from '@trethore/shared/object.js';
 
 interface WebSearchTool {
   type: 'web_search';

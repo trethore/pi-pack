@@ -2,7 +2,7 @@ import {
   createConfigTestFileHelpers,
   importWithHome,
   resetConfigTestEnvironment,
-} from '@trethore/pi-shared/test/config-test-helpers.js';
+} from '@trethore/shared/test/config-test-helpers.js';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const { makeTempDir, writeGlobalConfig, writeProjectConfig } = createConfigTestFileHelpers({

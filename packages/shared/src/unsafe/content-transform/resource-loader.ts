@@ -7,7 +7,7 @@ import {
   type PiContentTransformState,
   type ResourceLoaderContext,
   type ResourceLoaderPrototype,
-} from '@trethore/pi-shared/unsafe/content-transform/state.js';
+} from '@trethore/shared/unsafe/content-transform/state.js';
 
 export function installResourceLoaderContentTransform(): string[] {
   const state = getPiContentTransformState();
@@ -30,7 +30,7 @@ function installSystemPromptTransform(
     state,
     prototype,
     method: 'getSystemPrompt',
-    warning: 'pi-shared: DefaultResourceLoader.getSystemPrompt unavailable; system prompt transforms are disabled.',
+    warning: 'shared: DefaultResourceLoader.getSystemPrompt unavailable; system prompt transforms are disabled.',
     patch: (original) =>
       function (this: ResourceLoaderContext) {
         const content = original.call(this);
@@ -53,7 +53,7 @@ function installAppendSystemPromptTransform(
     prototype,
     method: 'getAppendSystemPrompt',
     warning:
-      'pi-shared: DefaultResourceLoader.getAppendSystemPrompt unavailable; appended system prompt transforms are disabled.',
+      'shared: DefaultResourceLoader.getAppendSystemPrompt unavailable; appended system prompt transforms are disabled.',
     patch: (original) =>
       function (this: ResourceLoaderContext) {
         const contents = original.call(this) ?? [];
@@ -78,7 +78,7 @@ function installAgentsFilesTransform(
     state,
     prototype,
     method: 'getAgentsFiles',
-    warning: 'pi-shared: DefaultResourceLoader.getAgentsFiles unavailable; context file transforms are disabled.',
+    warning: 'shared: DefaultResourceLoader.getAgentsFiles unavailable; context file transforms are disabled.',
     patch: (original) =>
       function (this: ResourceLoaderContext) {
         const result = original.call(this) ?? { agentsFiles: [] };
@@ -106,7 +106,7 @@ function installPromptsTransform(
     state,
     prototype,
     method: 'getPrompts',
-    warning: 'pi-shared: DefaultResourceLoader.getPrompts unavailable; prompt template transforms are disabled.',
+    warning: 'shared: DefaultResourceLoader.getPrompts unavailable; prompt template transforms are disabled.',
     patch: (original) =>
       function (this: ResourceLoaderContext) {
         const result = original.call(this) ?? { prompts: [], diagnostics: [] };
@@ -135,7 +135,7 @@ function installSkillsTransform(
     state,
     prototype,
     method: 'getSkills',
-    warning: 'pi-shared: DefaultResourceLoader.getSkills unavailable; skill description transforms are disabled.',
+    warning: 'shared: DefaultResourceLoader.getSkills unavailable; skill description transforms are disabled.',
     patch: (original) =>
       function (this: ResourceLoaderContext) {
         const result = original.call(this) ?? { skills: [], diagnostics: [] };

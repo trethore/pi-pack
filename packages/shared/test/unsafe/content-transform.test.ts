@@ -3,13 +3,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { AgentSession, DefaultResourceLoader, type ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  registerPiContentTransformer,
-  removePiContentTransformer,
-} from '@trethore/pi-shared/unsafe/content-transform.js';
-import { checkPiContentTransformCompatibility } from '@trethore/pi-shared/unsafe/content-transform/compatibility.js';
-import { transformExpandedSkillContent } from '@trethore/pi-shared/unsafe/content-transform/skill-invocation.js';
-import { getPiContentTransformState, transformPiContent } from '@trethore/pi-shared/unsafe/content-transform/state.js';
+import { registerPiContentTransformer, removePiContentTransformer } from '@trethore/shared/unsafe/content-transform.js';
+import { checkPiContentTransformCompatibility } from '@trethore/shared/unsafe/content-transform/compatibility.js';
+import { transformExpandedSkillContent } from '@trethore/shared/unsafe/content-transform/skill-invocation.js';
+import { getPiContentTransformState, transformPiContent } from '@trethore/shared/unsafe/content-transform/state.js';
 
 const firstId = 'test:first';
 const secondId = 'test:second';
@@ -267,7 +264,7 @@ describe('shared Pi content transforms', () => {
 
   it('patches the installed private skill expansion method', () => {
     // Arrange
-    const directory = mkdtempSync(path.join(tmpdir(), 'pi-shared-skill-transform-'));
+    const directory = mkdtempSync(path.join(tmpdir(), 'shared-skill-transform-'));
     const skillPath = path.join(directory, 'SKILL.md');
     writeFileSync(skillPath, '---\nname: test\ndescription: Test\n---\nBody {{value}}');
     registerPiContentTransformer(createPi(), {

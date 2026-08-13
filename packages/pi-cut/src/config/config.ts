@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/pi-shared/config/config-file.js';
+import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
 import { getCutConfigPaths } from '#src/config/locations.js';
 import { mergeEnabledField, mergeField, mergeSection } from '#src/config/merge.js';
 import { defaultConfig, type LoadedConfig, type PartialPiCutConfig, type PiCutConfig } from '#src/config/schema.js';

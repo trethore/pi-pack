@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { CONFIG_DIR_NAME } from '@earendil-works/pi-coding-agent';
-import { getGlobalConfigPath } from '@trethore/pi-shared/config/locations.js';
+import { getGlobalConfigPath } from '@trethore/shared/config/locations.js';
 
 const CONFIG_FILE_NAME = 'pi-codexify.jsonc';
 

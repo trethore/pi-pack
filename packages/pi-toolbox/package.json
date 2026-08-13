@@ -15,7 +15,7 @@
     "@earendil-works/pi-tui": ">=0.84.0 <1"
   },
   "dependencies": {
-    "@trethore/pi-shared": "*",
+    "@trethore/shared": "*",
     "typebox": "^1.1.34"
   },
   "imports": {

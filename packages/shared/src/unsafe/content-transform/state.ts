@@ -48,7 +48,7 @@ export interface PiContentTransformState {
   installed: Set<string>;
 }
 
-const PATCH_STATE_KEY = Symbol.for('trethore.pi-shared.content-transform.patch-state');
+const PATCH_STATE_KEY = Symbol.for('trethore.shared.content-transform.patch-state');
 
 type GlobalWithPatchState = typeof globalThis & {
   [PATCH_STATE_KEY]?: PiContentTransformState;

@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
-import { getErrorMessage } from '@trethore/pi-shared/error.js';
+import { getErrorMessage } from '@trethore/shared/error.js';
 
 import type { PiBashCommandsConfig } from '#src/config/schema.js';
 import { isBuiltInBashAvailable } from '#src/core/availability.js';

@@ -1,4 +1,4 @@
-import { isRecord } from '@trethore/pi-shared/object.js';
+import { isRecord } from '@trethore/shared/object.js';
 import { hasFields, mergeField, type ConfigFieldMerger } from '#src/config/merge.js';
 import type {
   LineTruncationConfig,
