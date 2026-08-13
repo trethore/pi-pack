@@ -6,6 +6,7 @@ import type { PiHandyConfig } from '#src/config/schema.js';
 import { registerShowSyspromptCommand } from '#src/features/show-sysprompt.js';
 import { registerThinkingLevelCommand } from '#src/features/thinking-level.js';
 import { registerTimeTakenFeature } from '#src/features/time-taken.js';
+import { registerWebSocketCacheTtlFeature } from '#src/features/websocket-cache-ttl.js';
 
 const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
@@ -19,6 +20,10 @@ const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
   {
     isEnabled: (config) => config.enabled && config.timeTaken.enabled,
     register: registerTimeTakenFeature,
+  },
+  {
+    isEnabled: (config) => config.enabled && config.websocketCacheTtl.enabled,
+    register: (pi, config) => registerWebSocketCacheTtlFeature(pi, config.websocketCacheTtl),
   },
 ];
 

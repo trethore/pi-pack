@@ -33,6 +33,7 @@ describe('pi-handy config', () => {
         thinkingLevel: { enabled: true },
         showSysprompt: { enabled: true },
         timeTaken: { enabled: true },
+        websocketCacheTtl: { enabled: false, ttlMinutes: 30 },
       },
       errors: [],
     });
@@ -56,6 +57,7 @@ describe('pi-handy config', () => {
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: false },
       timeTaken: { enabled: false },
+      websocketCacheTtl: { enabled: false, ttlMinutes: 30 },
     });
   });
 
@@ -76,6 +78,7 @@ describe('pi-handy config', () => {
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: true },
       timeTaken: { enabled: true },
+      websocketCacheTtl: { enabled: false, ttlMinutes: 30 },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
@@ -83,6 +86,20 @@ describe('pi-handy config', () => {
       expect.stringContaining('invalid showSysprompt value'),
       expect.stringContaining('invalid timeTaken value'),
     ]);
+  });
+
+  it('loads a valid WebSocket cache TTL and rejects an out-of-range value', () => {
+    // Arrange
+    const projectDirectory = makeTempProject();
+    writeFileSync(globalConfigPath, '{ "websocketCacheTtl": { "enabled": true, "ttlMinutes": 30 } }');
+    writeProjectConfig(projectDirectory, '{ "websocketCacheTtl": { "ttlMinutes": 60 } }');
+
+    // Act
+    const loadedConfig = loadConfig(projectDirectory);
+
+    // Assert
+    expect(loadedConfig.config.websocketCacheTtl).toEqual({ enabled: true, ttlMinutes: 30 });
+    expect(loadedConfig.errors).toEqual([expect.stringContaining('invalid websocketCacheTtl.ttlMinutes value')]);
   });
 });
 

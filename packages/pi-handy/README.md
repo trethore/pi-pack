@@ -7,6 +7,7 @@ Handy controls and diagnostics for Pi.
 - Inspects or changes the active model thinking level.
 - Displays the active system prompt and tool schemas.
 - Reports the total duration of an agent run.
+- Can extend the connection-local Codex WebSocket cache idle lifetime.
 
 ## Installation
 
@@ -62,6 +63,10 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
   "timeTaken": {
     "enabled": true,
   },
+  "websocketCacheTtl": {
+    "enabled": false,
+    "ttlMinutes": 30,
+  },
 }
 ```
 
@@ -104,6 +109,12 @@ The notification appears after the full agent run settles and the prompt returns
 Took 42s
 Took 1m5s
 ```
+
+### WebSocket cache TTL
+
+`websocketCacheTtl` extends Pi's five-minute idle timer for reusable OpenAI Codex WebSockets. This can preserve connection-local `previous_response_id` continuation during longer pauses.
+
+The feature is disabled by default because it uses a narrowly filtered global `setTimeout` patch. It changes only five-minute timers scheduled by Pi's `scheduleSessionWebSocketExpiry` function in the OpenAI Codex adapter. Values must be from 5 to 55 minutes. Pi's separate 55-minute maximum WebSocket age remains unchanged.
 
 ## License
 

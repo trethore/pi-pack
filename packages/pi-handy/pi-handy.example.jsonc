@@ -15,5 +15,12 @@
   // Notify how long the agent took when it finishes.
   "timeTaken": {
     "enabled": true
+  },
+
+  // Unsafely extends Pi's connection-local Codex WebSocket idle cache lifetime.
+  // Pi still replaces WebSockets at its fixed 55-minute maximum connection age.
+  "websocketCacheTtl": {
+    "enabled": false,
+    "ttlMinutes": 30
   }
 }
