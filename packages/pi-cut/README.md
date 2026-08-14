@@ -12,7 +12,7 @@ Tool-output cost-cutting strategies.
 
 ## Installation
 
-Requires Pi `>=0.84.0 <1`.
+Requires Pi `>=0.84.2 <1`.
 
 From the `pi-pack` repository root, install globally:
 
