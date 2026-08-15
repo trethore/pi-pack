@@ -14,6 +14,18 @@ describe('cleanTerminalOutput', () => {
     expect(cleanedText).toBe('red plain');
   });
 
+  it('strips ANSI sequences with colon-separated parameters', () => {
+    // Arrange
+    const text = '\u001B[38:2::255:0:0mred\u001B[0m';
+    const config = makeConfig({ stripAnsi: true });
+
+    // Act
+    const cleanedText = cleanTerminalOutput(text, config);
+
+    // Assert
+    expect(cleanedText).toBe('red');
+  });
+
   it('keeps ANSI escape sequences when disabled', () => {
     // Arrange
     const text = '\u001B[31mred\u001B[0m';

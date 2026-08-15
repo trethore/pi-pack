@@ -18,7 +18,8 @@
     "#pi-cut/*": "./src/*"
   },
   "dependencies": {
-    "@trethore/shared": "*"
+    "@trethore/shared": "*",
+    "strip-ansi": "^7.2.0"
   },
   "pi": {
     "extensions": [
