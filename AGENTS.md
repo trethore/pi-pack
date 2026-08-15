@@ -35,7 +35,7 @@ Look root and packages `package.json` to discover scripts, paths, and dependenci
 ## Development and Code Quality
 
 - Do not use relative imports; instead use absolute ones.
-- Do not add comments unless its for test sections or documentation is explicitly requested by the user.
+- Do not add comments unless its for test sections or when documentation is explicitly requested by the user.
 
 ## Testing
 
