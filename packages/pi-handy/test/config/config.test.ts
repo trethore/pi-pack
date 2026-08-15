@@ -33,7 +33,7 @@ describe('pi-handy config', () => {
         thinkingLevel: { enabled: true },
         showSysprompt: { enabled: true },
         timeTaken: { enabled: true },
-        websocketCacheTtl: { enabled: false, ttlMinutes: 30 },
+        noWebsocketCacheTtl: { enabled: false },
       },
       errors: [],
     });
@@ -57,7 +57,7 @@ describe('pi-handy config', () => {
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: false },
       timeTaken: { enabled: false },
-      websocketCacheTtl: { enabled: false, ttlMinutes: 30 },
+      noWebsocketCacheTtl: { enabled: false },
     });
   });
 
@@ -78,7 +78,7 @@ describe('pi-handy config', () => {
       thinkingLevel: { enabled: true },
       showSysprompt: { enabled: true },
       timeTaken: { enabled: true },
-      websocketCacheTtl: { enabled: false, ttlMinutes: 30 },
+      noWebsocketCacheTtl: { enabled: false },
     });
     expect(loadedConfig.errors).toEqual([
       expect.stringContaining('invalid enabled value'),
@@ -88,18 +88,18 @@ describe('pi-handy config', () => {
     ]);
   });
 
-  it('loads a valid WebSocket cache TTL and rejects an out-of-range value', () => {
+  it('loads the no WebSocket cache TTL feature setting', () => {
     // Arrange
     const projectDirectory = makeTempProject();
-    writeFileSync(globalConfigPath, '{ "websocketCacheTtl": { "enabled": true, "ttlMinutes": 30 } }');
-    writeProjectConfig(projectDirectory, '{ "websocketCacheTtl": { "ttlMinutes": 60 } }');
+    writeFileSync(globalConfigPath, '{ "noWebsocketCacheTtl": { "enabled": true } }');
+    writeProjectConfig(projectDirectory, '{ "noWebsocketCacheTtl": { "enabled": false } }');
 
     // Act
     const loadedConfig = loadConfig(projectDirectory);
 
     // Assert
-    expect(loadedConfig.config.websocketCacheTtl).toEqual({ enabled: true, ttlMinutes: 30 });
-    expect(loadedConfig.errors).toEqual([expect.stringContaining('invalid websocketCacheTtl.ttlMinutes value')]);
+    expect(loadedConfig.config.noWebsocketCacheTtl).toEqual({ enabled: false });
+    expect(loadedConfig.errors).toEqual([]);
   });
 });
 

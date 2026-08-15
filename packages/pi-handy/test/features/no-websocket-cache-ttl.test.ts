@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isPiCodexWebSocketExpiry } from '#pi-handy/features/websocket-cache-ttl.js';
+import { isPiCodexWebSocketExpiry } from '#pi-handy/features/no-websocket-cache-ttl.js';
 
-describe('WebSocket cache TTL feature', () => {
+describe('no WebSocket cache TTL feature', () => {
   it.each([
     [
       'at scheduleSessionWebSocketExpiry (/node_modules/@earendil-works/pi-ai/dist/api/openai-codex-responses.js:770)',

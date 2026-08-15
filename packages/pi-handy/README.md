@@ -7,7 +7,7 @@ Handy controls and diagnostics for Pi.
 - Inspects or changes the active model thinking level.
 - Displays the active system prompt and tool schemas.
 - Reports the total duration of an agent run.
-- Can extend the connection-local Codex WebSocket cache idle lifetime.
+- Can disable the five-minute idle expiry for connection-local Codex WebSockets.
 
 ## Installation
 
@@ -63,9 +63,8 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
   "timeTaken": {
     "enabled": true,
   },
-  "websocketCacheTtl": {
+  "noWebsocketCacheTtl": {
     "enabled": false,
-    "ttlMinutes": 30,
   },
 }
 ```
@@ -110,11 +109,11 @@ Took 42s
 Took 1m5s
 ```
 
-### WebSocket cache TTL
+### No WebSocket cache TTL
 
-`websocketCacheTtl` extends Pi's five-minute idle timer for reusable OpenAI Codex WebSockets. This can preserve connection-local `previous_response_id` continuation during longer pauses.
+`noWebsocketCacheTtl` disables Pi's five-minute idle timer for reusable OpenAI Codex WebSockets. The connection remains cached until it becomes unusable, the session shuts down, or Pi replaces it at its separate 55-minute maximum connection age.
 
-The feature is disabled by default because it uses a narrowly filtered global `setTimeout` patch. It changes only five-minute timers scheduled by Pi's `scheduleSessionWebSocketExpiry` function in the OpenAI Codex adapter. Values must be from 5 to 55 minutes. Pi's separate 55-minute maximum WebSocket age remains unchanged.
+The feature is disabled by default because it uses a narrowly filtered global `setTimeout` patch. It suppresses only five-minute timers scheduled by Pi's `scheduleSessionWebSocketExpiry` function in the OpenAI Codex adapter. Pi's separate 55-minute maximum WebSocket age remains unchanged.
 
 ## License
 

@@ -6,7 +6,7 @@ export interface PiHandyConfig {
   thinkingLevel: ThinkingLevelCommandConfig;
   showSysprompt: ShowSyspromptCommandConfig;
   timeTaken: TimeTakenFeatureConfig;
-  websocketCacheTtl: WebSocketCacheTtlFeatureConfig;
+  noWebsocketCacheTtl: NoWebSocketCacheTtlFeatureConfig;
 }
 
 type ThinkingLevelCommandConfig = EnabledConfig;
@@ -15,19 +15,14 @@ type ShowSyspromptCommandConfig = EnabledConfig;
 
 type TimeTakenFeatureConfig = EnabledConfig;
 
-export interface WebSocketCacheTtlFeatureConfig extends EnabledConfig {
-  ttlMinutes: number;
-}
+type NoWebSocketCacheTtlFeatureConfig = EnabledConfig;
 
 export type PartialPiHandyConfig = Partial<{
   enabled: unknown;
   thinkingLevel: PartialEnabledConfig;
   showSysprompt: PartialEnabledConfig;
   timeTaken: PartialEnabledConfig;
-  websocketCacheTtl: Partial<{
-    enabled: unknown;
-    ttlMinutes: unknown;
-  }>;
+  noWebsocketCacheTtl: PartialEnabledConfig;
 }>;
 
 export type LoadedConfig = LoadedExtensionConfig<PiHandyConfig>;
@@ -43,8 +38,7 @@ export const defaultConfig: PiHandyConfig = {
   timeTaken: {
     enabled: true,
   },
-  websocketCacheTtl: {
+  noWebsocketCacheTtl: {
     enabled: false,
-    ttlMinutes: 30,
   },
 };

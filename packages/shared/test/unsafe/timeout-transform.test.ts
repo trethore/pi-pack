@@ -1,7 +1,11 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { registerTimeoutTransformer, removeTimeoutTransformer } from '@trethore/shared/unsafe/timeout-transform.js';
+import {
+  registerTimeoutTransformer,
+  removeTimeoutTransformer,
+  SUPPRESS_TIMEOUT,
+} from '@trethore/shared/unsafe/timeout-transform.js';
 
 const transformerId = 'test:timeout';
 let originalSetTimeout: typeof globalThis.setTimeout;
@@ -12,6 +16,7 @@ beforeEach(() => {
 
 afterEach(() => {
   removeTimeoutTransformer(transformerId);
+  vi.useRealTimers();
   globalThis.setTimeout = originalSetTimeout;
 });
 
@@ -29,6 +34,25 @@ describe('unsafe timeout transforms', () => {
     // Assert
     expect(timeoutSpy).toHaveBeenNthCalledWith(1, expect.any(Function), 1_800_000);
     expect(timeoutSpy).toHaveBeenNthCalledWith(2, expect.any(Function), 1000);
+  });
+
+  it('suppresses matching timeouts and preserves other timeouts', () => {
+    // Arrange
+    vi.useFakeTimers();
+    registerTimeoutTransformer(createPi(), transformerId, ({ delay }) =>
+      delay === 300_000 ? SUPPRESS_TIMEOUT : delay
+    );
+    const suppressedCallback = vi.fn();
+    const retainedCallback = vi.fn();
+
+    // Act
+    setTimeout(suppressedCallback, 300_000);
+    setTimeout(retainedCallback, 1000);
+    vi.advanceTimersByTime(300_000);
+
+    // Assert
+    expect(suppressedCallback).not.toHaveBeenCalled();
+    expect(retainedCallback).toHaveBeenCalledOnce();
   });
 
   it('removes a transformer on extension reload', () => {

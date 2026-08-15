@@ -5,7 +5,9 @@ export interface TimeoutTransformInput {
   getStack(): string;
 }
 
-export type TimeoutTransformer = (input: TimeoutTransformInput) => number;
+export const SUPPRESS_TIMEOUT = Symbol.for('trethore.shared.timeout-transform.suppress');
+
+export type TimeoutTransformer = (input: TimeoutTransformInput) => number | typeof SUPPRESS_TIMEOUT;
 
 interface TimeoutTransformState {
   original: typeof globalThis.setTimeout;
@@ -46,6 +48,7 @@ function getOrInstallTimeoutTransformState(): TimeoutTransformState {
   if (existing) return existing;
 
   const original = globalThis.setTimeout;
+  const clear = globalThis.clearTimeout;
   const transformers = new Map<string, TimeoutTransformer>();
   const wrapper = function (this: unknown, callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]) {
     let transformedDelay = delay ?? 0;
@@ -53,7 +56,9 @@ function getOrInstallTimeoutTransformState(): TimeoutTransformState {
       let stack: string | undefined;
       const getStack = () => (stack ??= new Error('timeout transform call site').stack ?? '');
       for (const transform of transformers.values()) {
-        transformedDelay = transform({ delay: transformedDelay, getStack });
+        const result = transform({ delay: transformedDelay, getStack });
+        if (result === SUPPRESS_TIMEOUT) return createCancelledTimeout(original, clear, this);
+        transformedDelay = result;
       }
     }
     return Reflect.apply(original, this, [callback, transformedDelay, ...args]);
@@ -64,6 +69,16 @@ function getOrInstallTimeoutTransformState(): TimeoutTransformState {
   global[PATCH_STATE_KEY] = state;
   globalThis.setTimeout = wrapper;
   return state;
+}
+
+function createCancelledTimeout(
+  original: typeof globalThis.setTimeout,
+  clear: typeof globalThis.clearTimeout,
+  thisArgument: unknown
+): ReturnType<typeof globalThis.setTimeout> {
+  const timeout = Reflect.apply(original, thisArgument, [() => {}, 0]);
+  Reflect.apply(clear, globalThis, [timeout]);
+  return timeout;
 }
 
 function copyFunctionProperties(source: object, target: object): void {
