@@ -15,7 +15,7 @@ pi-pack/                            # You are here!
     pi-handy/
     pi-toolbox/
     pi-toolmask/
-    shared/                      # Shared utilities and types for Pi extensions
+    shared/                         # Shared utilities and types for Pi extensions
   references/                       # Source code and documentation as references; do not modify
     pi-mono/packages/
       agent/
