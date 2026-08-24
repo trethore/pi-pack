@@ -4,15 +4,10 @@ import { registerEnabledFeatures, type ExtensionFeature } from '@trethore/shared
 import { loadConfig } from '#src/config/config.js';
 import type { PiHandyConfig } from '#src/config/schema.js';
 import { registerShowSyspromptCommand } from '#src/features/show-sysprompt.js';
-import { registerThinkingLevelCommand } from '#src/features/thinking-level.js';
 import { registerTimeTakenFeature } from '#src/features/time-taken.js';
 import { registerNoWebSocketCacheTtlFeature } from '#src/features/no-websocket-cache-ttl.js';
 
 const FEATURES: readonly ExtensionFeature<PiHandyConfig>[] = [
-  {
-    isEnabled: (config) => config.enabled && config.thinkingLevel.enabled,
-    register: registerThinkingLevelCommand,
-  },
   {
     isEnabled: (config) => config.enabled && config.showSysprompt.enabled,
     register: registerShowSyspromptCommand,

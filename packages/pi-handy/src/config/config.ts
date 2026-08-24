@@ -6,12 +6,7 @@ import { defaultConfig, type LoadedConfig, type PartialPiHandyConfig, type PiHan
 type EnabledFeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
 
 const EXTENSION_NAME = 'pi-handy';
-const ENABLED_FEATURE_CONFIG_KEYS: EnabledFeatureConfigKey[] = [
-  'thinkingLevel',
-  'showSysprompt',
-  'timeTaken',
-  'noWebsocketCacheTtl',
-];
+const ENABLED_FEATURE_CONFIG_KEYS: EnabledFeatureConfigKey[] = ['showSysprompt', 'timeTaken', 'noWebsocketCacheTtl'];
 const { mergeEnabledField, mergeSection } = createConfigMerger(EXTENSION_NAME);
 
 export function loadConfig(cwd: string): LoadedConfig {
@@ -27,7 +22,6 @@ export function loadConfig(cwd: string): LoadedConfig {
 function cloneDefaultConfig(): PiHandyConfig {
   return {
     ...defaultConfig,
-    thinkingLevel: { ...defaultConfig.thinkingLevel },
     showSysprompt: { ...defaultConfig.showSysprompt },
     timeTaken: { ...defaultConfig.timeTaken },
     noWebsocketCacheTtl: { ...defaultConfig.noWebsocketCacheTtl },

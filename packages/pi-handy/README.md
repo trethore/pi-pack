@@ -4,7 +4,6 @@ Handy controls and diagnostics for Pi.
 
 ## Features
 
-- Inspects or changes the active model thinking level.
 - Displays the active system prompt and tool schemas.
 - Reports the total duration of an agent run.
 - Can disable the five-minute idle expiry for connection-local Codex WebSockets.
@@ -36,7 +35,6 @@ pi -e ./packages/pi-handy
 All features are enabled by default. After loading the extension, try:
 
 ```text
-/thinkinglevel
 /showsysprompt
 ```
 
@@ -54,9 +52,6 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 ```jsonc
 {
   "enabled": true,
-  "thinkingLevel": {
-    "enabled": true,
-  },
   "showSysprompt": {
     "enabled": true,
   },
@@ -73,20 +68,9 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 
 | Command                          | Purpose                                                          |
 | -------------------------------- | ---------------------------------------------------------------- |
-| `/thinkinglevel [level]`         | Inspect or set the current model thinking level.                 |
 | `/showsysprompt [prompt\|tools]` | Display the current system prompt, active tool schemas, or both. |
 
 ## Feature reference
-
-### Thinking level
-
-`/thinkinglevel [level]` inspects or sets the current model thinking level from the prompt. Without an argument, it shows the current level and the levels supported by the active model.
-
-```text
-/thinkinglevel medium
-/thinkinglevel off
-/thinkinglevel
-```
 
 ### System prompt display
 

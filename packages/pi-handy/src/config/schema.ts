@@ -3,13 +3,10 @@ import type { EnabledConfig, PartialEnabledConfig } from '@trethore/shared/confi
 
 export interface PiHandyConfig {
   enabled: boolean;
-  thinkingLevel: ThinkingLevelCommandConfig;
   showSysprompt: ShowSyspromptCommandConfig;
   timeTaken: TimeTakenFeatureConfig;
   noWebsocketCacheTtl: NoWebSocketCacheTtlFeatureConfig;
 }
-
-type ThinkingLevelCommandConfig = EnabledConfig;
 
 type ShowSyspromptCommandConfig = EnabledConfig;
 
@@ -19,7 +16,6 @@ type NoWebSocketCacheTtlFeatureConfig = EnabledConfig;
 
 export type PartialPiHandyConfig = Partial<{
   enabled: unknown;
-  thinkingLevel: PartialEnabledConfig;
   showSysprompt: PartialEnabledConfig;
   timeTaken: PartialEnabledConfig;
   noWebsocketCacheTtl: PartialEnabledConfig;
@@ -29,9 +25,6 @@ export type LoadedConfig = LoadedExtensionConfig<PiHandyConfig>;
 
 export const defaultConfig: PiHandyConfig = {
   enabled: true,
-  thinkingLevel: {
-    enabled: true,
-  },
   showSysprompt: {
     enabled: true,
   },
