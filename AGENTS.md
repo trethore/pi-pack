@@ -7,30 +7,29 @@ Pi-pack is a monorepo for the Pi extensions I develop.
 The project is organized as follows:
 
 ```text
-pi-pack/                            # You are here!
-  packages/                         # Workspace packages for Pi extensions
-    pi-cut/
-    pi-codexify/
-    pi-script-template/
-    pi-handy/
-    pi-toolbox/
-    pi-toolmask/
-    shared/                         # Shared utilities and types for Pi extensions
-  references/                       # Source code and documentation as references; do not modify
-    pi-mono/packages/
-      agent/
-      ai/
-      coding-agent/
-      tui/
-  scripts/                          # Development and maintenance scripts
-  eslint.config.js
-  LICENSE
-  package.json
-  README.md
-  tsconfig.json
+packages/                    # Workspace packages for Pi extensions
+  pi-cut/
+  pi-codexify/
+  pi-script-template/
+  pi-handy/
+  pi-toolbox/
+  pi-toolmask/
+  shared/                    # Shared utilities and types for Pi extensions
+references/                  # Source code and documentation as references; do not modify
+  pi-mono/packages/
+    agent/
+    ai/
+    coding-agent/
+    tui/
+scripts/                     # Development and maintenance scripts
+eslint.config.js
+LICENSE
+package.json
+README.md
+tsconfig.json
 ```
 
-Look root and packages `package.json` to discover scripts, paths, and dependencies.
+Look at the root and package-level `package.json` files to discover scripts, paths, and dependencies.
 
 ## Development and Code Quality
 
@@ -54,10 +53,4 @@ npm run format      # format code
 npm run typecheck   # check types
 npm run lint        # find linting issues
 npm run test        # run tests
-```
-
-Or you can run the following command to run all checks and tests at once:
-
-```bash
-set -o pipefail; { npm run format && npm run typecheck && npm run lint && npm run test; } 2>&1 | tail -n 50
 ```
