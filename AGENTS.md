@@ -49,8 +49,8 @@ Tests should be easy to scan and understand. Follow these guidelines:
 To verify changes:
 
 ```bash
-npm run format      # format code
-npm run typecheck   # check types
-npm run lint        # find linting issues
-npm run test        # run tests
+npm run --silent format      # format code
+npm run --silent typecheck   # check types
+npm run --silent lint        # find linting issues
+npm run --silent test        # run tests
 ```
