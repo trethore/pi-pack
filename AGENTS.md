@@ -7,21 +7,20 @@ Pi-pack is a monorepo for the Pi extensions I develop.
 The project is organized as follows:
 
 ```text
-packages/                    # Workspace packages for Pi extensions
+packages/
   pi-cut/
   pi-codexify/
   pi-script-template/
   pi-handy/
   pi-toolbox/
   pi-toolmask/
-  shared/                    # Shared utilities and types for Pi extensions
-references/                  # Source code and documentation as references; do not modify
-  pi-mono/packages/
-    agent/
-    ai/
-    coding-agent/
-    tui/
-scripts/                     # Development and maintenance scripts
+  shared/                      # Shared utilities and types
+references/pi-mono/packages/   # Pi source code and documentation for browsing; do not modify
+  agent/
+  ai/
+  coding-agent/
+  tui/
+scripts/                       # Development scripts
 eslint.config.js
 LICENSE
 package.json
@@ -41,16 +40,16 @@ Look at the root and package-level `package.json` files to discover scripts, pat
 Tests should be easy to scan and understand. Follow these guidelines:
 
 - Use clear Arrange / Act / Assert sections.
-- Prefer meaningful local variable names that clearly describe the role of each value in the scenario.
 - Use `it.each` for repetitive input/output test cases.
+- Prefer meaningful local variable names that clearly describe the role of each value in the scenario.
 
 ## Verification
 
 To verify changes:
 
 ```bash
-npm run --silent format      # format code
-npm run --silent typecheck   # check types
-npm run --silent lint        # find linting issues
-npm run --silent test        # run tests
+npm run --silent format        # format directly after changes instead of checking first and then fixing formatting issues.
+npm run --silent typecheck
+npm run --silent lint
+npm run --silent test
 ```
