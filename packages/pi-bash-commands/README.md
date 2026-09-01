@@ -13,7 +13,7 @@ Expose bundled and configured commands only to Pi's active built-in bash tool.
 
 ## Installation
 
-Requires Pi `>=0.84.3 <1`.
+Requires Pi `>=0.84.4 <1`.
 
 From the `pi-pack` repository root:
 

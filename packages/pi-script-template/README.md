@@ -13,7 +13,7 @@ Node.js script output templates for Pi prompt resources.
 
 ## Installation
 
-Requires Pi `>=0.84.3 <1`.
+Requires Pi `>=0.84.4 <1`.
 
 ```sh
 pi install ./packages/pi-script-template
