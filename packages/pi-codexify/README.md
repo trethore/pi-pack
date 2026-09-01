@@ -8,6 +8,8 @@ Codex settings, tools, and usage controls.
   - `text.verbosity`
   - `reasoning.summary`
   - `service_tier: "priority"` when `serviceTier` is `priority`
+- Adds the Codex backend routing hint header for priority requests:
+  - `x-codex-routing-hint: model=<model>;tier=priority`
 - Displays Codex 5h and 7d usage windows.
 - Adds the native OpenAI Codex `web_search` tool when enabled.
 - Consumes or inspects Codex reset credits.
@@ -95,7 +97,7 @@ Control commands update the trusted project configuration when one exists; other
 
 ## Behavior and limitations
 
-Priority service tier is applied at the final provider payload layer. Pi may report default-tier pricing if the provider response does not echo the effective priority tier.
+Priority service tier is applied at the final provider payload layer. For the `openai-codex` provider, pi-codexify also adds the routing hint used by the official Codex CLI. Pi may report default-tier pricing if the provider response does not echo the effective priority tier.
 
 ## License
 
