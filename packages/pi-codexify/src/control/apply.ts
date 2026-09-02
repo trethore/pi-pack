@@ -1,5 +1,5 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 import type { CodexReasoningSummary, CodexServiceTier, CodexVerbosity, ControlsConfig } from '#src/config/types.js';
 
 type SupportedApi = 'openai-responses' | 'openai-codex-responses' | 'azure-openai-responses';
@@ -12,7 +12,7 @@ export function applyControls(
   controls: ControlsConfig,
   model: Pick<Model<Api>, 'api' | 'reasoning'>
 ): unknown {
-  if (!isRecord(payload) || !supportsControls(model)) return payload;
+  if (!isPlainObject(payload) || !supportsControls(model)) return payload;
 
   let result = applyVerbosity(payload, controls.verbosity);
   result = applyServiceTier(result, controls.serviceTier);
@@ -34,7 +34,7 @@ export function supportsReasoningSummary(model: Pick<Model<Api>, 'api' | 'reason
 
 function applyVerbosity(payload: MutablePayload, verbosity: CodexVerbosity | undefined): MutablePayload {
   if (!verbosity) return payload;
-  const text = isRecord(payload.text) ? payload.text : {};
+  const text = isPlainObject(payload.text) ? payload.text : {};
   return { ...payload, text: { ...text, verbosity } };
 }
 
@@ -42,12 +42,12 @@ function applyReasoningSummary(payload: MutablePayload, summary: CodexReasoningS
   if (!summary) return payload;
   if (summary === 'none') return removeReasoningSummary(payload);
 
-  const reasoning = isRecord(payload.reasoning) ? payload.reasoning : {};
+  const reasoning = isPlainObject(payload.reasoning) ? payload.reasoning : {};
   return { ...payload, reasoning: { ...reasoning, summary } };
 }
 
 function removeReasoningSummary(payload: MutablePayload): MutablePayload {
-  if (!isRecord(payload.reasoning) || !Object.hasOwn(payload.reasoning, 'summary')) return payload;
+  if (!isPlainObject(payload.reasoning) || !Object.hasOwn(payload.reasoning, 'summary')) return payload;
 
   const reasoning = { ...payload.reasoning };
   delete reasoning.summary;

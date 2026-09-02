@@ -1,5 +1,5 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 
 interface WebSearchTool {
   type: 'web_search';
@@ -8,11 +8,11 @@ interface WebSearchTool {
 }
 
 export function applyWebSearch(payload: unknown, model: Pick<Model<Api>, 'provider' | 'id'> | undefined): unknown {
-  if (!isCodexModel(model) || !isRecord(payload)) return payload;
+  if (!isCodexModel(model) || !isPlainObject(payload)) return payload;
   if (payload.tools !== undefined && !Array.isArray(payload.tools)) return payload;
 
   const tools = payload.tools ?? [];
-  if (tools.some((tool) => isRecord(tool) && tool.type === 'web_search')) return payload;
+  if (tools.some((tool) => isPlainObject(tool) && tool.type === 'web_search')) return payload;
 
   return { ...payload, tools: [...tools, createWebSearchTool(model)] };
 }

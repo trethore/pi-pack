@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/shared/config/schema.js';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 
 import { getBashCommandsConfigPaths } from '#src/config/locations.js';
 import {
@@ -65,7 +65,7 @@ function mergeBuiltIns(
     target.builtIns = createBuiltInsConfig(source.builtIns);
     return;
   }
-  if (!isRecord(source.builtIns)) {
+  if (!isPlainObject(source.builtIns)) {
     errors.push(
       `${EXTENSION_NAME} config ignored invalid builtIns value in ${configPath}; expected boolean or object.`
     );
@@ -96,7 +96,7 @@ function mergeBuiltInConfig(
     target[name].enabled = source;
     return;
   }
-  if (!isRecord(source)) {
+  if (!isPlainObject(source)) {
     errors.push(
       `${EXTENSION_NAME} config ignored invalid builtIns.${name} value in ${configPath}; expected boolean or object.`
     );

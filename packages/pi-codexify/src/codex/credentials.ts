@@ -1,6 +1,6 @@
 import type { CredentialStore, OAuthCredential } from '@earendil-works/pi-ai';
 import { readStoredCredential, type ModelRegistry } from '@earendil-works/pi-coding-agent';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 
 export const CODEX_PROVIDER = 'openai-codex';
 
@@ -35,7 +35,7 @@ export function getAccountId(credential: CodexCredential): string | undefined {
 
 function isCodexCredential(value: unknown): value is CodexCredential {
   return (
-    isRecord(value) &&
+    isPlainObject(value) &&
     value.type === 'oauth' &&
     typeof value.access === 'string' &&
     typeof value.refresh === 'string' &&

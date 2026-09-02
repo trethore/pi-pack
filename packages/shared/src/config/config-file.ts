@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
 import { getErrorMessage, isMissingPathError } from '@trethore/shared/error.js';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 
 export interface LoadedExtensionConfig<TConfig> {
   config: TConfig;
@@ -56,7 +56,7 @@ export function readJsoncConfigFile<T extends Record<string, unknown>>(
     return undefined;
   }
 
-  if (!isRecord(parsed)) {
+  if (!isPlainObject(parsed)) {
     errors.push(`${extensionName} config ignored: ${configPath} must contain a JSON object.`);
     return undefined;
   }

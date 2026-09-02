@@ -1,4 +1,4 @@
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 import { hasFields, mergeField, type ConfigFieldMerger } from '#src/config/merge.js';
 import type {
   LineTruncationConfig,
@@ -30,7 +30,7 @@ export function mergeToolOverrides(
 
   for (const [index, toolOverride] of source.tools.entries()) {
     const configName = `tools[${index}]`;
-    if (!isRecord(toolOverride)) {
+    if (!isPlainObject(toolOverride)) {
       errors.push(`pi-cut config ignored invalid ${configName} value in ${configPath}; expected object.`);
       continue;
     }
@@ -112,7 +112,7 @@ function parseStrategyOverride<T extends object>(
   if (value === undefined) return undefined;
 
   const strategyConfigName = `${configName}.${field}`;
-  if (!isRecord(value)) {
+  if (!isPlainObject(value)) {
     errors.push(`pi-cut config ignored invalid ${strategyConfigName} value in ${configPath}; expected object.`);
     return undefined;
   }

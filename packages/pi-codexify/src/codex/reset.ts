@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/shared/error.js';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 import { backendUrl, formatResponseStatus, readResponseBody } from '#src/codex/backend.js';
 import { CODEX_PROVIDER, getCodexCredential, type CodexCredentialContext } from '#src/codex/credentials.js';
 
@@ -143,7 +143,7 @@ function resetHeaders(token: string, contentType = false): Record<string, string
 }
 
 function availableCount(body: unknown): number {
-  if (!isRecord(body)) throw new TypeError('Reset credit response missing available count.');
+  if (!isPlainObject(body)) throw new TypeError('Reset credit response missing available count.');
   const count = body.available_count ?? body.availableCount;
   if (typeof count !== 'number' || !Number.isFinite(count)) {
     throw new TypeError('Reset credit response missing available count.');
@@ -152,9 +152,9 @@ function availableCount(body: unknown): number {
 }
 
 function credits(body: unknown): ResetCredit[] {
-  if (!isRecord(body) || !Array.isArray(body.credits)) return [];
+  if (!isPlainObject(body) || !Array.isArray(body.credits)) return [];
   return body.credits.flatMap((value) => {
-    if (!isRecord(value) || typeof value.id !== 'string' || !value.id.trim()) return [];
+    if (!isPlainObject(value) || typeof value.id !== 'string' || !value.id.trim()) return [];
     const status = typeof value.status === 'string' ? value.status.toLowerCase() : undefined;
     return [
       {

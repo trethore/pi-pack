@@ -1,4 +1,4 @@
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 import { z } from 'zod';
 
 export { z } from 'zod';
@@ -99,7 +99,7 @@ function makeMergeSection(extensionName: string) {
     const value = source[field];
     if (value === undefined) return;
 
-    if (!isRecord(value)) {
+    if (!isPlainObject(value)) {
       errors.push(`${extensionName} config ignored invalid ${field} value in ${configPath}; expected object.`);
       return;
     }

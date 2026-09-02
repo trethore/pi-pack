@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { applyEdits, modify, parse, type FormattingOptions, type JSONPath } from 'jsonc-parser';
-import { isRecord } from '@trethore/shared/object.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 
 const REMOVE_JSONC_VALUE: unknown = undefined;
 
@@ -81,14 +81,14 @@ function isEmptyObjectAtPath(text: string, objectPath: readonly string[]): boole
     disallowComments: false,
   }) as unknown;
   const valueAtPath = getValueAtPath(parsed, objectPath);
-  return isRecord(valueAtPath) && Object.keys(valueAtPath).length === 0;
+  return isPlainObject(valueAtPath) && Object.keys(valueAtPath).length === 0;
 }
 
 function getValueAtPath(value: unknown, objectPath: readonly string[]): unknown {
   let current: unknown = value;
 
   for (const segment of objectPath) {
-    if (!isRecord(current)) return undefined;
+    if (!isPlainObject(current)) return undefined;
     current = current[segment];
   }
 
