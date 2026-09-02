@@ -161,7 +161,7 @@ function createTool(name: string, properties: Record<string, unknown>): ToolInfo
     parameters: {
       type: 'object',
       properties,
-    } as never,
+    },
     sourceInfo: { path: 'test', source: 'test', scope: 'temporary', origin: 'top-level' },
   };
 }

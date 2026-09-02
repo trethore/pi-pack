@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { isPlainObject } from '@trethore/shared/object.js';
 
-class TestClass {}
+class TestClass {
+  value = true;
+}
 
 describe('isPlainObject', () => {
   it.each([

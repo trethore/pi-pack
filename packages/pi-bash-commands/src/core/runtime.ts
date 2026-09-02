@@ -14,8 +14,8 @@ export interface BashCommandsRuntime {
 interface RuntimeState {
   pi: Pick<ExtensionAPI, 'getActiveTools' | 'getAllTools'>;
   config: PiBashCommandsConfig;
-  shims?: CommandShims;
-  setup?: Promise<CommandShims>;
+  shims: CommandShims | undefined;
+  setup: Promise<CommandShims> | undefined;
   unavailableWarningShown: boolean;
   setupWarningShown: boolean;
 }
@@ -27,6 +27,8 @@ export function createBashCommandsRuntime(
   const state: RuntimeState = {
     pi,
     config,
+    shims: undefined,
+    setup: undefined,
     unavailableWarningShown: false,
     setupWarningShown: false,
   };

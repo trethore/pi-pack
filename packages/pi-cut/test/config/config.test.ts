@@ -213,7 +213,9 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.tools).toHaveLength(1);
-    expect(loaded.config.tools[0].newLinesFolding).toEqual({
+    const override = loaded.config.tools[0];
+    if (!override) throw new Error('Expected a tool override.');
+    expect(override.newLinesFolding).toEqual({
       enabled: true,
       minNewLines: 3,
       foldTo: 2,
@@ -234,7 +236,9 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.tools).toHaveLength(1);
-    expect(loaded.config.tools[0].repetitionFolding).toEqual({
+    const override = loaded.config.tools[0];
+    if (!override) throw new Error('Expected a tool override.');
+    expect(override.repetitionFolding).toEqual({
       enabled: true,
       minRepeats: 5,
       minSavedLines: 0,
@@ -249,7 +253,9 @@ describe('loadConfig', () => {
     // Assert
     expect(loaded.errors).toEqual([]);
     expect(loaded.config.tools).toHaveLength(1);
-    expect(loaded.config.tools[0].transformErrors).toBe(true);
+    const override = loaded.config.tools[0];
+    if (!override) throw new Error('Expected a tool override.');
+    expect(override.transformErrors).toBe(true);
   });
 });
 

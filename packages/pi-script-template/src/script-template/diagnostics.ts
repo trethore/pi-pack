@@ -24,7 +24,11 @@ export function registerScriptTemplateDiagnostics(
     for (const diagnostic of getDiagnostics()) reportDiagnostic(diagnostic);
   };
 
-  pi.on('session_start', (_event, ctx) => reportAll(ctx));
-  pi.on('before_agent_start', (_event, ctx) => reportAll(ctx));
+  pi.on('session_start', (_event, ctx) => {
+    reportAll(ctx);
+  });
+  pi.on('before_agent_start', (_event, ctx) => {
+    reportAll(ctx);
+  });
   return { reportDiagnostic };
 }

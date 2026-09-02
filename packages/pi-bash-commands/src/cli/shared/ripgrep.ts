@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 
 import { rgPath } from '@vscode/ripgrep';
+import { isPlainObject } from '@trethore/shared/object.js';
 
 import { formatRipgrepPaths, toResolvedDisplayPath } from '#pi-bash-commands-cli/shared/paths';
 import { formatRipgrepSearchArgs, formatRipgrepSearchFilterArgs } from '#pi-bash-commands-cli/shared/search';
@@ -53,12 +54,6 @@ interface RipgrepJsonMatch {
   };
 }
 
-interface RipgrepJsonOther {
-  type: string;
-}
-
-type RipgrepJsonEvent = RipgrepJsonMatch | RipgrepJsonOther;
-
 interface RunRipgrepLinesOptions<T> {
   cwd: string;
   args: string[];
@@ -78,7 +73,7 @@ export async function runFind(options: RunFindOptions): Promise<FindResult> {
     args: [
       '--files',
       ...formatRipgrepSearchArgs({
-        depth: options.depth,
+        ...(options.depth === undefined ? {} : { depth: options.depth }),
         globs: options.patterns,
         noIgnore: options.noIgnore,
         paths: options.paths,
@@ -120,8 +115,17 @@ function parseRipgrepMatchLine(line: string, maxCharsPerMatch: number): GrepMatc
   };
 }
 
-function isRipgrepJsonMatch(event: RipgrepJsonEvent | undefined): event is RipgrepJsonMatch {
-  return event?.type === 'match';
+function isRipgrepJsonMatch(event: unknown): event is RipgrepJsonMatch {
+  return (
+    isPlainObject(event) &&
+    event.type === 'match' &&
+    isPlainObject(event.data) &&
+    isPlainObject(event.data.path) &&
+    (event.data.path.text === undefined || typeof event.data.path.text === 'string') &&
+    isPlainObject(event.data.lines) &&
+    (event.data.lines.text === undefined || typeof event.data.lines.text === 'string') &&
+    typeof event.data.line_number === 'number'
+  );
 }
 
 function calculateGrepCollectionLimit(options: RunGrepOptions): number {
@@ -137,7 +141,7 @@ function buildGrepArgs(options: RunGrepOptions): string[] {
     'never',
     ...(options.limitPerFile === undefined ? [] : ['--max-count', String(options.limitPerFile + 1)]),
     ...formatRipgrepSearchFilterArgs({
-      depth: options.depth,
+      ...(options.depth === undefined ? {} : { depth: options.depth }),
       globs: options.globs,
       noIgnore: options.noIgnore,
       visibleOnly: options.visibleOnly,
@@ -147,9 +151,9 @@ function buildGrepArgs(options: RunGrepOptions): string[] {
   ];
 }
 
-function parseRipgrepEvent(line: string): RipgrepJsonEvent | undefined {
+function parseRipgrepEvent(line: string): unknown {
   try {
-    return JSON.parse(line) as RipgrepJsonEvent;
+    return JSON.parse(line) as unknown;
   } catch {
     return undefined;
   }
@@ -208,7 +212,9 @@ function runRipgrepLines<T>(options: RunRipgrepLinesOptions<T>): Promise<Ripgrep
       if (!settled) stderr += chunk;
     });
 
-    child.on('error', (error) => rejectOnce(error));
+    child.on('error', (error) => {
+      rejectOnce(error);
+    });
     child.on('close', (code) => {
       if (settled) return;
       collectRemainingLine();

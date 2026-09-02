@@ -38,6 +38,8 @@ export function mergeNewLinesFoldingFields(
     return;
   }
 
-  target.minNewLines = nextConfig.minNewLines;
-  target.foldTo = nextConfig.foldTo;
+  if (nextConfig.minNewLines === undefined) delete target.minNewLines;
+  else target.minNewLines = nextConfig.minNewLines;
+  if (nextConfig.foldTo === undefined) delete target.foldTo;
+  else target.foldTo = nextConfig.foldTo;
 }

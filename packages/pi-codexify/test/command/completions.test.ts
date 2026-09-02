@@ -5,7 +5,7 @@ import { getCompletions } from '#pi-codexify/command/completions.js';
 
 describe('codexify command completions', () => {
   it('completes reset actions', async () => {
-    const completions = await getCompletions('reset ', defaultConfig);
+    const completions = getCompletions('reset ', defaultConfig);
 
     expect(completions).toEqual([
       { value: 'reset use', label: 'use' },
@@ -16,13 +16,13 @@ describe('codexify command completions', () => {
   it('does not complete reset actions when reset is disabled', async () => {
     const config: PiCodexifyConfig = { ...defaultConfig, reset: false };
 
-    const completions = await getCompletions('reset ', config);
+    const completions = getCompletions('reset ', config);
 
     expect(completions).toBeNull();
   });
 
   it('completes service tier values', async () => {
-    const completions = await getCompletions('service-tier ', defaultConfig);
+    const completions = getCompletions('service-tier ', defaultConfig);
 
     expect(completions).toEqual([
       { value: 'service-tier default', label: 'default' },
@@ -31,7 +31,7 @@ describe('codexify command completions', () => {
   });
 
   it('completes reasoning summary values', async () => {
-    const completions = await getCompletions('reasoning-summary ', defaultConfig);
+    const completions = getCompletions('reasoning-summary ', defaultConfig);
 
     expect(completions).toEqual([
       { value: 'reasoning-summary auto', label: 'auto' },

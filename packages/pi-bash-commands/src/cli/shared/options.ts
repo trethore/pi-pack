@@ -61,6 +61,7 @@ export function parseFindCliOptions(
   });
 
   if (parsed.values.help) return { help: true };
+  const depth = parseOptionalIntegerOption('depth', parsed.values.depth, DEPTH_RANGE);
 
   return {
     help: false,
@@ -71,7 +72,7 @@ export function parseFindCliOptions(
         defaultValue: defaults.defaultLimit,
         ...LIMIT_RANGE,
       }),
-      depth: parseOptionalIntegerOption('depth', parsed.values.depth, DEPTH_RANGE),
+      ...(depth === undefined ? {} : { depth }),
       noIgnore: parsed.values['no-ignore'] ?? false,
       visibleOnly: parsed.values['visible-only'] ?? false,
     },
@@ -99,6 +100,10 @@ export function parseGrepCliOptions(
 
   const regexes = normalizeStringList(parsed.values.regexes);
   if (regexes.length === 0) throw new Error('regexes must contain at least one non-empty string');
+  const limitPerFile =
+    parseOptionalIntegerOption('limit-per-file', parsed.values['limit-per-file'], LIMIT_RANGE) ??
+    defaults.defaultLimitPerFile;
+  const depth = parseOptionalIntegerOption('depth', parsed.values.depth, DEPTH_RANGE);
 
   return {
     help: false,
@@ -110,10 +115,8 @@ export function parseGrepCliOptions(
         defaultValue: defaults.defaultLimit,
         ...LIMIT_RANGE,
       }),
-      limitPerFile:
-        parseOptionalIntegerOption('limit-per-file', parsed.values['limit-per-file'], LIMIT_RANGE) ??
-        defaults.defaultLimitPerFile,
-      depth: parseOptionalIntegerOption('depth', parsed.values.depth, DEPTH_RANGE),
+      ...(limitPerFile === undefined ? {} : { limitPerFile }),
+      ...(depth === undefined ? {} : { depth }),
       maxCharsPerMatch: parseIntegerOption('max-chars-per-match', parsed.values['max-chars-per-match'], {
         defaultValue: defaults.defaultMaxCharsPerMatch,
         ...MAX_CHARS_PER_MATCH_RANGE,

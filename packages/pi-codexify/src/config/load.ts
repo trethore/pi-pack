@@ -7,7 +7,6 @@ import {
   serviceTierValues,
   verbosityValues,
   type LoadedConfig,
-  type PartialPiCodexifyConfig,
   type PiCodexifyConfig,
 } from '#src/config/types.js';
 
@@ -33,7 +32,7 @@ export function loadConfig(cwd: string, options: { includeProject?: boolean } = 
   });
 }
 
-function mergeConfig(target: PiCodexifyConfig, source: PartialPiCodexifyConfig, configPath: string, errors: string[]) {
+function mergeConfig(target: PiCodexifyConfig, source: Record<string, unknown>, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
   mergeField(source, 'usage', 'usage', booleanSchema, configPath, errors, (value) => {
     target.usage = value;
@@ -57,7 +56,8 @@ function mergeControls(
     target.controls.webSearch = value;
   });
   mergeField(source, 'verbosity', 'controls.verbosity', verbositySchema, configPath, errors, (value) => {
-    target.controls.verbosity = value ?? undefined;
+    if (value === null) delete target.controls.verbosity;
+    else target.controls.verbosity = value;
   });
   mergeField(
     source,
@@ -67,10 +67,12 @@ function mergeControls(
     configPath,
     errors,
     (value) => {
-      target.controls.reasoningSummary = value ?? undefined;
+      if (value === null) delete target.controls.reasoningSummary;
+      else target.controls.reasoningSummary = value;
     }
   );
   mergeField(source, 'serviceTier', 'controls.serviceTier', serviceTierSchema, configPath, errors, (value) => {
-    target.controls.serviceTier = value ?? undefined;
+    if (value === null) delete target.controls.serviceTier;
+    else target.controls.serviceTier = value;
   });
 }

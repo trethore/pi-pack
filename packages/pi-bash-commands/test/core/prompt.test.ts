@@ -63,5 +63,12 @@ Usage: third --help`);
 });
 
 function command(name: string, prompt?: BashCommandConfig['prompt']): BashCommandConfig {
-  return { enabled: true, name, command: process.execPath, args: [], env: {}, prompt };
+  return {
+    enabled: true,
+    name,
+    command: process.execPath,
+    args: [],
+    env: {},
+    ...(prompt === undefined ? {} : { prompt }),
+  };
 }

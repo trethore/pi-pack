@@ -2,13 +2,7 @@ import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js
 import { booleanSchema, createConfigMerger } from '@trethore/shared/config/schema.js';
 
 import { getToolmaskConfigPaths } from '#src/config/locations.js';
-import {
-  defaultConfig,
-  stringArraySchema,
-  type LoadedConfig,
-  type PartialPiToolmaskConfig,
-  type PiToolmaskConfig,
-} from '#src/config/schema.js';
+import { defaultConfig, stringArraySchema, type LoadedConfig, type PiToolmaskConfig } from '#src/config/schema.js';
 
 const EXTENSION_NAME = 'pi-toolmask';
 const { mergeEnabledField, mergeField } = createConfigMerger(EXTENSION_NAME);
@@ -32,7 +26,7 @@ function cloneDefaultConfig(): PiToolmaskConfig {
 
 function mergeConfig(
   target: PiToolmaskConfig,
-  source: PartialPiToolmaskConfig,
+  source: Record<string, unknown>,
   configPath: string,
   errors: string[]
 ): void {

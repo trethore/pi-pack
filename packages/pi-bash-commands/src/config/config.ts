@@ -13,7 +13,6 @@ import {
   type BashCommandConfig,
   type BuiltInsConfig,
   type LoadedConfig,
-  type PartialPiBashCommandsConfig,
   type PiFindBuiltInConfig,
   type PiGrepBuiltInConfig,
   type PiBashCommandsConfig,
@@ -39,7 +38,7 @@ function cloneDefaultConfig(): PiBashCommandsConfig {
 
 function mergeConfig(
   target: PiBashCommandsConfig,
-  source: PartialPiBashCommandsConfig,
+  source: Record<string, unknown>,
   configPath: string,
   errors: string[]
 ): void {
@@ -56,7 +55,7 @@ function mergeConfig(
 
 function mergeBuiltIns(
   target: PiBashCommandsConfig,
-  source: PartialPiBashCommandsConfig,
+  source: Record<string, unknown>,
   configPath: string,
   errors: string[]
 ): void {
@@ -199,7 +198,8 @@ function parseCommands(values: unknown[], configPath: string, errors: string[]):
       continue;
     }
 
-    commands.push(parsed.data);
+    const { prompt, ...command } = parsed.data;
+    commands.push({ ...command, ...(prompt === undefined ? {} : { prompt }) });
     if (parsed.data.enabled) enabledNames.add(parsed.data.name);
   }
 

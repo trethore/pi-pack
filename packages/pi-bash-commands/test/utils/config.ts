@@ -18,7 +18,7 @@ export function createTestConfig(options: CreateTestConfigOptions = {}): PiBashC
         command: process.execPath,
         args: [],
         env: {},
-        prompt: options.prompt,
+        ...(options.prompt === undefined ? {} : { prompt: options.prompt }),
       },
     ],
   };

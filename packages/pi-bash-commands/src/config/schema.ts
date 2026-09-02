@@ -83,7 +83,12 @@ const promptSchema = z
   .transform((prompt): BashCommandPromptConfig | undefined => {
     const description = normalizePromptField(prompt.description);
     const usage = normalizePromptField(prompt.usage);
-    return description || usage ? { description, usage } : undefined;
+    return description || usage
+      ? {
+          ...(description === undefined ? {} : { description }),
+          ...(usage === undefined ? {} : { usage }),
+        }
+      : undefined;
   });
 
 export const bashCommandSchema = z.object({

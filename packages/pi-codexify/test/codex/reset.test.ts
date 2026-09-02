@@ -146,8 +146,11 @@ describe('reset credit details command', () => {
         used: true,
       },
     ]);
-    expectLocalIsoDate(result.credits[0].expiresAt, '2026-07-12T15:30:00.000Z');
-    expectLocalIsoDate(result.credits[1].expiresAt, '2026-07-10T08:00:00.000Z');
+    const availableCredit = result.credits[0];
+    const usedCredit = result.credits[1];
+    if (!availableCredit || !usedCredit) throw new Error('Expected two reset credits.');
+    expectLocalIsoDate(availableCredit.expiresAt, '2026-07-12T15:30:00.000Z');
+    expectLocalIsoDate(usedCredit.expiresAt, '2026-07-10T08:00:00.000Z');
   });
 
   it('refreshes an expired Codex OAuth token before requesting reset credit details', async () => {
@@ -274,10 +277,12 @@ function expectResetCreditListRequest(fetchMock: ReturnType<typeof vi.fn>, acces
 }
 
 function expectLocalIsoDate(actual: string | undefined, source: string): void {
+  if (actual === undefined) throw new Error('Expected a local ISO date.');
   expect(actual).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}$/);
-  expect(new Date(actual!).toISOString()).toBe(source);
+  expect(new Date(actual).toISOString()).toBe(source);
 
-  const offsetMatch = actual!.match(/([+-])(\d{2}):(\d{2})$/)!;
+  const offsetMatch = actual.match(/([+-])(\d{2}):(\d{2})$/);
+  if (!offsetMatch) throw new Error('Expected a timezone offset.');
   const offsetMinutes = (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3])) * (offsetMatch[1] === '+' ? 1 : -1);
   expect(offsetMinutes).toBe(-new Date(source).getTimezoneOffset());
 }

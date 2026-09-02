@@ -1,7 +1,7 @@
 import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
 import { getCutConfigPaths } from '#src/config/locations.js';
 import { mergeEnabledField, mergeField, mergeSection } from '#src/config/merge.js';
-import { defaultConfig, type LoadedConfig, type PartialPiCutConfig, type PiCutConfig } from '#src/config/schema.js';
+import { defaultConfig, type LoadedConfig, type PiCutConfig } from '#src/config/schema.js';
 import { mergeLineTruncationFields } from '#src/config/sections/line-truncation.js';
 import { mergeNewLinesFoldingFields } from '#src/config/sections/new-lines-folding.js';
 import { mergeRepetitionFoldingFields } from '#src/config/sections/repetition-folding.js';
@@ -31,7 +31,7 @@ function cloneDefaultConfig(): PiCutConfig {
   };
 }
 
-function mergeConfig(target: PiCutConfig, source: PartialPiCutConfig, configPath: string, errors: string[]) {
+function mergeConfig(target: PiCutConfig, source: Record<string, unknown>, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
   mergeField(source, 'transformErrors', 'transformErrors', booleanSchema, configPath, errors, (value) => {
     target.transformErrors = value;

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { applyEdits, modify, parse, type FormattingOptions, type JSONPath } from 'jsonc-parser';
+import { applyEdits, modify, parse, type FormattingOptions } from 'jsonc-parser';
 import { isPlainObject } from '@trethore/shared/object.js';
 
 const REMOVE_JSONC_VALUE: unknown = undefined;
@@ -43,7 +43,7 @@ export async function updateJsoncFile(
 }
 
 function applyJsoncUpdate(text: string, updatePath: readonly string[], value: unknown): string {
-  const edits = modify(text, updatePath as JSONPath, value, {
+  const edits = modify(text, [...updatePath], value, {
     formattingOptions: getFormattingOptions(text),
   });
 
@@ -66,6 +66,7 @@ function detectIndentation(text: string): { insertSpaces: boolean; tabSize: numb
   if (!match) return { insertSpaces: true, tabSize: 2 };
 
   const indentation = match[1];
+  if (indentation === undefined) return { insertSpaces: true, tabSize: 2 };
   if (indentation.includes('\t')) return { insertSpaces: false, tabSize: 1 };
 
   return { insertSpaces: true, tabSize: Math.max(indentation.length, 1) };

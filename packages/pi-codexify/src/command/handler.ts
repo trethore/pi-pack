@@ -36,7 +36,10 @@ async function dispatchCommand(
       return;
     }
     case 'usage': {
-      if (!config.usage) return notifyDisabled(ctx, 'usage');
+      if (!config.usage) {
+        notifyDisabled(ctx, 'usage');
+        return;
+      }
       await notifyUsage(ctx);
       return;
     }
@@ -50,8 +53,9 @@ async function dispatchCommand(
       await handleControlCommand(command, parts[1], ctx, config);
       return;
     }
-    default: {
+    case undefined: {
       ctx.ui.notify(buildUsage(config), 'warning');
+      return;
     }
   }
 }
@@ -66,14 +70,18 @@ async function handleReset(
   ctx: ExtensionCommandContext,
   config: PiCodexifyConfig
 ): Promise<void> {
-  if (!config.reset) return notifyDisabled(ctx, 'reset');
+  if (!config.reset) {
+    notifyDisabled(ctx, 'reset');
+    return;
+  }
   const parsedAction = parseResetAction(action);
   if (!parsedAction) {
     ctx.ui.notify('Usage: /codexify reset use|details', 'warning');
     return;
   }
 
-  await (parsedAction === 'use' ? handleUseReset(ctx) : handleResetDetails(ctx));
+  const handler = parsedAction === 'use' ? handleUseReset : handleResetDetails;
+  await handler(ctx);
 }
 
 function buildStatus(config: PiCodexifyConfig, ctx: ExtensionCommandContext): string {

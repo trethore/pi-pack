@@ -5,8 +5,6 @@ import type { CodexReasoningSummary, CodexServiceTier, CodexVerbosity, ControlsC
 type SupportedApi = 'openai-responses' | 'openai-codex-responses' | 'azure-openai-responses';
 type MutablePayload = Record<string, unknown>;
 
-const SUPPORTED_APIS = new Set<SupportedApi>(['openai-responses', 'openai-codex-responses', 'azure-openai-responses']);
-
 export function applyControls(
   payload: unknown,
   controls: ControlsConfig,
@@ -25,7 +23,11 @@ export function applyControls(
 }
 
 export function supportsControls(model: Pick<Model<Api>, 'api'> | undefined): boolean {
-  return model !== undefined && SUPPORTED_APIS.has(model.api as SupportedApi);
+  return model !== undefined && isSupportedApi(model.api);
+}
+
+function isSupportedApi(api: Api): api is SupportedApi {
+  return api === 'openai-responses' || api === 'openai-codex-responses' || api === 'azure-openai-responses';
 }
 
 export function supportsReasoningSummary(model: Pick<Model<Api>, 'api' | 'reasoning'> | undefined): boolean {

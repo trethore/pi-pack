@@ -71,7 +71,9 @@ describe('registerBashCommands', () => {
     // Arrange
     const harness = createHarness();
     const situationalConfig = config();
-    situationalConfig.commands[0].prompt = undefined;
+    const situationalCommand = situationalConfig.commands[0];
+    if (!situationalCommand) throw new Error('Expected a configured command.');
+    delete situationalCommand.prompt;
     registerBashCommands(harness.pi, situationalConfig);
 
     // Act

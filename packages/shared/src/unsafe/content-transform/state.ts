@@ -78,8 +78,10 @@ export function hasPiContentTransformers(): boolean {
 export function getResourceLoaderTransformContext(
   resourceLoader: ResourceLoaderContext | undefined
 ): Pick<PiContentTransformInput, 'workspaceCwd' | 'projectTrusted'> {
+  const workspaceCwd = resourceLoader?.cwd;
+  const projectTrusted = resourceLoader?.settingsManager?.isProjectTrusted();
   return {
-    workspaceCwd: resourceLoader?.cwd,
-    projectTrusted: resourceLoader?.settingsManager?.isProjectTrusted(),
+    ...(workspaceCwd === undefined ? {} : { workspaceCwd }),
+    ...(projectTrusted === undefined ? {} : { projectTrusted }),
   };
 }

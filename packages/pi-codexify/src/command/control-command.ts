@@ -78,11 +78,13 @@ export async function handleControlCommand(
 function applyControlUpdate(controls: ControlsConfig, update: ControlUpdate): void {
   switch (update.field) {
     case 'verbosity': {
-      controls.verbosity = update.value === 'off' ? undefined : update.value;
+      if (update.value === 'off') delete controls.verbosity;
+      else controls.verbosity = update.value;
       return;
     }
     case 'reasoningSummary': {
-      controls.reasoningSummary = update.value === 'off' ? undefined : update.value;
+      if (update.value === 'off') delete controls.reasoningSummary;
+      else controls.reasoningSummary = update.value;
       return;
     }
     case 'serviceTier': {

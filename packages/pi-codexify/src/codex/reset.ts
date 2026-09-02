@@ -156,11 +156,12 @@ function credits(body: unknown): ResetCredit[] {
   return body.credits.flatMap((value) => {
     if (!isPlainObject(value) || typeof value.id !== 'string' || !value.id.trim()) return [];
     const status = typeof value.status === 'string' ? value.status.toLowerCase() : undefined;
+    const expiresAt = isoDate(value.expires_at);
     return [
       {
         id: value.id.trim(),
         used: status === 'redeemed' || status === 'used' || status === 'consumed' || value.redeemed_at != null,
-        expiresAt: isoDate(value.expires_at),
+        ...(expiresAt === undefined ? {} : { expiresAt }),
       },
     ];
   });
@@ -195,10 +196,12 @@ function shortenId(id: string): string {
 
 function markdownTable(rows: string[][]): string[] {
   const escaped = rows.map((row) => row.map((cell) => cell.replaceAll('|', String.raw`\|`)));
-  const widths = escaped[0].map((_, index) => Math.max(3, ...escaped.map((row) => row[index].length)));
-  const formatRow = (row: string[]) => `| ${row.map((cell, index) => cell.padEnd(widths[index])).join(' | ')} |`;
+  const header = escaped[0];
+  if (!header) return [];
+  const widths = header.map((_, index) => Math.max(3, ...escaped.map((row) => row[index]?.length ?? 0)));
+  const formatRow = (row: string[]) => `| ${row.map((cell, index) => cell.padEnd(widths[index] ?? 3)).join(' | ')} |`;
   return [
-    formatRow(escaped[0]),
+    formatRow(header),
     `| ${widths.map((width) => '-'.repeat(width)).join(' | ')} |`,
     ...escaped.slice(1).map((row) => formatRow(row)),
   ];

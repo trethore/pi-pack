@@ -81,7 +81,7 @@ export function formatToolCall(
 }
 
 function renderText(context: TextRenderContext, value: string): Text {
-  const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
+  const text = context.lastComponent instanceof Text ? context.lastComponent : new Text('', 0, 0);
   text.setText(value);
   return text;
 }

@@ -70,7 +70,8 @@ export function createApplyPatchToolDefinition(
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
         const cwd = options.cwd ?? ctx.cwd;
-        const result = await runner({ cwd, patch: params.patch, workdir: normalizeWorkdir(params.workdir) });
+        const workdir = normalizeWorkdir(params.workdir);
+        const result = await runner({ cwd, patch: params.patch, ...(workdir === undefined ? {} : { workdir }) });
         return {
           content: [
             {
@@ -134,7 +135,7 @@ function renderApplyPatchResult(
   theme: Theme,
   context: TextRenderContext
 ): Text {
-  const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
+  const text = context.lastComponent instanceof Text ? context.lastComponent : new Text('', 0, 0);
   text.setText(formatTextToolResult(result, options, theme));
   return text;
 }

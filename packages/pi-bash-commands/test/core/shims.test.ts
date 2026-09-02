@@ -138,7 +138,9 @@ function spawnCommand(
       stderr += chunk;
     });
     child.on('error', reject);
-    child.on('close', (code) => resolve({ code, stdout, stderr }));
+    child.on('close', (code) => {
+      resolve({ code, stdout, stderr });
+    });
     child.stdin.end(stdin);
   });
 }
