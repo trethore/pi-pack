@@ -8,10 +8,12 @@ The project is organized as follows:
 
 ```text
 packages/
-  pi-cut/
+  pi-bash-commands/
   pi-codexify/
-  pi-script-template/
+  pi-cut/
   pi-handy/
+  pi-notify/
+  pi-script-template/
   pi-toolbox/
   pi-toolmask/
   shared/                      # Shared utilities and types
