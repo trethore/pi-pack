@@ -1,0 +1,29 @@
+{
+  "name": "@trethore/pi-notify",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Terminal desktop notifications when Pi is ready for input.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "notifications"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.84.4 <1"
+  },
+  "dependencies": {
+    "@trethore/shared": "*"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-notify/*": "./src/*",
+    "#test/*": "./test/*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

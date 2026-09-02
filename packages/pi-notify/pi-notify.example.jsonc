@@ -1,0 +1,17 @@
+{
+  // Enable pi-notify.
+  "enabled": true,
+
+  // Notification text shown when Pi is ready for input.
+  "message": "Ready for input",
+
+  // Minimum number of seconds between notifications. Use 0 to disable the cooldown.
+  "cooldown": 90,
+
+  // Ask OSC 99 terminals to suppress notifications while the terminal is focused.
+  "unfocusedOnly": false,
+
+  // Optional protocol override: "osc777", "osc99", or "osc9".
+  // Keep "auto" to detect the protocol from the terminal environment.
+  "protocol": "auto"
+}
