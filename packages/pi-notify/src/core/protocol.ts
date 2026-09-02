@@ -78,6 +78,11 @@ export function getNotificationProtocolPrettyName(protocol: NotificationProtocol
   return NOTIFICATION_PROTOCOL_PRETTY_NAMES[protocol];
 }
 
+export function passthroughTmux(sequence: string, environment: NodeJS.ProcessEnv = process.env): string {
+  if (!environment.TMUX) return sequence;
+  return `${ESCAPE}Ptmux;${sequence.replaceAll(ESCAPE, ESCAPE.repeat(2))}${ST}`;
+}
+
 function buildOsc777Sequence(message: string): string {
   return `${OSC}777;notify;Pi;${sanitizeLegacyPayload(message)}${ST}`;
 }

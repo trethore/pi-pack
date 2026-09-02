@@ -84,6 +84,22 @@ describe('notification feature', () => {
     expect(harness.sequences[0]).toBe('\u001B]9;Ready for input\u001B\\');
   });
 
+  it('passes notifications through tmux with doubled escapes', () => {
+    // Arrange
+    const harness = createHarness({
+      config: { protocol: 'osc99' },
+      environment: { TMUX: '/tmp/tmux/default,1,0' },
+    });
+
+    // Act
+    harness.emitAgentSettled('tui');
+
+    // Assert
+    expect(harness.sequences[0]?.startsWith('\u001BPtmux;\u001B\u001B]99;')).toBe(true);
+    expect(harness.sequences[0]).toContain('\u001B\u001B\\\u001B\u001B]99;');
+    expect(harness.sequences[0]?.endsWith('\u001B\u001B\\\u001B\\')).toBe(true);
+  });
+
   it('warns when unfocusedOnly is unavailable for the resolved protocol', () => {
     // Arrange
     const harness = createHarness({ config: { unfocusedOnly: true }, environment: { TERM_PROGRAM: 'ghostty' } });

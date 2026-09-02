@@ -5,6 +5,7 @@ import {
   detectNotificationProtocol,
   getNotificationProtocolPrettyName,
   NOTIFICATION_PROTOCOL,
+  passthroughTmux,
   resolveNotificationProtocol,
 } from '#pi-notify/core/protocol.js';
 
@@ -83,6 +84,20 @@ describe('notification protocol', () => {
 
     expect(payloads).toHaveLength(2);
     expect(decodedMessage).toBe(message);
+  });
+
+  it('passes terminal sequences through tmux with doubled escapes', () => {
+    const sequence = '\u001B]99;payload\u001B\\';
+
+    expect(passthroughTmux(sequence, { TMUX: '/tmp/tmux/default,1,0' })).toBe(
+      '\u001BPtmux;\u001B\u001B]99;payload\u001B\u001B\\\u001B\\'
+    );
+  });
+
+  it('leaves terminal sequences unchanged outside tmux', () => {
+    const sequence = '\u001B]99;payload\u001B\\';
+
+    expect(passthroughTmux(sequence, {})).toBe(sequence);
   });
 });
 

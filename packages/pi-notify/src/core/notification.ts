@@ -7,6 +7,7 @@ import {
   buildNotificationSequence,
   getNotificationProtocolPrettyName,
   NOTIFICATION_PROTOCOL,
+  passthroughTmux,
   resolveNotificationProtocol,
 } from '#src/core/protocol.js';
 
@@ -58,7 +59,7 @@ export function registerNotificationFeature(
       message: config.message,
       unfocusedOnly: config.unfocusedOnly,
     });
-    write(sequence);
+    write(passthroughTmux(sequence, environment));
     lastNotificationTime = currentTime;
   });
 }
