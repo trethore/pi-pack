@@ -8,7 +8,6 @@ The project is organized as follows:
 
 ```text
 packages/
-  pi-bash-commands/
   pi-codexify/
   pi-cut/
   pi-handy/
