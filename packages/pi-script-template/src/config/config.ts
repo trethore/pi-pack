@@ -6,7 +6,6 @@ import {
   positiveIntegerSchema,
   surfaceNames,
   type LoadedConfig,
-  type PartialPiScriptTemplateConfig,
   type PiScriptTemplateConfig,
 } from '#src/config/schema.js';
 
@@ -33,7 +32,7 @@ function cloneDefaultConfig(): PiScriptTemplateConfig {
 
 function mergeConfig(
   target: PiScriptTemplateConfig,
-  source: PartialPiScriptTemplateConfig,
+  source: Record<string, unknown>,
   configPath: string,
   errors: string[]
 ) {

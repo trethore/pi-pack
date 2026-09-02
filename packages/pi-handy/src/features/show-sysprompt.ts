@@ -1,7 +1,7 @@
 import type { ExtensionAPI, Theme, ToolInfo } from '@earendil-works/pi-coding-agent';
 import { Box, Text } from '@earendil-works/pi-tui';
+import { isPlainObject } from '@trethore/shared/object.js';
 import { formatKeybindingText } from '@trethore/shared/ui/keybindings.js';
-import type { TArray, TEnum, TLiteral, TObject, TSchema, TSchemaOptions, TUnion } from 'typebox';
 
 const SYSTEM_PROMPT_ENTRY_TYPE = 'pi-handy-system-prompt';
 const TOOL_SCHEMAS_ENTRY_TYPE = 'pi-handy-tool-schemas';
@@ -9,8 +9,6 @@ const SHOW_MODES = ['prompt', 'tools'] as const;
 
 type NotificationType = 'info' | 'warning' | 'error' | 'success';
 type ShowMode = (typeof SHOW_MODES)[number];
-type DescribedSchema = TSchema & Pick<TSchemaOptions, 'description'>;
-type ToolParameters = TObject<Record<string, DescribedSchema>> & { required?: string[] };
 
 export function registerShowSyspromptCommand(pi: ExtensionAPI) {
   pi.registerEntryRenderer<string>(SYSTEM_PROMPT_ENTRY_TYPE, (entry, { expanded }, theme) => {
@@ -26,8 +24,9 @@ export function registerShowSyspromptCommand(pi: ExtensionAPI) {
   pi.registerCommand('showsysprompt', {
     description: 'Show the current system prompt and active tools',
     getArgumentCompletions: (prefix) => getShowSyspromptArgumentCompletions(prefix),
-    handler: async (args, ctx) => {
+    handler: (args, ctx) => {
       handleShowSyspromptCommand(pi, args, ctx);
+      return Promise.resolve();
     },
   });
 }
@@ -71,9 +70,13 @@ export function formatToolSchemas(tools: ToolInfo[]): string {
 
   return tools
     .map((tool) => {
-      const parameters = tool.parameters as Partial<ToolParameters>;
-      const properties = parameters.properties ?? {};
-      const required = parameters.required ? new Set(parameters.required) : new Set<string>();
+      const parameters = isPlainObject(tool.parameters) ? tool.parameters : {};
+      const properties = isPlainObject(parameters.properties) ? parameters.properties : {};
+      const required = new Set(
+        Array.isArray(parameters.required)
+          ? parameters.required.filter((value): value is string => typeof value === 'string')
+          : []
+      );
       const parameterNames = Object.keys(properties);
       const header = `${tool.name} - ${tool.description}`;
       if (parameterNames.length === 0) return `${header}\n  (no parameters)`;
@@ -83,7 +86,8 @@ export function formatToolSchemas(tools: ToolInfo[]): string {
           const property = properties[name];
           const presence = required.has(name) ? 'required' : 'optional';
           const type = formatSchemaType(property);
-          const description = property?.description ? ` - ${property.description}` : '';
+          const description =
+            isPlainObject(property) && typeof property.description === 'string' ? ` - ${property.description}` : '';
           return `  ${name}: ${type} [${presence}]${description}`;
         })
         .join('\n');
@@ -101,7 +105,7 @@ function parseShowModes(args: string): ShowMode[] | undefined {
 }
 
 function isShowMode(value: string): value is ShowMode {
-  return SHOW_MODES.includes(value as ShowMode);
+  return value === 'prompt' || value === 'tools';
 }
 
 function getActiveToolSchemas(pi: Pick<ExtensionAPI, 'getActiveTools' | 'getAllTools'>): string {
@@ -136,18 +140,24 @@ function countLines(content: string) {
   return content.length === 0 ? 0 : content.split('\n').length;
 }
 
-function formatSchemaType(schema: TSchema | undefined): string {
-  if (!schema) return 'any';
-  if ('const' in schema) return JSON.stringify((schema as TLiteral).const);
-  if ('enum' in schema) return (schema as TEnum).enum.map((value) => JSON.stringify(value)).join(' | ');
-  if ('anyOf' in schema) return (schema as TUnion).anyOf.map((item) => formatSchemaType(item)).join(' | ');
-  if ('oneOf' in schema) {
-    return (schema as TSchema & { oneOf: TSchema[] }).oneOf.map((item) => formatSchemaType(item)).join(' | ');
-  }
-  if ('items' in schema) return `${formatSchemaType((schema as TArray).items)}[]`;
-  if ('type' in schema) {
-    const type = (schema as TSchema & { type: string | string[] }).type;
-    return Array.isArray(type) ? type.join(' | ') : type;
-  }
+function formatSchemaType(schema: unknown): string {
+  if (!isPlainObject(schema)) return 'any';
+  if (Object.hasOwn(schema, 'const')) return formatSchemaLiteral(schema.const);
+  if (Array.isArray(schema.enum)) return schema.enum.map((value) => formatSchemaLiteral(value)).join(' | ');
+  if (Array.isArray(schema.anyOf)) return schema.anyOf.map((item) => formatSchemaType(item)).join(' | ');
+  if (Array.isArray(schema.oneOf)) return schema.oneOf.map((item) => formatSchemaType(item)).join(' | ');
+  if (Object.hasOwn(schema, 'items')) return `${formatSchemaType(schema.items)}[]`;
+  const type = formatSchemaTypeProperty(schema.type);
+  if (type !== undefined) return type;
   return 'any';
+}
+
+function formatSchemaLiteral(value: unknown): string {
+  return value === undefined ? 'undefined' : JSON.stringify(value);
+}
+
+function formatSchemaTypeProperty(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) return value.join(' | ');
+  return undefined;
 }

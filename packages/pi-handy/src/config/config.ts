@@ -1,7 +1,7 @@
 import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/shared/config/schema.js';
 import { getHandyConfigPaths } from '#src/config/locations.js';
-import { defaultConfig, type LoadedConfig, type PartialPiHandyConfig, type PiHandyConfig } from '#src/config/schema.js';
+import { defaultConfig, type LoadedConfig, type PiHandyConfig } from '#src/config/schema.js';
 
 type EnabledFeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
 
@@ -28,7 +28,7 @@ function cloneDefaultConfig(): PiHandyConfig {
   };
 }
 
-function mergeConfig(target: PiHandyConfig, source: PartialPiHandyConfig, configPath: string, errors: string[]) {
+function mergeConfig(target: PiHandyConfig, source: Record<string, unknown>, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   for (const key of ENABLED_FEATURE_CONFIG_KEYS) {

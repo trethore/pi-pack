@@ -3,7 +3,6 @@ import { hasFields, mergeField, type ConfigFieldMerger } from '#src/config/merge
 import type {
   LineTruncationConfig,
   NewLinesFoldingConfig,
-  PartialPiCutConfig,
   PartialRepetitionFoldingConfig,
   PiCutConfig,
   TerminalCleanupConfig,
@@ -17,7 +16,7 @@ import { booleanSchema, toolSelectorSchema } from '#src/config/validation.js';
 
 export function mergeToolOverrides(
   target: PiCutConfig,
-  source: PartialPiCutConfig,
+  source: Record<string, unknown>,
   configPath: string,
   errors: string[]
 ) {

@@ -7,7 +7,6 @@ import {
   serviceTierValues,
   verbosityValues,
   type LoadedConfig,
-  type PartialPiCodexifyConfig,
   type PiCodexifyConfig,
 } from '#src/config/types.js';
 
@@ -33,7 +32,7 @@ export function loadConfig(cwd: string, options: { includeProject?: boolean } = 
   });
 }
 
-function mergeConfig(target: PiCodexifyConfig, source: PartialPiCodexifyConfig, configPath: string, errors: string[]) {
+function mergeConfig(target: PiCodexifyConfig, source: Record<string, unknown>, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
   mergeField(source, 'usage', 'usage', booleanSchema, configPath, errors, (value) => {
     target.usage = value;

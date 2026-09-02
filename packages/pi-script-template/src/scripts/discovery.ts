@@ -43,7 +43,7 @@ function discoverDirectory(
   const scripts = new Map<string, TemplateScript>();
   const duplicateNames = new Set<string>();
 
-  let entries: Dirent<string>[];
+  let entries: Dirent[];
   try {
     entries = readdirSync(directory, { withFileTypes: true, encoding: 'utf8' });
   } catch (error) {

@@ -92,8 +92,11 @@ describe('createBashCommands', () => {
         defaultMaxCharsPerMatch: 500,
       })
     );
-    expect(findHelp).toBe(`${findCommand.prompt?.usage}\n`);
-    expect(grepHelp).toBe(`${grepCommand.prompt?.usage}\n`);
+    const findUsage = findCommand.prompt?.usage;
+    const grepUsage = grepCommand.prompt?.usage;
+    if (findUsage === undefined || grepUsage === undefined) throw new Error('Expected command usage.');
+    expect(findHelp).toBe(`${findUsage}\n`);
+    expect(grepHelp).toBe(`${grepUsage}\n`);
   });
 });
 

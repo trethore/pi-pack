@@ -9,33 +9,33 @@ export interface LoadedExtensionConfig<TConfig> {
   errors: string[];
 }
 
-interface LoadJsoncExtensionConfigOptions<TConfig, TPartialConfig extends Record<string, unknown>> {
+interface LoadJsoncExtensionConfigOptions<TConfig> {
   cwd: string;
   extensionName: string;
   getConfigPaths(cwd: string): string[];
   createDefaultConfig(): TConfig;
-  mergeConfig(target: TConfig, source: TPartialConfig, configPath: string, errors: string[]): void;
+  mergeConfig(target: TConfig, source: Record<string, unknown>, configPath: string, errors: string[]): void;
 }
 
-export function loadJsoncExtensionConfig<TConfig, TPartialConfig extends Record<string, unknown>>(
-  options: LoadJsoncExtensionConfigOptions<TConfig, TPartialConfig>
+export function loadJsoncExtensionConfig<TConfig>(
+  options: LoadJsoncExtensionConfigOptions<TConfig>
 ): LoadedExtensionConfig<TConfig> {
   const errors: string[] = [];
   const config = options.createDefaultConfig();
 
   for (const configPath of options.getConfigPaths(options.cwd)) {
-    const parsedConfig = readJsoncConfigFile<TPartialConfig>(configPath, options.extensionName, errors);
+    const parsedConfig = readJsoncConfigFile(configPath, options.extensionName, errors);
     if (parsedConfig) options.mergeConfig(config, parsedConfig, configPath, errors);
   }
 
   return { config, errors };
 }
 
-export function readJsoncConfigFile<T extends Record<string, unknown>>(
+export function readJsoncConfigFile(
   configPath: string,
   extensionName: string,
   errors: string[]
-): T | undefined {
+): Record<string, unknown> | undefined {
   let contents: string;
   try {
     contents = readFileSync(configPath, 'utf8');
@@ -61,7 +61,7 @@ export function readJsoncConfigFile<T extends Record<string, unknown>>(
     return undefined;
   }
 
-  return parsed as T;
+  return parsed;
 }
 
 function formatParseErrors(extensionName: string, configPath: string, parseErrors: ParseError[]): string {

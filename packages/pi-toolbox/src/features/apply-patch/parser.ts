@@ -66,7 +66,7 @@ export function parsePatch(patch: string): ApplyPatchArgs {
   const hunks: Hunk[] = [];
 
   if (remainingLines[0]?.trim().startsWith(ENVIRONMENT_ID_MARKER) === true) {
-    validateEnvironmentId(remainingLines[0] ?? '');
+    validateEnvironmentId(remainingLines[0]);
     remainingLines = remainingLines.slice(1);
     lineNumber += 1;
     if (remainingLines[0]?.trim().startsWith(ENVIRONMENT_ID_MARKER) === true) {

@@ -12,7 +12,7 @@ import { splitArgs } from '#src/command/handler.js';
 const verbosityCompletions = [...verbosityValues, 'off'] as const;
 const summaryCompletions = [...reasoningSummaryValues, 'off'] as const;
 
-export async function getCompletions(prefix: string, config: PiCodexifyConfig): Promise<AutocompleteItem[] | null> {
+export function getCompletions(prefix: string, config: PiCodexifyConfig): AutocompleteItem[] | null {
   if (!config.enabled) return null;
 
   const trailingWhitespace = /\s$/.test(prefix);

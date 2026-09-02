@@ -28,6 +28,7 @@ const UNICODE_PUNCTUATION_REPLACEMENTS: Readonly<Record<string, string>> = {
   '\u205F': ' ',
   '\u3000': ' ',
 };
+const UNICODE_PUNCTUATION_PATTERN = /[\u00A0\u2002-\u200A\u2010-\u2015\u2018-\u201F\u202F\u205F\u2212\u3000]/gu;
 
 export function seekSequence(
   lines: readonly string[],
@@ -49,7 +50,9 @@ export function seekSequence(
 }
 
 function normalizeUnicodePunctuation(value: string): string {
-  return [...value.trim()].map((character) => UNICODE_PUNCTUATION_REPLACEMENTS[character] ?? character).join('');
+  return value
+    .trim()
+    .replaceAll(UNICODE_PUNCTUATION_PATTERN, (character) => UNICODE_PUNCTUATION_REPLACEMENTS[character] ?? character);
 }
 
 function findMatch(

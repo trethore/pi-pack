@@ -21,7 +21,9 @@ describe('handleControlCommand', () => {
   beforeEach(() => {
     configUpdate.resolveScope.mockReset().mockReturnValue('global');
     configUpdate.update.mockReset().mockImplementation(async () => {});
-    configUpdate.buildMessage.mockReset().mockImplementation((label, value, scope) => `${label}:${value}:${scope}`);
+    configUpdate.buildMessage
+      .mockReset()
+      .mockImplementation((label, value, scope) => [label, value, scope].map(String).join(':'));
   });
 
   it('warns when controls are disabled', async () => {

@@ -277,10 +277,12 @@ function expectResetCreditListRequest(fetchMock: ReturnType<typeof vi.fn>, acces
 }
 
 function expectLocalIsoDate(actual: string | undefined, source: string): void {
+  if (actual === undefined) throw new Error('Expected a local ISO date.');
   expect(actual).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}$/);
-  expect(new Date(actual!).toISOString()).toBe(source);
+  expect(new Date(actual).toISOString()).toBe(source);
 
-  const offsetMatch = actual!.match(/([+-])(\d{2}):(\d{2})$/)!;
+  const offsetMatch = actual.match(/([+-])(\d{2}):(\d{2})$/);
+  if (!offsetMatch) throw new Error('Expected a timezone offset.');
   const offsetMinutes = (Number(offsetMatch[2]) * 60 + Number(offsetMatch[3])) * (offsetMatch[1] === '+' ? 1 : -1);
   expect(offsetMinutes).toBe(-new Date(source).getTimezoneOffset());
 }

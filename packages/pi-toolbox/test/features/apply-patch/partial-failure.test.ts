@@ -24,7 +24,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   };
 });
 
-import { ApplyPatchFailure, applyPatch } from '#pi-toolbox/features/apply-patch/apply.js';
+import { applyPatch } from '#pi-toolbox/features/apply-patch/apply.js';
 import { lines } from '#test/utils/lines.js';
 import { makeTempDir } from '#test/utils/tool-test-helpers.js';
 
@@ -54,8 +54,8 @@ describe('applyPatch partial failure', () => {
     await expect(operation).rejects.toMatchObject({
       message: `Failed to write file ${fsMockState.failedWritePath}: simulated write failure`,
       completed: { added: ['first.txt'], modified: [], deleted: [] },
-      hunk: expect.objectContaining({ type: 'add', path: 'second.txt' }),
-    } satisfies Partial<ApplyPatchFailure>);
+      hunk: { type: 'add', path: 'second.txt' },
+    });
     expect(existsSync(path.join(cwd, 'first.txt'))).toBe(true);
     expect(existsSync(path.join(cwd, 'second.txt'))).toBe(false);
   });
@@ -83,9 +83,9 @@ describe('applyPatch partial failure', () => {
     // Assert
     await expect(operation).rejects.toMatchObject({
       completed: { added: [], modified: [], deleted: [] },
-      hunk: expect.objectContaining({ type: 'update', path: 'old.txt', movePath: 'new.txt' }),
+      hunk: { type: 'update', path: 'old.txt', movePath: 'new.txt' },
       writtenMoveDestination: destinationPath,
-    } satisfies Partial<ApplyPatchFailure>);
+    });
     expect(readFileSync(sourcePath, 'utf8')).toBe('old\n');
     expect(readFileSync(destinationPath, 'utf8')).toBe('new\n');
   });

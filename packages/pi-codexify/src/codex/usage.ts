@@ -1,5 +1,6 @@
 import type { ExtensionCommandContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/shared/error.js';
+import { isPlainObject } from '@trethore/shared/object.js';
 import { backendUrl } from '#src/codex/backend.js';
 import {
   CODEX_PROVIDER,
@@ -54,7 +55,41 @@ async function fetchUsage(ctx: CodexCredentialContext): Promise<UsageResponse> {
   });
 
   if (!response.ok) throw new Error(`Usage request failed: ${response.status}`);
-  return (await response.json()) as UsageResponse;
+  const data: unknown = await response.json();
+  if (!isUsageResponse(data)) throw new TypeError('Usage response has an invalid structure.');
+  return data;
+}
+
+function isUsageResponse(value: unknown): value is UsageResponse {
+  if (!isPlainObject(value)) return false;
+  return value.rate_limit === undefined || value.rate_limit === null || isRateLimitBucket(value.rate_limit);
+}
+
+function isRateLimitBucket(value: unknown): value is RateLimitBucket {
+  return (
+    isPlainObject(value) &&
+    isOptionalNullableWindow(value.primary_window) &&
+    isOptionalNullableWindow(value.secondary_window) &&
+    (value.allowed === undefined || typeof value.allowed === 'boolean') &&
+    (value.limit_reached === undefined || typeof value.limit_reached === 'boolean')
+  );
+}
+
+function isOptionalNullableWindow(value: unknown): value is UsageWindow | null | undefined {
+  return value === undefined || value === null || isUsageWindow(value);
+}
+
+function isUsageWindow(value: unknown): value is UsageWindow {
+  return (
+    isPlainObject(value) &&
+    isOptionalNullableNumber(value.used_percent) &&
+    isOptionalNullableNumber(value.reset_after_seconds) &&
+    isOptionalNullableNumber(value.reset_at)
+  );
+}
+
+function isOptionalNullableNumber(value: unknown): value is number | null | undefined {
+  return value === undefined || value === null || typeof value === 'number';
 }
 
 function requireField(value: string | undefined, label: string): string {

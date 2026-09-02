@@ -1,12 +1,7 @@
 import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/shared/config/schema.js';
 import { getToolboxConfigPaths } from '#src/config/locations.js';
-import {
-  defaultConfig,
-  type LoadedConfig,
-  type PartialPiToolboxConfig,
-  type PiToolboxConfig,
-} from '#src/config/schema.js';
+import { defaultConfig, type LoadedConfig, type PiToolboxConfig } from '#src/config/schema.js';
 
 const EXTENSION_NAME = 'pi-toolbox';
 const { mergeEnabledField, mergeSection } = createConfigMerger(EXTENSION_NAME);
@@ -28,7 +23,7 @@ function cloneDefaultConfig(): PiToolboxConfig {
   };
 }
 
-function mergeConfig(target: PiToolboxConfig, source: PartialPiToolboxConfig, configPath: string, errors: string[]) {
+function mergeConfig(target: PiToolboxConfig, source: Record<string, unknown>, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);
 
   mergeSection(source, 'applyPatch', configPath, errors, (section, sectionName) => {

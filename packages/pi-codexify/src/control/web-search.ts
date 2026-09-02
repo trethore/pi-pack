@@ -11,7 +11,7 @@ export function applyWebSearch(payload: unknown, model: Pick<Model<Api>, 'provid
   if (!isCodexModel(model) || !isPlainObject(payload)) return payload;
   if (payload.tools !== undefined && !Array.isArray(payload.tools)) return payload;
 
-  const tools = payload.tools ?? [];
+  const tools: unknown[] = payload.tools ?? [];
   if (tools.some((tool) => isPlainObject(tool) && tool.type === 'web_search')) return payload;
 
   return { ...payload, tools: [...tools, createWebSearchTool(model)] };

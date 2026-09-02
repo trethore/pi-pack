@@ -135,7 +135,7 @@ function renderApplyPatchResult(
   theme: Theme,
   context: TextRenderContext
 ): Text {
-  const text = (context.lastComponent as Text | undefined) ?? new Text('', 0, 0);
+  const text = context.lastComponent instanceof Text ? context.lastComponent : new Text('', 0, 0);
   text.setText(formatTextToolResult(result, options, theme));
   return text;
 }

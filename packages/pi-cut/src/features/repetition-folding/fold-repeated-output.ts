@@ -130,7 +130,7 @@ function countSegmentRepeats(
 ): RepeatCountResult {
   let repeatCount = 1;
 
-  while (true) {
+  for (;;) {
     const segmentsEqual = segmentEquals(
       lines,
       startIndex,

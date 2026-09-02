@@ -34,7 +34,9 @@ function appendTransformedItems(
   transform: (text: string) => string
 ): void {
   for (let index = startIndex; index < content.length; index += 1) {
-    transformedContent.push(transformContentItem(content[index]!, transform));
+    const item = content[index];
+    if (item === undefined) continue;
+    transformedContent.push(transformContentItem(item, transform));
   }
 }
 
