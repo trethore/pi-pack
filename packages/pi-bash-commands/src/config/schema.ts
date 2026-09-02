@@ -42,12 +42,6 @@ export interface PiBashCommandsConfig {
   commands: BashCommandConfig[];
 }
 
-export type PartialPiBashCommandsConfig = Partial<{
-  enabled: unknown;
-  builtIns: unknown;
-  commands: unknown;
-}>;
-
 export type LoadedConfig = LoadedExtensionConfig<PiBashCommandsConfig>;
 
 export const defaultConfig: PiBashCommandsConfig = {

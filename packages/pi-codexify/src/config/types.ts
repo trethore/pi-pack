@@ -23,19 +23,6 @@ export interface PiCodexifyConfig {
   reset: boolean;
 }
 
-export type PartialPiCodexifyConfig = Partial<{
-  enabled: unknown;
-  controls: Partial<{
-    enabled: unknown;
-    verbosity: unknown;
-    reasoningSummary: unknown;
-    serviceTier: unknown;
-    webSearch: unknown;
-  }>;
-  usage: unknown;
-  reset: unknown;
-}>;
-
 export type LoadedConfig = LoadedExtensionConfig<PiCodexifyConfig>;
 
 export const defaultConfig: PiCodexifyConfig = {

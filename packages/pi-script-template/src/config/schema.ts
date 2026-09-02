@@ -18,15 +18,6 @@ export interface ExecutionConfig {
   maxOutputChars: number;
 }
 
-export type PartialPiScriptTemplateConfig = Partial<{
-  enabled: unknown;
-  surfaces: Partial<Record<TemplateSurface, unknown>>;
-  execution: Partial<{
-    timeoutMs: unknown;
-    maxOutputChars: unknown;
-  }>;
-}>;
-
 export type LoadedConfig = LoadedExtensionConfig<PiScriptTemplateConfig>;
 
 export const defaultConfig: PiScriptTemplateConfig = {

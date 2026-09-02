@@ -8,13 +8,6 @@ export interface PiToolboxConfig {
 
 type ApplyPatchToolConfig = EnabledConfig;
 
-export type PartialPiToolboxConfig = Partial<{
-  enabled: unknown;
-  applyPatch: Partial<{
-    enabled: unknown;
-  }>;
-}>;
-
 export type LoadedConfig = LoadedExtensionConfig<PiToolboxConfig>;
 
 export const defaultConfig: PiToolboxConfig = {

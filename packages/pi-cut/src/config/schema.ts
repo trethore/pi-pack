@@ -65,13 +65,6 @@ export interface LineTruncationConfig extends EnabledConfig {
   maxChars: number;
 }
 
-type PartialTerminalCleanupConfig = Partial<{
-  enabled: unknown;
-  stripAnsi: unknown;
-  collapseCarriageReturns: unknown;
-  trimTrailingWhitespace: unknown;
-}>;
-
 export type PartialRepetitionFoldingConfig = Partial<{
   enabled: boolean;
   minRepeats: number;
@@ -79,21 +72,6 @@ export type PartialRepetitionFoldingConfig = Partial<{
   minSavedTokens: number;
   maxComparisons: number;
   savingsMode: SavingsMode;
-}>;
-
-type PartialLineTruncationConfig = Partial<{
-  enabled: unknown;
-  maxChars: unknown;
-}>;
-
-export type PartialPiCutConfig = Partial<{
-  enabled: unknown;
-  transformErrors: unknown;
-  terminalCleanup: PartialTerminalCleanupConfig;
-  repetitionFolding: unknown;
-  newLinesFolding: unknown;
-  lineTruncation: PartialLineTruncationConfig;
-  tools: unknown;
 }>;
 
 export type LoadedConfig = LoadedExtensionConfig<PiCutConfig>;

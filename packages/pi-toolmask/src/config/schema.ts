@@ -8,13 +8,6 @@ export interface PiToolmaskConfig {
   notify: boolean;
 }
 
-export type PartialPiToolmaskConfig = Partial<{
-  enabled: unknown;
-  masks: unknown;
-  enforceBeforeAgentStart: unknown;
-  notify: unknown;
-}>;
-
 export type LoadedConfig = LoadedExtensionConfig<PiToolmaskConfig>;
 
 export const defaultConfig: PiToolmaskConfig = {

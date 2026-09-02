@@ -1,5 +1,5 @@
 import type { LoadedExtensionConfig } from '@trethore/shared/config/config-file.js';
-import type { EnabledConfig, PartialEnabledConfig } from '@trethore/shared/config/schema.js';
+import type { EnabledConfig } from '@trethore/shared/config/schema.js';
 
 export interface PiHandyConfig {
   enabled: boolean;
@@ -13,13 +13,6 @@ type ShowSyspromptCommandConfig = EnabledConfig;
 type TimeTakenFeatureConfig = EnabledConfig;
 
 type NoWebSocketCacheTtlFeatureConfig = EnabledConfig;
-
-export type PartialPiHandyConfig = Partial<{
-  enabled: unknown;
-  showSysprompt: PartialEnabledConfig;
-  timeTaken: PartialEnabledConfig;
-  noWebsocketCacheTtl: PartialEnabledConfig;
-}>;
 
 export type LoadedConfig = LoadedExtensionConfig<PiHandyConfig>;
 
