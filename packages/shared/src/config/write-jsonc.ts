@@ -66,6 +66,7 @@ function detectIndentation(text: string): { insertSpaces: boolean; tabSize: numb
   if (!match) return { insertSpaces: true, tabSize: 2 };
 
   const indentation = match[1];
+  if (indentation === undefined) return { insertSpaces: true, tabSize: 2 };
   if (indentation.includes('\t')) return { insertSpaces: false, tabSize: 1 };
 
   return { insertSpaces: true, tabSize: Math.max(indentation.length, 1) };

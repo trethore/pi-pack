@@ -22,7 +22,7 @@ export interface ApplyPatchResult {
 export class ApplyPatchFailure extends Error {
   readonly completed: ApplyPatchResult;
   readonly hunk: Hunk;
-  readonly writtenMoveDestination?: string;
+  readonly writtenMoveDestination: string | undefined;
 
   constructor(
     completed: ApplyPatchResult,
@@ -115,8 +115,9 @@ async function applyHunks(hunks: readonly Hunk[], cwd: string): Promise<ApplyPat
         summary.modified.push(hunkDisplayPath(hunk));
       }
     } catch (error) {
+      const writtenMoveDestination = error instanceof MoveSourceRemovalError ? error.writtenMoveDestination : undefined;
       throw new ApplyPatchFailure(summary, hunk, error, {
-        writtenMoveDestination: error instanceof MoveSourceRemovalError ? error.writtenMoveDestination : undefined,
+        ...(writtenMoveDestination === undefined ? {} : { writtenMoveDestination }),
       });
     }
   }

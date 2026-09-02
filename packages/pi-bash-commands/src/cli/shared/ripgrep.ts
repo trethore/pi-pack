@@ -78,7 +78,7 @@ export async function runFind(options: RunFindOptions): Promise<FindResult> {
     args: [
       '--files',
       ...formatRipgrepSearchArgs({
-        depth: options.depth,
+        ...(options.depth === undefined ? {} : { depth: options.depth }),
         globs: options.patterns,
         noIgnore: options.noIgnore,
         paths: options.paths,
@@ -137,7 +137,7 @@ function buildGrepArgs(options: RunGrepOptions): string[] {
     'never',
     ...(options.limitPerFile === undefined ? [] : ['--max-count', String(options.limitPerFile + 1)]),
     ...formatRipgrepSearchFilterArgs({
-      depth: options.depth,
+      ...(options.depth === undefined ? {} : { depth: options.depth }),
       globs: options.globs,
       noIgnore: options.noIgnore,
       visibleOnly: options.visibleOnly,

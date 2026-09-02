@@ -53,9 +53,10 @@ export function readFindCliDefaults(env: NodeJS.ProcessEnv): FindCliDefaults {
 }
 
 export function readGrepCliDefaults(env: NodeJS.ProcessEnv): GrepCliDefaults {
+  const defaultLimitPerFile = readOptionalInteger(env[GREP_DEFAULT_LIMIT_PER_FILE_ENV], LIMIT_RANGE);
   return {
     defaultLimit: readInteger(env[GREP_DEFAULT_LIMIT_ENV], DEFAULT_GREP_CLI_DEFAULTS.defaultLimit, LIMIT_RANGE),
-    defaultLimitPerFile: readOptionalInteger(env[GREP_DEFAULT_LIMIT_PER_FILE_ENV], LIMIT_RANGE),
+    ...(defaultLimitPerFile === undefined ? {} : { defaultLimitPerFile }),
     defaultMaxCharsPerMatch: readInteger(
       env[GREP_DEFAULT_MAX_CHARS_PER_MATCH_ENV],
       DEFAULT_GREP_CLI_DEFAULTS.defaultMaxCharsPerMatch,

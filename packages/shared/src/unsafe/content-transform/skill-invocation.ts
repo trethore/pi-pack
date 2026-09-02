@@ -51,9 +51,10 @@ export function installSkillInvocationContentTransform(): string[] {
     const skill = skillName
       ? this.resourceLoader?.getSkills().skills.find((entry) => entry.name === skillName)
       : undefined;
+    const name = skill?.name ?? skillName;
     return transformExpandedSkillContent(text, expanded, transformPiContent, {
-      name: skill?.name ?? skillName,
-      path: skill?.filePath,
+      ...(name === undefined ? {} : { name }),
+      ...(skill?.filePath === undefined ? {} : { path: skill.filePath }),
       ...getResourceLoaderTransformContext(this.resourceLoader),
     });
   };

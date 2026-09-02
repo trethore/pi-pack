@@ -171,10 +171,11 @@ function installPrototypeTransform<TMethod extends keyof ResourceLoaderPrototype
   if (typeof original !== 'function') return options.warning;
 
   const key = `DefaultResourceLoader.${String(options.method)}`;
-  if (options.state.installed.has(key)) return;
+  if (options.state.installed.has(key)) return undefined;
 
   options.prototype[options.method] = options.patch(original as NonNullable<typeof original>);
   options.state.installed.add(key);
+  return undefined;
 }
 
 function mapChangedValues<T>(values: T[], transform: (value: T) => T): T[] {

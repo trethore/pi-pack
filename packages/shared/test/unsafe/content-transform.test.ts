@@ -153,9 +153,9 @@ describe('shared Pi content transforms', () => {
       transform: (input) => {
         inputs.push({
           surface: input.surface,
-          path: input.path,
-          workspaceCwd: input.workspaceCwd,
-          projectTrusted: input.projectTrusted,
+          ...(input.path === undefined ? {} : { path: input.path }),
+          ...(input.workspaceCwd === undefined ? {} : { workspaceCwd: input.workspaceCwd }),
+          ...(input.projectTrusted === undefined ? {} : { projectTrusted: input.projectTrusted }),
         });
         return `[${input.surface}]${input.content}`;
       },

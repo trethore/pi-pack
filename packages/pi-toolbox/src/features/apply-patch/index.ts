@@ -70,7 +70,8 @@ export function createApplyPatchToolDefinition(
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
         const cwd = options.cwd ?? ctx.cwd;
-        const result = await runner({ cwd, patch: params.patch, workdir: normalizeWorkdir(params.workdir) });
+        const workdir = normalizeWorkdir(params.workdir);
+        const result = await runner({ cwd, patch: params.patch, ...(workdir === undefined ? {} : { workdir }) });
         return {
           content: [
             {

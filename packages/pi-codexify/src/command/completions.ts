@@ -25,7 +25,9 @@ export async function getCompletions(prefix: string, config: PiCodexifyConfig): 
 
 function directCompletions(path: string[], token: string, config: PiCodexifyConfig): AutocompleteItem[] | null {
   if (path.length !== 1) return null;
-  const command = normalizeCommand(path[0]);
+  const pathCommand = path[0];
+  if (pathCommand === undefined) return null;
+  const command = normalizeCommand(pathCommand);
   if (!command || !commandAvailable(command, config)) return null;
 
   if (command === 'verbosity') return items(path, token, verbosityCompletions);

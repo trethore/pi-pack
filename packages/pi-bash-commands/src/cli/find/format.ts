@@ -89,7 +89,9 @@ function compressNode(name: string, node: TreeNode): CompressedNode {
   let current = node;
 
   while (!current.isFile && current.children.size === 1) {
-    const [[childName, child]] = current.children;
+    const childEntry = current.children.entries().next().value;
+    if (!childEntry) break;
+    const [childName, child] = childEntry;
     label = label === '/' ? `/${childName}` : `${label}/${childName}`;
     current = child;
   }

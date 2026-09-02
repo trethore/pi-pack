@@ -38,7 +38,7 @@ export function foldRepeatedOutput(text: string, config: RepetitionFoldingConfig
       continue;
     }
 
-    foldedLines.push(context.lines[index].raw);
+    foldedLines.push(getRequiredValue(context.lines, index).raw);
     index += 1;
   }
 
@@ -64,7 +64,7 @@ interface ComparisonBudget {
 }
 
 interface CandidateSearchResult {
-  candidate?: RepetitionCandidate;
+  candidate: RepetitionCandidate | undefined;
   exhausted: boolean;
 }
 
@@ -78,8 +78,8 @@ function makeFoldingContext(lines: LineParts[]): FoldingContext {
   const nonEmptyLineOffsets = [0];
 
   for (const line of lines) {
-    const previousRawChars = rawCharOffsets.at(-1)!;
-    const previousNonEmptyLines = nonEmptyLineOffsets.at(-1)!;
+    const previousRawChars = getRequiredValue(rawCharOffsets, rawCharOffsets.length - 1);
+    const previousNonEmptyLines = getRequiredValue(nonEmptyLineOffsets, nonEmptyLineOffsets.length - 1);
 
     rawCharOffsets.push(previousRawChars + line.raw.length);
     nonEmptyLineOffsets.push(previousNonEmptyLines + (line.body.length > 0 ? 1 : 0));
@@ -155,7 +155,11 @@ function segmentEquals(
 
   for (let index = 0; index < lineCount; index += 1) {
     if (!consumeComparison(comparisonBudget)) return undefined;
-    if (lines[leftStartIndex + index].body !== lines[rightStartIndex + index].body) return false;
+    if (
+      getRequiredValue(lines, leftStartIndex + index).body !== getRequiredValue(lines, rightStartIndex + index).body
+    ) {
+      return false;
+    }
   }
 
   return true;
@@ -184,11 +188,17 @@ function makeCandidate(
 }
 
 function countRawChars(context: FoldingContext, startIndex: number, lineCount: number): number {
-  return context.rawCharOffsets[startIndex + lineCount] - context.rawCharOffsets[startIndex];
+  return (
+    getRequiredValue(context.rawCharOffsets, startIndex + lineCount) -
+    getRequiredValue(context.rawCharOffsets, startIndex)
+  );
 }
 
 function countNonEmptyLines(context: FoldingContext, startIndex: number, lineCount: number): number {
-  return context.nonEmptyLineOffsets[startIndex + lineCount] - context.nonEmptyLineOffsets[startIndex];
+  return (
+    getRequiredValue(context.nonEmptyLineOffsets, startIndex + lineCount) -
+    getRequiredValue(context.nonEmptyLineOffsets, startIndex)
+  );
 }
 
 function estimateTokens(chars: number): number {
@@ -235,14 +245,14 @@ function appendCandidate(
   candidate: RepetitionCandidate
 ): void {
   for (let segmentIndex = 0; segmentIndex < candidate.lineCount; segmentIndex += 1) {
-    target.push(lines[startIndex + segmentIndex].raw);
+    target.push(getRequiredValue(lines, startIndex + segmentIndex).raw);
   }
   target.push(candidate.marker);
 }
 
 function appendRemainingLines(target: string[], lines: LineParts[], startIndex: number): void {
   for (let index = startIndex; index < lines.length; index += 1) {
-    target.push(lines[index].raw);
+    target.push(getRequiredValue(lines, index).raw);
   }
 }
 
@@ -265,7 +275,7 @@ function countLinesUpTo(text: string, maxLines: number): number {
   return hasTrailingLine(text) ? lineCount + 1 : lineCount;
 }
 
-function isLineEnding(character: string): boolean {
+function isLineEnding(character: string | undefined): boolean {
   return character === '\r' || character === '\n';
 }
 
@@ -274,5 +284,11 @@ function isCrLfAt(text: string, index: number): boolean {
 }
 
 function hasTrailingLine(text: string): boolean {
-  return text.length > 0 && !isLineEnding(text.at(-1)!);
+  return text.length > 0 && !isLineEnding(text.at(-1));
+}
+
+function getRequiredValue<T>(values: readonly T[], index: number): T {
+  const value = values[index];
+  if (value === undefined) throw new RangeError(`Missing value at index ${index}.`);
+  return value;
 }

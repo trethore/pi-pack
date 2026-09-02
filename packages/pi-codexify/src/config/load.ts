@@ -57,7 +57,8 @@ function mergeControls(
     target.controls.webSearch = value;
   });
   mergeField(source, 'verbosity', 'controls.verbosity', verbositySchema, configPath, errors, (value) => {
-    target.controls.verbosity = value ?? undefined;
+    if (value === null) delete target.controls.verbosity;
+    else target.controls.verbosity = value;
   });
   mergeField(
     source,
@@ -67,10 +68,12 @@ function mergeControls(
     configPath,
     errors,
     (value) => {
-      target.controls.reasoningSummary = value ?? undefined;
+      if (value === null) delete target.controls.reasoningSummary;
+      else target.controls.reasoningSummary = value;
     }
   );
   mergeField(source, 'serviceTier', 'controls.serviceTier', serviceTierSchema, configPath, errors, (value) => {
-    target.controls.serviceTier = value ?? undefined;
+    if (value === null) delete target.controls.serviceTier;
+    else target.controls.serviceTier = value;
   });
 }

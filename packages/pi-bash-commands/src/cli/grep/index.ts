@@ -23,7 +23,7 @@ export function runPiGrepCli(args: readonly string[], options: RunCliOptions = {
         matches: result.matches,
         limit: parsedOptions.limit,
         paths: parsedOptions.paths,
-        limitPerFile: parsedOptions.limitPerFile,
+        ...(parsedOptions.limitPerFile === undefined ? {} : { limitPerFile: parsedOptions.limitPerFile }),
         limited: result.limited,
       });
     },

@@ -202,7 +202,10 @@ function parseUpdateFileHunk(
     throw new InvalidHunkError(`Update file hunk for path '${filePath}' is empty`, lineNumber);
   }
 
-  return { hunk: { type: 'update', path: filePath, movePath, chunks }, parsedLines };
+  return {
+    hunk: { type: 'update', path: filePath, ...(movePath === undefined ? {} : { movePath }), chunks },
+    parsedLines,
+  };
 }
 
 function parseUpdateFileChunk(

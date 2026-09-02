@@ -199,7 +199,8 @@ function parseCommands(values: unknown[], configPath: string, errors: string[]):
       continue;
     }
 
-    commands.push(parsed.data);
+    const { prompt, ...command } = parsed.data;
+    commands.push({ ...command, ...(prompt === undefined ? {} : { prompt }) });
     if (parsed.data.enabled) enabledNames.add(parsed.data.name);
   }
 
