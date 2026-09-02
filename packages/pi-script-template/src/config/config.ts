@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { booleanSchema, createConfigMerger } from '@trethore/shared/config/schema.js';
 import { getScriptTemplateConfigPaths } from '#src/config/locations.js';
 import {
@@ -11,16 +11,13 @@ import {
 
 const EXTENSION_NAME = 'pi-script-template';
 const { mergeEnabledField, mergeField, mergeSection } = createConfigMerger(EXTENSION_NAME);
-
-export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
+export const loadConfig: (cwd: string, options?: { includeProject?: boolean }) => LoadedConfig =
+  createJsoncExtensionConfigLoader<PiScriptTemplateConfig, { includeProject?: boolean }>({
     extensionName: EXTENSION_NAME,
-    getConfigPaths: (configCwd) => getScriptTemplateConfigPaths(configCwd, options),
+    getConfigPaths: (cwd, options) => getScriptTemplateConfigPaths(cwd, options),
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });
-}
 
 function cloneDefaultConfig(): PiScriptTemplateConfig {
   return {

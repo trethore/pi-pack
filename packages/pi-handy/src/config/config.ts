@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/shared/config/schema.js';
 import { getHandyConfigPaths } from '#src/config/locations.js';
 import { defaultConfig, type LoadedConfig, type PiHandyConfig } from '#src/config/schema.js';
@@ -8,16 +8,12 @@ type EnabledFeatureConfigKey = Exclude<keyof PiHandyConfig, 'enabled'>;
 const EXTENSION_NAME = 'pi-handy';
 const ENABLED_FEATURE_CONFIG_KEYS: EnabledFeatureConfigKey[] = ['showSysprompt', 'timeTaken', 'noWebsocketCacheTtl'];
 const { mergeEnabledField, mergeSection } = createConfigMerger(EXTENSION_NAME);
-
-export function loadConfig(cwd: string): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
-    extensionName: EXTENSION_NAME,
-    getConfigPaths: getHandyConfigPaths,
-    createDefaultConfig: cloneDefaultConfig,
-    mergeConfig,
-  });
-}
+export const loadConfig: (cwd: string) => LoadedConfig = createJsoncExtensionConfigLoader<PiHandyConfig>({
+  extensionName: EXTENSION_NAME,
+  getConfigPaths: getHandyConfigPaths,
+  createDefaultConfig: cloneDefaultConfig,
+  mergeConfig,
+});
 
 function cloneDefaultConfig(): PiHandyConfig {
   return {

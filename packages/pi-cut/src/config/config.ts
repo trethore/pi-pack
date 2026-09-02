@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { getCutConfigPaths } from '#src/config/locations.js';
 import { mergeEnabledField, mergeField, mergeSection } from '#src/config/merge.js';
 import { defaultConfig, type LoadedConfig, type PiCutConfig } from '#src/config/schema.js';
@@ -9,16 +9,13 @@ import { mergeTerminalCleanupFields } from '#src/config/sections/terminal-cleanu
 import { mergeToolOverrides } from '#src/config/tool-overrides.js';
 import { booleanSchema } from '#src/config/validation.js';
 const EXTENSION_NAME = 'pi-cut';
-
-export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
+export const loadConfig: (cwd: string, options?: { includeProject?: boolean }) => LoadedConfig =
+  createJsoncExtensionConfigLoader<PiCutConfig, { includeProject?: boolean }>({
     extensionName: EXTENSION_NAME,
-    getConfigPaths: (configCwd) => getCutConfigPaths(configCwd, options.includeProject),
+    getConfigPaths: (cwd, options) => getCutConfigPaths(cwd, options?.includeProject),
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });
-}
 
 function cloneDefaultConfig(): PiCutConfig {
   return {

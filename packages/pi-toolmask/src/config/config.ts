@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { booleanSchema, createConfigMerger } from '@trethore/shared/config/schema.js';
 
 import { getToolmaskConfigPaths } from '#src/config/locations.js';
@@ -6,16 +6,12 @@ import { defaultConfig, stringArraySchema, type LoadedConfig, type PiToolmaskCon
 
 const EXTENSION_NAME = 'pi-toolmask';
 const { mergeEnabledField, mergeField } = createConfigMerger(EXTENSION_NAME);
-
-export function loadConfig(cwd: string): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
-    extensionName: EXTENSION_NAME,
-    getConfigPaths: getToolmaskConfigPaths,
-    createDefaultConfig: cloneDefaultConfig,
-    mergeConfig,
-  });
-}
+export const loadConfig: (cwd: string) => LoadedConfig = createJsoncExtensionConfigLoader<PiToolmaskConfig>({
+  extensionName: EXTENSION_NAME,
+  getConfigPaths: getToolmaskConfigPaths,
+  createDefaultConfig: cloneDefaultConfig,
+  mergeConfig,
+});
 
 function cloneDefaultConfig(): PiToolmaskConfig {
   return {

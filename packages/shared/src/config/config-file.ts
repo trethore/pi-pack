@@ -17,6 +17,28 @@ interface LoadJsoncExtensionConfigOptions<TConfig> {
   mergeConfig(target: TConfig, source: Record<string, unknown>, configPath: string, errors: string[]): void;
 }
 
+interface JsoncExtensionConfigLoaderOptions<TConfig, TLoadOptions> {
+  extensionName: string;
+  getConfigPaths(cwd: string, options?: TLoadOptions): string[];
+  createDefaultConfig(): TConfig;
+  mergeConfig(target: TConfig, source: Record<string, unknown>, configPath: string, errors: string[]): void;
+}
+
+export function createJsoncExtensionConfigLoader<TConfig, TLoadOptions = never>(
+  options: JsoncExtensionConfigLoaderOptions<TConfig, TLoadOptions>
+) {
+  return (cwd: string, loadOptions?: TLoadOptions): LoadedExtensionConfig<TConfig> =>
+    loadJsoncExtensionConfig({
+      cwd,
+      extensionName: options.extensionName,
+      getConfigPaths: (configCwd) => options.getConfigPaths(configCwd, loadOptions),
+      createDefaultConfig: () => options.createDefaultConfig(),
+      mergeConfig: (target, source, configPath, errors) => {
+        options.mergeConfig(target, source, configPath, errors);
+      },
+    });
+}
+
 export function loadJsoncExtensionConfig<TConfig>(
   options: LoadJsoncExtensionConfigOptions<TConfig>
 ): LoadedExtensionConfig<TConfig> {

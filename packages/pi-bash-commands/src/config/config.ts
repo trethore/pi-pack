@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { createConfigMerger } from '@trethore/shared/config/schema.js';
 import { isPlainObject } from '@trethore/shared/object.js';
 
@@ -21,16 +21,13 @@ import { isBuiltInCommandName } from '#src/core/built-in-command-names.js';
 
 const EXTENSION_NAME = 'pi-bash-commands';
 const { mergeEnabledField, mergeField } = createConfigMerger(EXTENSION_NAME);
-
-export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
+export const loadConfig: (cwd: string, options?: { includeProject?: boolean }) => LoadedConfig =
+  createJsoncExtensionConfigLoader<PiBashCommandsConfig, { includeProject?: boolean }>({
     extensionName: EXTENSION_NAME,
-    getConfigPaths: (configCwd) => getBashCommandsConfigPaths(configCwd, options.includeProject),
+    getConfigPaths: (cwd, options) => getBashCommandsConfigPaths(cwd, options?.includeProject),
     createDefaultConfig: cloneDefaultConfig,
     mergeConfig,
   });
-}
 
 function cloneDefaultConfig(): PiBashCommandsConfig {
   return { ...defaultConfig, builtIns: createBuiltInsConfig(true), commands: [] };

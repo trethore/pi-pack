@@ -211,10 +211,7 @@ describe('loadConfig', () => {
     const loaded = await loadToolOverrideConfig({ newLinesFolding: { enabled: true, minNewLines: 3, foldTo: 2 } });
 
     // Assert
-    expect(loaded.errors).toEqual([]);
-    expect(loaded.config.tools).toHaveLength(1);
-    const override = loaded.config.tools[0];
-    if (!override) throw new Error('Expected a tool override.');
+    const override = expectOnlyToolOverride(loaded);
     expect(override.newLinesFolding).toEqual({
       enabled: true,
       minNewLines: 3,
@@ -234,10 +231,7 @@ describe('loadConfig', () => {
     });
 
     // Assert
-    expect(loaded.errors).toEqual([]);
-    expect(loaded.config.tools).toHaveLength(1);
-    const override = loaded.config.tools[0];
-    if (!override) throw new Error('Expected a tool override.');
+    const override = expectOnlyToolOverride(loaded);
     expect(override.repetitionFolding).toEqual({
       enabled: true,
       minRepeats: 5,
@@ -251,10 +245,7 @@ describe('loadConfig', () => {
     const loaded = await loadToolOverrideConfig({ transformErrors: true });
 
     // Assert
-    expect(loaded.errors).toEqual([]);
-    expect(loaded.config.tools).toHaveLength(1);
-    const override = loaded.config.tools[0];
-    if (!override) throw new Error('Expected a tool override.');
+    const override = expectOnlyToolOverride(loaded);
     expect(override.transformErrors).toBe(true);
   });
 });
@@ -277,4 +268,12 @@ async function loadProjectConfig(projectConfig: object) {
 
 async function loadToolOverrideConfig(toolConfig: object) {
   return loadProjectConfig({ tools: [{ selector: 'write', ...toolConfig }] });
+}
+
+function expectOnlyToolOverride(loaded: Awaited<ReturnType<typeof loadToolOverrideConfig>>) {
+  expect(loaded.errors).toEqual([]);
+  expect(loaded.config.tools).toHaveLength(1);
+  const [override] = loaded.config.tools;
+  if (!override) throw new Error('Expected a tool override.');
+  return override;
 }

@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { booleanSchema, createConfigMerger, defineConfigSchema, z } from '@trethore/shared/config/schema.js';
 import { getConfigPaths } from '#src/config/paths.js';
 import {
@@ -21,16 +21,13 @@ const serviceTierSchema = defineConfigSchema(
   z.enum(serviceTierValues).nullable(),
   'expected default, priority, or null'
 );
-
-export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
+export const loadConfig: (cwd: string, options?: { includeProject?: boolean }) => LoadedConfig =
+  createJsoncExtensionConfigLoader<PiCodexifyConfig, { includeProject?: boolean }>({
     extensionName: EXTENSION_NAME,
-    getConfigPaths: (configCwd) => getConfigPaths(configCwd, options.includeProject),
+    getConfigPaths: (cwd, options) => getConfigPaths(cwd, options?.includeProject),
     createDefaultConfig: () => ({ ...defaultConfig, controls: { ...defaultConfig.controls } }),
     mergeConfig,
   });
-}
 
 function mergeConfig(target: PiCodexifyConfig, source: Record<string, unknown>, configPath: string, errors: string[]) {
   mergeEnabledField(target, source, 'enabled', configPath, errors);

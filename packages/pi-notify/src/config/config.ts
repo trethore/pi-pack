@@ -1,4 +1,4 @@
-import { loadJsoncExtensionConfig } from '@trethore/shared/config/config-file.js';
+import { createJsoncExtensionConfigLoader } from '@trethore/shared/config/config-file.js';
 import { booleanSchema, createConfigMerger } from '@trethore/shared/config/schema.js';
 
 import { getNotifyConfigPaths } from '#src/config/locations.js';
@@ -13,16 +13,13 @@ import {
 
 const EXTENSION_NAME = 'pi-notify';
 const { mergeEnabledField, mergeField } = createConfigMerger(EXTENSION_NAME);
-
-export function loadConfig(cwd: string, options: { includeProject?: boolean } = {}): LoadedConfig {
-  return loadJsoncExtensionConfig({
-    cwd,
+export const loadConfig: (cwd: string, options?: { includeProject?: boolean }) => LoadedConfig =
+  createJsoncExtensionConfigLoader<PiNotifyConfig, { includeProject?: boolean }>({
     extensionName: EXTENSION_NAME,
-    getConfigPaths: (configCwd) => getNotifyConfigPaths(configCwd, options.includeProject),
+    getConfigPaths: (cwd, options) => getNotifyConfigPaths(cwd, options?.includeProject),
     createDefaultConfig: () => ({ ...defaultConfig }),
     mergeConfig,
   });
-}
 
 function mergeConfig(
   target: PiNotifyConfig,
