@@ -62,7 +62,7 @@ function getFormattingOptions(text: string): FormattingOptions {
 }
 
 function detectIndentation(text: string): { insertSpaces: boolean; tabSize: number } {
-  const match = /^(\s+)\S/m.exec(text);
+  const match = /^([ \t]+)\S/m.exec(text);
   if (!match) return { insertSpaces: true, tabSize: 2 };
 
   const indentation = match[1];
