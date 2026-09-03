@@ -1,0 +1,8 @@
+{
+  // Enable whimsical working messages.
+  "enabled": true,
+
+  // Replace the defaults with custom messages.
+  // Omit this field or set it to null to use the default list.
+  "messages": ["Consulting the sprites...", "Polishing the moonbeams..."]
+}

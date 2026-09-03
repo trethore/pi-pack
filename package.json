@@ -33,6 +33,7 @@
     "dev:pi-script-template": "pi -e ./packages/pi-script-template",
     "dev:pi-toolbox": "pi -e ./packages/pi-toolbox",
     "dev:pi-toolmask": "pi -e ./packages/pi-toolmask",
+    "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
     "install:global": "pi install .",
     "install:local": "pi install -l .",
     "install:global:pi-cut": "pi install ./packages/pi-cut",
@@ -49,6 +50,8 @@
     "install:local:pi-toolbox": "pi install -l ./packages/pi-toolbox",
     "install:global:pi-toolmask": "pi install ./packages/pi-toolmask",
     "install:local:pi-toolmask": "pi install -l ./packages/pi-toolmask",
+    "install:global:pi-whimsical": "pi install ./packages/pi-whimsical",
+    "install:local:pi-whimsical": "pi install -l ./packages/pi-whimsical",
     "jscpd": "jscpd packages scripts --format typescript --no-tips",
     "test:coverage": "vitest run --coverage"
   },
@@ -62,7 +65,8 @@
     "#pi-notify/*": "./packages/pi-notify/src/*",
     "#pi-script-template/*": "./packages/pi-script-template/src/*",
     "#pi-toolbox/*": "./packages/pi-toolbox/src/*",
-    "#pi-toolmask/*": "./packages/pi-toolmask/src/*"
+    "#pi-toolmask/*": "./packages/pi-toolmask/src/*",
+    "#pi-whimsical/*": "./packages/pi-whimsical/src/*"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": ">=0.84.4 <1",

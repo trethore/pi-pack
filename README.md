@@ -11,6 +11,7 @@ Monorepo for the pi extensions I develop.
 - [pi-notify](./packages/pi-notify): Terminal desktop notifications when Pi is ready for input.
 - [pi-toolbox](./packages/pi-toolbox): Various and useful tools.
 - [pi-toolmask](./packages/pi-toolmask): Disable pi tools with wildcard masks.
+- [pi-whimsical](./packages/pi-whimsical): Random whimsical thinking and status messages.
 
 ## License
 

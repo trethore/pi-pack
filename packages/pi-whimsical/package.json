@@ -1,0 +1,29 @@
+{
+  "name": "@trethore/pi-whimsical",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Replace Pi working status text with whimsical phrases.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "status"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.84.4 <1"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-whimsical/*": "./src/*",
+    "#test/*": "./test/*"
+  },
+  "dependencies": {
+    "@trethore/shared": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

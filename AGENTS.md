@@ -15,6 +15,7 @@ packages/
   pi-script-template/
   pi-toolbox/
   pi-toolmask/
+  pi-whimsical/
   shared/                      # Shared utilities and types
 references/pi-mono/packages/   # Pi source code and documentation for browsing; do not modify
   agent/
