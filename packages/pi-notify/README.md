@@ -4,7 +4,7 @@ Send a terminal desktop notification when Pi finishes all automatic work and is 
 
 ## Installation
 
-Requires Pi `>=0.84.4 <1`.
+Requires Pi `>=0.85.0 <1`.
 
 From the `pi-pack` repository root, install globally:
 

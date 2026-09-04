@@ -6,8 +6,8 @@
   "type": "module",
   "description": "Shared utilities for pi-pack extensions.",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.84.4 <1",
-    "@earendil-works/pi-tui": ">=0.84.4 <1"
+    "@earendil-works/pi-coding-agent": ">=0.85.0 <1",
+    "@earendil-works/pi-tui": ">=0.85.0 <1"
   },
   "exports": {
     "./*.js": "./src/*.ts"

@@ -56,7 +56,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.84.4 <1"
+    "@earendil-works/pi-coding-agent": ">=0.85.0 <1"
   },
   "imports": {
     "#pi-cut/*": "./packages/pi-cut/src/*",
@@ -69,7 +69,8 @@
     "#pi-whimsical/*": "./packages/pi-whimsical/src/*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.84.4 <1",
+    "@earendil-works/pi-coding-agent": ">=0.85.0 <1",
+    "@earendil-works/pi-server": ">=0.85.0 <1",
     "@eslint/js": "10.0.1",
     "@types/node": "^22.19.19",
     "@vitest/coverage-v8": "4.1.5",
