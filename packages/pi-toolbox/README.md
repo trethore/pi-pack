@@ -36,10 +36,13 @@ The `apply_patch` tool is enabled by default.
 
 Configuration is loaded from:
 
-1. `$PI_CODING_AGENT_DIR/pi-toolbox.jsonc` (defaults to `~/.pi/agent/pi-toolbox.jsonc`)
+1. `$PI_CODING_AGENT_DIR/pi-toolbox.jsonc` (defaults to
+   `~/.pi/agent/pi-toolbox.jsonc`)
 2. `<project>/.pi/pi-toolbox.jsonc`
 
-Project configuration overrides global configuration. See [`pi-toolbox.example.jsonc`](./pi-toolbox.example.jsonc) for a copyable configuration.
+Project configuration overrides global configuration. See
+[`pi-toolbox.example.jsonc`](./pi-toolbox.example.jsonc) for a copyable
+configuration.
 
 ```jsonc
 {
@@ -56,7 +59,9 @@ Project configuration overrides global configuration. See [`pi-toolbox.example.j
 
 Applies structured file edits using the Codex apply-patch format.
 
-`*** Add File:` targets and `*** Move to:` destinations must not already exist. The operation is serialized with Pi's file mutation queue and rolls back completed writes if a later filesystem operation fails.
+`*** Add File:` targets and `*** Move to:` destinations must not already exist.
+The operation is serialized with Pi's file mutation queue and rolls back
+completed writes if a later filesystem operation fails.
 
 | Argument  | Required | Description                                                                               |
 | --------- | -------- | ----------------------------------------------------------------------------------------- |

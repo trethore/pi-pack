@@ -46,10 +46,13 @@ Create `.pi/pi-toolmask.jsonc` to disable every tool except `read`:
 
 Configuration is loaded from:
 
-1. `$PI_CODING_AGENT_DIR/pi-toolmask.jsonc` (defaults to `~/.pi/agent/pi-toolmask.jsonc`)
+1. `$PI_CODING_AGENT_DIR/pi-toolmask.jsonc` (defaults to
+   `~/.pi/agent/pi-toolmask.jsonc`)
 2. `<project>/.pi/pi-toolmask.jsonc`
 
-Project configuration overrides global configuration. See [`pi-toolmask.example.jsonc`](./pi-toolmask.example.jsonc) for a copyable configuration.
+Project configuration overrides global configuration. See
+[`pi-toolmask.example.jsonc`](./pi-toolmask.example.jsonc) for a copyable
+configuration.
 
 ```jsonc
 {
@@ -62,7 +65,9 @@ Project configuration overrides global configuration. See [`pi-toolmask.example.
 
 ## Mask patterns
 
-`masks` is an array of wildcard patterns matched against active tool names. Matching is case-sensitive. `*` matches any number of characters, and `!` at the start of a pattern keeps matching tools enabled.
+`masks` is an array of wildcard patterns matched against active tool names.
+Matching is case-sensitive. `*` matches any number of characters, and `!` at the
+start of a pattern keeps matching tools enabled.
 
 | Pattern  | Matches                     |
 | -------- | --------------------------- |
@@ -73,7 +78,9 @@ Project configuration overrides global configuration. See [`pi-toolmask.example.
 | `*`      | Every active tool.          |
 | `!read`  | Keeps `read` enabled.       |
 
-Negated masks are exceptions to positive masks. A configuration with only negated masks disables nothing. Tools that do not match a positive mask remain enabled.
+Negated masks are exceptions to positive masks. A configuration with only
+negated masks disables nothing. Tools that do not match a positive mask remain
+enabled.
 
 ### Disable all tools
 
@@ -113,13 +120,16 @@ Negated masks are exceptions to positive masks. A configuration with only negate
 
 ## Enforcement timing
 
-Masks are applied on `session_start`. By default, they are also reapplied on `before_agent_start` so tools registered or re-enabled by other extensions are masked before the next model request.
+Masks are applied on `session_start`. By default, they are also reapplied on
+`before_agent_start` so tools registered or re-enabled by other extensions are
+masked before the next model request.
 
 Set `enforceBeforeAgentStart` to `false` to apply masks only at startup.
 
 ## Notifications
 
-Set `notify` to `true` to display a Pi notification whenever one or more active tools are disabled.
+Set `notify` to `true` to display a Pi notification whenever one or more active
+tools are disabled.
 
 ## License
 

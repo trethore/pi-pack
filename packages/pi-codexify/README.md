@@ -38,7 +38,8 @@ pi -e ./packages/pi-codexify
 
 ## Quick start
 
-Run `/codexify status` to inspect the active controls, then update them with commands such as:
+Run `/codexify status` to inspect the active controls, then update them with
+commands such as:
 
 ```text
 /codexify verbosity medium
@@ -52,10 +53,13 @@ Commands persist control changes to the active configuration file.
 
 Configuration is loaded from:
 
-1. `$PI_CODING_AGENT_DIR/pi-codexify.jsonc` (defaults to `~/.pi/agent/pi-codexify.jsonc`)
+1. `$PI_CODING_AGENT_DIR/pi-codexify.jsonc` (defaults to
+   `~/.pi/agent/pi-codexify.jsonc`)
 2. `<project>/.pi/pi-codexify.jsonc`
 
-Project configuration overrides global configuration when the project is trusted. See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc) for a copyable configuration.
+Project configuration overrides global configuration when the project is
+trusted. See [`pi-codexify.example.jsonc`](./pi-codexify.example.jsonc) for a
+copyable configuration.
 
 ```jsonc
 {
@@ -72,9 +76,15 @@ Project configuration overrides global configuration when the project is trusted
 }
 ```
 
-Everything under `controls` modifies outgoing provider payloads. Setting `controls.enabled` to `false` disables all payload modifications, including native web search.
+Everything under `controls` modifies outgoing provider payloads. Setting
+`controls.enabled` to `false` disables all payload modifications, including
+native web search.
 
-Omitted or `null` optional control values leave the provider payload unchanged. In project configuration, `null` disables an inherited global override. `reasoningSummary: "none"` actively removes `reasoning.summary` while preserving other reasoning fields. The `usage` and `reset` booleans control their corresponding subcommands.
+Omitted or `null` optional control values leave the provider payload unchanged.
+In project configuration, `null` disables an inherited global override.
+`reasoningSummary: "none"` actively removes `reasoning.summary` while preserving
+other reasoning fields. The `usage` and `reset` booleans control their
+corresponding subcommands.
 
 ## Commands
 
@@ -89,15 +99,21 @@ Omitted or `null` optional control values leave the provider payload unchanged. 
 /codexify reset details
 ```
 
-Control commands update the trusted project configuration when one exists; otherwise they update the global configuration.
+Control commands update the trusted project configuration when one exists;
+otherwise they update the global configuration.
 
-`/codexify usage` and `/codexify reset` use Pi's active `openai-codex` OAuth credential. Use `/login openai-codex` to change it.
+`/codexify usage` and `/codexify reset` use Pi's active `openai-codex` OAuth
+credential. Use `/login openai-codex` to change it.
 
-`/codexify reset use` asks for confirmation because the request consumes a reset credit. `/codexify reset details` is read-only.
+`/codexify reset use` asks for confirmation because the request consumes a reset
+credit. `/codexify reset details` is read-only.
 
 ## Behavior and limitations
 
-Priority service tier is applied at the final provider payload layer. For the `openai-codex` provider, pi-codexify also adds the routing hint used by the official Codex CLI. Pi may report default-tier pricing if the provider response does not echo the effective priority tier.
+Priority service tier is applied at the final provider payload layer. For the
+`openai-codex` provider, pi-codexify also adds the routing hint used by the
+official Codex CLI. Pi may report default-tier pricing if the provider response
+does not echo the effective priority tier.
 
 ## License
 

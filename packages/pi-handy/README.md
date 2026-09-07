@@ -42,12 +42,16 @@ All features are enabled by default. After loading the extension, try:
 
 Configuration is loaded from:
 
-1. `$PI_CODING_AGENT_DIR/pi-handy.jsonc` (defaults to `~/.pi/agent/pi-handy.jsonc`)
+1. `$PI_CODING_AGENT_DIR/pi-handy.jsonc` (defaults to
+   `~/.pi/agent/pi-handy.jsonc`)
 2. `<project>/.pi/pi-handy.jsonc`
 
-Project configuration overrides global configuration. See [`pi-handy.example.jsonc`](./pi-handy.example.jsonc) for a copyable configuration.
+Project configuration overrides global configuration. See
+[`pi-handy.example.jsonc`](./pi-handy.example.jsonc) for a copyable
+configuration.
 
-Set the top-level `enabled` field to `false` to disable the extension without changing individual feature settings.
+Set the top-level `enabled` field to `false` to disable the extension without
+changing individual feature settings.
 
 ```jsonc
 {
@@ -74,9 +78,12 @@ Set the top-level `enabled` field to `false` to disable the extension without ch
 
 ### System prompt display
 
-`/showsysprompt [prompt|tools]` displays the current system prompt and schemas for the active tools. Without arguments, it shows both. Use `prompt` or `tools` to show only that section.
+`/showsysprompt [prompt|tools]` displays the current system prompt and schemas
+for the active tools. Without arguments, it shows both. Use `prompt` or `tools`
+to show only that section.
 
-The output is stored as display-only session entries and is never added to LLM context.
+The output is stored as display-only session entries and is never added to LLM
+context.
 
 ```text
 /showsysprompt
@@ -86,7 +93,9 @@ The output is stored as display-only session entries and is never added to LLM c
 
 ### Time taken notification
 
-The notification appears after the full agent run settles and the prompt returns to the user, including automatic retries, compaction retries, and queued continuations.
+The notification appears after the full agent run settles and the prompt returns
+to the user, including automatic retries, compaction retries, and queued
+continuations.
 
 ```text
 Took 42s
@@ -95,9 +104,15 @@ Took 1m5s
 
 ### No WebSocket cache TTL
 
-`noWebsocketCacheTtl` disables Pi's five-minute idle timer for reusable OpenAI Codex WebSockets. The connection remains cached until it becomes unusable, the session shuts down, or Pi replaces it at its separate 55-minute maximum connection age.
+`noWebsocketCacheTtl` disables Pi's five-minute idle timer for reusable OpenAI
+Codex WebSockets. The connection remains cached until it becomes unusable, the
+session shuts down, or Pi replaces it at its separate 55-minute maximum
+connection age.
 
-The feature is disabled by default because it uses a narrowly filtered global `setTimeout` patch. It suppresses only five-minute timers scheduled by Pi's `scheduleSessionWebSocketExpiry` function in the OpenAI Codex adapter. Pi's separate 55-minute maximum WebSocket age remains unchanged.
+The feature is disabled by default because it uses a narrowly filtered global
+`setTimeout` patch. It suppresses only five-minute timers scheduled by Pi's
+`scheduleSessionWebSocketExpiry` function in the OpenAI Codex adapter. Pi's
+separate 55-minute maximum WebSocket age remains unchanged.
 
 ## License
 

@@ -68,9 +68,12 @@ Scripts are discovered from:
 1. `$PI_CODING_AGENT_DIR/script-templates/`
 2. `<project>/.pi/script-templates/`
 
-Project configuration and scripts are loaded only for trusted projects. Project scripts override global scripts with the same template name.
+Project configuration and scripts are loaded only for trusted projects. Project
+scripts override global scripts with the same template name.
 
-Only top-level `.js`, `.mjs`, and `.cjs` files are discovered. The filename without its extension is the template name. Names may contain letters, digits, underscores, and hyphens.
+Only top-level `.js`, `.mjs`, and `.cjs` files are discovered. The filename
+without its extension is the template name. Names may contain letters, digits,
+underscores, and hyphens.
 
 ## Configuration
 
@@ -95,9 +98,12 @@ All rendering surfaces are disabled by default.
 
 ## Script execution
 
-Scripts run through `process.execPath` with no shell. Their working directory is the directory containing the script.
+Scripts run through `process.execPath` with no shell. Their working directory is
+the directory containing the script.
 
-Each template runs at most once per workspace and trust scope. Its output is reused for subsequent resource reads so prompt content remains stable for model prompt caching. Reloading the extension creates a new cache.
+Each template runs at most once per workspace and trust scope. Its output is
+reused for subsequent resource reads so prompt content remains stable for model
+prompt caching. Reloading the extension creates a new cache.
 
 The following environment variables are available:
 
@@ -105,7 +111,9 @@ The following environment variables are available:
 - `PI_SCRIPT_TEMPLATE_NAME`: template name
 - `PI_SCRIPT_TEMPLATE_SCOPE`: `global` or `project`
 
-Standard output becomes the replacement value. One trailing line ending is removed. Standard error is reported as a warning and is not inserted into the prompt. A timeout, signal, or non-zero exit produces an error marker.
+Standard output becomes the replacement value. One trailing line ending is
+removed. Standard error is reported as a warning and is not inserted into the
+prompt. A timeout, signal, or non-zero exit produces an error marker.
 
 Example script that operates on the workspace:
 
@@ -122,9 +130,14 @@ process.stdout.write(branch.trim());
 
 ## Security
 
-Script templates are arbitrary Node.js programs. Only install global scripts you trust, and only trust projects whose `.pi/script-templates` contents you intend to execute.
+Script templates are arbitrary Node.js programs. Only install global scripts you
+trust, and only trust projects whose `.pi/script-templates` contents you intend
+to execute.
 
-The extension uses the shared `shared` compatibility layer to transform resources before they enter model context. That layer patches Pi prototypes process-wide because Pi does not currently expose equivalent resource transformation hooks.
+The extension uses the shared `shared` compatibility layer to transform
+resources before they enter model context. That layer patches Pi prototypes
+process-wide because Pi does not currently expose equivalent resource
+transformation hooks.
 
 ## License
 
