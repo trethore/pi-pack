@@ -4,6 +4,7 @@ Monorepo for the pi extensions I develop.
 
 ## Extensions
 
+- [pi-account](./packages/pi-account): Saved provider accounts with session-local switching.
 - [pi-cut](./packages/pi-cut): Cost-cutting strategies.
 - [pi-codexify](./packages/pi-codexify): Codex settings, tools, and usage.
 - [pi-script-template](./packages/pi-script-template): Inject Node.js script output into Pi prompt resources.

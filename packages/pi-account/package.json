@@ -1,0 +1,32 @@
+{
+  "name": "@trethore/pi-account",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Saved OAuth and API-key provider accounts with session-local switching.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "providers",
+    "oauth",
+    "accounts"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-ai": ">=0.85.0 <1",
+    "@earendil-works/pi-coding-agent": ">=0.85.0 <1",
+    "@earendil-works/pi-tui": ">=0.85.0 <1"
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#pi-account/*": "./src/*"
+  },
+  "dependencies": {
+    "@trethore/shared": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

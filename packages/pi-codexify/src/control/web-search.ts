@@ -1,4 +1,5 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
+import { isCodexProvider } from '@trethore/shared/codex-provider.js';
 import { isPlainObject } from '@trethore/shared/object.js';
 
 interface WebSearchTool {
@@ -30,5 +31,5 @@ function createWebSearchTool(model: Pick<Model<Api>, 'provider' | 'id'>): WebSea
 function isCodexModel(
   model: Pick<Model<Api>, 'provider' | 'id'> | undefined
 ): model is Pick<Model<Api>, 'provider' | 'id'> {
-  return model?.provider.toLowerCase() === 'openai-codex';
+  return model !== undefined && isCodexProvider(model.provider);
 }

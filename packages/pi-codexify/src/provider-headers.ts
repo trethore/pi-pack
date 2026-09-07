@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { isCodexProvider } from '@trethore/shared/codex-provider.js';
 import type { PiCodexifyConfig } from '#src/config/types.js';
 
 const CODEX_ROUTING_HINT_HEADER = 'x-codex-routing-hint';
@@ -11,7 +12,8 @@ export function registerProviderHeaders(pi: ExtensionAPI, getConfig: () => PiCod
       !config.enabled ||
       !config.controls.enabled ||
       config.controls.serviceTier !== 'priority' ||
-      model?.provider.toLowerCase() !== 'openai-codex' ||
+      !model ||
+      !isCodexProvider(model.provider) ||
       model.api !== 'openai-codex-responses'
     ) {
       return;

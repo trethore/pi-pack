@@ -26,6 +26,7 @@
     "format:check": "prettier . --check",
     "importpi": "node scripts/importpi.ts",
     "dev": "pi -e .",
+    "dev:pi-account": "pi -e ./packages/pi-account",
     "dev:pi-cut": "pi -e ./packages/pi-cut",
     "dev:pi-codexify": "pi -e ./packages/pi-codexify",
     "dev:pi-handy": "pi -e ./packages/pi-handy",
@@ -36,6 +37,8 @@
     "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
     "install:global": "pi install .",
     "install:local": "pi install -l .",
+    "install:global:pi-account": "pi install ./packages/pi-account",
+    "install:local:pi-account": "pi install -l ./packages/pi-account",
     "install:global:pi-cut": "pi install ./packages/pi-cut",
     "install:local:pi-cut": "pi install -l ./packages/pi-cut",
     "install:global:pi-codexify": "pi install ./packages/pi-codexify",
@@ -59,6 +62,7 @@
     "@earendil-works/pi-coding-agent": ">=0.85.0 <1"
   },
   "imports": {
+    "#pi-account/*": "./packages/pi-account/src/*",
     "#pi-cut/*": "./packages/pi-cut/src/*",
     "#pi-codexify/*": "./packages/pi-codexify/src/*",
     "#pi-handy/*": "./packages/pi-handy/src/*",

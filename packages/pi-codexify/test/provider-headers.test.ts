@@ -10,17 +10,20 @@ type HeaderHandler = (
 ) => void;
 
 describe('provider header mutations', () => {
-  it('adds the Codex priority routing hint without replacing existing headers', () => {
-    const handler = registerTestHandler(createConfig('priority'));
-    const headers = { 'x-existing': 'existing' };
+  it.each(['openai-codex', 'openai-codex-account-work'])(
+    'adds the Codex priority routing hint for %s without replacing existing headers',
+    (provider) => {
+      const handler = registerTestHandler(createConfig('priority'));
+      const headers = { 'x-existing': 'existing' };
 
-    handler({ headers }, { model: { provider: 'openai-codex', id: 'gpt-5.5', api: 'openai-codex-responses' } });
+      handler({ headers }, { model: { provider, id: 'gpt-5.5', api: 'openai-codex-responses' } });
 
-    expect(headers).toEqual({
-      'x-existing': 'existing',
-      'x-codex-routing-hint': 'model=gpt-5.5;tier=priority',
-    });
-  });
+      expect(headers).toEqual({
+        'x-existing': 'existing',
+        'x-codex-routing-hint': 'model=gpt-5.5;tier=priority',
+      });
+    }
+  );
 
   it.each([
     [
