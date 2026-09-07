@@ -17,7 +17,7 @@ function createHarness(accounts: Account[] = [createAccount('work', 'extension-p
       nativeProviders.delete(id);
     }),
   };
-  const store = { list: vi.fn(async () => accounts), add: vi.fn() };
+  const store = { list: vi.fn(async () => accounts), getDefault: vi.fn(), setDefault: vi.fn(), add: vi.fn() };
   const ctx = {
     modelRegistry: {
       getProvider: (id: string) => providers.get(id),

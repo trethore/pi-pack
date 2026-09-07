@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { link, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { link, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { CODEX_ACCOUNT_PREFIX, CODEX_PROVIDER } from '@trethore/shared/codex-provider.js';
 import { isMissingPathError, isNodeError } from '@trethore/shared/error.js';
@@ -33,6 +33,50 @@ export class AccountStore {
 
   constructor(agentDir: string) {
     this.directory = path.join(agentDir, 'pi-account', 'accounts');
+  }
+
+  async getDefault(baseProvider: string): Promise<Account | undefined> {
+    const filePath = this.defaultPath(baseProvider);
+    let contents: unknown;
+    try {
+      contents = JSON.parse(await readFile(filePath, 'utf8'));
+    } catch (error) {
+      if (isMissingPathError(error)) return undefined;
+      throw error;
+    }
+    if (!isPlainObject(contents) || typeof contents.name !== 'string' || contents.baseProvider !== baseProvider) {
+      throw new Error(`Invalid default account for ${baseProvider}.`);
+    }
+    if (contents.name === 'default') return defaultAccount(baseProvider);
+    const account = createAccount(contents.name, baseProvider);
+    const saved = await this.list();
+    if (!saved.some((entry) => entry.provider === account.provider)) {
+      throw new Error(`Default account "${account.name}" is no longer saved.`);
+    }
+    return account;
+  }
+
+  async setDefault(account: Account): Promise<void> {
+    const filePath = this.defaultPath(account.baseProvider);
+    await mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
+    const temporaryPath = `${filePath}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(
+        temporaryPath,
+        `${JSON.stringify({ name: account.name, baseProvider: account.baseProvider })}\n`,
+        {
+          mode: 0o600,
+          flag: 'wx',
+        }
+      );
+      await rename(temporaryPath, filePath);
+    } finally {
+      await rm(temporaryPath, { force: true });
+    }
+  }
+
+  private defaultPath(baseProvider: string): string {
+    return path.join(this.directory, '..', 'defaults', `${Buffer.from(baseProvider).toString('hex')}.json`);
   }
 
   async list(): Promise<Account[]> {

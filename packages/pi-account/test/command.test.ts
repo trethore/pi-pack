@@ -2,7 +2,13 @@ import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-code
 import type { ExtensionAPI, ExtensionCommandContext, RegisteredCommand } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 import { createAccount, defaultAccount } from '#pi-account/accounts.js';
-import { accountItems, handleAccountCommand, registerAccountCommand, switchAccount } from '#pi-account/command.js';
+import {
+  accountItems,
+  applyDefaultAccount,
+  handleAccountCommand,
+  registerAccountCommand,
+  switchAccount,
+} from '#pi-account/command.js';
 import { createAccountProvider } from '#pi-account/provider.js';
 
 const DEFAULT_ACCOUNT = defaultAccount('openai-codex');
@@ -13,6 +19,90 @@ if (!workModel) throw new Error('Missing Codex model');
 const personalModel = { ...workModel, provider: personal.provider };
 
 describe('account command', () => {
+  it.each(['setDefault work', 'SETDEFAULT Work'])(
+    'saves a named default with %s without switching',
+    async (command) => {
+      // Arrange
+      const { pi, ctx, manager } = createHarness();
+
+      // Act
+      await handleAccountCommand(pi, manager, command, ctx);
+
+      // Assert
+      expect(manager.store.setDefault).toHaveBeenCalledExactlyOnceWith(work);
+      expect(pi.setModel).not.toHaveBeenCalled();
+    }
+  );
+
+  it('saves the current account when no default name is supplied', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+
+    // Act
+    await handleAccountCommand(pi, manager, 'setDefault', ctx);
+
+    // Assert
+    expect(manager.store.setDefault).toHaveBeenCalledExactlyOnceWith(personal);
+  });
+
+  it('can restore the original provider as the startup default', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+
+    // Act
+    await handleAccountCommand(pi, manager, 'setDefault default', ctx);
+
+    // Assert
+    expect(manager.store.setDefault).toHaveBeenCalledExactlyOnceWith(DEFAULT_ACCOUNT);
+  });
+
+  it('rejects unknown defaults without writing storage', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+
+    // Act / Assert
+    await expect(handleAccountCommand(pi, manager, 'setDefault missing', ctx)).rejects.toThrow('setDefault');
+    expect(manager.store.setDefault).not.toHaveBeenCalled();
+  });
+
+  it('saves the menu default action without switching', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+    ctx.ui.custom = vi.fn().mockResolvedValue(`setDefault:${work.provider}`);
+
+    // Act
+    await handleAccountCommand(pi, manager, '', ctx);
+
+    // Assert
+    expect(manager.store.setDefault).toHaveBeenCalledExactlyOnceWith(work);
+    expect(pi.setModel).not.toHaveBeenCalled();
+  });
+
+  it('applies the saved default for the current base provider on startup', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+    manager.store.getDefault.mockResolvedValue(work);
+
+    // Act
+    await applyDefaultAccount(pi, manager, ctx);
+
+    // Assert
+    expect(manager.store.getDefault).toHaveBeenCalledExactlyOnceWith('openai-codex');
+    expect(pi.setModel).toHaveBeenCalledExactlyOnceWith(workModel);
+    expect(pi.setThinkingLevel).toHaveBeenCalledExactlyOnceWith('high');
+  });
+
+  it('keeps the session account when no startup default is saved', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+
+    // Act
+    await applyDefaultAccount(pi, manager, ctx);
+
+    // Assert
+    expect(pi.setModel).not.toHaveBeenCalled();
+  });
+
   it('changes only this session while preserving the model ID and thinking level', async () => {
     // Arrange
     const first = createHarness();
@@ -446,7 +536,7 @@ function createHarness() {
     },
   } as unknown as ExtensionCommandContext;
   const manager = {
-    store: { add: vi.fn(async () => work) },
+    store: { getDefault: vi.fn(), setDefault: vi.fn(), add: vi.fn(async () => work) },
     sync: vi.fn(async () => [personal, work]),
     list: () => [personal, work],
   };

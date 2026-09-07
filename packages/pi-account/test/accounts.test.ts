@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AccountStore, createAccount } from '#pi-account/accounts.js';
+import { AccountStore, createAccount, defaultAccount } from '#pi-account/accounts.js';
 
 describe('account names', () => {
   it.each([
@@ -49,6 +49,49 @@ describe('account storage', () => {
 
   afterEach(async () => {
     await rm(agentDir, { recursive: true, force: true });
+  });
+
+  it('has no startup default until one is saved', async () => {
+    // Act / Assert
+    expect(await store.getDefault('openai-codex')).toBeUndefined();
+    expect(await readdir(agentDir)).toEqual([]);
+  });
+
+  it('persists independent provider defaults across instances', async () => {
+    // Arrange
+    const work = await store.add('work');
+    const other = await store.add('other', 'anthropic');
+
+    // Act
+    await Promise.all([store.setDefault(work), store.setDefault(other)]);
+    const reloaded = new AccountStore(agentDir);
+
+    // Assert
+    expect(await reloaded.getDefault(work.baseProvider)).toEqual(work);
+    expect(await reloaded.getDefault(other.baseProvider)).toEqual(other);
+    expect(await store.list()).toHaveLength(2);
+  });
+
+  it('replaces a saved default with the original provider login', async () => {
+    // Arrange
+    const work = await store.add('work');
+    await store.setDefault(work);
+
+    // Act
+    await store.setDefault(defaultAccount(work.baseProvider));
+
+    // Assert
+    expect(await new AccountStore(agentDir).getDefault(work.baseProvider)).toEqual(defaultAccount(work.baseProvider));
+  });
+
+  it('reports deleted default accounts instead of selecting stale aliases', async () => {
+    // Arrange
+    const work = await store.add('work');
+    await store.setDefault(work);
+    await rm(path.join(agentDir, 'pi-account', 'accounts', 'work.json'));
+
+    // Act / Assert
+    await expect(store.getDefault(work.baseProvider)).rejects.toThrow('no longer saved');
   });
 
   it('starts empty without creating files', async () => {

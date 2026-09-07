@@ -9,17 +9,17 @@ import { AccountSelector } from '#src/selector.js';
 const ADD_ACCOUNT = 'add';
 
 export interface AccountManager {
-  store: Pick<AccountStore, 'add'>;
+  store: Pick<AccountStore, 'add' | 'getDefault' | 'setDefault'>;
   sync(ctx: Pick<ExtensionContext, 'modelRegistry'>): Promise<Account[]>;
   list(): Account[];
 }
 
 export function registerAccountCommand(pi: ExtensionAPI, manager: AccountManager): void {
   pi.registerCommand('account', {
-    description: 'Switch saved provider accounts in this session, or add <name> [provider]',
+    description: 'Switch saved provider accounts in this session, add <name> [provider], or setDefault [name]',
     getArgumentCompletions: (prefix) =>
-      [ADD_ACCOUNT, 'default', ...manager.list().map((account) => account.name)]
-        .filter((name) => name.startsWith(prefix.trim().toLowerCase()))
+      [ADD_ACCOUNT, 'setDefault', 'default', ...manager.list().map((account) => account.name)]
+        .filter((name) => name.toLowerCase().startsWith(prefix.trim().toLowerCase()))
         .map((name) => ({ value: name, label: name })),
     handler: async (args, ctx) => {
       try {
@@ -48,6 +48,10 @@ export async function handleAccountCommand(
     await addAccount(manager, args.slice(ADD_ACCOUNT.length).trim(), currentProvider, ctx);
     return;
   }
+  if (/^setDefault(?:\s|$)/i.test(args)) {
+    await setDefaultCommand(manager, args.slice('setDefault'.length).trim(), accounts, currentProvider, ctx);
+    return;
+  }
   await ctx.modelRegistry.refresh({ allowNetwork: false });
   if (args) {
     const account = resolveAccount(args, accounts, currentProvider);
@@ -55,12 +59,60 @@ export async function handleAccountCommand(
     else ctx.ui.notify(`Unknown account "${args}". Use /account add <name> [provider].`, 'warning');
     return;
   }
-  const selected = await selectAccount(accounts, ctx);
+  await openAccountMenu(pi, manager, accounts, currentProvider, ctx);
+}
+
+async function setDefaultCommand(
+  manager: AccountManager,
+  target: string,
+  accounts: Account[],
+  currentProvider: string | undefined,
+  ctx: ExtensionContext
+): Promise<void> {
+  const account = target
+    ? resolveAccount(target, accounts, currentProvider)
+    : accounts.find((entry) => entry.provider === ctx.model?.provider);
+  if (!account) throw new Error('Use /account setDefault <name> or select an account first.');
+  await saveDefault(manager, account, ctx);
+}
+
+async function openAccountMenu(
+  pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
+  manager: AccountManager,
+  accounts: Account[],
+  currentProvider: string | undefined,
+  ctx: ExtensionCommandContext
+): Promise<void> {
+  const defaults = await Promise.all(
+    [...new Set(accounts.map((account) => account.baseProvider))].map((provider) => manager.store.getDefault(provider))
+  );
+  const selected = await selectAccount(accounts, ctx, new Set(defaults.map((account) => account?.provider)));
   if (selected === ADD_ACCOUNT) {
     await addAccount(manager, '', currentProvider, ctx);
     return;
   }
+  if (selected?.startsWith('setDefault:')) {
+    const account = accounts.find((entry) => entry.provider === selected.slice('setDefault:'.length));
+    if (account) await saveDefault(manager, account, ctx);
+    return;
+  }
   const account = accounts.find((entry) => entry.provider === selected);
+  if (account) await switchAccount(pi, account, ctx);
+}
+
+async function saveDefault(manager: AccountManager, account: Account, ctx: ExtensionContext): Promise<void> {
+  await manager.store.setDefault(account);
+  ctx.ui.notify(`Default account for ${account.baseProvider}: ${account.name}. Applies on session start.`, 'info');
+}
+
+export async function applyDefaultAccount(
+  pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
+  manager: AccountManager,
+  ctx: ExtensionContext
+): Promise<void> {
+  const baseProvider = currentBaseProvider(manager.list(), ctx);
+  if (!baseProvider) return;
+  const account = await manager.store.getDefault(baseProvider);
   if (account) await switchAccount(pi, account, ctx);
 }
 
@@ -131,24 +183,34 @@ function accountDescription(account: Account, ctx: Pick<ExtensionCommandContext,
   return `${base.name}${configured ? '' : ' (login required)'}`;
 }
 
-async function selectAccount(accounts: Account[], ctx: ExtensionCommandContext): Promise<string | undefined> {
+async function selectAccount(
+  accounts: Account[],
+  ctx: ExtensionCommandContext,
+  defaults: Set<string | undefined>
+): Promise<string | undefined> {
   if (ctx.mode !== 'tui') {
     ctx.ui.notify('Use /account <name> to switch accounts outside the terminal UI.', 'info');
     return undefined;
   }
   const items = [
-    ...accountItems(accounts, ctx),
+    ...accountItems(accounts, ctx).map((item) => ({
+      ...item,
+      label: `${item.label}${defaults.has(item.value) ? ' (startup default)' : ''}`,
+    })),
     { value: ADD_ACCOUNT, label: '+ Add account', description: 'Save another login for the current provider' },
   ];
   return ctx.ui.custom<string | undefined>(
-    (_tui, theme, _keys, done) => new AccountSelector(items, ctx.model?.provider, theme, done)
+    (_tui, theme, _keys, done) =>
+      new AccountSelector(items, ctx.model?.provider, theme, done, (provider) => {
+        done(`setDefault:${provider}`);
+      })
   );
 }
 
 export async function switchAccount(
   pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
   account: Account,
-  ctx: ExtensionCommandContext
+  ctx: ExtensionContext
 ): Promise<void> {
   if (!ctx.isIdle()) {
     ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
@@ -188,7 +250,7 @@ export async function switchAccount(
   pi.setThinkingLevel(thinkingLevel);
 }
 
-function findAccountModel(account: Account, ctx: ExtensionCommandContext): Model<Api> | undefined {
+function findAccountModel(account: Account, ctx: ExtensionContext): Model<Api> | undefined {
   return ctx.modelRegistry
     .getAvailable()
     .find((model) => model.provider === account.provider && model.id === ctx.model?.id);
@@ -196,7 +258,7 @@ function findAccountModel(account: Account, ctx: ExtensionCommandContext): Model
 
 async function resolveAccountModel(
   account: Account,
-  ctx: ExtensionCommandContext
+  ctx: ExtensionContext
 ): Promise<{ ok: true; model: Model<Api> | undefined } | { ok: false }> {
   const cached = findAccountModel(account, ctx);
   if (cached) return { ok: true, model: cached };
@@ -210,7 +272,7 @@ async function resolveAccountModel(
   return { ok: true, model: findAccountModel(account, ctx) };
 }
 
-function promptLogin(account: Account, ctx: ExtensionCommandContext): void {
+function promptLogin(account: Account, ctx: ExtensionContext): void {
   const command = `/login ${account.provider}`;
   if (ctx.mode === 'tui' && !ctx.ui.getEditorText().trim()) ctx.ui.setEditorText(command);
   ctx.ui.notify(

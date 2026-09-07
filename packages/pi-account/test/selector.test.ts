@@ -7,6 +7,31 @@ beforeAll(() => {
 });
 
 describe('account picker', () => {
+  it('sets the highlighted account as default with Ctrl+S', () => {
+    // Arrange
+    const { selector, done, setDefault } = createSelector();
+
+    // Act
+    selector.handleInput('work');
+    selector.handleInput('\u0013');
+
+    // Assert
+    expect(setDefault).toHaveBeenCalledExactlyOnceWith('work');
+    expect(done).not.toHaveBeenCalled();
+  });
+
+  it('ignores Ctrl+S when no account matches', () => {
+    // Arrange
+    const { selector, setDefault } = createSelector();
+
+    // Act
+    selector.handleInput('zzzz');
+    selector.handleInput('\u0013');
+
+    // Assert
+    expect(setDefault).not.toHaveBeenCalled();
+  });
+
   it('preselects the current account and renders its indicator', () => {
     // Arrange
     const { selector, done } = createSelector();
@@ -77,6 +102,7 @@ describe('account picker', () => {
 
 function createSelector() {
   const done = vi.fn();
+  const setDefault = vi.fn();
   const theme = { fg: (_color: string, text: string) => text } as Theme;
   const selector = new AccountSelector(
     [
@@ -85,7 +111,8 @@ function createSelector() {
     ],
     'personal',
     theme,
-    done
+    done,
+    setDefault
   );
-  return { selector, done };
+  return { selector, done, setDefault };
 }

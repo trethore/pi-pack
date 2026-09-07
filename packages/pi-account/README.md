@@ -8,6 +8,7 @@ Save multiple provider logins and switch accounts in the current Pi session.
 - Uses registered providers, including providers added by other extensions.
 - Switches accounts for the current session without changing global defaults.
 - Provides a searchable account picker and direct account commands.
+- Saves an optional startup default for each provider.
 - Keeps each original provider's existing authentication available as `default`.
 - Integrates with pi-codexify when using Codex accounts.
 
@@ -55,6 +56,24 @@ choose the intended account in the browser.
 | `/account default`               | Switch back to the current account's original provider.   |
 | `/account default <provider>`    | Switch to a specific original provider.                   |
 
+### Startup defaults
+
+Use `/account setDefault work` to make `work` the startup default for its provider.
+Use `/account setDefault` without a name to save the current account instead.
+In `/account`, highlight an account and press Ctrl+S to save it as the startup
+default and close the picker. Saved defaults are marked `(startup default)`.
+Saving a default does not switch the current session; Enter still switches only
+this session.
+
+Defaults apply on session start, including new sessions and session resume, for
+the current model's original provider. The model ID and thinking level are kept.
+Defaults for other providers do not change the selected provider. If no model is
+selected, nothing is switched. An unavailable account, missing login, or missing
+model leaves the current model unchanged and shows a notification.
+
+Use `/account setDefault default` to use the original provider login on startup,
+or `/account setDefault default <provider>` for a specific provider.
+
 For example:
 
 ```text
@@ -88,7 +107,7 @@ If that account still does not offer the current model, select a model under the
 account's provider with `/model`. No different model is selected automatically.
 
 Switching is blocked while a response is running. There is no automatic failover
-or global active-account setting.
+or change to other running sessions.
 
 ## Supported providers
 
@@ -136,12 +155,15 @@ synchronized again by `/account`. Providers loaded later are discovered on the
 next command. Missing providers leave saved metadata intact; load the original
 provider extension before using those accounts. If Pi selects an initial model
 before aliases are registered, reselect the account with `/account <name>` after
-startup or session resume.
+startup or session resume, or configure a startup default.
 
 ## Storage and scope
 
 - Account names and original provider IDs are stored in
   `~/.pi/agent/pi-account/accounts/<name>.json`.
+- Startup defaults are stored in
+  `~/.pi/agent/pi-account/defaults/<hex-encoded-provider-id>.json` and shared by
+  instances using the same agent directory.
 - Credentials stay in Pi's `auth.json`, in separate provider slots. Pi handles
   login, token refresh, and credential-file locking.
 - Codex aliases keep `openai-codex-account-<name>` provider IDs. Other aliases use

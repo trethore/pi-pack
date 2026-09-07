@@ -5,6 +5,7 @@ import {
   fuzzyFilter,
   getKeybindings,
   Input,
+  matchesKey,
   type SelectItem,
   SelectList,
   Spacer,
@@ -29,7 +30,8 @@ export class AccountSelector extends Container implements Focusable {
     private readonly items: SelectItem[],
     currentProvider: string | undefined,
     theme: Theme,
-    private readonly done: (value?: string) => void
+    private readonly done: (value?: string) => void,
+    private readonly setDefault?: (provider: string) => void
   ) {
     super();
     this.addChild(new DynamicBorder());
@@ -45,7 +47,7 @@ export class AccountSelector extends Container implements Focusable {
     const confirm = formatKeybindingText('tui.select.confirm');
     const cancel = formatKeybindingText('tui.select.cancel');
     this.addChild(
-      new Text(theme.fg('dim', `  ${confirm} to select | ${cancel} to cancel | current session only`), 0, 0)
+      new Text(theme.fg('dim', `  ${confirm} to select | ${cancel} to cancel | ctrl+s to set startup default`), 0, 0)
     );
     this.addChild(new DynamicBorder());
     this.searchInput.onSubmit = () => {
@@ -54,6 +56,11 @@ export class AccountSelector extends Container implements Focusable {
   }
 
   handleInput(data: string): void {
+    if (matchesKey(data, 'ctrl+s')) {
+      const selected = this.selectList.getSelectedItem();
+      if (selected && selected.value !== 'add') this.setDefault?.(selected.value);
+      return;
+    }
     const keys = getKeybindings();
     const navigation = [
       'tui.select.up',

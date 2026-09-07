@@ -6,7 +6,7 @@ import { createAccountProvider, supportsAccounts } from '#src/provider.js';
 
 export function createAccountManager(
   pi: Pick<ExtensionAPI, 'unregisterProvider'> & { registerProvider(provider: Provider): void },
-  store: Pick<AccountStore, 'list' | 'add'>
+  store: Pick<AccountStore, 'list' | 'add' | 'getDefault' | 'setDefault'>
 ): AccountManager {
   const registered = new Map<string, { base: Provider; alias: Provider }>();
   let accounts: Account[] = [];
