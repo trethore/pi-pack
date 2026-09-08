@@ -86,14 +86,9 @@ async function openAccountMenu(
   const defaults = await Promise.all(
     [...new Set(accounts.map((account) => account.baseProvider))].map((provider) => manager.store.getDefault(provider))
   );
-  const selected = await selectAccount(accounts, ctx, new Set(defaults.map((account) => account?.provider)));
+  const selected = await selectAccount(manager, accounts, ctx, new Set(defaults.map((account) => account?.provider)));
   if (selected === ADD_ACCOUNT) {
     await addAccount(manager, '', currentProvider, ctx);
-    return;
-  }
-  if (selected?.startsWith('setDefault:')) {
-    const account = accounts.find((entry) => entry.provider === selected.slice('setDefault:'.length));
-    if (account) await saveDefault(manager, account, ctx);
     return;
   }
   const account = accounts.find((entry) => entry.provider === selected);
@@ -184,6 +179,7 @@ function accountDescription(account: Account, ctx: Pick<ExtensionCommandContext,
 }
 
 async function selectAccount(
+  manager: AccountManager,
   accounts: Account[],
   ctx: ExtensionCommandContext,
   defaults: Set<string | undefined>
@@ -192,19 +188,37 @@ async function selectAccount(
     ctx.ui.notify('Use /account <name> to switch accounts outside the terminal UI.', 'info');
     return undefined;
   }
-  const items = [
+  const items = () => [
     ...accountItems(accounts, ctx).map((item) => ({
       ...item,
-      label: `${item.label}${defaults.has(item.value) ? ' (startup default)' : ''}`,
+      label: `${item.label}${defaults.has(item.value) ? ' (default)' : ''}`,
     })),
     { value: ADD_ACCOUNT, label: '+ Add account', description: 'Save another login for the current provider' },
   ];
-  return ctx.ui.custom<string | undefined>(
-    (_tui, theme, _keys, done) =>
-      new AccountSelector(items, ctx.model?.provider, theme, done, (provider) => {
-        done(`setDefault:${provider}`);
-      })
-  );
+  return ctx.ui.custom<string | undefined>((tui, theme, _keys, done) => {
+    let saving = false;
+    const selector = new AccountSelector(items(), ctx.model?.provider, theme, done, (provider) => {
+      const account = accounts.find((entry) => entry.provider === provider);
+      if (!account || saving) return;
+      saving = true;
+      void saveDefault(manager, account, ctx)
+        .then(() => {
+          for (const entry of accounts) {
+            if (entry.baseProvider === account.baseProvider) defaults.delete(entry.provider);
+          }
+          defaults.add(account.provider);
+          selector.updateItems(items());
+          tui.requestRender();
+        })
+        .catch((error: unknown) => {
+          ctx.ui.notify(`pi-account: ${getErrorMessage(error)}`, 'error');
+        })
+        .finally(() => {
+          saving = false;
+        });
+    });
+    return selector;
+  });
 }
 
 export async function switchAccount(

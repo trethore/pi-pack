@@ -1,5 +1,11 @@
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
-import type { ExtensionAPI, ExtensionCommandContext, RegisteredCommand } from '@earendil-works/pi-coding-agent';
+import {
+  initTheme,
+  type Theme,
+  type ExtensionAPI,
+  type ExtensionCommandContext,
+  type RegisteredCommand,
+} from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 import { createAccount, defaultAccount } from '#pi-account/accounts.js';
 import {
@@ -9,6 +15,7 @@ import {
   registerAccountCommand,
   switchAccount,
 } from '#pi-account/command.js';
+import { AccountSelector } from '#pi-account/selector.js';
 import { createAccountProvider } from '#pi-account/provider.js';
 
 const DEFAULT_ACCOUNT = defaultAccount('openai-codex');
@@ -65,17 +72,45 @@ describe('account command', () => {
     expect(manager.store.setDefault).not.toHaveBeenCalled();
   });
 
-  it('saves the menu default action without switching', async () => {
+  it.each([false, true])('keeps the picker open after saving a default (failure: %s)', async (fails) => {
     // Arrange
+    initTheme('dark');
     const { pi, ctx, manager } = createHarness();
-    ctx.ui.custom = vi.fn().mockResolvedValue(`setDefault:${work.provider}`);
+    manager.store.getDefault.mockResolvedValue(personal);
+    if (fails) manager.store.setDefault.mockRejectedValue(new Error('storage unavailable'));
+    const done = vi.fn();
+    const requestRender = vi.fn();
+    let selector: AccountSelector | undefined;
+    ctx.ui.custom = vi.fn(async (factory: Parameters<ExtensionCommandContext['ui']['custom']>[0]) => {
+      selector = (await factory(
+        { requestRender } as never,
+        { fg: (_color: string, text: string) => text } as Theme,
+        {} as never,
+        done
+      )) as AccountSelector;
+      selector.handleInput('work');
+      selector.handleInput('\u0013');
+      await vi.waitFor(() => {
+        if (fails) expect(ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining('storage unavailable'), 'error');
+        else expect(requestRender).toHaveBeenCalledOnce();
+      });
+      return undefined as never;
+    });
 
     // Act
     await handleAccountCommand(pi, manager, '', ctx);
 
     // Assert
     expect(manager.store.setDefault).toHaveBeenCalledExactlyOnceWith(work);
+    expect(done).not.toHaveBeenCalled();
     expect(pi.setModel).not.toHaveBeenCalled();
+    const rendered = selector?.render(100).join('\n');
+    expect(rendered).not.toContain('personal');
+    expect(rendered).not.toContain('(startup default)');
+    if (fails) expect(rendered).not.toContain('work (default)');
+    else expect(rendered).toContain('work (default)');
+    selector?.handleInput('\r');
+    expect(done).toHaveBeenCalledExactlyOnceWith(work.provider);
   });
 
   it('applies the saved default for the current base provider on startup', async () => {

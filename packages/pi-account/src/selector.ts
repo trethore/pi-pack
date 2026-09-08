@@ -27,7 +27,7 @@ export class AccountSelector extends Container implements Focusable {
   }
 
   constructor(
-    private readonly items: SelectItem[],
+    private items: SelectItem[],
     currentProvider: string | undefined,
     theme: Theme,
     private readonly done: (value?: string) => void,
@@ -75,6 +75,11 @@ export class AccountSelector extends Container implements Focusable {
       return;
     }
     this.searchInput.handleInput(data);
+    this.updateItems(this.items);
+  }
+
+  updateItems(items: SelectItem[]): void {
+    this.items = items;
     const query = this.searchInput.getValue();
     const filtered = fuzzyFilter(this.items, query, (item) => `${item.label} ${item.description ?? ''}`);
     this.selectList = this.buildList(filtered, this.selectList.getSelectedItem()?.value);

@@ -61,7 +61,7 @@ choose the intended account in the browser.
 Use `/account setDefault work` to make `work` the startup default for its provider.
 Use `/account setDefault` without a name to save the current account instead.
 In `/account`, highlight an account and press Ctrl+S to save it as the startup
-default and close the picker. Saved defaults are marked `(startup default)`.
+default without closing the picker. Saved defaults are marked `(default)`.
 Saving a default does not switch the current session; Enter still switches only
 this session.
 
