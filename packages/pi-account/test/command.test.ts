@@ -9,13 +9,8 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it, vi } from 'vitest';
 import { createAccount, defaultAccount } from '#pi-account/accounts.js';
-import {
-  accountItems,
-  applyDefaultAccount,
-  handleAccountCommand,
-  registerAccountCommand,
-  switchAccount,
-} from '#pi-account/command.js';
+import { accountItems, handleAccountCommand, registerAccountCommand } from '#pi-account/command.js';
+import { applyDefaultAccount, switchAccount } from '#pi-account/switching.js';
 import { createAccountModelHandler } from '#pi-account/models.js';
 import { AccountSelector } from '#pi-account/selector.js';
 import { createAccountProvider } from '#pi-account/provider.js';
@@ -590,6 +585,26 @@ describe('account command', () => {
 
     // Act / Assert
     expect(accountItems([personal, work], ctx).map((item) => item.label)).toEqual(['* personal', '  work']);
+  });
+
+  it('replaces one provider default without changing another provider default', () => {
+    // Arrange
+    const { ctx } = createHarness();
+    const company = createAccount('company', 'other-provider');
+    const defaults = new Map([
+      [personal.baseProvider, personal.provider],
+      [company.baseProvider, company.provider],
+    ]);
+    const accounts = [personal, work, company];
+
+    // Act
+    const initialLabels = accountItems(accounts, ctx, defaults).map((item) => item.label);
+    defaults.set(work.baseProvider, work.provider);
+    const updatedLabels = accountItems(accounts, ctx, defaults).map((item) => item.label);
+
+    // Assert
+    expect(initialLabels).toEqual(['* personal (default)', '  work', '  company (default)']);
+    expect(updatedLabels).toEqual(['* personal', '  work (default)', '  company (default)']);
   });
 
   it('catches errors and completes account names', async () => {

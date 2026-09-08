@@ -15,6 +15,10 @@ export function defaultAccount(baseProvider: string): Account {
   return { name: 'default', provider: baseProvider, baseProvider };
 }
 
+export function accountForProvider(accounts: readonly Account[], provider: string): Account {
+  return accounts.find((account) => account.provider === provider) ?? defaultAccount(provider);
+}
+
 export function createAccount(input: string, baseProvider: string = CODEX_PROVIDER): Account {
   const name = input.trim().toLowerCase();
   if (!/^[a-z0-9][a-z0-9_-]{0,47}$/.test(name) || name === 'default' || name === 'add') {

@@ -5,10 +5,10 @@ import {
   type ExtensionEvent,
 } from '@earendil-works/pi-coding-agent';
 import type { Account } from '#src/accounts.js';
-import type { AccountSwitchAPI } from '#src/command.js';
+import { sameModel, type ModelIdentity } from '#src/model-identity.js';
+import type { AccountSwitchAPI } from '#src/switching.js';
 
 type ThinkingLevel = ReturnType<AccountSwitchAPI['getThinkingLevel']>;
-type ModelIdentity = { provider: string; id: string };
 type ThinkingEvent = Extract<ExtensionEvent, { type: 'thinking_level_select' }>;
 type ThinkingSettings = Pick<SettingsManager, 'getModelThinkingLevel' | 'getDefaultThinkingLevel'>;
 export type ThinkingSettingsReader = (ctx: ExtensionContext) => ThinkingSettings;
@@ -61,8 +61,4 @@ export function createAccountThinking(pi: AccountSwitchAPI, readSettings: Thinki
 
 function loadSettings(ctx: ExtensionContext): ThinkingSettings {
   return SettingsManager.create(ctx.cwd, getAgentDir(), { projectTrusted: ctx.isProjectTrusted() });
-}
-
-function sameModel(left: ModelIdentity | undefined, right: ModelIdentity | undefined): boolean {
-  return left?.provider === right?.provider && left?.id === right?.id;
 }

@@ -1,20 +1,13 @@
-import type { Api, Model } from '@earendil-works/pi-ai';
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { SelectItem } from '@earendil-works/pi-tui';
 import { getErrorMessage } from '@trethore/shared/error.js';
-import { defaultAccount, type Account, type AccountStore } from '#src/accounts.js';
+import { accountForProvider, defaultAccount, type Account } from '#src/accounts.js';
+import type { AccountManager } from '#src/manager.js';
+import { promptLogin, switchAccount, type AccountSwitchAPI } from '#src/switching.js';
 import { supportsAccounts } from '#src/provider.js';
 import { AccountSelector } from '#src/selector.js';
 
 const ADD_ACCOUNT = 'add';
-
-export type AccountSwitchAPI = Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>;
-
-export interface AccountManager {
-  store: Pick<AccountStore, 'add' | 'getDefault' | 'setDefault'>;
-  sync(ctx: Pick<ExtensionContext, 'modelRegistry'>): Promise<Account[]>;
-  list(): Account[];
-}
 
 export function registerAccountCommand(pi: ExtensionAPI, manager: AccountManager): void {
   pi.registerCommand('account', {
@@ -44,7 +37,7 @@ export async function handleAccountCommand(
     return;
   }
   const saved = await manager.sync(ctx);
-  const currentProvider = currentBaseProvider(saved, ctx);
+  const currentProvider = ctx.model ? accountForProvider(saved, ctx.model.provider).baseProvider : undefined;
   const accounts = listedAccounts(saved, currentProvider);
   if (args === ADD_ACCOUNT || args.startsWith(`${ADD_ACCOUNT} `)) {
     await addAccount(manager, args.slice(ADD_ACCOUNT.length).trim(), currentProvider, ctx);
@@ -88,7 +81,14 @@ async function openAccountMenu(
   const defaults = await Promise.all(
     [...new Set(accounts.map((account) => account.baseProvider))].map((provider) => manager.store.getDefault(provider))
   );
-  const selected = await selectAccount(manager, accounts, ctx, new Set(defaults.map((account) => account?.provider)));
+  const selected = await selectAccount(
+    manager,
+    accounts,
+    ctx,
+    new Map(
+      defaults.filter((account) => account !== undefined).map((account) => [account.baseProvider, account.provider])
+    )
+  );
   if (selected === ADD_ACCOUNT) {
     await addAccount(manager, '', currentProvider, ctx);
     return;
@@ -100,21 +100,6 @@ async function openAccountMenu(
 async function saveDefault(manager: AccountManager, account: Account, ctx: ExtensionContext): Promise<void> {
   await manager.store.setDefault(account);
   ctx.ui.notify(`Default account for ${account.baseProvider}: ${account.name}. Applies on session start.`, 'info');
-}
-
-export async function applyDefaultAccount(
-  pi: AccountSwitchAPI,
-  manager: AccountManager,
-  ctx: ExtensionContext
-): Promise<void> {
-  const baseProvider = currentBaseProvider(manager.list(), ctx);
-  if (!baseProvider) return;
-  const account = await manager.store.getDefault(baseProvider);
-  if (account) await switchAccount(pi, account, ctx);
-}
-
-function currentBaseProvider(accounts: Account[], ctx: Pick<ExtensionCommandContext, 'model'>): string | undefined {
-  return accounts.find((account) => account.provider === ctx.model?.provider)?.baseProvider ?? ctx.model?.provider;
 }
 
 function listedAccounts(saved: Account[], currentProvider: string | undefined): Account[] {
@@ -164,11 +149,12 @@ function validateBaseProvider(baseProvider: string, manager: AccountManager, ctx
 
 export function accountItems(
   accounts: Account[],
-  ctx: Pick<ExtensionCommandContext, 'model' | 'modelRegistry'>
+  ctx: Pick<ExtensionCommandContext, 'model' | 'modelRegistry'>,
+  defaults: ReadonlyMap<string, string> = new Map()
 ): SelectItem[] {
   return accounts.map((account) => ({
     value: account.provider,
-    label: `${ctx.model?.provider === account.provider ? '* ' : '  '}${account.name}`,
+    label: `${ctx.model?.provider === account.provider ? '* ' : '  '}${account.name}${defaults.get(account.baseProvider) === account.provider ? ' (default)' : ''}`,
     description: accountDescription(account, ctx),
   }));
 }
@@ -184,17 +170,14 @@ async function selectAccount(
   manager: AccountManager,
   accounts: Account[],
   ctx: ExtensionCommandContext,
-  defaults: Set<string | undefined>
+  defaults: Map<string, string>
 ): Promise<string | undefined> {
   if (ctx.mode !== 'tui') {
     ctx.ui.notify('Use /account <name> to switch accounts outside the terminal UI.', 'info');
     return undefined;
   }
   const items = () => [
-    ...accountItems(accounts, ctx).map((item) => ({
-      ...item,
-      label: `${item.label}${defaults.has(item.value) ? ' (default)' : ''}`,
-    })),
+    ...accountItems(accounts, ctx, defaults),
     { value: ADD_ACCOUNT, label: '+ Add account', description: 'Save another login for the current provider' },
   ];
   return ctx.ui.custom<string | undefined>((tui, theme, _keys, done) => {
@@ -205,10 +188,7 @@ async function selectAccount(
       saving = true;
       void saveDefault(manager, account, ctx)
         .then(() => {
-          for (const entry of accounts) {
-            if (entry.baseProvider === account.baseProvider) defaults.delete(entry.provider);
-          }
-          defaults.add(account.provider);
+          defaults.set(account.baseProvider, account.provider);
           selector.updateItems(items());
           tui.requestRender();
         })
@@ -221,93 +201,4 @@ async function selectAccount(
     });
     return selector;
   });
-}
-
-export async function switchAccount(
-  pi: AccountSwitchAPI,
-  account: Account,
-  ctx: ExtensionContext,
-  modelId = ctx.model?.id
-): Promise<boolean> {
-  const previousModel = ctx.model;
-  if (!canSwitchAccount(account, ctx)) return false;
-  if (isCurrentAccountModel(account, ctx, modelId)) return true;
-  const result = await resolveAccountModel(account, ctx, modelId);
-  if (!result.ok || ctx.model !== previousModel) return false;
-  if (!ctx.isIdle()) {
-    ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
-    return false;
-  }
-  const model = result.model;
-  if (!model) {
-    ctx.ui.notify(
-      `The current model is not available for ${account.name}. Select a model under ${account.provider} with /model.`,
-      'warning'
-    );
-    return false;
-  }
-  const thinkingLevel = pi.getThinkingLevel();
-  if (!(await pi.setModel(model))) {
-    promptLogin(account, ctx);
-    return false;
-  }
-  pi.setThinkingLevel(thinkingLevel);
-  return true;
-}
-
-function isCurrentAccountModel(account: Account, ctx: ExtensionContext, modelId: string | undefined): boolean {
-  return ctx.model?.provider === account.provider && ctx.model.id === modelId;
-}
-
-function canSwitchAccount(account: Account, ctx: ExtensionContext): boolean {
-  if (!ctx.isIdle()) {
-    ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
-    return false;
-  }
-  if (!ctx.modelRegistry.getProvider(account.provider)) {
-    ctx.ui.notify(
-      `Provider for ${account.name} is unavailable. Load ${account.baseProvider} with a stored-credential login flow.`,
-      'warning'
-    );
-    return false;
-  }
-  if (!ctx.modelRegistry.getProviderAuthStatus(account.provider).configured) {
-    promptLogin(account, ctx);
-    return false;
-  }
-  return true;
-}
-
-function findAccountModel(
-  account: Account,
-  ctx: ExtensionContext,
-  modelId: string | undefined
-): Model<Api> | undefined {
-  return ctx.modelRegistry.getAvailable().find((model) => model.provider === account.provider && model.id === modelId);
-}
-
-async function resolveAccountModel(
-  account: Account,
-  ctx: ExtensionContext,
-  modelId: string | undefined
-): Promise<{ ok: true; model: Model<Api> | undefined } | { ok: false }> {
-  const cached = findAccountModel(account, ctx, modelId);
-  if (cached) return { ok: true, model: cached };
-  const refreshed = await ctx.modelRegistry.refresh({ providers: [account.provider], allowNetwork: true });
-  if (refreshed.aborted) return { ok: false };
-  const error = refreshed.errors.get(account.provider);
-  if (error) {
-    ctx.ui.notify(`Could not refresh models for ${account.name}: ${error.message}`, 'warning');
-    return { ok: false };
-  }
-  return { ok: true, model: findAccountModel(account, ctx, modelId) };
-}
-
-function promptLogin(account: Account, ctx: ExtensionContext): void {
-  const command = `/login ${account.provider}`;
-  if (ctx.mode === 'tui' && !ctx.ui.getEditorText().trim()) ctx.ui.setEditorText(command);
-  ctx.ui.notify(
-    `Sign in with ${command}, then select ${account.name} with /account. Complete the provider login with the intended account or API key.`,
-    'info'
-  );
 }

@@ -1,10 +1,11 @@
 import type { ExtensionContext, ExtensionEvent } from '@earendil-works/pi-coding-agent';
-import { defaultAccount, type Account } from '#src/accounts.js';
-import { switchAccount, type AccountManager, type AccountSwitchAPI } from '#src/command.js';
+import { accountForProvider, type Account } from '#src/accounts.js';
+import type { AccountManager } from '#src/manager.js';
+import { modelKey, sameModel, type ModelIdentity } from '#src/model-identity.js';
+import { switchAccount, type AccountSwitchAPI } from '#src/switching.js';
 import { createAccountThinking, type ThinkingSettingsReader } from '#src/thinking.js';
 
 type ModelSelectEvent = Extract<ExtensionEvent, { type: 'model_select' }>;
-type ModelIdentity = Pick<ModelSelectEvent['model'], 'id' | 'provider'>;
 type CycleTarget = { model: ModelIdentity; thinkingLevel?: ReturnType<AccountSwitchAPI['getThinkingLevel']> };
 type ModelEvent = Extract<ExtensionEvent, { type: 'model_select' | 'thinking_level_select' | 'session_start' }>;
 
@@ -16,8 +17,7 @@ export function createAccountModelHandler(
   const thinking = createAccountThinking(pi, readThinkingSettings);
   const selected = new Map<string, Account>();
   const pending = new Set<ModelIdentity>();
-  const accountFor = (provider: string) =>
-    manager.list().find((account) => account.provider === provider) ?? defaultAccount(provider);
+  const accountFor = (provider: string) => accountForProvider(manager.list(), provider);
   const remember = (model: ModelIdentity | undefined) => {
     if (!model) return;
     const account = accountFor(model.provider);
@@ -144,12 +144,4 @@ async function restorePreviousModel(
   if (!event.previousModel || !sameModel(ctx.model, event.model)) return;
   if (!(await pi.setModel(event.previousModel))) return;
   if (thinkingLevel !== undefined) pi.setThinkingLevel(thinkingLevel);
-}
-
-function sameModel(left: ModelIdentity | undefined, right: ModelIdentity | undefined): boolean {
-  return left?.id === right?.id && left?.provider === right?.provider;
-}
-
-function modelKey(model: ModelIdentity): string {
-  return `${model.provider}\0${model.id}`;
 }

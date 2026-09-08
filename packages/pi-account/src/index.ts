@@ -1,9 +1,10 @@
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/shared/error.js';
 import { AccountStore } from '#src/accounts.js';
-import { applyDefaultAccount, registerAccountCommand } from '#src/command.js';
+import { registerAccountCommand } from '#src/command.js';
 import { createAccountManager } from '#src/manager.js';
 import { createAccountModelHandler } from '#src/models.js';
+import { applyDefaultAccount } from '#src/switching.js';
 
 export default function piAccount(pi: ExtensionAPI): void {
   const manager = createAccountManager(pi, new AccountStore(getAgentDir()));

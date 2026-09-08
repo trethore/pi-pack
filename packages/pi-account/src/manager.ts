@@ -1,8 +1,13 @@
 import type { Provider } from '@earendil-works/pi-ai';
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { Account, AccountStore } from '#src/accounts.js';
-import type { AccountManager } from '#src/command.js';
 import { createAccountProvider, supportsAccounts } from '#src/provider.js';
+
+export interface AccountManager {
+  store: Pick<AccountStore, 'add' | 'getDefault' | 'setDefault'>;
+  sync(ctx: Pick<ExtensionContext, 'modelRegistry'>): Promise<Account[]>;
+  list(): Account[];
+}
 
 export function createAccountManager(
   pi: Pick<ExtensionAPI, 'unregisterProvider'> & { registerProvider(provider: Provider): void },
