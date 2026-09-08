@@ -124,7 +124,7 @@ export async function preserveAccount(
   event: Extract<ExtensionEvent, { type: 'model_select' }>,
   ctx: ExtensionContext
 ): Promise<void> {
-  if (event.source === 'restore' || event.model.id === event.previousModel?.id) return;
+  if (event.source === 'restore' || (event.source === 'set' && event.model.id === event.previousModel?.id)) return;
   const account = manager.list().find((entry) => entry.provider === event.previousModel?.provider);
   if (event.model.provider !== account?.baseProvider) return;
   await switchAccount(pi, account, ctx);

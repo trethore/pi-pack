@@ -27,10 +27,14 @@ if (!workModel) throw new Error('Missing Codex model');
 const personalModel = { ...workModel, provider: personal.provider };
 
 describe('account command', () => {
-  it.each(['set', 'cycle'] as const)('preserves the selected account on model %s', async (source) => {
+  it.each([
+    { source: 'set', id: 'another-model' },
+    { source: 'cycle', id: 'another-model' },
+    { source: 'cycle', id: personalModel.id },
+  ] as const)('preserves the selected account on model $source to $id', async ({ source, id }) => {
     // Arrange
     const { pi, ctx, manager } = createHarness();
-    const selectedModel = { ...personalModel, id: 'another-model', provider: DEFAULT_ACCOUNT.provider };
+    const selectedModel = { ...personalModel, id, provider: DEFAULT_ACCOUNT.provider };
     const accountModel = { ...selectedModel, provider: personal.provider };
     ctx.model = selectedModel;
     ctx.modelRegistry.getAvailable = () => [accountModel];
@@ -46,6 +50,32 @@ describe('account command', () => {
     // Assert
     expect(pi.setModel).toHaveBeenCalledExactlyOnceWith(accountModel);
     expect(pi.setThinkingLevel).toHaveBeenCalledExactlyOnceWith('high');
+    expect(manager.store.getDefault).not.toHaveBeenCalled();
+    expect(manager.store.setDefault).not.toHaveBeenCalled();
+  });
+
+  it('preserves the account when consecutive cycles select the same base-provider model', async () => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+    const selectedModel = { ...personalModel, id: 'another-model', provider: DEFAULT_ACCOUNT.provider };
+    const accountModel = { ...selectedModel, provider: personal.provider };
+    ctx.modelRegistry.getAvailable = () => [accountModel];
+
+    // Act
+    for (const previousModel of [personalModel, accountModel]) {
+      ctx.model = selectedModel;
+      await preserveAccount(
+        pi,
+        manager,
+        { type: 'model_select', model: selectedModel, previousModel, source: 'cycle' },
+        ctx
+      );
+    }
+
+    // Assert
+    expect(pi.setModel).toHaveBeenCalledTimes(2);
+    expect(pi.setModel).toHaveBeenNthCalledWith(1, accountModel);
+    expect(pi.setModel).toHaveBeenNthCalledWith(2, accountModel);
     expect(manager.store.getDefault).not.toHaveBeenCalled();
     expect(manager.store.setDefault).not.toHaveBeenCalled();
   });
