@@ -1,7 +1,7 @@
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { getErrorMessage } from '@trethore/shared/error.js';
 import { AccountStore } from '#src/accounts.js';
-import { applyDefaultAccount, registerAccountCommand } from '#src/command.js';
+import { applyDefaultAccount, preserveAccount, registerAccountCommand } from '#src/command.js';
 import { createAccountManager } from '#src/manager.js';
 
 export default function piAccount(pi: ExtensionAPI): void {
@@ -17,4 +17,11 @@ export default function piAccount(pi: ExtensionAPI): void {
     }
   };
   pi.on('session_start', (_event, ctx) => sync(ctx));
+  pi.on('model_select', async (event, ctx) => {
+    try {
+      await preserveAccount(pi, manager, event, ctx);
+    } catch (error) {
+      ctx.ui.notify(`pi-account: ${getErrorMessage(error)}`, 'error');
+    }
+  });
 }

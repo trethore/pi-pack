@@ -12,6 +12,7 @@ import {
   accountItems,
   applyDefaultAccount,
   handleAccountCommand,
+  preserveAccount,
   registerAccountCommand,
   switchAccount,
 } from '#pi-account/command.js';
@@ -26,6 +27,53 @@ if (!workModel) throw new Error('Missing Codex model');
 const personalModel = { ...workModel, provider: personal.provider };
 
 describe('account command', () => {
+  it.each(['set', 'cycle'] as const)('preserves the selected account on model %s', async (source) => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+    const selectedModel = { ...personalModel, id: 'another-model', provider: DEFAULT_ACCOUNT.provider };
+    const accountModel = { ...selectedModel, provider: personal.provider };
+    ctx.model = selectedModel;
+    ctx.modelRegistry.getAvailable = () => [accountModel];
+
+    // Act
+    await preserveAccount(
+      pi,
+      manager,
+      { type: 'model_select', model: selectedModel, previousModel: personalModel, source },
+      ctx
+    );
+
+    // Assert
+    expect(pi.setModel).toHaveBeenCalledExactlyOnceWith(accountModel);
+    expect(pi.setThinkingLevel).toHaveBeenCalledExactlyOnceWith('high');
+    expect(manager.store.getDefault).not.toHaveBeenCalled();
+    expect(manager.store.setDefault).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'explicit default account', provider: DEFAULT_ACCOUNT.provider, id: personalModel.id, source: 'set' },
+    { name: 'explicit saved account', provider: work.provider, id: 'another-model', source: 'set' },
+    { name: 'unrelated provider', provider: 'another-provider', id: 'another-model', source: 'set' },
+    { name: 'session restoration', provider: DEFAULT_ACCOUNT.provider, id: 'another-model', source: 'restore' },
+    { name: 'account remapping', provider: personal.provider, id: 'another-model', source: 'set' },
+  ] as const)('does not override $name', async ({ provider, id, source }) => {
+    // Arrange
+    const { pi, ctx, manager } = createHarness();
+    const selectedModel = { ...personalModel, provider, id };
+    ctx.model = selectedModel;
+
+    // Act
+    await preserveAccount(
+      pi,
+      manager,
+      { type: 'model_select', model: selectedModel, previousModel: personalModel, source },
+      ctx
+    );
+
+    // Assert
+    expect(pi.setModel).not.toHaveBeenCalled();
+  });
+
   it.each(['setDefault work', 'SETDEFAULT Work'])(
     'saves a named default with %s without switching',
     async (command) => {

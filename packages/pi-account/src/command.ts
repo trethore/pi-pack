@@ -1,5 +1,10 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+  ExtensionContext,
+  ExtensionEvent,
+} from '@earendil-works/pi-coding-agent';
 import type { SelectItem } from '@earendil-works/pi-tui';
 import { getErrorMessage } from '@trethore/shared/error.js';
 import { defaultAccount, type Account, type AccountStore } from '#src/accounts.js';
@@ -7,6 +12,8 @@ import { supportsAccounts } from '#src/provider.js';
 import { AccountSelector } from '#src/selector.js';
 
 const ADD_ACCOUNT = 'add';
+
+type AccountSwitchAPI = Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>;
 
 export interface AccountManager {
   store: Pick<AccountStore, 'add' | 'getDefault' | 'setDefault'>;
@@ -32,7 +39,7 @@ export function registerAccountCommand(pi: ExtensionAPI, manager: AccountManager
 }
 
 export async function handleAccountCommand(
-  pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
+  pi: AccountSwitchAPI,
   manager: AccountManager,
   args: string,
   ctx: ExtensionCommandContext
@@ -77,7 +84,7 @@ async function setDefaultCommand(
 }
 
 async function openAccountMenu(
-  pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
+  pi: AccountSwitchAPI,
   manager: AccountManager,
   accounts: Account[],
   currentProvider: string | undefined,
@@ -101,7 +108,7 @@ async function saveDefault(manager: AccountManager, account: Account, ctx: Exten
 }
 
 export async function applyDefaultAccount(
-  pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
+  pi: AccountSwitchAPI,
   manager: AccountManager,
   ctx: ExtensionContext
 ): Promise<void> {
@@ -109,6 +116,18 @@ export async function applyDefaultAccount(
   if (!baseProvider) return;
   const account = await manager.store.getDefault(baseProvider);
   if (account) await switchAccount(pi, account, ctx);
+}
+
+export async function preserveAccount(
+  pi: AccountSwitchAPI,
+  manager: AccountManager,
+  event: Extract<ExtensionEvent, { type: 'model_select' }>,
+  ctx: ExtensionContext
+): Promise<void> {
+  if (event.source === 'restore' || event.model.id === event.previousModel?.id) return;
+  const account = manager.list().find((entry) => entry.provider === event.previousModel?.provider);
+  if (event.model.provider !== account?.baseProvider) return;
+  await switchAccount(pi, account, ctx);
 }
 
 function currentBaseProvider(accounts: Account[], ctx: Pick<ExtensionCommandContext, 'model'>): string | undefined {
@@ -221,11 +240,7 @@ async function selectAccount(
   });
 }
 
-export async function switchAccount(
-  pi: Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>,
-  account: Account,
-  ctx: ExtensionContext
-): Promise<void> {
+export async function switchAccount(pi: AccountSwitchAPI, account: Account, ctx: ExtensionContext): Promise<void> {
   if (!ctx.isIdle()) {
     ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
     return;
