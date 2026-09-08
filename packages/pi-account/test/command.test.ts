@@ -1,6 +1,7 @@
 import { openaiCodexProvider } from '@earendil-works/pi-ai/providers/openai-codex';
 import {
   initTheme,
+  SettingsManager,
   type Theme,
   type ExtensionAPI,
   type ExtensionCommandContext,
@@ -12,10 +13,10 @@ import {
   accountItems,
   applyDefaultAccount,
   handleAccountCommand,
-  preserveAccount,
   registerAccountCommand,
   switchAccount,
 } from '#pi-account/command.js';
+import { createAccountModelHandler } from '#pi-account/models.js';
 import { AccountSelector } from '#pi-account/selector.js';
 import { createAccountProvider } from '#pi-account/provider.js';
 
@@ -40,16 +41,14 @@ describe('account command', () => {
     ctx.modelRegistry.getAvailable = () => [accountModel];
 
     // Act
-    await preserveAccount(
-      pi,
-      manager,
+    await createAccountModelHandler(pi, manager, () => SettingsManager.inMemory())(
       { type: 'model_select', model: selectedModel, previousModel: personalModel, source },
       ctx
     );
 
     // Assert
     expect(pi.setModel).toHaveBeenCalledExactlyOnceWith(accountModel);
-    expect(pi.setThinkingLevel).toHaveBeenCalledExactlyOnceWith('high');
+    expect(pi.setThinkingLevel).toHaveBeenLastCalledWith('medium');
     expect(manager.store.getDefault).not.toHaveBeenCalled();
     expect(manager.store.setDefault).not.toHaveBeenCalled();
   });
@@ -60,16 +59,12 @@ describe('account command', () => {
     const selectedModel = { ...personalModel, id: 'another-model', provider: DEFAULT_ACCOUNT.provider };
     const accountModel = { ...selectedModel, provider: personal.provider };
     ctx.modelRegistry.getAvailable = () => [accountModel];
+    const selectModel = createAccountModelHandler(pi, manager, () => SettingsManager.inMemory());
 
     // Act
     for (const previousModel of [personalModel, accountModel]) {
       ctx.model = selectedModel;
-      await preserveAccount(
-        pi,
-        manager,
-        { type: 'model_select', model: selectedModel, previousModel, source: 'cycle' },
-        ctx
-      );
+      await selectModel({ type: 'model_select', model: selectedModel, previousModel, source: 'cycle' }, ctx);
     }
 
     // Assert
@@ -93,9 +88,7 @@ describe('account command', () => {
     ctx.model = selectedModel;
 
     // Act
-    await preserveAccount(
-      pi,
-      manager,
+    await createAccountModelHandler(pi, manager, () => SettingsManager.inMemory())(
       { type: 'model_select', model: selectedModel, previousModel: personalModel, source },
       ctx
     );
@@ -632,6 +625,7 @@ function createHarness() {
     mode: 'tui',
     hasUI: true,
     model: personalModel,
+    scopedModels: [],
     isIdle: () => true,
     modelRegistry: {
       getAll: () => [workModel, personalModel],

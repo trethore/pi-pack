@@ -1,10 +1,5 @@
 import type { Api, Model } from '@earendil-works/pi-ai';
-import type {
-  ExtensionAPI,
-  ExtensionCommandContext,
-  ExtensionContext,
-  ExtensionEvent,
-} from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { SelectItem } from '@earendil-works/pi-tui';
 import { getErrorMessage } from '@trethore/shared/error.js';
 import { defaultAccount, type Account, type AccountStore } from '#src/accounts.js';
@@ -13,7 +8,7 @@ import { AccountSelector } from '#src/selector.js';
 
 const ADD_ACCOUNT = 'add';
 
-type AccountSwitchAPI = Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>;
+export type AccountSwitchAPI = Pick<ExtensionAPI, 'setModel' | 'getThinkingLevel' | 'setThinkingLevel'>;
 
 export interface AccountManager {
   store: Pick<AccountStore, 'add' | 'getDefault' | 'setDefault'>;
@@ -116,18 +111,6 @@ export async function applyDefaultAccount(
   if (!baseProvider) return;
   const account = await manager.store.getDefault(baseProvider);
   if (account) await switchAccount(pi, account, ctx);
-}
-
-export async function preserveAccount(
-  pi: AccountSwitchAPI,
-  manager: AccountManager,
-  event: Extract<ExtensionEvent, { type: 'model_select' }>,
-  ctx: ExtensionContext
-): Promise<void> {
-  if (event.source === 'restore' || (event.source === 'set' && event.model.id === event.previousModel?.id)) return;
-  const account = manager.list().find((entry) => entry.provider === event.previousModel?.provider);
-  if (event.model.provider !== account?.baseProvider) return;
-  await switchAccount(pi, account, ctx);
 }
 
 function currentBaseProvider(accounts: Account[], ctx: Pick<ExtensionCommandContext, 'model'>): string | undefined {
@@ -240,28 +223,20 @@ async function selectAccount(
   });
 }
 
-export async function switchAccount(pi: AccountSwitchAPI, account: Account, ctx: ExtensionContext): Promise<void> {
+export async function switchAccount(
+  pi: AccountSwitchAPI,
+  account: Account,
+  ctx: ExtensionContext,
+  modelId = ctx.model?.id
+): Promise<boolean> {
+  const previousModel = ctx.model;
+  if (!canSwitchAccount(account, ctx)) return false;
+  if (isCurrentAccountModel(account, ctx, modelId)) return true;
+  const result = await resolveAccountModel(account, ctx, modelId);
+  if (!result.ok || ctx.model !== previousModel) return false;
   if (!ctx.isIdle()) {
     ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
-    return;
-  }
-  if (!ctx.modelRegistry.getProvider(account.provider)) {
-    ctx.ui.notify(
-      `Provider for ${account.name} is unavailable. Load ${account.baseProvider} with a stored-credential login flow.`,
-      'warning'
-    );
-    return;
-  }
-  if (!ctx.modelRegistry.getProviderAuthStatus(account.provider).configured) {
-    promptLogin(account, ctx);
-    return;
-  }
-  if (ctx.model?.provider === account.provider) return;
-  const result = await resolveAccountModel(account, ctx);
-  if (!result.ok) return;
-  if (!ctx.isIdle()) {
-    ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
-    return;
+    return false;
   }
   const model = result.model;
   if (!model) {
@@ -269,27 +244,54 @@ export async function switchAccount(pi: AccountSwitchAPI, account: Account, ctx:
       `The current model is not available for ${account.name}. Select a model under ${account.provider} with /model.`,
       'warning'
     );
-    return;
+    return false;
   }
   const thinkingLevel = pi.getThinkingLevel();
   if (!(await pi.setModel(model))) {
     promptLogin(account, ctx);
-    return;
+    return false;
   }
   pi.setThinkingLevel(thinkingLevel);
+  return true;
 }
 
-function findAccountModel(account: Account, ctx: ExtensionContext): Model<Api> | undefined {
-  return ctx.modelRegistry
-    .getAvailable()
-    .find((model) => model.provider === account.provider && model.id === ctx.model?.id);
+function isCurrentAccountModel(account: Account, ctx: ExtensionContext, modelId: string | undefined): boolean {
+  return ctx.model?.provider === account.provider && ctx.model.id === modelId;
+}
+
+function canSwitchAccount(account: Account, ctx: ExtensionContext): boolean {
+  if (!ctx.isIdle()) {
+    ctx.ui.notify('Wait for the current response to finish before changing accounts.', 'warning');
+    return false;
+  }
+  if (!ctx.modelRegistry.getProvider(account.provider)) {
+    ctx.ui.notify(
+      `Provider for ${account.name} is unavailable. Load ${account.baseProvider} with a stored-credential login flow.`,
+      'warning'
+    );
+    return false;
+  }
+  if (!ctx.modelRegistry.getProviderAuthStatus(account.provider).configured) {
+    promptLogin(account, ctx);
+    return false;
+  }
+  return true;
+}
+
+function findAccountModel(
+  account: Account,
+  ctx: ExtensionContext,
+  modelId: string | undefined
+): Model<Api> | undefined {
+  return ctx.modelRegistry.getAvailable().find((model) => model.provider === account.provider && model.id === modelId);
 }
 
 async function resolveAccountModel(
   account: Account,
-  ctx: ExtensionContext
+  ctx: ExtensionContext,
+  modelId: string | undefined
 ): Promise<{ ok: true; model: Model<Api> | undefined } | { ok: false }> {
-  const cached = findAccountModel(account, ctx);
+  const cached = findAccountModel(account, ctx, modelId);
   if (cached) return { ok: true, model: cached };
   const refreshed = await ctx.modelRegistry.refresh({ providers: [account.provider], allowNetwork: true });
   if (refreshed.aborted) return { ok: false };
@@ -298,7 +300,7 @@ async function resolveAccountModel(
     ctx.ui.notify(`Could not refresh models for ${account.name}: ${error.message}`, 'warning');
     return { ok: false };
   }
-  return { ok: true, model: findAccountModel(account, ctx) };
+  return { ok: true, model: findAccountModel(account, ctx, modelId) };
 }
 
 function promptLogin(account: Account, ctx: ExtensionContext): void {
