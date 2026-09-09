@@ -32,7 +32,7 @@ tsconfig.json
 
 Look at the root and package-level `package.json` files to discover scripts, paths, and dependencies.
 
-## Development and Code Quality
+## Development
 
 - Do not use relative imports; instead use absolute ones.
 - Do not add comments unless its for test sections or when documentation is explicitly requested by the user.
@@ -55,3 +55,8 @@ npm run --silent typecheck
 npm run --silent lint
 npm run --silent test
 ```
+
+## Commits & Pull Requests
+
+- Follow the Conventional Commits specification for commit messages.
+- Pull request summaries should include the related issue(s), a brief description of the changes, and how the changes were tested.
