@@ -99,11 +99,21 @@ function requireField(value: string | undefined, label: string): string {
 
 function formatUsage(data: UsageResponse): string {
   const bucket = data.rate_limit;
+  const heading = `Codex usage${bucket?.limit_reached === true || bucket?.allowed === false ? ' (LIMITED)' : ''}`;
+  const windows = [bucket?.primary_window, bucket?.secondary_window].filter(
+    (window): window is UsageWindow => window !== undefined && window !== null
+  );
+
+  if (windows.length === 1) {
+    const weekly = summarize(windows[0]);
+    return [heading, formatWindow('7d', weekly), `7d reset: ${formatDuration(weekly.resetSeconds)}`].join('\n');
+  }
+
   const primary = summarize(bucket?.primary_window);
   const secondary = summarize(bucket?.secondary_window);
 
   return [
-    `Codex usage${bucket?.limit_reached === true || bucket?.allowed === false ? ' (LIMITED)' : ''}`,
+    heading,
     formatWindow('5h', primary),
     `5h reset: ${formatDuration(primary.resetSeconds)}`,
     formatWindow('7d', secondary),
