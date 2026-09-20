@@ -3,6 +3,7 @@ import {
   envApiKeyAuth,
   InMemoryCredentialStore,
   InMemoryModelsStore,
+  normalizeContext,
   type Api,
   type ApiKeyCredential,
   type Credential,
@@ -133,7 +134,7 @@ describe('generic account providers', () => {
     const alias = createAccountProvider(createAccount('work', base.id), base);
     const model = alias.getModels()[0];
     if (!model) throw new Error('Missing model fixture');
-    const context = { messages: [] };
+    const context = normalizeContext({ messages: [] });
     const options = { apiKey: 'work-key' };
     const handle = { id: 'deferred-job' } as Parameters<NonNullable<Provider['fetchDeferred']>>[1];
 

@@ -2,6 +2,8 @@
 
 Monorepo for the pi extensions I develop.
 
+Requires Pi `>=0.86.0 <1`.
+
 ## Extensions
 
 - [pi-account](./packages/pi-account): Saved provider accounts with session-local switching.

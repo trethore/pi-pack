@@ -59,7 +59,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.85.0 <1"
+    "@earendil-works/pi-coding-agent": ">=0.86.0 <1"
   },
   "imports": {
     "#pi-account/*": "./packages/pi-account/src/*",
@@ -73,11 +73,11 @@
     "#pi-whimsical/*": "./packages/pi-whimsical/src/*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.85.0 <1",
-    "@earendil-works/pi-server": ">=0.85.0 <1",
+    "@earendil-works/pi-coding-agent": "0.86.0",
+    "@earendil-works/pi-server": "0.86.0",
     "@eslint/js": "10.0.1",
     "@types/node": "^22.19.19",
-    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.8.0",
     "eslint-plugin-unicorn": "64.0.0",
     "jscpd": "^5.0.9",
@@ -85,7 +85,7 @@
     "prettier": "3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.0",
-    "vitest": "4.1.5"
+    "vitest": "4.1.11"
   },
   "pi": {
     "extensions": [
@@ -93,7 +93,7 @@
     ]
   },
   "allowScripts": {
-    "@google/genai@1.52.0": true,
-    "protobufjs@7.6.5": true
+    "@google/genai@2.21.0": true,
+    "protobufjs@7.6.6": true
   }
 }
