@@ -18,7 +18,7 @@ export function checkPiContentTransformCompatibility(): PiContentTransformCompat
   }
 
   if (!isSupportedPiVersion(VERSION)) {
-    warnings.push(`shared: Pi content transforms support Pi >=0.86.0 <1; current Pi version is ${VERSION}.`);
+    warnings.push(`shared: Pi content transforms support Pi >=0.87.0 <1; current Pi version is ${VERSION}.`);
   }
 
   return { warnings, errors };
@@ -30,8 +30,8 @@ function isSupportedPiVersion(version: string): boolean {
 
   const [major, minor, patch] = match.slice(1).map(Number);
   const isExpectedMajor = major === 0;
-  const isLaterMinor = minor !== undefined && minor > 86;
-  const isMinimumSupportedVersion = minor === 86 && patch !== undefined && patch >= 0;
+  const isLaterMinor = minor !== undefined && minor > 87;
+  const isMinimumSupportedVersion = minor === 87 && patch !== undefined && patch >= 0;
   const isSupportedVersion = isExpectedMajor && (isLaterMinor || isMinimumSupportedVersion);
 
   return isSupportedVersion;

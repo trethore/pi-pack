@@ -11,7 +11,7 @@
     "notifications"
   ],
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.86.0 <1"
+    "@earendil-works/pi-coding-agent": ">=0.87.0 <1"
   },
   "dependencies": {
     "@trethore/shared": "*"

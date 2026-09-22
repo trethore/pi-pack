@@ -2,7 +2,7 @@
 
 Monorepo for the pi extensions I develop.
 
-Requires Pi `>=0.86.0 <1`.
+Requires Pi `>=0.87.0 <1`.
 
 ## Extensions
 
