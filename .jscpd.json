@@ -1,0 +1,19 @@
+{
+  "mode": "strict",
+  "threshold": 3,
+  "minLines": 10,
+  "minTokens": 70,
+  "maxLines": 100000,
+  "maxSize": "10mb",
+  "path": ["."],
+  "pattern": "**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts,sh}",
+  "reporters": ["console"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/*.d.ts",
+    "**/test/fixtures/**",
+    "**/__snapshots__/**"
+  ]
+}

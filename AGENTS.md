@@ -9,16 +9,21 @@ Here is an overview of the project:
 ```text
 packages/
 scripts/
-  import-pi.sh  # Use this script to download the upstream Pi source into `pi/`.
-pi/             # Generated directory containing Pi's source code for browsing.
-scripts/
+  check-duplicates.mjs
+  import-pi.sh          # Use this script to download the upstream Pi source into `pi/`.
+pi/                     # Generated directory containing Pi's source code for browsing.
 test/
 .gitattributes
 .gitignore
+.jscpd.json
 .prettierignore
 .prettierrc.json
 AGENTS.md
+flake.lock
+flake.nix
+knip.json
 LICENSE
+package-lock.json
 package.json
 README.md
 tsconfig.json
