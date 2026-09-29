@@ -11,11 +11,18 @@ packages/
 scripts/
   import-pi.sh  # Use this script to download the upstream Pi source into `pi/`.
 pi/             # Generated directory containing Pi's source code for browsing.
+scripts/
+test/
 .gitattributes
 .gitignore
+.prettierignore
+.prettierrc.json
 AGENTS.md
 LICENSE
+package.json
 README.md
+tsconfig.json
+vitest.config.ts
 ```
 
 ## Commits & Pull Requests
