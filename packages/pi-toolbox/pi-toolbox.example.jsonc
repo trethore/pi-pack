@@ -1,9 +1,0 @@
-{
-  // Master switch for pi-toolbox.
-  "enabled": true,
-
-  // apply_patch tool for structured file edits.
-  "applyPatch": {
-    "enabled": true
-  }
-}
