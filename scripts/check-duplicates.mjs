@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
+const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const configFile = fileURLToPath(new URL("../.jscpd.json", import.meta.url));
 const argumentsForJscpd = ["--config", configFile, "--no-tips", "--fail-on-empty", ...process.argv.slice(2)];
 
@@ -21,7 +21,7 @@ if (!command) {
 }
 
 const result = spawnSync(command, commandArguments, {
-  cwd: repositoryRoot,
+  cwd: projectRoot,
   stdio: "inherit",
 });
 

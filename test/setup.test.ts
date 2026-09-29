@@ -9,7 +9,7 @@ describe("test setup", () => {
     const homeDirectory = process.env[variableName] ?? "";
 
     // Act
-    const homeExists = existsSync(homeDirectory);
+    const isHomeDirectoryPresent = existsSync(homeDirectory);
     const homeParent = path.dirname(homeDirectory);
     const homeName = path.basename(homeDirectory);
 
@@ -17,6 +17,6 @@ describe("test setup", () => {
     expect(homeDirectory).toBe(process.env.HOME);
     expect(homeParent).toBe(tmpdir());
     expect(homeName).toMatch(/^pi-pack-test-home-/);
-    expect(homeExists).toBe(true);
+    expect(isHomeDirectoryPresent).toBe(true);
   });
 });

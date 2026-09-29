@@ -15,7 +15,7 @@ process.env.USERPROFILE = testHome;
 afterAll(() => {
   for (const [name, value] of Object.entries(originalEnvironment)) {
     if (value === undefined) {
-      delete process.env[name];
+      Reflect.deleteProperty(process.env, name);
     } else {
       process.env[name] = value;
     }
