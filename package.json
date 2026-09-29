@@ -1,0 +1,30 @@
+{
+  "name": "pi-pack",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Monorepo for pi extensions.",
+  "keywords": [
+    "pi-package"
+  ],
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "import:pi": "bash scripts/import-pi.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "0.99.1",
+    "@earendil-works/pi-ai": "0.99.1",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-tui": "0.99.1",
+    "@types/node": "22.19.19",
+    "typebox": "1.3.27",
+    "typescript": "7.0.2"
+  }
+}
