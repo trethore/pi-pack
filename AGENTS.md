@@ -6,7 +6,7 @@ Pi-pack is a monorepo for the Pi extensions I develop.
 
 Here is an overview of the project:
 
-```
+```text
 packages/
 scripts/
   import-pi.sh  # Use this script to download the upstream Pi source into `pi/`.
