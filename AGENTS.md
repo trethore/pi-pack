@@ -8,6 +8,9 @@ Here is an overview of the project:
 
 ```
 packages/
+scripts/
+  import-pi.sh  # Use this script to download the upstream Pi source into `pi/`.
+pi/             # Generated directory containing Pi's source code for browsing.
 .gitattributes
 .gitignore
 AGENTS.md
