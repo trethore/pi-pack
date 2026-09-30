@@ -12,19 +12,6 @@ From the repository root, install pi-toolmask globally:
 npm run install:global:pi-toolmask
 ```
 
-<details>
-<summary>Install for this project only</summary>
-
-From the repository root:
-
-```sh
-npm run install:local:pi-toolmask
-```
-
-This uses `pi install -l` to add the package to the current project's Pi settings instead of the global settings.
-
-</details>
-
 ## Configuration
 
 Create one of these files:
@@ -121,24 +108,6 @@ See [pi-toolmask.example.jsonc](pi-toolmask.example.jsonc) for an example config
 > Codemode support wraps Pi's built-in codemode extension, retaining its sandbox, settings, and rendering.
 > A tool hidden at the top level can remain internally active if it is still available through codemode.
 > Top-level masked calls are still blocked.
-
-## Development
-
-From the repository root:
-
-```sh
-npm run dev:pi-toolmask
-```
-
-Or use `npm run dev` to load the root package's extension entry.
-
-From `packages/pi-toolmask`, use:
-
-```sh
-npm run dev
-```
-
-These scripts start Pi with the extension loaded for that run without adding it to your Pi settings.
 
 ## License
 

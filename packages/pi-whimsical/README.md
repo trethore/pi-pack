@@ -12,19 +12,6 @@ From the repository root, install pi-whimsical globally:
 npm run install:global:pi-whimsical
 ```
 
-<details>
-<summary>Install for this project only</summary>
-
-From the repository root:
-
-```sh
-npm run install:local:pi-whimsical
-```
-
-This uses `pi install -l` to add the package to the current project's Pi settings instead of the global settings.
-
-</details>
-
 ## Configuration
 
 No configuration is required. To customize it, create `.pi/pi-whimsical.jsonc` in your project or `~/.pi/agent/pi-whimsical.jsonc` globally:
