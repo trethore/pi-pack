@@ -35,7 +35,7 @@ Read root and package-level `package.json` files to learn more about available s
 
 - Write tests that are easy to scan and understand. Use clear Arrange / Act / Assert sections.
 - Do not add comments or documentation unless explicitly requested, needed to explain non-obvious behavior, or used for Arrange / Act / Assert test sections.
-- To browse Pi source code, use `npm run import:pi` to clone the Pi repository into the gitignored `pi/` directory.
+- To browse the Pi source code, use the gitignored `pi/` directory. If it doesn't exist, run `npm run import:pi` to clone the Pi repository into it.
 
 ### NixOS
 
