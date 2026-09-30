@@ -1,0 +1,30 @@
+{
+  "name": "pi-whimsical",
+  "version": "0.0.1",
+  "description": "Replace Pi's working message with a random whimsical message.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "whimsical"
+  ],
+  "files": [
+    "src",
+    "pi-whimsical.example.jsonc"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "dev": "pi -e ."
+  },
+  "dependencies": {
+    "jsonc-parser": "3.3.1"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.99.1"
+  }
+}
