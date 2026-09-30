@@ -40,7 +40,7 @@
     "node": "^22.19.0 || ^24.0.0 || >=26.0.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-coding-agent": "^0.99.2",
     "@types/node": "22.19.19",
     "jscpd": "5.3.3",
     "knip": "6.38.0",
