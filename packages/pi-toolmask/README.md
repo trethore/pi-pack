@@ -59,8 +59,7 @@ These scripts start Pi with the extension loaded for that run without adding it 
 
 Codemode support wraps Pi's built-in codemode extension, retaining its sandbox, settings, and rendering.
 
-Masks filter tools that Pi makes available. An exception does not activate an inactive tool or bypass Pi's tool
-configuration.
+Masks filter tools that Pi makes available. An exception does not activate an inactive tool or bypass Pi's tool configuration.
 
 A tool hidden at the top level can remain internally active if it is still available through codemode.
 
@@ -75,8 +74,8 @@ Create one of these files:
 | Global  | `~/.pi/agent/pi-toolmask.jsonc` |
 | Project | `.pi/pi-toolmask.jsonc`         |
 
-The project configuration replaces the global configuration completely. The global path follows Pi's agent directory
-if you customize it.
+The project configuration replaces the global configuration completely.
+The global path follows Pi's agent directory if you customize it ($PI_CODING_AGENT_DIR).
 
 To disable every tool except top-level `read`:
 
@@ -87,9 +86,9 @@ To disable every tool except top-level `read`:
 }
 ```
 
-Configuration loads at session start. After editing it, run `/reload`. Files are not watched for changes.
+Configuration loads at session start or after running `/reload`.
 
-See [pi-toolmask.example.jsonc](pi-toolmask.example.jsonc) for a configuration with before-agent-start enforcement.
+See [pi-toolmask.example.jsonc](pi-toolmask.example.jsonc) for an example configuration with before-agent-start enforcement.
 
 <details>
 <summary>Options and lifecycle</summary>
