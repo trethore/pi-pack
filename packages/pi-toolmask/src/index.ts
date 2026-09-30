@@ -1,7 +1,15 @@
-import type { ExtensionAPI, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionEvent, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 import { registerMaskedCodemode } from "./codemode.ts";
 import { disabledConfig, loadConfig } from "./config.ts";
 import { ToolMasks } from "./masks.ts";
+
+const Events = {
+  SessionStart: "session_start",
+  BeforeAgentStart: "before_agent_start",
+  ToolCall: "tool_call",
+  ToolExecutionEnd: "tool_execution_end",
+  SessionShutdown: "session_shutdown",
+} as const satisfies Record<string, ExtensionEvent["type"]>;
 
 export default function toolmask(pi: ExtensionAPI): void {
   let config = disabledConfig;
@@ -36,7 +44,7 @@ export default function toolmask(pi: ExtensionAPI): void {
 
   registerMaskedCodemode(pi, () => masks);
 
-  pi.on("session_start", async (_event, ctx) => {
+  pi.on(Events.SessionStart, async (_event, ctx) => {
     config = disabledConfig;
     masks = new ToolMasks(config);
     removedTools.clear();
@@ -46,13 +54,13 @@ export default function toolmask(pi: ExtensionAPI): void {
     applyMasks();
   });
 
-  pi.on("before_agent_start", () => {
+  pi.on(Events.BeforeAgentStart, () => {
     if (config.enforceBeforeAgentStart) {
       applyMasks();
     }
   });
 
-  pi.on("tool_call", (event): ToolCallEventResult | undefined => {
+  pi.on(Events.ToolCall, (event): ToolCallEventResult | undefined => {
     const nestedCodemode = event.parentToolCallId !== undefined && codemodeCalls.has(event.parentToolCallId);
     const name = nestedCodemode ? `codemode.${event.toolName}` : event.toolName;
     if ((event.parentToolCallId === undefined || nestedCodemode) && masks.isMasked(name)) {
@@ -64,11 +72,11 @@ export default function toolmask(pi: ExtensionAPI): void {
     return undefined;
   });
 
-  pi.on("tool_execution_end", (event) => {
+  pi.on(Events.ToolExecutionEnd, (event) => {
     codemodeCalls.delete(event.toolCallId);
   });
 
-  pi.on("session_shutdown", (event) => {
+  pi.on(Events.SessionShutdown, (event) => {
     if (event.reason === "reload") {
       // Restore only tools removed here before Pi carries its active set into the new runtime.
       masks = new ToolMasks(disabledConfig);
