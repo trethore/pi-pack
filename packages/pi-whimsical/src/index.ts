@@ -1,13 +1,7 @@
-import type { ExtensionAPI, ExtensionEvent } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Events } from "@pi-pack/shared/events";
 import { loadConfig } from "./config.ts";
 import { defaultMessages } from "./messages.ts";
-
-const Events = {
-  SessionStart: "session_start",
-  TurnStart: "turn_start",
-  TurnEnd: "turn_end",
-  SessionShutdown: "session_shutdown",
-} as const satisfies Record<string, ExtensionEvent["type"]>;
 
 export default function whimsical(pi: ExtensionAPI): void {
   let enabled = true;

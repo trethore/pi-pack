@@ -13,7 +13,7 @@
   ],
   "pi": {
     "extensions": [
-      "packages/*/src/index.ts"
+      "packages/pi-*/src/index.ts"
     ]
   },
   "scripts": {

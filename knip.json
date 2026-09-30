@@ -5,7 +5,11 @@
       "project": ["**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"]
     },
     "packages/*": {
-      "entry": ["index.ts", "src/index.ts", "test/**/*.test.ts"],
+      "entry": ["src/index.ts", "test/**/*.test.ts"],
+      "project": ["**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"]
+    },
+    "packages/shared": {
+      "entry": ["test/**/*.test.ts"],
       "project": ["**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"]
     }
   }

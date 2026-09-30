@@ -1,15 +1,8 @@
-import type { ExtensionAPI, ExtensionEvent, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
+import { Events } from "@pi-pack/shared/events";
 import { registerMaskedCodemode } from "./codemode.ts";
 import { disabledConfig, loadConfig } from "./config.ts";
 import { ToolMasks } from "./masks.ts";
-
-const Events = {
-  SessionStart: "session_start",
-  BeforeAgentStart: "before_agent_start",
-  ToolCall: "tool_call",
-  ToolExecutionEnd: "tool_execution_end",
-  SessionShutdown: "session_shutdown",
-} as const satisfies Record<string, ExtensionEvent["type"]>;
 
 export default function toolmask(pi: ExtensionAPI): void {
   let config = disabledConfig;

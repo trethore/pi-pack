@@ -1,7 +1,13 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { fileURLToPath } from "node:url";
+import {
+  DefaultResourceLoader,
+  SettingsManager,
+  type ExtensionAPI,
+  type ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { loadConfig } from "../src/config.ts";
 import whimsical from "../src/index.ts";
@@ -178,4 +184,26 @@ it("reloads configuration at session start", async () => {
 
   // Assert
   expect(extension.setWorkingMessage).not.toHaveBeenCalled();
+});
+
+it("loads the package entry and shared imports through Pi's TypeScript loader", async () => {
+  // Arrange
+  const loader = new DefaultResourceLoader({
+    cwd,
+    agentDir,
+    settingsManager: SettingsManager.inMemory(),
+    noSkills: true,
+    noThemes: true,
+    noPromptTemplates: true,
+    noContextFiles: true,
+    additionalExtensionPaths: [fileURLToPath(new URL("../src/index.ts", import.meta.url))],
+  });
+
+  // Act
+  await loader.reload();
+  const result = loader.getExtensions();
+
+  // Assert
+  expect(result.errors).toEqual([]);
+  expect(result.extensions.some((extension) => extension.handlers.has("turn_start"))).toBe(true);
 });

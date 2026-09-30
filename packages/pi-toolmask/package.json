@@ -22,7 +22,7 @@
     "dev": "pi -e ."
   },
   "dependencies": {
-    "jsonc-parser": "3.3.1"
+    "@pi-pack/shared": "0.0.1"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "^0.99.1"
