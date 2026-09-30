@@ -13,19 +13,24 @@ export default function toolmask(pi: ExtensionAPI): void {
     const active = pi.getActiveTools();
     const codemodeActive = active.includes("codemode") && !masks.isMasked("codemode");
     const exposure = new Map(pi.getAllTools().map((tool) => [tool.name, tool.exposure]));
-    const keepNested = (name: string): boolean =>
+    const isNeededByCodemode = (name: string): boolean =>
       codemodeActive && exposure.get(name) === "direct" && !masks.isMasked(`codemode.${name}`);
-    // Re-enforcement can restore an originally active tool when codemode is activated later.
-    const candidates = [...new Set([...active, ...[...removedTools].filter(keepNested)])];
-    const retained = candidates.filter((name) => {
+
+    // Restore tools removed by this extension if codemode now needs them.
+    const restoredTools = [...removedTools].filter(isNeededByCodemode);
+    const candidates = new Set([...active, ...restoredTools]);
+    const retained: string[] = [];
+
+    for (const name of candidates) {
       // A direct tool can stay callable in codemode while its top-level declaration is hidden.
-      if (!masks.isMasked(name) || keepNested(name)) {
+      if (!masks.isMasked(name) || isNeededByCodemode(name)) {
         removedTools.delete(name);
-        return true;
+        retained.push(name);
+      } else {
+        removedTools.add(name);
       }
-      removedTools.add(name);
-      return false;
-    });
+    }
+
     pi.setActiveTools(retained);
   }
 
