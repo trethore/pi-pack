@@ -11,7 +11,16 @@
   "workspaces": [
     "packages/*"
   ],
+  "pi": {
+    "extensions": [
+      "packages/*/src/index.ts"
+    ]
+  },
   "scripts": {
+    "dev": "pi -e .",
+    "dev:pi-toolmask": "pi -e ./packages/pi-toolmask",
+    "install:global:pi-toolmask": "pi install ./packages/pi-toolmask",
+    "install:local:pi-toolmask": "pi install -l ./packages/pi-toolmask",
     "import:pi": "bash scripts/import-pi.sh",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
@@ -28,6 +37,7 @@
     "node": "^22.19.0 || ^24.0.0 || >=26.0.0"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.99.1",
     "@types/node": "22.19.19",
     "jscpd": "5.3.3",
     "knip": "6.38.0",

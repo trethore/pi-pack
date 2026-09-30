@@ -1,0 +1,30 @@
+{
+  "name": "pi-toolmask",
+  "version": "0.0.1",
+  "description": "Mask Pi tools and nested codemode tools with ordered wildcard rules.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "tools"
+  ],
+  "files": [
+    "src",
+    "pi-toolmask.example.jsonc"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "dev": "pi -e ."
+  },
+  "dependencies": {
+    "jsonc-parser": "3.3.1"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.99.1"
+  }
+}
