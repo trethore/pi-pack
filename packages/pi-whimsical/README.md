@@ -4,7 +4,7 @@ Replace Pi's working message with a random whimsical message.
 
 ## Installation
 
-Requires Pi `0.99.1` or a compatible later release.
+Requires Pi `1.0.0` or a compatible later release.
 
 From the repository root, install pi-whimsical globally:
 

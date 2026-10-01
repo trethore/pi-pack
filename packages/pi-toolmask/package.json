@@ -25,6 +25,6 @@
     "@pi-pack/shared": "0.0.1"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.99.2"
+    "@earendil-works/pi-coding-agent": "^1.0.0"
   }
 }
