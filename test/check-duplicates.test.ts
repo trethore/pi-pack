@@ -4,14 +4,16 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { dedent } from "./dedent.ts";
 
 const originalWrapper = fileURLToPath(new URL("../scripts/check-duplicates.mjs", import.meta.url));
 let fixtureDirectory: string;
 
 function mockLauncher(source: string): string {
-  return `console.log(JSON.stringify({ source: ${JSON.stringify(source)}, args: process.argv.slice(2), cwd: process.cwd() }));
-process.exit(Number(process.env.JSCPD_TEST_EXIT_CODE ?? "0"));
-`;
+  return dedent(`
+    console.log(JSON.stringify({ source: ${JSON.stringify(source)}, args: process.argv.slice(2), cwd: process.cwd() }));
+    process.exit(Number(process.env.JSCPD_TEST_EXIT_CODE ?? "0"));
+  `);
 }
 
 beforeEach(() => {
