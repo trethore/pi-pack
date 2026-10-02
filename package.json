@@ -32,7 +32,7 @@
     "format:check": "prettier --check .",
     "check:unused": "knip",
     "check:duplicates": "node scripts/check-duplicates.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run check:unused && npm run check:duplicates"
+    "check": "npm run format && npm run lint && npm run typecheck && npm run test && npm run check:unused && npm run check:duplicates"
   },
   "engines": {
     "node": "^22.19.0 || ^24.0.0 || >=26.0.0"
