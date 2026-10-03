@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createConfigLoader } from "../src/config.ts";
+import { createConfigLoader } from "@pi-pack/shared/config";
 
 let root: string;
 let cwd: string;

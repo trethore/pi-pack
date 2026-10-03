@@ -1,42 +1,7 @@
 {
   "name": "pi-pack",
   "version": "0.0.1",
-  "private": true,
-  "license": "MIT",
-  "type": "module",
   "description": "Monorepo for pi extensions.",
-  "keywords": [
-    "pi-package"
-  ],
-  "workspaces": [
-    "packages/*"
-  ],
-  "pi": {
-    "extensions": [
-      "packages/pi-*/src/index.ts"
-    ]
-  },
-  "scripts": {
-    "dev": "pi -e .",
-    "dev:pi-metrics": "pi -e ./packages/pi-metrics",
-    "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
-    "install:global:pi-metrics": "pi install ./packages/pi-metrics",
-    "install:global:pi-whimsical": "pi install ./packages/pi-whimsical",
-    "import:pi": "bash scripts/import-pi.sh",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint .",
-    "lint:fix": "oxlint --fix .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "format": "prettier --log-level warn --write .",
-    "format:check": "prettier --check .",
-    "check:unused": "knip",
-    "check:duplicates": "node scripts/check-duplicates.mjs",
-    "check": "npm run format && npm run lint && npm run typecheck && npm run test && npm run check:unused && npm run check:duplicates"
-  },
-  "engines": {
-    "node": "^22.19.0 || ^24.0.0 || >=26.0.0"
-  },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.0.0",
     "@types/node": "22.19.19",
@@ -47,5 +12,43 @@
     "prettier": "3.9.9",
     "typescript": "7.0.2",
     "vitest": "5.0.2"
-  }
+  },
+  "engines": {
+    "node": "^22.19.0 || ^24.0.0 || >=26.0.0"
+  },
+  "imports": {
+    "#test/*": "./test/*.ts"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "pi": {
+    "extensions": [
+      "packages/pi-*/src/index.ts"
+    ]
+  },
+  "private": true,
+  "scripts": {
+    "check": "npm run format && npm run lint && npm run typecheck && npm run test && npm run check:unused && npm run check:duplicates",
+    "check:duplicates": "node scripts/check-duplicates.mjs",
+    "check:unused": "knip",
+    "dev": "pi -e .",
+    "dev:pi-metrics": "pi -e ./packages/pi-metrics",
+    "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
+    "format": "prettier --log-level warn --write .",
+    "format:check": "prettier --check .",
+    "import:pi": "bash scripts/import-pi.sh",
+    "install:global:pi-metrics": "pi install ./packages/pi-metrics",
+    "install:global:pi-whimsical": "pi install ./packages/pi-whimsical",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ]
 }

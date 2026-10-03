@@ -9,9 +9,9 @@ import {
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { loadConfig } from "../src/config.ts";
-import whimsical from "../src/index.ts";
-import { defaultMessages } from "../src/messages.ts";
+import { loadConfig } from "#src/config";
+import whimsical from "#src/index";
+import { defaultMessages } from "#src/messages";
 
 let root: string;
 let cwd: string;

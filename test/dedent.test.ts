@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedent } from "./dedent.ts";
+import { dedent } from "#test/dedent";
 
 describe("dedent", () => {
   it.each([

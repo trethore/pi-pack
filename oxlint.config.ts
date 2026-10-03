@@ -25,6 +25,17 @@ export default defineConfig({
   ],
   rules: {
     "unicorn/no-array-sort": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            regex: "^\\.{1,2}(/|$)",
+            message: "Use a package import or a package.json imports alias instead of a relative import.",
+          },
+        ],
+      },
+    ],
     complexity: ["error", 10],
     "max-depth": ["error", 3],
   },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { booleanOption } from "../src/validation.ts";
+import { booleanOption } from "@pi-pack/shared/validation";
 
 describe("booleanOption", () => {
   it.each([true, false])("uses fallback %s only for undefined", (fallback) => {

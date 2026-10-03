@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
-import { loadConfig } from "./config.ts";
-import { defaultMessages } from "./messages.ts";
+import { loadConfig } from "#src/config";
+import { defaultMessages } from "#src/messages";
 
 export default function whimsical(pi: ExtensionAPI): void {
   let enabled = true;

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { dedent } from "./dedent.ts";
+import { dedent } from "#test/dedent";
 
 const originalScript = fileURLToPath(new URL("../scripts/import-pi.sh", import.meta.url));
 let fixtureDirectory: string;
