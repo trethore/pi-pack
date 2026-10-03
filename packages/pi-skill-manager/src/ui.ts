@@ -1,9 +1,9 @@
-import type { KeybindingsManager, Skill, Theme } from "@earendil-works/pi-coding-agent";
+import type { Skill, Theme } from "@earendil-works/pi-coding-agent";
 import {
   fuzzyFilter,
   Input,
-  Key,
-  matchesKey,
+  KeybindingsManager,
+  type Keybinding,
   SelectList,
   Text,
   truncateToWidth,
@@ -14,6 +14,7 @@ import {
   type SelectListLayoutOptions,
 } from "@earendil-works/pi-tui";
 import type { SkillManagerConfig } from "./config.ts";
+import { createManagerKeybindings, type ManagerKeybindings } from "./keybindings.ts";
 import { SkillDraft } from "./selection.ts";
 
 export interface ManagerResult {
@@ -32,7 +33,7 @@ export class SkillManager implements Focusable {
   private readonly skills: Skill[];
   private readonly locked: boolean;
   private readonly theme: Pick<Theme, "fg" | "bold" | "underline">;
-  private readonly keybindings: Pick<KeybindingsManager, "matches">;
+  private readonly keybindings: KeybindingsManager;
   private readonly requestRender: () => void;
   private readonly done: (result: ManagerResult | undefined) => void;
 
@@ -49,7 +50,7 @@ export class SkillManager implements Focusable {
     skills: Skill[],
     locked: boolean,
     theme: Pick<Theme, "fg" | "bold" | "underline">,
-    keybindings: Pick<KeybindingsManager, "matches">,
+    keybindings: ManagerKeybindings,
     requestRender: () => void,
     done: (result: ManagerResult | undefined) => void,
     savedConfig = config,
@@ -57,7 +58,7 @@ export class SkillManager implements Focusable {
     this.skills = skills;
     this.locked = locked;
     this.theme = theme;
-    this.keybindings = keybindings;
+    this.keybindings = createManagerKeybindings(keybindings);
     this.requestRender = requestRender;
     this.done = done;
     this.draft = new SkillDraft(config, skills, savedConfig);
@@ -122,7 +123,7 @@ export class SkillManager implements Focusable {
     return missing.map((name) => ({
       value: name,
       label: this.skillLabel(name),
-      description: "Enter: remove rule",
+      description: this.hint("tui.select.confirm", "remove rule"),
     }));
   }
 
@@ -198,9 +199,13 @@ export class SkillManager implements Focusable {
   }
 
   handleInput(data: string): void {
-    if (matchesKey(data, Key.ctrl("s"))) {
+    if (this.handleNavigation(data)) {
+      this.requestRender();
+      return;
+    }
+    if (this.keybindings.matches(data, "pi-skill-manager.save")) {
       this.done({ action: "save", config: this.draft.config() });
-    } else if (!this.switchSection(data) && !this.handleNavigation(data)) {
+    } else if (!this.switchSection(data)) {
       this.search.handleInput(data);
       this.rebuild();
     }
@@ -209,12 +214,10 @@ export class SkillManager implements Focusable {
 
   private switchSection(data: string): boolean {
     const movements = [
-      [Key.tab, "forward"],
-      [Key.right, "forward"],
-      [Key.shift("tab"), "backward"],
-      [Key.left, "backward"],
+      ["pi-skill-manager.nextSection", "forward"],
+      ["pi-skill-manager.previousSection", "backward"],
     ] as const;
-    const movement = movements.find(([key]) => matchesKey(data, key));
+    const movement = movements.find(([action]) => this.keybindings.matches(data, action));
     if (!movement) return false;
     const directions = {
       forward: { skills: "missing", missing: "actions", actions: "skills" },
@@ -258,6 +261,11 @@ export class SkillManager implements Focusable {
     this.lists[this.section].setSelectedIndex(next);
   }
 
+  private hint(action: Keybinding, description: string): string {
+    const keys = this.keybindings.getKeys(action).join("/") || "unbound";
+    return `${keys}: ${description}`;
+  }
+
   private text(text: string, width: number): string[] {
     return new Text(text, 0, 0).render(width);
   }
@@ -281,8 +289,30 @@ export class SkillManager implements Focusable {
     return [
       ...this.text(this.theme.bold("Skill manager"), width),
       ...notice,
-      ...this.text("Left/Right or Tab/Shift+Tab: switch section | Up/Down: select", width),
-      ...this.text("Enter: toggle/action | Ctrl+S: save config | Esc: cancel", width),
+      ...this.text(
+        [
+          this.hint("pi-skill-manager.nextSection", "next section"),
+          this.hint("pi-skill-manager.previousSection", "previous section"),
+        ].join(" | "),
+        width,
+      ),
+      ...this.text(
+        [
+          this.hint("tui.select.up", "up"),
+          this.hint("tui.select.down", "down"),
+          this.hint("tui.select.pageUp", "page up"),
+          this.hint("tui.select.pageDown", "page down"),
+        ].join(" | "),
+        width,
+      ),
+      ...this.text(
+        [
+          this.hint("tui.select.confirm", "toggle/action"),
+          this.hint("pi-skill-manager.save", "save config"),
+          this.hint("tui.select.cancel", "cancel"),
+        ].join(" | "),
+        width,
+      ),
       "",
       ...this.search.render(width),
       "",

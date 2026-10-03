@@ -1,5 +1,5 @@
-import { type KeybindingsManager, type Theme, type Skill } from "@earendil-works/pi-coding-agent";
-import { getKeybindings, visibleWidth } from "@earendil-works/pi-tui";
+import { type Theme, type Skill } from "@earendil-works/pi-coding-agent";
+import { getKeybindings, KeybindingsManager, TUI_KEYBINDINGS, visibleWidth } from "@earendil-works/pi-tui";
 import { describe, expect, it, vi } from "vitest";
 import { defaultConfig, type SkillManagerConfig } from "../src/config.ts";
 import { SkillManager } from "../src/ui.ts";
@@ -9,7 +9,7 @@ function picker(
   config: SkillManagerConfig = defaultConfig(),
   locked = false,
   skills: Skill[] = [skill("one"), skill("two")],
-  keybindings: Pick<KeybindingsManager, "matches"> = getKeybindings(),
+  keybindings = getKeybindings(),
   savedConfig = config,
 ) {
   const done = vi.fn();
@@ -311,10 +311,7 @@ describe("skill manager picker", () => {
 
   it("uses the injected navigation bindings instead of a separate TUI global registry", () => {
     // Arrange
-    const keybindings: Pick<KeybindingsManager, "matches"> = {
-      matches: (data, action) =>
-        (action === "tui.select.down" && data === "j") || getKeybindings().matches(data, action),
-    };
+    const keybindings = new KeybindingsManager(TUI_KEYBINDINGS, { "tui.select.down": "j" });
     const { component } = picker(defaultConfig(), false, [skill("one"), skill("two")], keybindings);
 
     // Act
@@ -325,6 +322,119 @@ describe("skill manager picker", () => {
     const rendered = component.render(80).join("\n");
     expect(rendered).toContain("[on] one");
     expect(rendered).toContain("[off] two");
+  });
+
+  it("remaps save and section shortcuts and displays their active keys", () => {
+    // Arrange
+    const keybindings = new KeybindingsManager(TUI_KEYBINDINGS, {
+      "pi-skill-manager.save": ["ctrl+g", "ctrl+x"],
+      "pi-skill-manager.nextSection": "ctrl+n",
+      "pi-skill-manager.previousSection": "ctrl+p",
+    });
+    const { component, done } = picker(defaultConfig(), false, undefined, keybindings);
+
+    // Act
+    component.handleInput("\u0013");
+    for (const key of ["\t", "\u001b[C", "\u001b[Z", "\u001b[D"]) component.handleInput(key);
+
+    // Assert
+    expect(done).not.toHaveBeenCalled();
+    expect(component.render(240).join("\n")).toContain("\u001b[4mSkills (2)\u001b[24m");
+    component.handleInput("\u000e");
+    expect(component.render(240).join("\n")).toContain("\u001b[4mNot loaded (0)\u001b[24m");
+    component.handleInput("\u0010");
+    const rendered = component.render(240).join("\n");
+    expect(rendered).toContain("\u001b[4mSkills (2)\u001b[24m");
+    expect(rendered).toContain("ctrl+n: next section");
+    expect(rendered).toContain("ctrl+p: previous section");
+    expect(rendered).toContain("ctrl+g/ctrl+x: save config");
+    expect(rendered).not.toContain("ctrl+s: save config");
+    for (const key of ["\u0007", "\u0018"]) {
+      done.mockClear();
+      component.handleInput(key);
+      expect(done).toHaveBeenCalledExactlyOnceWith({ action: "save", config: defaultConfig() });
+    }
+  });
+
+  it("disables shortcuts with empty arrays and labels them as unbound", () => {
+    // Arrange
+    const keybindings = new KeybindingsManager(TUI_KEYBINDINGS, {
+      "pi-skill-manager.save": [],
+      "pi-skill-manager.nextSection": [],
+      "pi-skill-manager.previousSection": [],
+      "tui.select.confirm": [],
+      "tui.select.cancel": [],
+    });
+    const { component, done } = picker(defaultConfig(), false, undefined, keybindings);
+
+    // Act
+    for (const key of ["\u0013", "\t", "\u001b[C", "\u001b[Z", "\u001b[D", "\r", "\u001b"]) {
+      component.handleInput(key);
+    }
+    const rendered = component.render(240).join("\n");
+
+    // Assert
+    expect(done).not.toHaveBeenCalled();
+    expect(rendered).toContain("\u001b[4mSkills (2)\u001b[24m");
+    expect(rendered).toContain("[on] one");
+    for (const action of ["save config", "next section", "previous section", "toggle/action", "cancel"]) {
+      expect(rendered).toContain(`unbound: ${action}`);
+    }
+  });
+
+  it("uses configured selection keys in the help and missing-rule description", () => {
+    // Arrange
+    const keybindings = new KeybindingsManager(TUI_KEYBINDINGS, {
+      "tui.select.up": "ctrl+k",
+      "tui.select.down": "ctrl+j",
+      "tui.select.pageUp": "ctrl+u",
+      "tui.select.pageDown": "ctrl+d",
+      "tui.select.confirm": "ctrl+g",
+      "tui.select.cancel": "ctrl+q",
+    });
+    const config = { enabled: true, skills: [["gone", false] as [string, boolean]] };
+    const { component, done } = picker(config, false, undefined, keybindings);
+
+    // Act
+    component.handleInput("\t");
+    const rendered = component.render(240).join("\n");
+    component.handleInput("\r");
+
+    // Assert
+    expect(rendered).toContain("ctrl+k: up | ctrl+j: down | ctrl+u: page up | ctrl+d: page down");
+    expect(rendered).toContain("ctrl+g: toggle/action");
+    expect(rendered).toContain("ctrl+q: cancel");
+    expect(rendered).toContain("ctrl+g: remove rule");
+    expect(rendered).not.toContain("Enter: remove rule");
+    expect(component.render(240).join("\n")).toContain("[off] gone");
+    component.handleInput("\u0007");
+    expect(component.render(240).join("\n")).toContain("Not loaded (0)");
+    component.handleInput("\u0011");
+    expect(done).toHaveBeenCalledExactlyOnceWith(undefined);
+  });
+
+  it.each([
+    { action: "tui.select.confirm" as const, binding: "right" as const, key: "\u001b[C" },
+    { action: "tui.select.cancel" as const, binding: "ctrl+s" as const, key: "\u0013" },
+  ])("does not intercept a remapped $action with an extension shortcut", ({ action, binding, key }) => {
+    // Arrange
+    const keybindings = new KeybindingsManager(TUI_KEYBINDINGS, { [action]: binding });
+    const { component, done } = picker(defaultConfig(), false, undefined, keybindings);
+
+    // Act
+    component.handleInput(key);
+
+    // Assert
+    if (action === "tui.select.confirm") {
+      const rendered = component.render(240).join("\n");
+      expect(rendered).toContain("[off] one");
+      expect(rendered).toContain("tab: next section");
+      expect(rendered).not.toContain("tab/right: next section");
+      expect(done).not.toHaveBeenCalled();
+    } else {
+      expect(component.render(240).join("\n")).toContain("unbound: save config");
+      expect(done).toHaveBeenCalledExactlyOnceWith(undefined);
+    }
   });
 
   it("renders manual-only skills and empty sections", () => {
