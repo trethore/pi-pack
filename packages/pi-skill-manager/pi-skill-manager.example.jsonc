@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "skills": [
+    ["code-review", true],
+    ["browser-testing", false]
+  ]
+}
