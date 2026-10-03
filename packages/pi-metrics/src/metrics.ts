@@ -32,6 +32,17 @@ function duration(milliseconds: number): string {
   return `${hours > 0 ? `${hours}h` : ""}${hours > 0 || minutes > 0 ? `${minutes}m` : ""}${seconds}s`;
 }
 
+type MetricDependency = "cost" | "input" | "output" | "requestTime" | "duration";
+
+interface MetricDefinition {
+  requires: readonly MetricDependency[];
+  render: () => string;
+}
+
+function metricToken(name: string): string {
+  return `<${name}>`;
+}
+
 export class TurnMetrics {
   readonly needsSpeed: boolean;
   readonly needsUsage: boolean;
@@ -39,7 +50,7 @@ export class TurnMetrics {
   private readonly needsInput: boolean;
   private readonly needsOutput: boolean;
   private readonly needsCost: boolean;
-  private readonly format: string;
+  private readonly parts: (string | MetricDefinition)[];
   active = false;
   private started = 0;
   private requestStarted: number | undefined;
@@ -49,12 +60,46 @@ export class TurnMetrics {
   private cost = 0;
 
   constructor(format: string) {
-    this.format = format;
-    this.needsSpeed = format.includes("<tokps>");
-    this.needsDuration = format.includes("<timetaken>");
-    this.needsInput = format.includes("<input_tokens>");
-    this.needsOutput = this.needsSpeed || format.includes("<output_tokens>");
-    this.needsCost = format.includes("<cost>");
+    const definitions = {
+      cost: {
+        requires: ["cost"],
+        render: () => displayValue(this.cost, (value) => `$${value.toFixed(4)}`),
+      },
+      tokps: {
+        requires: ["output", "requestTime"],
+        render: () => {
+          const speed = this.modelMilliseconds > 0 ? this.output / (this.modelMilliseconds / 1000) : NaN;
+          return displayValue(speed, (value) => `${value.toFixed(1)} tok/s`);
+        },
+      },
+      timetaken: {
+        requires: ["duration"],
+        render: () => duration(performance.now() - this.started),
+      },
+      input_tokens: {
+        requires: ["input"],
+        render: () => displayValue(this.input, String),
+      },
+      output_tokens: {
+        requires: ["output"],
+        render: () => displayValue(this.output, String),
+      },
+    } satisfies Record<string, MetricDefinition>;
+
+    const tokens = new Map(Object.entries(definitions).map(([name, definition]) => [metricToken(name), definition]));
+    const pattern = new RegExp(`(${[...tokens.keys()].join("|")})`, "g");
+    this.parts = format.split(pattern).map((part) => tokens.get(part) ?? part);
+
+    const dependencies = new Set<MetricDependency>();
+    for (const part of this.parts) {
+      if (typeof part === "string") continue;
+      for (const dependency of part.requires) dependencies.add(dependency);
+    }
+    this.needsSpeed = dependencies.has("requestTime");
+    this.needsDuration = dependencies.has("duration");
+    this.needsInput = dependencies.has("input");
+    this.needsOutput = dependencies.has("output");
+    this.needsCost = dependencies.has("cost");
     this.needsUsage = this.needsInput || this.needsOutput || this.needsCost;
   }
 
@@ -90,23 +135,6 @@ export class TurnMetrics {
   }
 
   render(): string {
-    return this.format.replace(/<(cost|tokps|timetaken|input_tokens|output_tokens)>/g, (_match, name: string) => {
-      switch (name) {
-        case "cost":
-          return displayValue(this.cost, (value) => `$${value.toFixed(4)}`);
-        case "tokps": {
-          const speed = this.modelMilliseconds > 0 ? this.output / (this.modelMilliseconds / 1000) : NaN;
-          return displayValue(speed, (value) => `${value.toFixed(1)} tok/s`);
-        }
-        case "timetaken":
-          return duration(performance.now() - this.started);
-        case "input_tokens":
-          return displayValue(this.input, String);
-        case "output_tokens":
-          return displayValue(this.output, String);
-        default:
-          return _match;
-      }
-    });
+    return this.parts.map((part) => (typeof part === "string" ? part : part.render())).join("");
   }
 }

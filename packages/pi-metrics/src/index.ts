@@ -1,5 +1,7 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Events } from "@pi-pack/shared/events";
 import { loadConfig } from "#src/config";
+import { EXTENSION_NAME } from "#src/constants";
 import { TurnMetrics } from "#src/metrics";
 import { createMetricsWidget } from "#src/widget";
 
@@ -9,11 +11,11 @@ export default function metrics(pi: ExtensionAPI): void {
 
   function clearWidget(ctx: ExtensionContext): void {
     if (!widgetVisible) return;
-    ctx.ui.setWidget("pi-metrics", undefined);
+    ctx.ui.setWidget(EXTENSION_NAME, undefined);
     widgetVisible = false;
   }
 
-  pi.on("session_start", async (_sessionEvent, ctx) => {
+  pi.on(Events.SessionStart, async (_sessionEvent, ctx) => {
     for (const unsubscribe of subscriptions) unsubscribe();
     subscriptions = [];
     clearWidget(ctx);
@@ -26,16 +28,16 @@ export default function metrics(pi: ExtensionAPI): void {
     function updateWidget(context: ExtensionContext): void {
       if (!live || !turn.active) return;
       const text = turn.render();
-      context.ui.setWidget("pi-metrics", () => createMetricsWidget(text), { placement: "aboveEditor" });
+      context.ui.setWidget(EXTENSION_NAME, () => createMetricsWidget(text), { placement: "aboveEditor" });
       widgetVisible = true;
     }
 
     subscriptions.push(
-      pi.on("agent_start", (_event, context) => {
+      pi.on(Events.AgentStart, (_event, context) => {
         turn.start();
         updateWidget(context);
       }),
-      pi.on("agent_settled", (_event, context) => {
+      pi.on(Events.AgentSettled, (_event, context) => {
         if (!turn.active) return;
         if (live) updateWidget(context);
         else context.ui.notify(turn.render(), "info");
@@ -45,11 +47,11 @@ export default function metrics(pi: ExtensionAPI): void {
 
     if (turn.needsSpeed) {
       // Assistant message_start can arrive after request latency, so time from turn_start instead.
-      subscriptions.push(pi.on("turn_start", () => turn.startRequest()));
+      subscriptions.push(pi.on(Events.TurnStart, () => turn.startRequest()));
     }
     if (turn.needsUsage || live) {
       subscriptions.push(
-        pi.on("message_end", (event, context) => {
+        pi.on(Events.MessageEnd, (event, context) => {
           if (event.message.role !== "assistant" || !turn.active) return;
           turn.completeRequest(event.message);
           updateWidget(context);
@@ -58,8 +60,8 @@ export default function metrics(pi: ExtensionAPI): void {
     }
     if (live) {
       subscriptions.push(
-        pi.on("tool_execution_end", (_event, context) => updateWidget(context)),
-        pi.on("session_shutdown", (_event, context) => clearWidget(context)),
+        pi.on(Events.ToolExecutionEnd, (_event, context) => updateWidget(context)),
+        pi.on(Events.SessionShutdown, (_event, context) => clearWidget(context)),
       );
     }
   });

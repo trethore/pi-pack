@@ -96,6 +96,60 @@ it("keeps unknown placeholders and replaces repeated known placeholders", () => 
   expect(metrics.render()).toBe("12/12 <unknown> <ouput_tokens>");
 });
 
+it.each([
+  ["", ""],
+  ["literal", "literal"],
+  ["<input_tokens><output_tokens>", "123"],
+  ["<<input_tokens>>", "<12>"],
+  ["<constructor> <toString> <__proto__>", "<constructor> <toString> <__proto__>"],
+  ["<COST> <cost <tokps_extra>", "<COST> <cost <tokps_extra>"],
+])("preserves literal text and resolves exact tokens in %s", (format, expected) => {
+  // Arrange
+  const metrics = new TurnMetrics(format);
+  metrics.start();
+
+  // Act
+  metrics.completeRequest({ usage: { input: 12, output: 3 } });
+
+  // Assert
+  expect(metrics.render()).toBe(expected);
+});
+
+it("renders current values each time from the parsed format", () => {
+  // Arrange
+  const metrics = new TurnMetrics("<input_tokens>/<input_tokens> <timetaken>");
+  metrics.start();
+  metrics.completeRequest({ usage: { input: 12 } });
+  expect(metrics.render()).toBe("12/12 0s");
+
+  // Act
+  now = 2000;
+  metrics.completeRequest({ usage: { input: 3 } });
+
+  // Assert
+  expect(metrics.render()).toBe("15/15 2s");
+});
+
+it.each([
+  ["literal", false, false],
+  ["<unknown>", false, false],
+  ["<timetaken>", false, false],
+  ["<cost>", false, true],
+  ["<input_tokens>", false, true],
+  ["<output_tokens>", false, true],
+  ["<tokps>", true, true],
+  ["<tokps><output_tokens><cost>", true, true],
+])("derives collection requirements for %s", (format, needsSpeed, needsUsage) => {
+  // Arrange
+  const metrics = new TurnMetrics(format);
+
+  // Act
+  const requirements = { needsSpeed: metrics.needsSpeed, needsUsage: metrics.needsUsage };
+
+  // Assert
+  expect(requirements).toEqual({ needsSpeed, needsUsage });
+});
+
 it.each(["", "literal", "<cost>", "<input_tokens>", "<output_tokens>"])(
   "does not read a clock without timing placeholders in %s",
   (format) => {

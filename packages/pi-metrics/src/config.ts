@@ -1,5 +1,6 @@
 import { createConfigLoader } from "@pi-pack/shared/config";
 import { booleanOption } from "@pi-pack/shared/validation";
+import { EXTENSION_NAME } from "#src/constants";
 
 interface MetricsConfig {
   enabled: boolean;
@@ -10,7 +11,7 @@ interface MetricsConfig {
 const defaultFormat = "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>";
 
 export const loadConfig = createConfigLoader({
-  name: "pi-metrics",
+  name: EXTENSION_NAME,
   defaults: (): MetricsConfig => ({ enabled: true, mode: "notify", format: defaultFormat }),
   validate(value): MetricsConfig {
     const enabled = booleanOption(value.enabled, "enabled", true);
