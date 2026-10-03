@@ -3,8 +3,6 @@ import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 
-export { applyEdits, createScanner, findNodeAtLocation, modify, parseTree } from "jsonc-parser";
-
 interface ConfigLoaderOptions<T> {
   name: string;
   defaults: () => T;
@@ -15,7 +13,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function parseConfig(source: string): Record<string, unknown> {
+function parseConfig(source: string): Record<string, unknown> {
   const errors: ParseError[] = [];
   const value: unknown = parse(source, errors, { allowTrailingComma: true });
   const firstError = errors[0];

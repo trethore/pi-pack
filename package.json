@@ -19,12 +19,8 @@
   "scripts": {
     "dev": "pi -e .",
     "dev:pi-metrics": "pi -e ./packages/pi-metrics",
-    "dev:pi-skill-manager": "pi -e ./packages/pi-skill-manager",
-    "dev:pi-toolmask": "pi -e ./packages/pi-toolmask",
     "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
     "install:global:pi-metrics": "pi install ./packages/pi-metrics",
-    "install:global:pi-skill-manager": "pi install ./packages/pi-skill-manager",
-    "install:global:pi-toolmask": "pi install ./packages/pi-toolmask",
     "install:global:pi-whimsical": "pi install ./packages/pi-whimsical",
     "import:pi": "bash scripts/import-pi.sh",
     "typecheck": "tsc --noEmit",

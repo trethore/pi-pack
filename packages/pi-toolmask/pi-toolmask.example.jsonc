@@ -1,5 +1,0 @@
-{
-  "enabled": true,
-  "enforceBeforeAgentStart": true,
-  "masks": ["*", "!read"]
-}

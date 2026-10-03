@@ -1,5 +1,0 @@
-{
-  "pi-skill-manager.save": "ctrl+s",
-  "pi-skill-manager.nextSection": ["tab", "right"],
-  "pi-skill-manager.previousSection": ["shift+tab", "left"]
-}
