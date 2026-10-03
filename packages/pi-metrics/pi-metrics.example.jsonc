@@ -1,5 +1,5 @@
 {
   "enabled": true,
-  "mode": "notify",
+  "mode": "notify", // "notify" or "live"
   "format": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>"
 }
