@@ -120,6 +120,31 @@ it("commands override environment and reset exposes lower layers again", async (
   expect(parseConfig(await workspace.read("global"))).toEqual({ verbosity: "high" });
 });
 
+it.each([
+  ["verbosity medium", "verbosity = medium."],
+  ["reset verbosity", "Reset verbosity."],
+  ["reset", "Reset command overrides."],
+])("reminds users to save after %s without changing config files", async (command, confirmation) => {
+  // Arrange
+  const config = '{"verbosity":"high"}';
+  await workspace.write("global", config);
+  await workspace.write("project", config);
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.command("verbosity low");
+
+  // Act
+  await extension.command(command);
+
+  // Assert
+  expect(extension.notify).toHaveBeenLastCalledWith(
+    `pi-openai: ${confirmation} Use /pi-openai save to save the current settings.`,
+    "info",
+  );
+  expect(await workspace.read("global")).toBe(config);
+  expect(await workspace.read("project")).toBe(config);
+});
+
 it("applies runtime commands to subsequent requests and model changes", async () => {
   // Arrange
   const extension = harness();

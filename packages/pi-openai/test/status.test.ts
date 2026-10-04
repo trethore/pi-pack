@@ -33,6 +33,18 @@ it("shows a Markdown table with effective values, sources, behavior and save des
   expect(markdown).not.toContain(model.baseUrl);
 });
 
+it("surrounds status with horizontal rules and leaves the support warning unquoted", () => {
+  // Act
+  const markdown = statusMarkdown(resolveSettings(layers()), model, "global");
+
+  // Assert
+  expect(markdown.startsWith("---\n\n")).toBe(true);
+  expect(markdown.endsWith("\n\n---")).toBe(true);
+  expect(markdown).toContain(
+    "\nRequest behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.\n",
+  );
+});
+
 it("shows disabled settings and missing or unsupported models clearly", () => {
   // Act / Assert
   const disabled = statusMarkdown(resolveSettings(layers({ command: { enabled: false } })), model, "global");
@@ -54,23 +66,33 @@ it("escapes model metadata rather than allowing table or terminal injection", ()
   expect(markdown).not.toContain("\u001b");
 });
 
-it.each([30, 60, 100, 160])("renders within %i columns using green true and red false/null", (width) => {
-  // Arrange
-  const fg = vi.fn((color: string, text: string) => `\u001b[${color === "success" ? "32" : "31"}m${text}\u001b[0m`);
-  const theme = { fg } as unknown as Theme;
-  const component = renderStatus(statusMarkdown(resolveSettings(layers()), model, "global"), theme);
+it.each([30, 60, 100, 160])(
+  "renders within %i columns using green true, red false/null and a yellow warning",
+  (width) => {
+    // Arrange
+    const colors = { success: "32", error: "31", warning: "33", border: "34" };
+    const fg = vi.fn((color: keyof typeof colors, text: string) => `\u001b[${colors[color]}m${text}\u001b[0m`);
+    const theme = { fg } as unknown as Theme;
+    const component = renderStatus(statusMarkdown(resolveSettings(layers()), model, "global"), theme);
 
-  // Act
-  const output = component.render(width);
-  component.invalidate();
+    // Act
+    const output = component.render(width);
+    component.invalidate();
 
-  // Assert
-  expect(fg).toHaveBeenCalledWith("success", "true");
-  expect(fg).toHaveBeenCalledWith("error", "false");
-  expect(fg).toHaveBeenCalledWith("error", "null");
-  expect(output.every((line) => visibleWidth(line) <= width)).toBe(true);
-  expect(output.join("\n")).toContain("\u001b[32m");
-});
+    // Assert
+    expect(fg).toHaveBeenCalledWith("success", "true");
+    expect(fg).toHaveBeenCalledWith("error", "false");
+    expect(fg).toHaveBeenCalledWith("error", "null");
+    expect(fg).toHaveBeenCalledWith("warning", expect.stringContaining("Request behavior"));
+    const border = `\u001b[34m${"\u2500".repeat(width)}\u001b[0m`;
+    expect(output[0]).toBe(border);
+    expect(output.at(-1)).toBe(border);
+    expect(fg).toHaveBeenCalledWith("border", "\u2500".repeat(width));
+    expect(output.every((line) => visibleWidth(line) <= width)).toBe(true);
+    expect(output.join("\n")).toContain("\u001b[32m");
+    expect(output.join("\n")).toContain("\u001b[33m");
+  },
+);
 
 it("explains the modern-model support boundary in status", () => {
   // Arrange

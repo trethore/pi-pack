@@ -15,6 +15,7 @@ import { resolveSettings, type Layers } from "#src/settings";
 import { renderStatus, statusMarkdown } from "#src/status";
 
 const statusEntry = `${extensionName}-status`;
+const saveReminder = `Use /${extensionName} save to save the current settings.`;
 
 interface State {
   paths: ConfigPaths;
@@ -41,7 +42,10 @@ async function executeCommand(
     }
     case Command.SET:
       Object.assign(layers.command, command.override);
-      ctx.ui.notify(`${extensionName}: ${command.setting} = ${String(command.override[command.setting])}.`, "info");
+      ctx.ui.notify(
+        `${extensionName}: ${command.setting} = ${String(command.override[command.setting])}. ${saveReminder}`,
+        "info",
+      );
       break;
     case Command.RESET:
       if (command.setting) {
@@ -49,7 +53,7 @@ async function executeCommand(
       } else {
         layers.command = {};
       }
-      ctx.ui.notify(`${extensionName}: Reset ${command.setting ?? "command overrides"}.`, "info");
+      ctx.ui.notify(`${extensionName}: Reset ${command.setting ?? "command overrides"}. ${saveReminder}`, "info");
       break;
     case Command.SAVE: {
       const destination = command.destination ?? (await saveDestination(paths));

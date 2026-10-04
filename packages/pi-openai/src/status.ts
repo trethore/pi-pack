@@ -1,8 +1,11 @@
-import { getMarkdownTheme, type Theme } from "@earendil-works/pi-coding-agent";
-import { Markdown } from "@earendil-works/pi-tui";
+import { DynamicBorder, getMarkdownTheme, type Theme } from "@earendil-works/pi-coding-agent";
+import { Container, Markdown } from "@earendil-works/pi-tui";
 import { featureDecision, type RequestModel } from "#src/compatibility";
 import { extensionName, type Destination } from "#src/constants";
 import { Setting, settingNames, type EffectiveSettings } from "#src/settings";
+
+const supportWarning =
+  "Request behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.";
 
 function inlineCode(text: string): string {
   return `\`${text.replace(/[\p{Cc}`|\\]/gu, "?")}\``;
@@ -26,6 +29,8 @@ export function statusMarkdown(
 ): string {
   const identity = model ? `${inlineCode(model.provider)} / ${inlineCode(model.id)}` : "None";
   const lines = [
+    "---",
+    "",
     `### ${extensionName}`,
     "",
     `Model: ${identity}  `,
@@ -40,23 +45,35 @@ export function statusMarkdown(
     "",
     `Save destination: **${destination}**. Saves all effective settings, including environment and command overrides.`,
     "",
-    "Request behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.",
+    supportWarning,
+    "",
+    "---",
   ];
   return lines.join("\n");
 }
 
-export function renderStatus(markdown: string, theme: Theme): Markdown {
+export function renderStatus(markdown: string, theme: Theme): Container {
   const markdownTheme = getMarkdownTheme();
-  return new Markdown(markdown, 1, 0, {
-    ...markdownTheme,
-    code(text) {
-      if (text === "true") {
-        return theme.fg("success", text);
-      }
-      if (text === "false" || text === "null") {
-        return theme.fg("error", text);
-      }
-      return markdownTheme.code(text);
-    },
-  });
+  const content = markdown
+    .replace(/^---\n\n/, "")
+    .replace(/\n\n---$/, "")
+    .replace(supportWarning, theme.fg("warning", supportWarning));
+  const container = new Container();
+  container.addChild(new DynamicBorder((text) => theme.fg("border", text)));
+  container.addChild(
+    new Markdown(content, 1, 1, {
+      ...markdownTheme,
+      code(text) {
+        if (text === "true") {
+          return theme.fg("success", text);
+        }
+        if (text === "false" || text === "null") {
+          return theme.fg("error", text);
+        }
+        return markdownTheme.code(text);
+      },
+    }),
+  );
+  container.addChild(new DynamicBorder((text) => theme.fg("border", text)));
+  return container;
 }
