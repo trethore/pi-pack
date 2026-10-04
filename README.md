@@ -6,7 +6,7 @@ Monorepo for the pi extensions I develop.
 
 - [pi-metrics](packages/pi-metrics/README.md): Show per-turn token usage, speed, duration, and estimated cost through notifications or live updates.
 - [pi-openai](packages/pi-openai/README.md): Configure OpenAI-compatible request parameters with layered settings, environment variables, and runtime commands.
-- [pi-script-templates](packages/pi-script-templates/): Replace placeholders in system prompts and prompt templates with cached script output.
+- [pi-script-templates](packages/pi-script-templates/README.md): Replace placeholders in system prompts and prompt templates with cached script output.
 - [pi-whimsical](packages/pi-whimsical/README.md): Replace Pi's working message with a random whimsical message.
 
 ## License
