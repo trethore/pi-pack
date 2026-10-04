@@ -21,7 +21,7 @@ export interface Decision {
   description: string;
 }
 
-const responsesApis = new Set(["openai-responses", "azure-openai-responses", "openai-codex-responses"]);
+const supportedResponsesApis = new Set(["openai-responses", "azure-openai-responses"]);
 const supportedModels = new Set([
   "gpt-5.5",
   "gpt-5.5-pro",
@@ -35,7 +35,7 @@ const supportedModels = new Set([
 ]);
 
 export function requestFormat(model: RequestModel): RequestFormat | undefined {
-  if (responsesApis.has(model.api)) {
+  if (supportedResponsesApis.has(model.api)) {
     return RequestFormat.RESPONSES;
   }
   if (model.api === "openai-completions") {
@@ -46,14 +46,12 @@ export function requestFormat(model: RequestModel): RequestFormat | undefined {
 
 const Endpoint = {
   OPENAI: "openai",
-  CODEX: "codex",
   COPILOT: "copilot",
   AZURE: "azure",
 } as const;
 type Endpoint = (typeof Endpoint)[keyof typeof Endpoint];
 const endpoints = new Map<string, { name: Endpoint; pattern: RegExp }>([
   ["openai", { name: Endpoint.OPENAI, pattern: /^https:\/\/api\.openai\.com\/v1\/?$/ }],
-  ["openai-codex", { name: Endpoint.CODEX, pattern: /^https:\/\/chatgpt\.com\/backend-api(?:\/codex)?\/?$/ }],
   [
     "github-copilot",
     {
@@ -91,7 +89,7 @@ function hostedFeatureRestriction(
   id: string,
 ): string | undefined {
   const host = endpoint(model);
-  if (host !== Endpoint.OPENAI && host !== Endpoint.CODEX) {
+  if (host !== Endpoint.OPENAI) {
     return "Native feature support is unverified on this endpoint";
   }
   if (feature === Feature.SERVICE_TIER && id.endsWith("-pro")) {
@@ -122,7 +120,13 @@ function inactive(feature: Feature, settings: Settings): boolean {
   return value === null || value === false || value === ServiceTier.DEFAULT;
 }
 
-function action(feature: Feature, settings: Settings, format: RequestFormat): string {
+function actionDecision(feature: Feature, settings: Settings, format: RequestFormat | undefined): Decision {
+  if (!format) {
+    return { apply: true, description: "Attempt on compatible request payload (support checks bypassed)" };
+  }
+  if (format === RequestFormat.COMPLETIONS && feature !== Feature.VERBOSITY) {
+    return { apply: false, description: "Skipped: requires a Responses payload" };
+  }
   const descriptions = {
     verbosity: format === RequestFormat.RESPONSES ? "Set text.verbosity" : "Set verbosity",
     reasoningSummary:
@@ -130,10 +134,16 @@ function action(feature: Feature, settings: Settings, format: RequestFormat): st
     webSearch: "Add native web search if absent",
     serviceTier: "Set service_tier to priority",
   };
-  return descriptions[feature];
+  const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
+  return { apply: true, description: descriptions[feature] + suffix };
 }
 
-export function featureDecision(feature: Feature, settings: Settings, model: RequestModel | undefined): Decision {
+export function featureDecision(
+  feature: Feature,
+  settings: Settings,
+  model: RequestModel | undefined,
+  payloadFormat?: RequestFormat,
+): Decision {
   if (!settings.enabled) {
     return { apply: false, description: "Disabled: leave unchanged" };
   }
@@ -143,14 +153,13 @@ export function featureDecision(feature: Feature, settings: Settings, model: Req
   if (!model) {
     return { apply: false, description: "Skipped: no model selected" };
   }
-  const format = requestFormat(model);
-  if (!format || (format === RequestFormat.COMPLETIONS && feature !== Feature.VERBOSITY)) {
+  const format = settings.allowUnsupported ? payloadFormat : requestFormat(model);
+  if (!format && !settings.allowUnsupported) {
     return { apply: false, description: "Skipped: unsupported API format" };
   }
   const restriction = settings.allowUnsupported ? undefined : safeRestriction(feature, settings, model);
   if (restriction) {
     return { apply: false, description: `Skipped: ${restriction}` };
   }
-  const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
-  return { apply: true, description: action(feature, settings, format) + suffix };
+  return actionDecision(feature, settings, format);
 }

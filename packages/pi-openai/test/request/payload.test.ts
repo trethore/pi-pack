@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { featureDecision, type Feature, type RequestModel } from "#src/request/compatibility";
+import { RequestFormat, featureDecision, type Feature, type RequestModel } from "#src/request/compatibility";
 import { transformPayload } from "#src/request/payload";
 import type { Settings } from "#src/config/settings";
 import { model, settings } from "#test/support";
@@ -143,24 +143,53 @@ it.each([
   expect(result).toEqual({ ...payloadFor(requestModel), text: { verbosity: "low" }, reasoning: { summary: "auto" } });
 });
 
-it("supports modern models through the legacy Codex API", () => {
-  // Arrange
-  const codex = {
-    ...model,
+it.each([
+  {
     provider: "openai-codex",
     api: "openai-codex-responses",
     baseUrl: "https://chatgpt.com/backend-api",
-    id: "gpt-5.5",
-  };
+  },
+  { provider: "openai", api: "openai-codex-responses", baseUrl: "https://api.openai.com/v1" },
+  { provider: "openai-codex", api: "openai-responses", baseUrl: "https://chatgpt.com/backend-api/codex" },
+])("requires allowUnsupported for $provider / $api", (overrides) => {
+  // Arrange
+  const requestModel = { ...model, ...overrides };
+  const payload = payloadFor(requestModel);
 
-  // Act / Assert
-  expect(transformPayload(payloadFor(codex), active, codex)).toEqual({
-    ...payloadFor(codex),
+  // Act
+  const result = transformPayload(payload, active, requestModel);
+  const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel);
+
+  // Assert
+  expect(result).toBeUndefined();
+  expect(featureDecision("verbosity", active, requestModel).apply).toBe(false);
+  expect(bypassed).toEqual({
+    ...payload,
     text: { verbosity: "low" },
     reasoning: { summary: "auto" },
     tools: [{ type: "web_search" }],
     service_tier: "priority",
   });
+});
+
+it.each([
+  { model: model.id, input: 42 },
+  { model: model.id, input: [], messages: [] },
+  { model: "some-other-model", input: [] },
+])("preserves payload safeguards for legacy requests with allowUnsupported: %j", (payload) => {
+  // Arrange
+  const legacy = {
+    ...model,
+    provider: "openai-codex",
+    api: "openai-codex-responses",
+    baseUrl: "https://chatgpt.com/backend-api",
+  };
+
+  // Act
+  const result = transformPayload(payload, { ...active, allowUnsupported: true }, legacy);
+
+  // Assert
+  expect(result).toBeUndefined();
 });
 
 it("requires allowUnsupported for a custom endpoint even with an OpenAI model ID", () => {
@@ -192,18 +221,99 @@ it.each([
   [],
   "text",
   {},
+  { input: [] },
+  { model: model.id },
   { model: model.id, input: 42 },
+  { model: model.id, messages: "Hello" },
   { model: model.id, input: [], messages: [] },
+  { model: model.id, contents: [] },
+  { model: "some-other-model", input: [] },
 ])("ignores malformed or mismatched payload %j even with the bypass", (payload) => {
   // Act / Assert
   expect(transformPayload(payload, { ...active, allowUnsupported: true }, model)).toBeUndefined();
+  expect(
+    transformPayload(payload, { ...active, allowUnsupported: true }, { ...model, api: "unknown-api" }),
+  ).toBeUndefined();
 });
 
+describe.each(["anthropic-messages", "google-generative-ai", "unknown-api", "openai-responses", "openai-completions"])(
+  "unsafe payload inference for %s",
+  (api) => {
+    const custom = {
+      ...model,
+      api,
+      provider: "custom",
+      baseUrl: "https://gateway.example/v1",
+      id: "deployment-name",
+      reasoning: false,
+    };
+
+    it.each([{ input: [] }, { input: "Hello" }])("infers Responses format from input $input", ({ input }) => {
+      // Arrange
+      const payload = Object.freeze({ ...payloadFor(custom), input });
+
+      // Act
+      const result = transformPayload(payload, { ...active, allowUnsupported: true }, custom);
+
+      // Assert
+      expect(transformPayload(payload, active, custom)).toBeUndefined();
+      expect(result).toEqual({
+        ...payload,
+        text: { verbosity: "low" },
+        reasoning: { summary: "auto" },
+        tools: [{ type: "web_search" }],
+        service_tier: "priority",
+      });
+      expect(payload).not.toHaveProperty("text");
+    });
+
+    it("infers Completions format and only changes verbosity", () => {
+      // Arrange
+      const payload = Object.freeze({ model: custom.id, messages: [], reasoning_effort: "high" });
+
+      // Act
+      const result = transformPayload(payload, { ...active, allowUnsupported: true }, custom);
+
+      // Assert
+      expect(transformPayload(payload, active, custom)).toBeUndefined();
+      expect(result).toEqual({ ...payload, verbosity: "low" });
+      expect(payload).not.toHaveProperty("verbosity");
+    });
+
+    it("leaves inactive and disabled overrides unchanged", () => {
+      // Arrange
+      const payload = payloadFor(custom);
+
+      // Act / Assert
+      expect(transformPayload(payload, settings({ allowUnsupported: true }), custom)).toBeUndefined();
+      expect(transformPayload(payload, { ...active, enabled: false, allowUnsupported: true }, custom)).toBeUndefined();
+      expect(transformPayload(payload, { ...active, allowUnsupported: true }, undefined)).toBeUndefined();
+    });
+  },
+);
+
+it.each(["openai-responses", "openai-completions"])(
+  "requires the unsafe flag when the payload disagrees with the declared %s API",
+  (api) => {
+    // Arrange
+    const requestModel = { ...model, api };
+    const payload = api === "openai-responses" ? { model: model.id, messages: [] } : payloadFor();
+
+    // Act
+    const result = transformPayload(payload, active, requestModel);
+    const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel);
+
+    // Assert
+    expect(result).toBeUndefined();
+    expect(bypassed).toHaveProperty(api === "openai-responses" ? "verbosity" : "text.verbosity", "low");
+  },
+);
+
 it.each(["anthropic-messages", "google-generative-ai", "unknown-api"])(
-  "never injects into %s even with the bypass",
+  "rejects an unverified %s API by default even on a supported provider and model",
   (api) => {
     // Act / Assert
-    expect(transformPayload(payloadFor(), { ...active, allowUnsupported: true }, { ...model, api })).toBeUndefined();
+    expect(transformPayload(payloadFor(), active, { ...model, api })).toBeUndefined();
   },
 );
 
@@ -222,6 +332,13 @@ it("leaves unrecognized nested field shapes intact", () => {
 
   // Act / Assert
   expect(transformPayload(payload, { ...active, serviceTier: "default" }, model)).toBeUndefined();
+  expect(
+    transformPayload(
+      payload,
+      { ...active, serviceTier: "default", allowUnsupported: true },
+      { ...model, api: "unknown-api" },
+    ),
+  ).toBeUndefined();
 });
 
 it("disabled overrides win over the unsupported bypass", () => {
@@ -247,8 +364,12 @@ describe("compatibility decisions", () => {
     expect(decision.apply).toBe(false);
     expect(decision.description).toContain(reason);
     expect(
-      featureDecision(feature, { ...active, ...override, allowUnsupported: true }, { ...model, ...modelOverride })
-        .apply,
+      featureDecision(
+        feature,
+        { ...active, ...override, allowUnsupported: true },
+        { ...model, ...modelOverride },
+        RequestFormat.RESPONSES,
+      ).apply,
     ).toBe(true);
   });
 

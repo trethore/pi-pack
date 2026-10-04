@@ -107,3 +107,28 @@ it("explains the modern-model support boundary in status", () => {
   expect(markdown).toContain("Skipped: Model support is limited to known GPT-5.5 and newer models");
   expect(markdown).not.toContain("Remove reasoning.summary");
 });
+
+it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior for %s with the unsafe flag", (api) => {
+  // Arrange
+  const effective = resolveSettings(
+    layers({
+      command: {
+        allowUnsupported: true,
+        verbosity: "low",
+        reasoningSummary: "auto",
+        webSearch: true,
+        serviceTier: "priority",
+      },
+    }),
+  );
+
+  // Act
+  const markdown = statusMarkdown(effective, { ...model, api }, "global");
+
+  // Assert
+  for (const setting of ["verbosity", "reasoningSummary", "webSearch", "serviceTier"]) {
+    const row = markdown.split("\n").find((line) => line.startsWith(`| ${setting} |`));
+    expect(row).toContain("Attempt on compatible request payload (support checks bypassed)");
+  }
+  expect(markdown).not.toContain("Skipped:");
+});

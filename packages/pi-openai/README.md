@@ -67,7 +67,7 @@ The example above uses the default values. Comments and trailing commas are supp
 | Setting            | Values                                                | Behavior                                                                                          |
 | ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `enabled`          | `true`, `false`                                       | Set to `false` to leave requests unchanged.                                                       |
-| `allowUnsupported` | `true`, `false`                                       | Bypass provider and model support checks. Defaults to `false`.                                    |
+| `allowUnsupported` | `true`, `false`                                       | Unsafe: bypass all support checks. Defaults to `false`.                                           |
 | `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                             |
 | `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged. |
 | `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.            |
@@ -106,13 +106,13 @@ PI_OPENAI_VERBOSITY=low PI_OPENAI_WEB_SEARCH=true pi
 
 ## Compatibility
 
-The extension handles Pi's `openai-responses`, `azure-openai-responses`, and `openai-codex-responses` API formats. For `openai-completions`, only verbosity is available.
+The extension supports Pi's `openai-responses` and `azure-openai-responses` API formats by default. For `openai-completions`, only verbosity is available.
 
-By default, overrides require a recognized provider endpoint and a model in the extension's [built-in allowlist](src/compatibility.ts). The checks cover selected GPT-5.5 and newer model IDs, not every newer or custom model.
+By default, overrides require a recognized provider endpoint and a model in the extension's [built-in allowlist](src/request/compatibility.ts). The checks cover selected GPT-5.5 and newer model IDs, not every newer or custom model.
 
-- Verbosity and reasoning summaries are checked for OpenAI, Codex, GitHub Copilot, and Azure endpoints.
+- Verbosity and reasoning summaries are checked for OpenAI, GitHub Copilot, and Azure endpoints.
 - Reasoning summaries require a reasoning-capable model. `concise` is skipped as unverified.
-- Native web search and priority processing are limited to recognized OpenAI and Codex endpoints. Priority processing is skipped for `-pro` models.
+- Native web search and priority processing are limited to recognized OpenAI endpoints. Priority processing is skipped for `-pro` models.
 
 Use `/pi-openai status` to see why a setting is skipped. To attempt an unverified combination:
 
@@ -120,7 +120,11 @@ Use `/pi-openai status` to see why a setting is skipped. To attempt an unverifie
 /pi-openai allowUnsupported true
 ```
 
-This bypasses provider and model support checks, but not value validation or API-format checks. Requests whose model or payload format does not match the selected model are left unchanged.
+This is an unsafe override: it bypasses API, provider, endpoint, model, and feature-support checks, including for unknown API identifiers, legacy APIs, and custom providers or proxies.
+Request format is inferred from the payload rather than the API identifier: a string or array `input` selects Responses transformations; an array `messages` selects Chat Completions verbosity only.
+
+Value validation, disabled settings, and payload safeguards still apply. Requests with both `input` and `messages`, neither compatible shape, or a model different from the selected model are left unchanged. Incompatible nested fields are preserved.
+Status reports that overrides will be attempted on compatible payloads because their format is not known until a request is made.
 
 Request behavior describes intended overrides, not server acceptance. The server can reject unsupported combinations. Web search makes a tool available; it does not force the model to use it.
 

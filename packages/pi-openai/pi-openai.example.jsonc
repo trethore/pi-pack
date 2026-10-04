@@ -1,8 +1,8 @@
 {
   "enabled": true,
 
-  // Bypass provider/model support checks, not validation or API-format checks.
-  // Unsupported combinations can be rejected by the server.
+  // Unsafe: bypass all support checks and infer the format from the payload.
+  // Value validation, disabled settings, and payload safeguards still apply.
   "allowUnsupported": false,
 
   // "low", "medium", "high", or null to leave the provider payload unchanged.

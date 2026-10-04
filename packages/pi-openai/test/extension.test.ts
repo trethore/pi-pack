@@ -145,28 +145,34 @@ it.each([
   expect(await workspace.read("project")).toBe(config);
 });
 
-it("applies runtime commands to subsequent requests and model changes", async () => {
-  // Arrange
-  const extension = harness();
-  await extension.emit("session_start");
-  await extension.command("verbosity low");
-  extension.ctx.model = {
-    ...extension.ctx.model,
-    provider: "custom",
-    baseUrl: "https://custom.example/v1",
-  } as ExtensionContext["model"];
-  const event = { payload: { model: model.id, input: [] } };
+it.each(["openai-responses", "custom-responses", "openai-codex-responses"])(
+  "applies runtime support overrides to subsequent requests using %s",
+  async (api) => {
+    // Arrange
+    const extension = harness();
+    await extension.emit("session_start");
+    await extension.command("verbosity low");
+    extension.ctx.model = {
+      ...extension.ctx.model,
+      api,
+      provider: "custom",
+      baseUrl: "https://custom.example/v1",
+    } as ExtensionContext["model"];
+    const event = { payload: { model: model.id, input: [] } };
 
-  // Act / Assert
-  expect(await extension.emit("before_provider_request", event)).toBeUndefined();
-  await extension.command("allowUnsupported true");
-  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
-  await extension.command("status");
-  expect(extension.appendEntry).toHaveBeenCalledWith(
-    "pi-openai-status",
-    expect.stringContaining("support checks bypassed"),
-  );
-});
+    // Act / Assert
+    expect(await extension.emit("before_provider_request", event)).toBeUndefined();
+    await extension.command("allowUnsupported true");
+    expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
+    await extension.command("status");
+    expect(extension.appendEntry).toHaveBeenCalledWith(
+      "pi-openai-status",
+      expect.stringContaining("support checks bypassed"),
+    );
+    await extension.command("allowUnsupported false");
+    expect(await extension.emit("before_provider_request", event)).toBeUndefined();
+  },
+);
 
 const saveCases: Array<[string, Destination | undefined, Destination]> = [
   ["save", undefined, "global"],
