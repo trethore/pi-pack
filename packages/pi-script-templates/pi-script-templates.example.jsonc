@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "surfaces": {
+    "system": true,
+    "appendSystem": true,
+    "promptTemplates": true
+  },
+  "execution": {
+    "timeoutMs": 3000,
+    "maxOutputChars": 1000
+  }
+}

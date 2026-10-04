@@ -31,7 +31,7 @@ async function executeCommand(
   const { paths, layers } = state;
   switch (command.type) {
     case Command.STATUS: {
-      const destination = await saveDestination(paths);
+      const destination = await saveDestination(paths, { projectTrusted: ctx.isProjectTrusted() });
       const markdown = statusMarkdown(resolveSettings(layers), ctx.model, destination);
       if (ctx.mode === "tui") {
         pi.appendEntry(statusEntry, markdown);
@@ -56,9 +56,10 @@ async function executeCommand(
       ctx.ui.notify(`${extensionName}: Reset ${command.setting ?? "command overrides"}. ${saveReminder}`, "info");
       break;
     case Command.SAVE: {
-      const destination = command.destination ?? (await saveDestination(paths));
+      const destination =
+        command.destination ?? (await saveDestination(paths, { projectTrusted: ctx.isProjectTrusted() }));
       const { values } = resolveSettings(layers);
-      await saveConfiguration(paths, destination, values);
+      await saveConfiguration(paths, destination, values, { projectTrusted: ctx.isProjectTrusted() });
       layers[destination] = { ...values };
       ctx.ui.notify(
         destination === Destination.GLOBAL
@@ -80,7 +81,7 @@ export default function openai(pi: ExtensionAPI): void {
     try {
       state = {
         paths,
-        layers: await loadConfiguration(paths, { ui: ctx.ui }),
+        layers: await loadConfiguration(paths, { projectTrusted: ctx.isProjectTrusted(), ui: ctx.ui }),
       };
     } catch (error) {
       throw new Error(`${extensionName}: ${error instanceof Error ? error.message : "Could not load configuration."}`, {

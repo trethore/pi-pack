@@ -1,5 +1,6 @@
 import { DynamicBorder, getMarkdownTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown } from "@earendil-works/pi-tui";
+import { dedent } from "@pi-pack/shared/dedent";
 import { featureDecision, type RequestModel } from "#src/request/compatibility";
 import { extensionName, type Destination } from "#src/constants";
 import { Setting, settingNames, type EffectiveSettings } from "#src/config/settings";
@@ -29,25 +30,29 @@ export function statusMarkdown(
 ): string {
   const identity = model ? `${inlineCode(model.provider)} / ${inlineCode(model.id)}` : "None";
   const lines = [
-    "---",
-    "",
-    `### ${extensionName}`,
-    "",
-    `Model: ${identity}  `,
-    `API: ${model ? inlineCode(model.api) : "None"}`,
-    "",
-    "| Setting | Value | Source | Request behavior |",
-    "| --- | --- | --- | --- |",
+    dedent(`
+      ---
+
+      ### ${extensionName}
+
+      Model: ${identity}${"  "}
+      API: ${model ? inlineCode(model.api) : "None"}
+
+      | Setting | Value | Source | Request behavior |
+      | --- | --- | --- | --- |
+    `),
     ...settingNames.map(
       (key) =>
         `| ${key} | ${inlineCode(String(effective.values[key]))} | ${effective.sources[key]} | ${behavior(key, effective, model)} |`,
     ),
     "",
-    `Save destination: **${destination}**. Saves all effective settings, including environment and command overrides.`,
-    "",
-    supportWarning,
-    "",
-    "---",
+    dedent(`
+      Save destination: **${destination}**. Saves all effective settings, including environment and command overrides.
+
+      ${supportWarning}
+
+      ---
+    `),
   ];
   return lines.join("\n");
 }

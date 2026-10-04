@@ -24,6 +24,7 @@ export interface ConfigWarningOptions {
 }
 
 interface ConfigLoadOptions extends ConfigWarningOptions {
+  projectTrusted: boolean;
   agentDir?: string;
 }
 
@@ -60,10 +61,14 @@ function errorMessage(error: unknown): string {
 }
 
 export function createConfigLoader<T>({ name, knownKeys, defaults, validate }: ConfigLoaderOptions<T>) {
-  return async function loadConfig(cwd: string, { agentDir, ...warnings }: ConfigLoadOptions = {}): Promise<T> {
+  return async function loadConfig(
+    cwd: string,
+    { agentDir, projectTrusted, ...warnings }: ConfigLoadOptions,
+  ): Promise<T> {
     const onWarning = createWarningReporter(warnings);
     const paths = configPaths(name, cwd, agentDir);
-    for (const file of [paths.project, paths.global]) {
+    const files = projectTrusted ? [paths.project, paths.global] : [paths.global];
+    for (const file of files) {
       let source: string | undefined;
       try {
         source = await readOptionalFile(file);
