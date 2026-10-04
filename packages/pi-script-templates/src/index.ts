@@ -1,6 +1,6 @@
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
-import { expandPrompt } from "#src/prompts";
+import { expandPrompt } from "#src/prompts/expansion";
 import { clearWorkspaces, getWorkspace, type Workspace } from "#src/workspace";
 
 function reportWarnings(workspace: Workspace, ctx: ExtensionContext): void {

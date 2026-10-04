@@ -1,5 +1,5 @@
 import type { ScriptTemplatesConfig } from "#src/config";
-import { executeScript, type Script } from "#src/execution";
+import { executeScript, type Script } from "#src/scripts/execution";
 
 const placeholder = /\{\{([a-zA-Z0-9_-]+)\}\}/g;
 

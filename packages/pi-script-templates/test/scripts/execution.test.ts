@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
-import { executeScript } from "#src/execution";
+import { executeScript } from "#src/scripts/execution";
 import { useWorkspace } from "#test/workspace";
 
 const files = useWorkspace();

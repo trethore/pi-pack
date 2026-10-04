@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { parseFrontmatter, type SlashCommandInfo } from "@earendil-works/pi-coding-agent";
-import { expandArguments, parseArguments } from "#src/arguments";
+import { expandArguments, parseArguments } from "#src/prompts/arguments";
 import type { Workspace } from "#src/workspace";
 
 function isAllowedPrompt(command: SlashCommandInfo | undefined, projectTrusted: boolean): command is SlashCommandInfo {

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { loadConfig, type ScriptTemplatesConfig } from "#src/config";
-import { discoverScripts } from "#src/discovery";
-import { ScriptTemplates } from "#src/templates";
+import { discoverScripts } from "#src/scripts/discovery";
+import { ScriptTemplates } from "#src/scripts/templates";
 
 export interface Workspace {
   config: ScriptTemplatesConfig | undefined;
