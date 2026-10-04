@@ -64,7 +64,7 @@ export function isSetting(value: string): value is Setting {
 }
 
 function normalizeValue(key: Setting, value: unknown): unknown {
-  return key === Setting.SERVICE_TIER && value === "priority" ? ServiceTier.FAST : value;
+  return key === Setting.SERVICE_TIER && value === "fast" ? ServiceTier.PRIORITY : value;
 }
 
 function setValue<K extends Setting>(target: Partial<Pick<Settings, K>>, key: K, value: unknown): void {

@@ -113,7 +113,7 @@ export function transformPayload(
     addWebSearch(result);
   }
   if (featureDecision(Feature.SERVICE_TIER, settings, model, format).apply) {
-    result.service_tier = ServiceTier.FAST;
+    result.service_tier = ServiceTier.PRIORITY;
   }
   return Object.keys(result).some((key) => result[key] !== payload[key]) ? result : undefined;
 }

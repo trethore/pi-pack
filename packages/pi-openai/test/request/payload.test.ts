@@ -4,7 +4,7 @@ import { transformPayload } from "#src/request/payload";
 import type { Settings } from "#src/config/settings";
 import { model, settings } from "#test/support";
 
-const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "fast" });
+const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });
 
 function payloadFor(requestModel = model): Record<string, unknown> {
   return { model: requestModel.id, input: [], stream: true, store: false };
@@ -23,13 +23,22 @@ it.each(["fast", "priority"])("does not change an existing %s tier with default 
   expect(transformPayload(payload, settings(), model)).toBeUndefined();
 });
 
-it("changes supported Responses fields without mutating or losing unrelated data", () => {
+it.each([
+  { provider: "openai", api: "openai-responses", baseUrl: "https://api.openai.com/v1" },
+  { provider: "azure-openai-responses", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
+  {
+    provider: "azure-openai-responses",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.services.ai.azure.com/openai/v1/",
+  },
+])("changes supported $provider Responses fields without mutating or losing unrelated data", (overrides) => {
   // Arrange
+  const requestModel = { ...model, ...overrides };
   const text = Object.freeze({ format: { type: "json_object" }, verbosity: "high" });
   const reasoning = Object.freeze({ effort: "high", summary: "detailed" });
   const tools = Object.freeze([{ type: "function", name: "read" }]);
   const payload = Object.freeze({
-    ...payloadFor(),
+    ...payloadFor(requestModel),
     text,
     reasoning,
     tools,
@@ -39,7 +48,7 @@ it("changes supported Responses fields without mutating or losing unrelated data
   });
 
   // Act
-  const result = transformPayload(payload, active, model);
+  const result = transformPayload(payload, active, requestModel);
 
   // Assert
   expect(result).toEqual({
@@ -47,7 +56,7 @@ it("changes supported Responses fields without mutating or losing unrelated data
     text: { ...text, verbosity: "low" },
     reasoning: { ...reasoning, summary: "auto" },
     tools: [...tools, { type: "web_search" }],
-    service_tier: "fast",
+    service_tier: "priority",
   });
   expect(payload.text.verbosity).toBe("high");
   expect(payload.reasoning.summary).toBe("detailed");
@@ -64,7 +73,7 @@ it("adds only the requested fields to a minimal request", () => {
     text: { verbosity: "low" },
     reasoning: { summary: "auto" },
     tools: [{ type: "web_search" }],
-    service_tier: "fast",
+    service_tier: "priority",
   });
   expect(result).not.toHaveProperty("temperature");
   expect(result).not.toHaveProperty("max_output_tokens");
@@ -131,7 +140,9 @@ it("sets top-level verbosity and skips Responses-only features on Chat Completio
 
 it.each([
   { provider: "github-copilot", baseUrl: "https://api.individual.githubcopilot.com" },
-  { provider: "azure-openai-responses", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
+  { provider: "github-copilot", baseUrl: "https://api.githubcopilot.com" },
+  { provider: "github-copilot", baseUrl: "https://api.business.githubcopilot.com" },
+  { provider: "github-copilot", baseUrl: "https://api.enterprise.githubcopilot.com" },
 ])("applies parameter overrides but not native features on $provider", (overrides) => {
   // Arrange
   const requestModel = { ...model, ...overrides };
@@ -141,6 +152,18 @@ it.each([
 
   // Assert
   expect(result).toEqual({ ...payloadFor(requestModel), text: { verbosity: "low" }, reasoning: { summary: "auto" } });
+  for (const feature of ["webSearch", "serviceTier"] as const) {
+    expect(featureDecision(feature, active, requestModel)).toEqual({
+      apply: false,
+      description: "Skipped: Native feature support is unverified on this endpoint",
+    });
+  }
+  expect(transformPayload(payloadFor(requestModel), { ...active, allowUnsupported: true }, requestModel)).toMatchObject(
+    {
+      tools: [{ type: "web_search" }],
+      service_tier: "priority",
+    },
+  );
 });
 
 it.each([
@@ -168,7 +191,7 @@ it.each([
     text: { verbosity: "low" },
     reasoning: { summary: "auto" },
     tools: [{ type: "web_search" }],
-    service_tier: "fast",
+    service_tier: "priority",
   });
 });
 
@@ -262,7 +285,7 @@ describe.each(["anthropic-messages", "google-generative-ai", "unknown-api", "ope
         text: { verbosity: "low" },
         reasoning: { summary: "auto" },
         tools: [{ type: "web_search" }],
-        service_tier: "fast",
+        service_tier: "priority",
       });
       expect(payload).not.toHaveProperty("text");
     });
@@ -395,7 +418,7 @@ describe("compatibility decisions", () => {
       text: { verbosity: "low" },
       reasoning: { summary: "auto" },
       tools: [{ type: "web_search" }],
-      service_tier: "fast",
+      service_tier: "priority",
     });
   });
 

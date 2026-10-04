@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { featureDecision } from "#src/request/compatibility";
 import { transformPayload } from "#src/request/payload";
 import { model, settings } from "#test/support";
 
@@ -9,7 +10,7 @@ const azure = {
   api: "azure-openai-responses",
   baseUrl: "https://example.openai.azure.com",
 };
-const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "fast" });
+const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });
 
 it.each([
   [undefined, azure.id],
@@ -29,7 +30,13 @@ it.each([
   const result = transformPayload(payload, active, azure, mapping);
 
   // Assert
-  expect(result).toEqual({ ...payload, text: { verbosity: "low" }, reasoning: { summary: "auto" } });
+  expect(result).toEqual({
+    ...payload,
+    text: { verbosity: "low" },
+    reasoning: { summary: "auto" },
+    tools: [{ type: "web_search" }],
+    service_tier: "priority",
+  });
   expect(payload).not.toHaveProperty("text");
 });
 
@@ -101,5 +108,57 @@ it.each([{ input: [], messages: [] }, { input: 42 }, { messages: [] }, {}])(
 
     // Act / Assert
     expect(transformPayload(payload, active, azure, deploymentNameMap)).toBeUndefined();
+  },
+);
+
+it.each([
+  "gpt-5.5",
+  "gpt-5.5-2026-04-24",
+  "gpt-5.6-sol",
+  "gpt-5.6-sol-2026-07-09",
+  "gpt-5.6-terra",
+  "gpt-5.6-terra-2026-07-09",
+  "gpt-6-sol",
+  "gpt-6-sol-2026-09-22",
+])("requests priority for documented Azure model %s", (id) => {
+  // Arrange
+  const requestModel = { ...azure, id };
+  const payload = { model: "production-assistant", input: [] };
+
+  // Act
+  const result = transformPayload(payload, active, requestModel, `${id}=production-assistant`);
+
+  // Assert
+  expect(result).toHaveProperty("service_tier", "priority");
+  expect(featureDecision("serviceTier", active, requestModel)).toEqual({
+    apply: true,
+    description: "Set service_tier to priority",
+  });
+});
+
+it.each(["gpt-5.6-luna", "gpt-6-astra", "gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-sol-2026-10-01"])(
+  "skips unverified Azure priority for %s without blocking other features",
+  (id) => {
+    // Arrange
+    const requestModel = { ...azure, id };
+    const payload = { model: "production-assistant", input: [], service_tier: "auto" };
+    const mapping = `${id}=production-assistant`;
+
+    // Act
+    const result = transformPayload(payload, active, requestModel, mapping);
+    const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel, mapping);
+
+    // Assert
+    expect(result).toEqual({
+      ...payload,
+      text: { verbosity: "low" },
+      reasoning: { summary: "auto" },
+      tools: [{ type: "web_search" }],
+    });
+    expect(featureDecision("serviceTier", active, requestModel)).toEqual({
+      apply: false,
+      description: "Skipped: Priority processing support is unverified for this Azure model",
+    });
+    expect(bypassed).toHaveProperty("service_tier", "priority");
   },
 );

@@ -27,7 +27,7 @@ it("merges each key with command > environment > project > global precedence", (
   const input = layers({
     global: { enabled: false, verbosity: "high", reasoningSummary: "auto", webSearch: true },
     project: { verbosity: "medium", reasoningSummary: null },
-    environment: { verbosity: "low", serviceTier: "fast" },
+    environment: { verbosity: "low", serviceTier: "priority" },
     command: { verbosity: null, allowUnsupported: true },
   });
 
@@ -40,7 +40,7 @@ it("merges each key with command > environment > project > global precedence", (
     verbosity: null,
     reasoningSummary: null,
     webSearch: true,
-    serviceTier: "fast",
+    serviceTier: "priority",
     allowUnsupported: true,
   });
   expect(resolved.sources).toEqual({
@@ -98,15 +98,15 @@ it("distinguishes null, none, omission, and typed booleans", () => {
   expect(() => validateSettings({ serviceTier: null })).toThrow();
 });
 
-it("normalizes the legacy priority tier in JSON, environment and command values", () => {
+it("normalizes the fast alias in JSON, environment and command values", () => {
   // Arrange
-  const expected = { serviceTier: "fast" };
+  const expected = { serviceTier: "priority" };
 
   // Act / Assert
-  expect(validateSettings({ serviceTier: "priority" })).toEqual(expected);
-  expect(parseSetting("serviceTier", " priority ")).toEqual(expected);
-  expect(readEnvironment({ PI_OPENAI_SERVICE_TIER: " priority " })).toEqual(expected);
-  expect(choices.serviceTier).toEqual(["default", "fast"]);
-  expect(() => validateSettings({ serviceTier: " priority " })).toThrow();
-  expect(() => parseSetting("serviceTier", "PRIORITY")).toThrow();
+  expect(validateSettings({ serviceTier: "fast" })).toEqual(expected);
+  expect(parseSetting("serviceTier", " fast ")).toEqual(expected);
+  expect(readEnvironment({ PI_OPENAI_SERVICE_TIER: " fast " })).toEqual(expected);
+  expect(choices.serviceTier).toEqual(["default", "priority"]);
+  expect(() => validateSettings({ serviceTier: " fast " })).toThrow();
+  expect(() => parseSetting("serviceTier", "FAST")).toThrow();
 });

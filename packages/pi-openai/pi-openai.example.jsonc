@@ -17,7 +17,7 @@
   // false leaves existing tools unchanged.
   "webSearch": false,
 
-  // "fast" requests Fast mode; legacy "priority" is accepted as an alias.
+  // "priority" requests priority processing; "fast" is accepted as an alias.
   // "default" leaves the payload unchanged, rather than forcing a standard tier.
   "serviceTier": "default"
 }

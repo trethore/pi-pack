@@ -32,6 +32,7 @@ const supportedModels = new Set([
   "gpt-6-sol",
   "gpt-6.1-sol",
 ]);
+const azurePriorityModels = new Set(["gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-sol"]);
 
 export function requestFormat(model: RequestModel): RequestFormat | undefined {
   if (supportedResponsesApis.has(model.api)) {
@@ -82,15 +83,19 @@ function summaryRestriction(settings: Settings, model: RequestModel): string | u
   return undefined;
 }
 
-function hostedFeatureRestriction(model: RequestModel): string | undefined {
-  if (endpoint(model) !== Endpoint.OPENAI) {
+function hostedFeatureRestriction(feature: Feature, host: Endpoint, id: string): string | undefined {
+  if (host === Endpoint.COPILOT) {
     return "Native feature support is unverified on this endpoint";
+  }
+  if (host === Endpoint.AZURE && feature === Feature.SERVICE_TIER && !azurePriorityModels.has(id)) {
+    return "Priority processing support is unverified for this Azure model";
   }
   return undefined;
 }
 
 function safeRestriction(feature: Feature, settings: Settings, model: RequestModel): string | undefined {
-  if (endpoint(model) === undefined) {
+  const host = endpoint(model);
+  if (host === undefined) {
     return "Provider or endpoint support is unverified";
   }
   const id = model.id.replace(/-\d{4}-\d{2}-\d{2}$/, "");
@@ -103,7 +108,7 @@ function safeRestriction(feature: Feature, settings: Settings, model: RequestMod
   if (feature === Feature.REASONING_SUMMARY) {
     return summaryRestriction(settings, model);
   }
-  return hostedFeatureRestriction(model);
+  return hostedFeatureRestriction(feature, host, id);
 }
 
 function inactive(feature: Feature, settings: Settings): boolean {
@@ -123,7 +128,7 @@ function actionDecision(feature: Feature, settings: Settings, format: RequestFor
     reasoningSummary:
       settings.reasoningSummary === ReasoningSummary.NONE ? "Remove reasoning.summary" : "Set reasoning.summary",
     webSearch: "Add native web search if absent",
-    serviceTier: "Set service_tier to fast (Fast mode)",
+    serviceTier: "Set service_tier to priority",
   };
   const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
   return { apply: true, description: descriptions[feature] + suffix };

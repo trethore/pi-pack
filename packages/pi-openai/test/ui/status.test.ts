@@ -97,7 +97,7 @@ it.each([30, 60, 100, 160])(
 it("explains the modern-model support boundary in status", () => {
   // Arrange
   const effective = resolveSettings(
-    layers({ command: { verbosity: "low", reasoningSummary: "none", webSearch: true, serviceTier: "fast" } }),
+    layers({ command: { verbosity: "low", reasoningSummary: "none", webSearch: true, serviceTier: "priority" } }),
   );
 
   // Act
@@ -117,7 +117,7 @@ it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior f
         verbosity: "low",
         reasoningSummary: "auto",
         webSearch: true,
-        serviceTier: "fast",
+        serviceTier: "priority",
       },
     }),
   );
@@ -131,4 +131,45 @@ it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior f
     expect(row).toContain("Attempt on compatible request payload (support checks bypassed)");
   }
   expect(markdown).not.toContain("Skipped:");
+});
+
+it.each([
+  {
+    provider: "azure-openai-responses",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.openai.azure.com",
+    id: "gpt-6-sol",
+    search: "Add native web search if absent",
+    tier: "Set service_tier to priority",
+  },
+  {
+    provider: "azure-openai-responses",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.openai.azure.com",
+    id: "gpt-6.1-sol",
+    search: "Add native web search if absent",
+    tier: "Skipped: Priority processing support is unverified for this Azure model",
+  },
+  {
+    provider: "github-copilot",
+    api: "openai-responses",
+    baseUrl: "https://api.githubcopilot.com",
+    id: "gpt-6-sol",
+    search: "Skipped: Native feature support is unverified on this endpoint",
+    tier: "Skipped: Native feature support is unverified on this endpoint",
+  },
+])("shows provider feature handling for $provider / $id", ({ search, tier, ...identity }) => {
+  // Arrange
+  const effective = resolveSettings(
+    layers({ command: { verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" } }),
+  );
+
+  // Act
+  const markdown = statusMarkdown(effective, { ...model, ...identity }, "global");
+
+  // Assert
+  expect(markdown).toContain("| verbosity | `low` | command | Set text.verbosity |");
+  expect(markdown).toContain("| reasoningSummary | `auto` | command | Set reasoning.summary |");
+  expect(markdown).toContain(`| webSearch | \`true\` | command | ${search} |`);
+  expect(markdown).toContain(`| serviceTier | \`priority\` | command | ${tier} |`);
 });

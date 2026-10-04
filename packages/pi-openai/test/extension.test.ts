@@ -88,8 +88,8 @@ it("registers one command root, completions, and a display-only status renderer"
 
   // Assert
   expect([...extension.commands.keys()]).toEqual(["pi-openai"]);
-  expect(extension.commands.get("pi-openai")?.getArgumentCompletions?.("serviceTier f")).toEqual([
-    { value: "serviceTier fast", label: "fast" },
+  expect(extension.commands.get("pi-openai")?.getArgumentCompletions?.("serviceTier p")).toEqual([
+    { value: "serviceTier priority", label: "priority" },
   ]);
   expect(extension.registerEntryRenderer).toHaveBeenCalledWith("pi-openai-status", expect.any(Function));
   expect(extension.appendEntry).toHaveBeenCalledTimes(2);
@@ -356,17 +356,20 @@ it("loads through Pi's TypeScript loader with all workspace dependencies", async
 });
 
 it.each([
-  { provider: "openai", apiKey: "sk-proj-test" },
-  { provider: "openai", apiKey: "chatgpt-access-token" },
-  { provider: "azure-openai-responses", apiKey: "azure-test" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "priority" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "fast" },
+  { provider: "openai", apiKey: "chatgpt-access-token", tier: "priority" },
+  { provider: "openai", apiKey: "chatgpt-access-token", tier: "fast" },
+  { provider: "azure-openai-responses", apiKey: "azure-test", tier: "priority" },
+  { provider: "azure-openai-responses", apiKey: "azure-test", tier: "fast" },
 ])(
-  "modifies real Pi $provider requests using $apiKey without restoring auth-rejected fields",
-  async ({ provider, apiKey }) => {
+  "modifies real Pi $provider requests using $apiKey and $tier without restoring auth-rejected fields",
+  async ({ provider, apiKey, tier }) => {
     // Arrange
     vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
     vi.stubEnv("PI_OPENAI_REASONING_SUMMARY", "none");
     vi.stubEnv("PI_OPENAI_WEB_SEARCH", "true");
-    vi.stubEnv("PI_OPENAI_SERVICE_TIER", "fast");
+    vi.stubEnv("PI_OPENAI_SERVICE_TIER", tier);
     vi.stubEnv("AZURE_OPENAI_DEPLOYMENT_NAME_MAP", `${model.id}=production-assistant`);
     const extension = harness("print");
     await extension.emit("session_start");
@@ -429,12 +432,7 @@ it.each([
       reasoning: { effort: "high" },
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
-    if (provider === "openai") {
-      expect(sent).toMatchObject({ service_tier: "fast", tools: [{ type: "web_search" }] });
-    } else {
-      expect(sent).not.toHaveProperty("service_tier");
-      expect(sent).not.toHaveProperty("tools");
-    }
+    expect(sent).toMatchObject({ service_tier: "priority", tools: [{ type: "web_search" }] });
     if (provider === "azure-openai-responses" || apiKey.startsWith("sk-")) {
       expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
     } else {
@@ -462,32 +460,33 @@ it("warns about unknown entries in both config layers without disabling known se
   expect(payload).toHaveProperty("text.verbosity", "high");
 });
 
-it.each(["global", "project", "environment", "command"] as const)(
-  "normalizes legacy priority from %s in status, saved configuration and requests",
-  async (source) => {
-    // Arrange
-    if (source === "global" || source === "project") {
-      await workspace.write(source, '{"serviceTier":"priority"}');
-    } else if (source === "environment") {
-      vi.stubEnv("PI_OPENAI_SERVICE_TIER", "priority");
-    }
-    const extension = harness();
-    await extension.emit("session_start");
+it.each(
+  (["global", "project", "environment", "command"] as const).flatMap((source) =>
+    ["priority", "fast"].map((tier) => ({ source, tier })),
+  ),
+)("normalizes $tier from $source in status, saved configuration and requests", async ({ source, tier }) => {
+  // Arrange
+  if (source === "global" || source === "project") {
+    await workspace.write(source, JSON.stringify({ serviceTier: tier }));
+  } else if (source === "environment") {
+    vi.stubEnv("PI_OPENAI_SERVICE_TIER", tier);
+  }
+  const extension = harness();
+  await extension.emit("session_start");
 
-    // Act
-    if (source === "command") {
-      await extension.command("serviceTier priority");
-    }
-    await extension.command("status");
-    await extension.command("save project");
-    const payload = await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } });
+  // Act
+  if (source === "command") {
+    await extension.command(`serviceTier ${tier}`);
+  }
+  await extension.command("status");
+  await extension.command("save project");
+  const payload = await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } });
 
-    // Assert
-    expect(extension.appendEntry).toHaveBeenCalledWith(
-      "pi-openai-status",
-      expect.stringContaining(`| serviceTier | \`fast\` | ${source} | Set service_tier to fast (Fast mode) |`),
-    );
-    expect(parseConfig(await workspace.read("project"))).toHaveProperty("serviceTier", "fast");
-    expect(payload).toHaveProperty("service_tier", "fast");
-  },
-);
+  // Assert
+  expect(extension.appendEntry).toHaveBeenCalledWith(
+    "pi-openai-status",
+    expect.stringContaining(`| serviceTier | \`priority\` | ${source} | Set service_tier to priority |`),
+  );
+  expect(parseConfig(await workspace.read("project"))).toHaveProperty("serviceTier", "priority");
+  expect(payload).toHaveProperty("service_tier", "priority");
+});

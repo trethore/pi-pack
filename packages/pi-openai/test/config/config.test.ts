@@ -23,7 +23,7 @@ it("loads JSONC layers and lets project null cancel a global override", async ()
   const result = resolveSettings(loaded);
 
   // Assert
-  expect(result.values).toEqual(settings({ verbosity: null, webSearch: true, serviceTier: "fast" }));
+  expect(result.values).toEqual(settings({ verbosity: null, webSearch: true, serviceTier: "priority" }));
   expect(result.sources.verbosity).toBe("project");
   expect(result.sources.webSearch).toBe("global");
   expect(result.sources.serviceTier).toBe("environment");
@@ -112,7 +112,7 @@ it("preserves comments, unknown keys, line endings and saved nulls", async () =>
   // Arrange
   const original = '{\r\n  // keep this\r\n  "verbosity": "high", // inline\r\n  "future": {"nested":42},\r\n}\r\n';
   await workspace.write("project", original);
-  const values = settings({ reasoningSummary: "none", serviceTier: "fast" });
+  const values = settings({ reasoningSummary: "none", serviceTier: "priority" });
 
   // Act
   await saveConfiguration(workspace.paths, "project", values);
