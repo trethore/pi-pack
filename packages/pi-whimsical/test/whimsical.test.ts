@@ -21,10 +21,12 @@ beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "whimsical-"));
   cwd = join(root, "project");
   agentDir = join(root, "agent");
+  vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
   await Promise.all([mkdir(join(cwd, ".pi"), { recursive: true }), mkdir(agentDir)]);
 });
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   await rm(root, { recursive: true, force: true });
 });
@@ -42,9 +44,11 @@ function harness(hasUI = true) {
       handlers.set(name, handler);
     },
   } as unknown as ExtensionAPI;
-  const ctx = { cwd, hasUI, ui: { setWorkingMessage, notify } } as unknown as ExtensionContext;
+  const isProjectTrusted = vi.fn(() => true);
+  const ctx = { cwd, hasUI, isProjectTrusted, ui: { setWorkingMessage, notify } } as unknown as ExtensionContext;
   whimsical(api);
   return {
+    isProjectTrusted,
     notify,
     setWorkingMessage,
     async emit(name: string) {
@@ -59,7 +63,7 @@ function harness(hasUI = true) {
 
 it("enables built-in messages when no configuration exists", async () => {
   // Act
-  const config = await loadConfig(cwd, { agentDir });
+  const config = await loadConfig(cwd, { projectTrusted: true, agentDir });
 
   // Assert
   expect(config).toEqual({ enabled: true, messages: [] });
@@ -70,7 +74,10 @@ it("reads global JSONC with comments and trailing commas", async () => {
   await configure('{ // custom\n "messages": ["Thinking...",], }', true);
 
   // Act / Assert
-  await expect(loadConfig(cwd, { agentDir })).resolves.toEqual({ enabled: true, messages: ["Thinking..."] });
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toEqual({
+    enabled: true,
+    messages: ["Thinking..."],
+  });
 });
 
 it("uses project configuration instead of merging with global configuration", async () => {
@@ -79,7 +86,7 @@ it("uses project configuration instead of merging with global configuration", as
   await configure('{"enabled":false}');
 
   // Act / Assert
-  await expect(loadConfig(cwd, { agentDir })).resolves.toEqual({ enabled: false, messages: [] });
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toEqual({ enabled: false, messages: [] });
 });
 
 it.each([
@@ -96,8 +103,10 @@ it.each([
   await configure("{}", true);
 
   // Act / Assert
-  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow(reason);
-  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow(join(cwd, ".pi", "pi-whimsical.jsonc"));
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(reason);
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
+    join(cwd, ".pi", "pi-whimsical.jsonc"),
+  );
 });
 
 it("reports unreadable configuration", async () => {
@@ -105,7 +114,7 @@ it("reports unreadable configuration", async () => {
   await mkdir(join(cwd, ".pi", "pi-whimsical.jsonc"));
 
   // Act / Assert
-  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow("could not read");
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow("could not read");
 });
 
 it.each(["{}", '{"messages":[]}'])("uses the supplied built-in list for %s", async (source) => {
@@ -229,4 +238,42 @@ it("warns on session start and reload while still applying known entries", async
     `pi-whimsical: ${join(cwd, ".pi", "pi-whimsical.jsonc")}: Unknown configuration entries: "mesages".`,
     "warning",
   );
+});
+
+it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
+  "uses global messages without reading untrusted project configuration %s",
+  async (source) => {
+    // Arrange
+    await configure('{"messages":["Global..."]}', true);
+    await configure(source);
+    const extension = harness();
+    extension.isProjectTrusted.mockReturnValue(false);
+
+    // Act
+    await extension.emit("session_start");
+    await extension.emit("turn_start");
+
+    // Assert
+    expect(extension.setWorkingMessage).toHaveBeenCalledWith("Global...");
+    expect(extension.notify).not.toHaveBeenCalled();
+  },
+);
+
+it("replaces project messages with global messages when reloading untrusted", async () => {
+  // Arrange
+  await configure('{"messages":["Global..."]}', true);
+  await configure('{"messages":["Project..."]}');
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.emit("turn_start");
+  await extension.emit("turn_end");
+  extension.isProjectTrusted.mockReturnValue(false);
+
+  // Act
+  await extension.emit("session_start");
+  await extension.emit("turn_start");
+
+  // Assert
+  expect(extension.setWorkingMessage.mock.calls).toEqual([["Project..."], [], ["Global..."]]);
+  expect(extension.notify).not.toHaveBeenCalled();
 });

@@ -25,6 +25,7 @@ beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "pi-metrics-"));
   cwd = join(root, "project");
   agentDir = join(root, "agent");
+  vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
   await mkdir(join(cwd, ".pi"), { recursive: true });
   await mkdir(agentDir);
   now = 0;
@@ -32,6 +33,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   await rm(root, { recursive: true, force: true });
 });
@@ -80,7 +82,8 @@ function harness(hasUI = true) {
   const handlers = new Map<string, Set<Handler>>();
   const notify = vi.fn();
   const setWidget = vi.fn<ExtensionUIContext["setWidget"]>();
-  const ctx = { cwd, hasUI, ui: { notify, setWidget } } as unknown as ExtensionContext;
+  const isProjectTrusted = vi.fn(() => true);
+  const ctx = { cwd, hasUI, isProjectTrusted, ui: { notify, setWidget } } as unknown as ExtensionContext;
   const api = {
     on(name: string, handler: Handler) {
       let entries = handlers.get(name);
@@ -99,6 +102,7 @@ function harness(hasUI = true) {
   } as unknown as ExtensionAPI;
   metrics(api);
   return {
+    isProjectTrusted,
     handlers,
     notify,
     setWidget,
@@ -118,7 +122,7 @@ function harness(hasUI = true) {
 
 it("provides all defaults without a config file", async () => {
   // Act
-  const config = await loadConfig(cwd, { agentDir });
+  const config = await loadConfig(cwd, { projectTrusted: true, agentDir });
 
   // Assert
   expect(config).toEqual({
@@ -133,9 +137,9 @@ it("accepts global JSONC and lets project configuration replace it", async () =>
   await writeFile(join(agentDir, "pi-metrics.jsonc"), '{ // live metrics\n "mode": "live", "format": "<cost>", }');
 
   // Act
-  const global = await loadConfig(cwd, { agentDir });
+  const global = await loadConfig(cwd, { projectTrusted: true, agentDir });
   await configure({ enabled: false });
-  const project = await loadConfig(cwd, { agentDir });
+  const project = await loadConfig(cwd, { projectTrusted: true, agentDir });
 
   // Assert
   expect(global).toEqual({ enabled: true, mode: "live", format: "<cost>" });
@@ -154,7 +158,7 @@ it.each([
   await configure(config);
 
   // Act / Assert
-  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow(reason);
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(reason);
 });
 
 it("notifies only when control returns to the user, with uncached tokens and full cost", async () => {
@@ -519,5 +523,43 @@ it.each([true, false])("warns about unknown entries even when enabled is %s", as
   expect(extension.notify.mock.calls).toEqual([
     [`pi-metrics: ${join(cwd, ".pi", "pi-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
   ]);
-  await expect(loadConfig(cwd, { agentDir })).resolves.toMatchObject({ enabled, mode: "notify" });
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({ enabled, mode: "notify" });
+});
+
+it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
+  "uses global metrics without reading untrusted project configuration %s",
+  async (source) => {
+    // Arrange
+    await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"format":"Global metrics"}');
+    await writeFile(join(cwd, ".pi", "pi-metrics.jsonc"), source);
+    const extension = harness();
+    extension.isProjectTrusted.mockReturnValue(false);
+
+    // Act
+    await extension.emit("session_start");
+    await extension.emit("agent_start");
+    await extension.emit("agent_settled");
+
+    // Assert
+    expect(extension.notify.mock.calls).toEqual([["Global metrics", "info"]]);
+  },
+);
+
+it("clears trusted project widgets and handlers when reloading untrusted", async () => {
+  // Arrange
+  await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"enabled":false}');
+  await configure({ mode: "live" });
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.emit("agent_start");
+  extension.isProjectTrusted.mockReturnValue(false);
+
+  // Act
+  await extension.emit("session_start");
+  await extension.emit("agent_start");
+
+  // Assert
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
+  expect([...extension.handlers.keys()]).toEqual(["session_start"]);
+  expect(extension.notify).not.toHaveBeenCalled();
 });

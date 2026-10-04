@@ -75,18 +75,22 @@ function parseSource(
   }
 }
 
-interface LoadConfigurationOptions extends ConfigWarningOptions {
+interface ProjectTrustOptions {
+  projectTrusted: boolean;
+}
+
+interface LoadConfigurationOptions extends ConfigWarningOptions, ProjectTrustOptions {
   environment?: NodeJS.ProcessEnv;
 }
 
 export async function loadConfiguration(
   paths: ConfigPaths,
-  { environment = process.env, ...warnings }: LoadConfigurationOptions = {},
+  { projectTrusted, environment = process.env, ...warnings }: LoadConfigurationOptions,
 ): Promise<Layers> {
   const onWarning = createWarningReporter(warnings);
   const [global, project] = await Promise.all([
     readSource(paths.global, Destination.GLOBAL),
-    readSource(paths.project, Destination.PROJECT),
+    projectTrusted ? readSource(paths.project, Destination.PROJECT) : undefined,
   ]);
   return {
     global: global === undefined ? {} : parseSource(global, Destination.GLOBAL, onWarning),
@@ -96,7 +100,13 @@ export async function loadConfiguration(
   };
 }
 
-export async function saveDestination(paths: ConfigPaths): Promise<Destination> {
+export async function saveDestination(
+  paths: ConfigPaths,
+  { projectTrusted }: ProjectTrustOptions,
+): Promise<Destination> {
+  if (!projectTrusted) {
+    return Destination.GLOBAL;
+  }
   try {
     await stat(paths.project);
     return Destination.PROJECT;
@@ -112,7 +122,11 @@ export async function saveConfiguration(
   paths: ConfigPaths,
   destination: Destination,
   settings: Settings,
+  { projectTrusted }: ProjectTrustOptions,
 ): Promise<void> {
+  if (destination === Destination.PROJECT && !projectTrusted) {
+    throw new Error("Project is not trusted; refusing to save project configuration.");
+  }
   const file = paths[destination];
   const existing = await readSource(file, destination);
   if (existing !== undefined) {

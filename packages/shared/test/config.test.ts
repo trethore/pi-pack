@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import * as files from "@pi-pack/shared/files";
 import { configPaths, createConfigLoader, parseConfig } from "@pi-pack/shared/config";
 
 let root: string;
@@ -25,6 +26,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await rm(root, { recursive: true, force: true });
 });
 
@@ -55,8 +57,8 @@ describe("configuration paths", () => {
 describe("configuration loading", () => {
   it("creates independent defaults without validating when files are absent", async () => {
     // Act
-    const first = await load(cwd, { agentDir });
-    const second = await load(cwd, { agentDir });
+    const first = await load(cwd, { projectTrusted: true, agentDir });
+    const second = await load(cwd, { projectTrusted: true, agentDir });
 
     // Assert
     expect(first).toEqual({ items: [] });
@@ -71,9 +73,9 @@ describe("configuration loading", () => {
     await writeFile(globalFile, '{ // global\n "globalOnly": true, }');
 
     // Act
-    const global = await load(cwd, { agentDir });
+    const global = await load(cwd, { projectTrusted: true, agentDir });
     await writeFile(projectFile, "{}");
-    const project = await load(cwd, { agentDir });
+    const project = await load(cwd, { projectTrusted: true, agentDir });
 
     // Assert
     expect(global).toEqual({ globalOnly: true });
@@ -95,7 +97,7 @@ describe("configuration loading", () => {
     await writeFile(globalFile, "{}");
 
     // Act
-    const result = load(cwd, { agentDir });
+    const result = load(cwd, { projectTrusted: true, agentDir });
 
     // Assert
     await expect(result).rejects.toThrow(`example: invalid configuration in ${projectFile}:`);
@@ -115,7 +117,7 @@ describe("configuration loading", () => {
     await writeFile(globalFile, "{}");
 
     // Act
-    const result = load(cwd, { agentDir });
+    const result = load(cwd, { projectTrusted: true, agentDir });
 
     // Assert
     await expect(result).rejects.toThrow(`example: invalid configuration in ${projectFile}: invalid setting`);
@@ -132,7 +134,7 @@ describe("configuration loading", () => {
     await writeFile(globalFile, "{}");
 
     // Act / Assert
-    await expect(load(cwd, { agentDir })).rejects.toThrow(
+    await expect(load(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
       `example: invalid configuration in ${globalFile}: invalid setting`,
     );
   });
@@ -146,7 +148,7 @@ describe("configuration loading", () => {
     }
 
     // Act
-    const result = load(cwd, { agentDir });
+    const result = load(cwd, { projectTrusted: true, agentDir });
 
     // Assert
     await expect(result).rejects.toThrow(`example: could not read ${file}:`);
@@ -163,7 +165,7 @@ describe("configuration warnings", () => {
     await writeFile(projectFile, '{"itmes":[]}');
 
     // Act
-    await load(cwd, { agentDir, ui: { notify } });
+    await load(cwd, { projectTrusted: true, agentDir, ui: { notify } });
 
     // Assert
     expect(notify.mock.calls).toEqual([
@@ -178,7 +180,7 @@ describe("configuration warnings", () => {
     await writeFile(projectFile, '{"itmes":[]}');
 
     // Act
-    await load(cwd, { agentDir, ui: { notify }, onWarning });
+    await load(cwd, { projectTrusted: true, agentDir, ui: { notify }, onWarning });
 
     // Assert
     expect(onWarning.mock.calls).toEqual([[`example: ${projectFile}: Unknown configuration entries: "itmes".`]]);
@@ -190,7 +192,7 @@ describe("configuration warnings", () => {
     await writeFile(projectFile, '{"itmes":[]}');
 
     // Act / Assert
-    await expect(load(cwd, { agentDir })).resolves.toEqual({ itmes: [] });
+    await expect(load(cwd, { projectTrusted: true, agentDir })).resolves.toEqual({ itmes: [] });
   });
 
   it.each(["project", "global"])("reports unknown entries in the selected %s file", async (scope) => {
@@ -200,7 +202,7 @@ describe("configuration warnings", () => {
     await writeFile(file, '{"items":[], "itmes":"secret", "constructor":true}');
 
     // Act
-    const result = await load(cwd, { agentDir, onWarning });
+    const result = await load(cwd, { projectTrusted: true, agentDir, onWarning });
 
     // Assert
     expect(result.items).toEqual([]);
@@ -217,7 +219,7 @@ describe("configuration warnings", () => {
     await writeFile(projectFile, '{"items":[]}');
 
     // Act
-    await load(cwd, { agentDir, onWarning });
+    await load(cwd, { projectTrusted: true, agentDir, onWarning });
 
     // Assert
     expect(onWarning).not.toHaveBeenCalled();
@@ -228,7 +230,7 @@ describe("configuration warnings", () => {
     const onWarning = vi.fn();
 
     // Act
-    await load(cwd, { agentDir, onWarning });
+    await load(cwd, { projectTrusted: true, agentDir, onWarning });
 
     // Assert
     expect(onWarning).not.toHaveBeenCalled();
@@ -259,5 +261,40 @@ describe("configuration warnings", () => {
     // Act / Assert
     expect(() => parseConfig('{"itmes":', { knownKeys: ["items"], onWarning })).toThrow();
     expect(onWarning).not.toHaveBeenCalled();
+  });
+});
+
+describe("project trust", () => {
+  it.each(["valid", "malformed", "unreadable"])("ignores %s project configuration when untrusted", async (kind) => {
+    // Arrange
+    await writeFile(globalFile, '{"items":["global"]}');
+    if (kind === "unreadable") {
+      await mkdir(projectFile);
+    } else {
+      await writeFile(projectFile, kind === "valid" ? '{"items":["project"],"unknown":true}' : "{invalid");
+    }
+    const read = vi.spyOn(files, "readOptionalFile");
+    const onWarning = vi.fn();
+
+    // Act
+    const result = await load(cwd, { projectTrusted: false, agentDir, onWarning });
+
+    // Assert
+    expect(result).toEqual({ items: ["global"] });
+    expect(read.mock.calls).toEqual([[globalFile]]);
+    expect(onWarning).not.toHaveBeenCalled();
+  });
+
+  it("uses defaults when untrusted and only project configuration exists", async () => {
+    // Arrange
+    await writeFile(projectFile, '{"items":["project"]}');
+
+    // Act
+    const result = await load(cwd, { projectTrusted: false, agentDir });
+
+    // Assert
+    expect(result).toEqual({ items: [] });
+    expect(defaults).toHaveBeenCalledOnce();
+    expect(validate).not.toHaveBeenCalled();
   });
 });

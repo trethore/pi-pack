@@ -45,7 +45,9 @@ function harness(mode: ExtensionContext["mode"] = "tui") {
     registerEntryRenderer,
     appendEntry,
   } as unknown as ExtensionAPI;
+  const isProjectTrusted = vi.fn(() => true);
   const ctx = {
+    isProjectTrusted,
     cwd: workspace.cwd,
     mode,
     hasUI: mode === "tui",
@@ -55,6 +57,7 @@ function harness(mode: ExtensionContext["mode"] = "tui") {
   } as unknown as ExtensionCommandContext;
   openai(api);
   return {
+    isProjectTrusted,
     notify,
     appendEntry,
     registerEntryRenderer,
@@ -489,4 +492,117 @@ it.each(
   );
   expect(parseConfig(await workspace.read("project"))).toHaveProperty("serviceTier", "priority");
   expect(payload).toHaveProperty("service_tier", "priority");
+});
+
+it.each(['{"verbosity":"low","unknown":true}', "{invalid"])(
+  "ignores untrusted project configuration %s while retaining global and runtime overrides",
+  async (source) => {
+    // Arrange
+    await workspace.write("global", '{"verbosity":"high","webSearch":true}');
+    await workspace.write("project", source);
+    vi.stubEnv("PI_OPENAI_REASONING_SUMMARY", "detailed");
+    const extension = harness();
+    extension.isProjectTrusted.mockReturnValue(false);
+    const event = { payload: { model: model.id, input: [] } };
+
+    // Act
+    await extension.emit("session_start");
+    const initial = await extension.emit("before_provider_request", event);
+    await extension.command("verbosity medium");
+    const overridden = await extension.emit("before_provider_request", event);
+    await extension.command("reset");
+
+    // Assert
+    expect(initial).toMatchObject({
+      text: { verbosity: "high" },
+      reasoning: { summary: "detailed" },
+      tools: [{ type: "web_search" }],
+    });
+    expect(overridden).toHaveProperty("text.verbosity", "medium");
+    expect(await extension.emit("before_provider_request", event)).toEqual(initial);
+    expect(extension.notify.mock.calls.every(([, level]) => level === "info")).toBe(true);
+  },
+);
+
+it.each(["save", "save global"])("%s uses global configuration and status when untrusted", async (command) => {
+  // Arrange
+  await workspace.write("project", "{invalid");
+  const extension = harness();
+  extension.isProjectTrusted.mockReturnValue(false);
+  await extension.emit("session_start");
+  await extension.command("verbosity high");
+
+  // Act
+  await extension.command(command);
+  await extension.command("reset");
+  await extension.command("status");
+
+  // Assert
+  expect(parseConfig(await workspace.read("global"))).toHaveProperty("verbosity", "high");
+  expect(await workspace.read("project")).toBe("{invalid");
+  expect(extension.notify).toHaveBeenCalledWith("pi-openai: Saved globally.", "info");
+  expect(extension.appendEntry).toHaveBeenCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("Save destination: **global**"),
+  );
+  expect(extension.appendEntry).toHaveBeenCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("| verbosity | `high` | global |"),
+  );
+});
+
+it.each([undefined, '{"verbosity":"low"}'])(
+  "rejects save project when untrusted with project file %s",
+  async (source) => {
+    // Arrange
+    if (source !== undefined) {
+      await workspace.write("project", source);
+    }
+    const extension = harness();
+    extension.isProjectTrusted.mockReturnValue(false);
+    await extension.emit("session_start");
+    await extension.command("verbosity high");
+
+    // Act
+    await extension.command("save project");
+    await extension.command("status");
+
+    // Assert
+    expect(extension.notify).toHaveBeenLastCalledWith(
+      "pi-openai: Project is not trusted; refusing to save project configuration.",
+      "error",
+    );
+    expect(extension.appendEntry).toHaveBeenCalledWith(
+      "pi-openai-status",
+      expect.stringContaining("| verbosity | `high` | command |"),
+    );
+    if (source === undefined) {
+      await expect(workspace.read("project")).rejects.toHaveProperty("code", "ENOENT");
+    } else {
+      expect(await workspace.read("project")).toBe(source);
+    }
+    await expect(workspace.read("global")).rejects.toHaveProperty("code", "ENOENT");
+  },
+);
+
+it("drops the project layer when reloading untrusted and restores it when trusted again", async () => {
+  // Arrange
+  await workspace.write("global", '{"verbosity":"high"}');
+  await workspace.write("project", '{"verbosity":"low"}');
+  const extension = harness();
+  const event = { payload: { model: model.id, input: [] } };
+  await extension.emit("session_start");
+  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
+
+  // Act
+  extension.isProjectTrusted.mockReturnValue(false);
+  await extension.emit("session_start");
+  const untrusted = await extension.emit("before_provider_request", event);
+  extension.isProjectTrusted.mockReturnValue(true);
+  await extension.emit("session_start");
+  const trusted = await extension.emit("before_provider_request", event);
+
+  // Assert
+  expect(untrusted).toHaveProperty("text.verbosity", "high");
+  expect(trusted).toHaveProperty("text.verbosity", "low");
 });
