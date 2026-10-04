@@ -3,7 +3,9 @@ import type { ExtensionEvent } from "@earendil-works/pi-coding-agent";
 export const Events = {
   AgentStart: "agent_start",
   AgentSettled: "agent_settled",
+  BeforeAgentStart: "before_agent_start",
   BeforeProviderRequest: "before_provider_request",
+  Input: "input",
   MessageEnd: "message_end",
   SessionStart: "session_start",
   SessionShutdown: "session_shutdown",
