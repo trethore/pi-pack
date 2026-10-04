@@ -10,9 +10,12 @@ function inlineCode(text: string): string {
 
 function behavior(key: Setting, effective: EffectiveSettings, model: RequestModel | undefined): string {
   const { values } = effective;
-  if (key === Setting.ENABLED) return values.enabled ? "Active" : "No request overrides";
-  if (key === Setting.ALLOW_UNSUPPORTED)
+  if (key === Setting.ENABLED) {
+    return values.enabled ? "Active" : "No request overrides";
+  }
+  if (key === Setting.ALLOW_UNSUPPORTED) {
     return values.allowUnsupported ? "Support checks bypassed" : "Compatibility checks enabled";
+  }
   return featureDecision(key, values, model).description;
 }
 
@@ -47,8 +50,12 @@ export function renderStatus(markdown: string, theme: Theme): Markdown {
   return new Markdown(markdown, 1, 0, {
     ...markdownTheme,
     code(text) {
-      if (text === "true") return theme.fg("success", text);
-      if (text === "false" || text === "null") return theme.fg("error", text);
+      if (text === "true") {
+        return theme.fg("success", text);
+      }
+      if (text === "false" || text === "null") {
+        return theme.fg("error", text);
+      }
       return markdownTheme.code(text);
     },
   });

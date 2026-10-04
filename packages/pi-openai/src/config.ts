@@ -28,7 +28,9 @@ async function readSource(file: string, destination: Destination): Promise<strin
   try {
     return await readFile(file, "utf8");
   } catch (error) {
-    if (isMissing(error)) return undefined;
+    if (isMissing(error)) {
+      return undefined;
+    }
     throw new Error(`Could not read ${destination} configuration.`, { cause: error });
   }
 }
@@ -38,9 +40,13 @@ function rejectDuplicateSettings(source: string): void {
   const properties = parseTree(source)?.children ?? [];
   for (const property of properties) {
     const key: unknown = property.children?.[0]?.value;
-    if (typeof key !== "string" || !isSetting(key)) continue;
+    if (typeof key !== "string" || !isSetting(key)) {
+      continue;
+    }
     // JSONC edits target the first property, but parsing uses the last duplicate.
-    if (seen.has(key)) throw new Error(`Duplicate setting: ${key}`);
+    if (seen.has(key)) {
+      throw new Error(`Duplicate setting: ${key}`);
+    }
     seen.add(key);
   }
 }
@@ -74,7 +80,9 @@ export async function saveDestination(paths: ConfigPaths): Promise<Destination> 
     await stat(paths.project);
     return Destination.PROJECT;
   } catch (error) {
-    if (isMissing(error)) return Destination.GLOBAL;
+    if (isMissing(error)) {
+      return Destination.GLOBAL;
+    }
     throw new Error("Could not inspect project configuration.", { cause: error });
   }
 }
@@ -86,7 +94,9 @@ export async function saveConfiguration(
 ): Promise<void> {
   const file = paths[destination];
   const existing = await readSource(file, destination);
-  if (existing !== undefined) parseSource(existing, destination);
+  if (existing !== undefined) {
+    parseSource(existing, destination);
+  }
   let source = existing ?? "{}\n";
   for (const key of settingNames) {
     source = applyEdits(

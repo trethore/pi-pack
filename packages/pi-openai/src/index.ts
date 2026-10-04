@@ -32,8 +32,11 @@ async function executeCommand(
     case Command.STATUS: {
       const destination = await saveDestination(paths);
       const markdown = statusMarkdown(resolveSettings(layers), ctx.model, destination);
-      if (ctx.mode === "tui") pi.appendEntry(statusEntry, markdown);
-      else ctx.ui.notify(markdown, "info");
+      if (ctx.mode === "tui") {
+        pi.appendEntry(statusEntry, markdown);
+      } else {
+        ctx.ui.notify(markdown, "info");
+      }
       break;
     }
     case Command.SET:
@@ -41,8 +44,11 @@ async function executeCommand(
       ctx.ui.notify(`${extensionName}: ${command.setting} = ${String(command.override[command.setting])}.`, "info");
       break;
     case Command.RESET:
-      if (command.setting) Reflect.deleteProperty(layers.command, command.setting);
-      else layers.command = {};
+      if (command.setting) {
+        Reflect.deleteProperty(layers.command, command.setting);
+      } else {
+        layers.command = {};
+      }
       ctx.ui.notify(`${extensionName}: Reset ${command.setting ?? "command overrides"}.`, "info");
       break;
     case Command.SAVE: {
@@ -77,12 +83,16 @@ export default function openai(pi: ExtensionAPI): void {
   });
 
   pi.on(Events.BeforeProviderRequest, (event, ctx) => {
-    if (!state) return undefined;
+    if (!state) {
+      return undefined;
+    }
     return transformPayload(event.payload, resolveSettings(state.layers).values, ctx.model);
   });
 
   pi.registerEntryRenderer<string>(statusEntry, (entry, _options, theme) => {
-    if (typeof entry.data !== "string") return undefined;
+    if (typeof entry.data !== "string") {
+      return undefined;
+    }
     return renderStatus(entry.data, theme);
   });
 
@@ -92,7 +102,9 @@ export default function openai(pi: ExtensionAPI): void {
     handler: async (args, ctx) => {
       try {
         const command = parseCommand(args);
-        if (!state) throw new Error("Configuration is unavailable. Fix configuration and run /reload.");
+        if (!state) {
+          throw new Error("Configuration is unavailable. Fix configuration and run /reload.");
+        }
         await executeCommand(command, state, pi, ctx);
       } catch (error) {
         ctx.ui.notify(`${extensionName}: ${error instanceof Error ? error.message : "Command failed."}`, "error");

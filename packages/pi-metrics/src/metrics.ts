@@ -92,8 +92,12 @@ export class TurnMetrics {
 
     const dependencies = new Set<MetricDependency>();
     for (const part of this.parts) {
-      if (typeof part === "string") continue;
-      for (const dependency of part.requires) dependencies.add(dependency);
+      if (typeof part === "string") {
+        continue;
+      }
+      for (const dependency of part.requires) {
+        dependencies.add(dependency);
+      }
     }
     this.needsSpeed = dependencies.has("requestTime");
     this.needsDuration = dependencies.has("duration");
@@ -104,9 +108,13 @@ export class TurnMetrics {
   }
 
   start(): void {
-    if (this.active) return;
+    if (this.active) {
+      return;
+    }
     this.active = true;
-    if (this.needsDuration) this.started = performance.now();
+    if (this.needsDuration) {
+      this.started = performance.now();
+    }
     this.requestStarted = undefined;
     this.modelMilliseconds = 0;
     this.input = 0;
@@ -115,23 +123,35 @@ export class TurnMetrics {
   }
 
   startRequest(): void {
-    if (this.active && this.needsSpeed) this.requestStarted = performance.now();
+    if (this.active && this.needsSpeed) {
+      this.requestStarted = performance.now();
+    }
   }
 
   completeRequest(message: UsageMessage): void {
-    if (!this.active) return;
+    if (!this.active) {
+      return;
+    }
     if (this.needsSpeed) {
       this.modelMilliseconds += this.requestStarted === undefined ? NaN : performance.now() - this.requestStarted;
       this.requestStarted = undefined;
     }
-    if (this.needsUsage) this.recordUsage(message);
+    if (this.needsUsage) {
+      this.recordUsage(message);
+    }
   }
 
   private recordUsage(message: UsageMessage): void {
     const usage = reportedUsage(message);
-    if (this.needsInput) this.input += reportedValue(usage?.input);
-    if (this.needsOutput) this.output += reportedValue(usage?.output);
-    if (this.needsCost) this.cost += reportedValue(usage?.cost?.total);
+    if (this.needsInput) {
+      this.input += reportedValue(usage?.input);
+    }
+    if (this.needsOutput) {
+      this.output += reportedValue(usage?.output);
+    }
+    if (this.needsCost) {
+      this.cost += reportedValue(usage?.cost?.total);
+    }
   }
 
   render(): string {

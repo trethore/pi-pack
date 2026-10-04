@@ -17,10 +17,14 @@ export const loadConfig = createConfigLoader({
     const enabled = booleanOption(value.enabled, "enabled", true);
     const mode = value.mode === undefined ? "notify" : value.mode;
 
-    if (mode !== "notify" && mode !== "live") throw new Error('mode must be "notify" or "live"');
+    if (mode !== "notify" && mode !== "live") {
+      throw new Error('mode must be "notify" or "live"');
+    }
     const format = value.format === undefined ? defaultFormat : value.format;
 
-    if (typeof format !== "string") throw new Error("format must be a string");
+    if (typeof format !== "string") {
+      throw new Error("format must be a string");
+    }
     return { enabled, mode, format };
   },
 });

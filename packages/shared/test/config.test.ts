@@ -116,7 +116,9 @@ describe("configuration loading", () => {
     // Arrange
     const file = scope === "project" ? projectFile : globalFile;
     await mkdir(file);
-    if (scope === "project") await writeFile(globalFile, "{}");
+    if (scope === "project") {
+      await writeFile(globalFile, "{}");
+    }
 
     // Act
     const result = load(cwd, agentDir);

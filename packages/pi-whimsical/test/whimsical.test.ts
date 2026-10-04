@@ -47,7 +47,9 @@ function harness(hasUI = true) {
     setWorkingMessage,
     async emit(name: string) {
       const handler = handlers.get(name);
-      if (!handler) throw new Error(`Missing handler: ${name}`);
+      if (!handler) {
+        throw new Error(`Missing handler: ${name}`);
+      }
       await handler({} as never, ctx);
     },
   };

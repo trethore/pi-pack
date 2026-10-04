@@ -35,8 +35,12 @@ const supportedModels = new Set([
 ]);
 
 export function requestFormat(model: RequestModel): RequestFormat | undefined {
-  if (responsesApis.has(model.api)) return RequestFormat.RESPONSES;
-  if (model.api === "openai-completions") return RequestFormat.COMPLETIONS;
+  if (responsesApis.has(model.api)) {
+    return RequestFormat.RESPONSES;
+  }
+  if (model.api === "openai-completions") {
+    return RequestFormat.COMPLETIONS;
+  }
   return undefined;
 }
 
@@ -72,9 +76,12 @@ function endpoint(model: RequestModel): Endpoint | undefined {
 }
 
 function summaryRestriction(settings: Settings, model: RequestModel): string | undefined {
-  if (!model.reasoning) return "Model is not reasoning-capable";
-  if (settings.reasoningSummary === ReasoningSummary.CONCISE)
+  if (!model.reasoning) {
+    return "Model is not reasoning-capable";
+  }
+  if (settings.reasoningSummary === ReasoningSummary.CONCISE) {
     return "Concise summary support is unverified for this model";
+  }
   return undefined;
 }
 
@@ -84,19 +91,29 @@ function hostedFeatureRestriction(
   id: string,
 ): string | undefined {
   const host = endpoint(model);
-  if (host !== Endpoint.OPENAI && host !== Endpoint.CODEX)
+  if (host !== Endpoint.OPENAI && host !== Endpoint.CODEX) {
     return "Native feature support is unverified on this endpoint";
-  if (feature === Feature.SERVICE_TIER && id.endsWith("-pro"))
+  }
+  if (feature === Feature.SERVICE_TIER && id.endsWith("-pro")) {
     return "Priority processing support is unverified for this model";
+  }
   return undefined;
 }
 
 function safeRestriction(feature: Feature, settings: Settings, model: RequestModel): string | undefined {
-  if (endpoint(model) === undefined) return "Provider or endpoint support is unverified";
+  if (endpoint(model) === undefined) {
+    return "Provider or endpoint support is unverified";
+  }
   const id = model.id.replace(/-\d{4}-\d{2}-\d{2}$/, "");
-  if (!supportedModels.has(id)) return "Model support is limited to known GPT-5.5 and newer models";
-  if (feature === Feature.VERBOSITY) return undefined;
-  if (feature === Feature.REASONING_SUMMARY) return summaryRestriction(settings, model);
+  if (!supportedModels.has(id)) {
+    return "Model support is limited to known GPT-5.5 and newer models";
+  }
+  if (feature === Feature.VERBOSITY) {
+    return undefined;
+  }
+  if (feature === Feature.REASONING_SUMMARY) {
+    return summaryRestriction(settings, model);
+  }
   return hostedFeatureRestriction(feature, model, id);
 }
 
@@ -117,15 +134,23 @@ function action(feature: Feature, settings: Settings, format: RequestFormat): st
 }
 
 export function featureDecision(feature: Feature, settings: Settings, model: RequestModel | undefined): Decision {
-  if (!settings.enabled) return { apply: false, description: "Disabled: leave unchanged" };
-  if (inactive(feature, settings)) return { apply: false, description: "Leave unchanged" };
-  if (!model) return { apply: false, description: "Skipped: no model selected" };
+  if (!settings.enabled) {
+    return { apply: false, description: "Disabled: leave unchanged" };
+  }
+  if (inactive(feature, settings)) {
+    return { apply: false, description: "Leave unchanged" };
+  }
+  if (!model) {
+    return { apply: false, description: "Skipped: no model selected" };
+  }
   const format = requestFormat(model);
   if (!format || (format === RequestFormat.COMPLETIONS && feature !== Feature.VERBOSITY)) {
     return { apply: false, description: "Skipped: unsupported API format" };
   }
   const restriction = settings.allowUnsupported ? undefined : safeRestriction(feature, settings, model);
-  if (restriction) return { apply: false, description: `Skipped: ${restriction}` };
+  if (restriction) {
+    return { apply: false, description: `Skipped: ${restriction}` };
+  }
   const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
   return { apply: true, description: action(feature, settings, format) + suffix };
 }

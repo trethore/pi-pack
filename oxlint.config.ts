@@ -24,6 +24,7 @@ export default defineConfig({
     ".pi/**",
   ],
   rules: {
+    curly: "error",
     "unicorn/no-array-sort": "off",
     "no-restricted-imports": [
       "error",

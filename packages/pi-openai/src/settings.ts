@@ -74,7 +74,9 @@ function setValue<K extends Setting>(target: Partial<Pick<Settings, K>>, key: K,
 export function validateSettings(input: Record<string, unknown>): Partial<Settings> {
   const result: Partial<Settings> = {};
   for (const key of settingNames) {
-    if (Object.hasOwn(input, key)) setValue(result, key, input[key]);
+    if (Object.hasOwn(input, key)) {
+      setValue(result, key, input[key]);
+    }
   }
   return result;
 }
@@ -91,7 +93,9 @@ export function readEnvironment(environment: NodeJS.ProcessEnv): Partial<Setting
   for (const key of settingNames) {
     const name = environmentNames[key];
     const value = environment[name];
-    if (value === undefined) continue;
+    if (value === undefined) {
+      continue;
+    }
     try {
       Object.assign(result, parseSetting(key, value));
     } catch {

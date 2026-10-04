@@ -17,7 +17,9 @@ import { createWorkspace, model } from "#test/support";
 let workspace: Awaited<ReturnType<typeof createWorkspace>>;
 beforeEach(async () => {
   workspace = await createWorkspace();
-  for (const name of Object.values(environmentNames)) vi.stubEnv(name, undefined);
+  for (const name of Object.values(environmentNames)) {
+    vi.stubEnv(name, undefined);
+  }
   vi.stubEnv("PI_CODING_AGENT_DIR", workspace.agentDir);
 });
 afterEach(async () => {
@@ -59,12 +61,16 @@ function harness(mode: ExtensionContext["mode"] = "tui") {
     ctx,
     async emit(name: string, event: unknown = {}) {
       const handler = handlers.get(name);
-      if (!handler) throw new Error(`Missing handler: ${name}`);
+      if (!handler) {
+        throw new Error(`Missing handler: ${name}`);
+      }
       return await handler(event as never, ctx);
     },
     async command(args: string) {
       const command = commands.get("pi-openai");
-      if (!command) throw new Error("Missing command");
+      if (!command) {
+        throw new Error("Missing command");
+      }
       await command.handler(args, ctx);
     },
   };
@@ -146,7 +152,9 @@ const saveCases: Array<[string, Destination | undefined, Destination]> = [
 ];
 it.each(saveCases)("%s with existing %s saves effective state to %s", async (command, existing, destination) => {
   // Arrange
-  if (existing) await workspace.write(existing, '{ // retain\n "futureSetting":42, "reasoningSummary":"detailed" }');
+  if (existing) {
+    await workspace.write(existing, '{ // retain\n "futureSetting":42, "reasoningSummary":"detailed" }');
+  }
   vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
   const extension = harness();
   await extension.emit("session_start");
@@ -332,10 +340,14 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
       refreshOnCreate: false,
     });
     const requestModel = runtime.getModel("openai", model.id);
-    if (!requestModel) throw new Error("Missing built-in OpenAI model");
+    if (!requestModel) {
+      throw new Error("Missing built-in OpenAI model");
+    }
     let sent: unknown;
     const fetch = vi.fn((_url: unknown, init?: RequestInit) => {
-      if (typeof init?.body !== "string") throw new Error("Expected a JSON request body");
+      if (typeof init?.body !== "string") {
+        throw new Error("Expected a JSON request body");
+      }
       sent = JSON.parse(init.body) as unknown;
       return Promise.resolve(
         new Response('{"error":{"message":"Test response"}}', {
@@ -371,8 +383,9 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
       tools: [{ type: "web_search" }],
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
-    if (apiKey.startsWith("sk-")) expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
-    else {
+    if (apiKey.startsWith("sk-")) {
+      expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
+    } else {
       expect(sent).not.toHaveProperty("max_output_tokens");
       expect(sent).not.toHaveProperty("temperature");
     }

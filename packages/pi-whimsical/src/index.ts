@@ -16,20 +16,26 @@ export default function whimsical(pi: ExtensionAPI): void {
   });
 
   pi.on(Events.TurnStart, (_event, ctx) => {
-    if (!enabled || !ctx.hasUI) return;
+    if (!enabled || !ctx.hasUI) {
+      return;
+    }
     const message = messages[Math.floor(Math.random() * messages.length)];
     ctx.ui.setWorkingMessage(message);
     workingMessageSet = true;
   });
 
   pi.on(Events.TurnEnd, (_event, ctx) => {
-    if (!workingMessageSet) return;
+    if (!workingMessageSet) {
+      return;
+    }
     ctx.ui.setWorkingMessage();
     workingMessageSet = false;
   });
 
   pi.on(Events.SessionShutdown, (_event, ctx) => {
-    if (!workingMessageSet) return;
+    if (!workingMessageSet) {
+      return;
+    }
     ctx.ui.setWorkingMessage();
     workingMessageSet = false;
   });

@@ -68,7 +68,9 @@ function assistant(input = 100, output = 20): { type: "message_end"; message: As
 type WidgetFactory = Exclude<Parameters<ExtensionUIContext["setWidget"]>[1], undefined>;
 
 function renderWidget(factory: WidgetFactory | undefined, width = 80): string[] {
-  if (!factory) throw new Error("Missing metrics widget");
+  if (!factory) {
+    throw new Error("Missing metrics widget");
+  }
   const component = factory({} as Parameters<WidgetFactory>[0], {} as Parameters<WidgetFactory>[1]);
   return component.render(width);
 }
@@ -89,7 +91,9 @@ function harness(hasUI = true) {
       entries.add(handler);
       return () => {
         entries.delete(handler);
-        if (entries.size === 0) handlers.delete(name);
+        if (entries.size === 0) {
+          handlers.delete(name);
+        }
       };
     },
   } as unknown as ExtensionAPI;
@@ -99,7 +103,9 @@ function harness(hasUI = true) {
     notify,
     setWidget,
     async emit(name: string, event: unknown = { type: name }) {
-      for (const handler of handlers.get(name) ?? []) await handler(event as never, ctx);
+      for (const handler of handlers.get(name) ?? []) {
+        await handler(event as never, ctx);
+      }
     },
     async respond(input = 100, output = 20) {
       await this.emit("turn_start");
