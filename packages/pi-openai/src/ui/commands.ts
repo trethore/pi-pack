@@ -1,6 +1,6 @@
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import { Destination, extensionName } from "#src/constants";
-import { choices, isSetting, parseSetting, settingNames, type Setting, type Settings } from "#src/settings";
+import { choices, isSetting, parseSetting, settingNames, type Setting, type Settings } from "#src/config/settings";
 
 export const Command = {
   STATUS: "status",

@@ -1,6 +1,6 @@
-import { Feature, RequestFormat, featureDecision, requestFormat, type RequestModel } from "#src/compatibility";
+import { Feature, RequestFormat, featureDecision, requestFormat, type RequestModel } from "#src/request/compatibility";
 import { ReasoningSummary, ServiceTier } from "#src/constants";
-import type { Settings } from "#src/settings";
+import type { Settings } from "#src/config/settings";
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

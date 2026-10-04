@@ -11,7 +11,7 @@ import {
 import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import openai from "#src/index";
-import { environmentNames } from "#src/settings";
+import { environmentNames } from "#src/config/settings";
 import { createWorkspace, model } from "#test/support";
 
 let workspace: Awaited<ReturnType<typeof createWorkspace>>;

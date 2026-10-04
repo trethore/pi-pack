@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { featureDecision, type Feature, type RequestModel } from "#src/compatibility";
-import { transformPayload } from "#src/payload";
-import type { Settings } from "#src/settings";
+import { featureDecision, type Feature, type RequestModel } from "#src/request/compatibility";
+import { transformPayload } from "#src/request/payload";
+import type { Settings } from "#src/config/settings";
 import { model, settings } from "#test/support";
 
 const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });

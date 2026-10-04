@@ -5,7 +5,14 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parseConfig } from "@pi-pack/shared/config";
 import { applyEdits, modify, parseTree } from "jsonc-parser";
 import { Destination, extensionName } from "#src/constants";
-import { isSetting, readEnvironment, settingNames, validateSettings, type Layers, type Settings } from "#src/settings";
+import {
+  isSetting,
+  readEnvironment,
+  settingNames,
+  validateSettings,
+  type Layers,
+  type Settings,
+} from "#src/config/settings";
 
 export { Destination } from "#src/constants";
 

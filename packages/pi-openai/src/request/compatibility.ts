@@ -1,5 +1,5 @@
 import { Feature, ReasoningSummary, ServiceTier } from "#src/constants";
-import type { Settings } from "#src/settings";
+import type { Settings } from "#src/config/settings";
 
 export interface RequestModel {
   id: string;

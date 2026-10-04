@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { completeArguments, parseCommand } from "#src/commands";
+import { completeArguments, parseCommand } from "#src/ui/commands";
 
 it.each(["", " ", "status", " status "])("shows status for %j", (input) => {
   // Act / Assert

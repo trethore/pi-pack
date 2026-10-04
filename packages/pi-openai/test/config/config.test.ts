@@ -1,8 +1,8 @@
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import { loadConfiguration, saveConfiguration, saveDestination } from "#src/config";
-import { resolveSettings } from "#src/settings";
+import { loadConfiguration, saveConfiguration, saveDestination } from "#src/config/files";
+import { resolveSettings } from "#src/config/settings";
 import { createWorkspace, settings } from "#test/support";
 
 let workspace: Awaited<ReturnType<typeof createWorkspace>>;

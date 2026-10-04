@@ -1,8 +1,8 @@
 import { initTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { beforeAll, expect, it, vi } from "vitest";
-import { resolveSettings } from "#src/settings";
-import { renderStatus, statusMarkdown } from "#src/status";
+import { resolveSettings } from "#src/config/settings";
+import { renderStatus, statusMarkdown } from "#src/ui/status";
 import { layers, model } from "#test/support";
 
 beforeAll(() => {

@@ -8,7 +8,7 @@ import {
   resolveSettings,
   settingNames,
   validateSettings,
-} from "#src/settings";
+} from "#src/config/settings";
 import { layers } from "#test/support";
 
 it("uses independent defaults with source information", () => {

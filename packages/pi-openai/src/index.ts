@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
-import { Command, completeArguments, parseCommand } from "#src/commands";
+import { Command, completeArguments, parseCommand } from "#src/ui/commands";
 import {
   Destination,
   configPaths,
@@ -8,11 +8,11 @@ import {
   saveConfiguration,
   saveDestination,
   type ConfigPaths,
-} from "#src/config";
+} from "#src/config/files";
 import { extensionName } from "#src/constants";
-import { transformPayload } from "#src/payload";
-import { resolveSettings, type Layers } from "#src/settings";
-import { renderStatus, statusMarkdown } from "#src/status";
+import { transformPayload } from "#src/request/payload";
+import { resolveSettings, type Layers } from "#src/config/settings";
+import { renderStatus, statusMarkdown } from "#src/ui/status";
 
 const statusEntry = `${extensionName}-status`;
 const saveReminder = `Use /${extensionName} save to save the current settings.`;
