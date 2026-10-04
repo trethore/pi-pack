@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedent } from "#test/dedent";
+import { dedent } from "@pi-pack/shared/dedent";
 
 describe("dedent", () => {
   it.each([

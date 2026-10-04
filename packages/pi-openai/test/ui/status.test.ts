@@ -45,6 +45,18 @@ it("surrounds status with horizontal rules and leaves the support warning unquot
   );
 });
 
+it("keeps status text unindented and preserves the Markdown model line break", () => {
+  // Arrange
+  const effective = resolveSettings(layers());
+
+  // Act
+  const markdown = statusMarkdown(effective, model, "global");
+
+  // Assert
+  expect(markdown).toContain("Model: `openai` / `gpt-6-sol`  \nAPI: `openai-responses`");
+  expect(markdown.split("\n").every((line) => line === line.trimStart())).toBe(true);
+});
+
 it("shows disabled settings and missing or unsupported models clearly", () => {
   // Act / Assert
   const disabled = statusMarkdown(resolveSettings(layers({ command: { enabled: false } })), model, "global");

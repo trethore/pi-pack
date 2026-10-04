@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { dedent } from "#test/dedent";
+import { dedent } from "@pi-pack/shared/dedent";
 
 const originalWrapper = fileURLToPath(new URL("../scripts/check-duplicates.mjs", import.meta.url));
 let fixtureDirectory: string;
