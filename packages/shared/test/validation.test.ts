@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { booleanOption } from "@pi-pack/shared/validation";
+import { booleanOption, isObject } from "@pi-pack/shared/validation";
 
 describe("booleanOption", () => {
   it.each([true, false])("uses fallback %s only for undefined", (fallback) => {
@@ -13,4 +13,22 @@ describe("booleanOption", () => {
     // Act / Assert
     expect(() => booleanOption(value, "enabled", true)).toThrow("enabled must be a boolean");
   });
+});
+
+describe("isObject", () => {
+  it("accepts non-array objects without restricting their prototype", () => {
+    // Act / Assert
+    expect(isObject({})).toBe(true);
+    expect(isObject({ enabled: true })).toBe(true);
+    expect(isObject(Object.create(null))).toBe(true);
+    expect(isObject(new Date(0))).toBe(true);
+  });
+
+  it.each([undefined, null, true, false, 0, "text", [], [1], () => {}].map((value) => ({ value })))(
+    "rejects $value",
+    ({ value }) => {
+      // Act / Assert
+      expect(isObject(value)).toBe(false);
+    },
+  );
 });

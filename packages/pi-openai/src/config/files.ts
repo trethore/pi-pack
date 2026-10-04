@@ -1,8 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { createWarningReporter, parseConfig, type ConfigWarningOptions } from "@pi-pack/shared/config";
+import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import {
+  configPaths as sharedConfigPaths,
+  createWarningReporter,
+  parseConfig,
+  type ConfigWarningOptions,
+} from "@pi-pack/shared/config";
+import { readOptionalFile } from "@pi-pack/shared/files";
 import { applyEdits, modify, parseTree } from "jsonc-parser";
 import { Destination, extensionName } from "#src/constants";
 import {
@@ -16,15 +21,10 @@ import {
 
 export { Destination } from "#src/constants";
 
-const configFileName = `${extensionName}.jsonc`;
-
 export type ConfigPaths = Record<Destination, string>;
 
-export function configPaths(cwd: string, agentDir = getAgentDir()): ConfigPaths {
-  return {
-    global: join(agentDir, configFileName),
-    project: join(cwd, ".pi", configFileName),
-  };
+export function configPaths(cwd: string, agentDir?: string): ConfigPaths {
+  return sharedConfigPaths(extensionName, cwd, agentDir);
 }
 
 function isMissing(error: unknown): boolean {
@@ -33,11 +33,8 @@ function isMissing(error: unknown): boolean {
 
 async function readSource(file: string, destination: Destination): Promise<string | undefined> {
   try {
-    return await readFile(file, "utf8");
+    return await readOptionalFile(file);
   } catch (error) {
-    if (isMissing(error)) {
-      return undefined;
-    }
     throw new Error(`Could not read ${destination} configuration.`, { cause: error });
   }
 }

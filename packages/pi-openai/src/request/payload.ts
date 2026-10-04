@@ -1,10 +1,7 @@
+import { isObject } from "@pi-pack/shared/validation";
 import { Feature, RequestFormat, featureDecision, requestFormat, type RequestModel } from "#src/request/compatibility";
 import { ReasoningSummary, ServiceTier } from "#src/constants";
 import type { Settings } from "#src/config/settings";
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function setVerbosity(payload: Record<string, unknown>, settings: Settings, format: RequestFormat): void {
   if (format === RequestFormat.COMPLETIONS) {

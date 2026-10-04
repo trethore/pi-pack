@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createConfigLoader, parseConfig } from "@pi-pack/shared/config";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { configPaths, createConfigLoader, parseConfig } from "@pi-pack/shared/config";
 
 let root: string;
 let cwd: string;
@@ -25,6 +26,30 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
+});
+
+describe("configuration paths", () => {
+  it.each(["example", "pi-openai"])("builds project and global paths for %s", (name) => {
+    // Act
+    const paths = configPaths(name, cwd, agentDir);
+
+    // Assert
+    expect(paths).toEqual({
+      global: join(agentDir, `${name}.jsonc`),
+      project: join(cwd, ".pi", `${name}.jsonc`),
+    });
+  });
+
+  it("uses the agent directory when no override is provided", () => {
+    // Act
+    const paths = configPaths("example", cwd);
+
+    // Assert
+    expect(paths).toEqual({
+      global: join(getAgentDir(), "example.jsonc"),
+      project: projectFile,
+    });
+  });
 });
 
 describe("configuration loading", () => {
