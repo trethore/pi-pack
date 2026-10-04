@@ -75,6 +75,10 @@ function endpoint(model: RequestModel): Endpoint | undefined {
   return candidate?.pattern.test(model.baseUrl) ? candidate.name : undefined;
 }
 
+export function isCodexModel(model: RequestModel): boolean {
+  return model.api === "openai-codex-responses" && endpoint(model) === Endpoint.CODEX;
+}
+
 function summaryRestriction(settings: Settings, model: RequestModel): string | undefined {
   if (!model.reasoning) {
     return "Model is not reasoning-capable";
@@ -100,7 +104,11 @@ function hostedFeatureRestriction(
   return undefined;
 }
 
-function safeRestriction(feature: Feature, settings: Settings, model: RequestModel): string | undefined {
+function safeRestriction(
+  feature: Exclude<Feature, typeof Feature.CODEX_ORIGINATOR>,
+  settings: Settings,
+  model: RequestModel,
+): string | undefined {
   if (endpoint(model) === undefined) {
     return "Provider or endpoint support is unverified";
   }
@@ -117,18 +125,28 @@ function safeRestriction(feature: Feature, settings: Settings, model: RequestMod
   return hostedFeatureRestriction(feature, model, id);
 }
 
+function supportRestriction(feature: Feature, settings: Settings, model: RequestModel): string | undefined {
+  if (feature === Feature.CODEX_ORIGINATOR) {
+    return isCodexModel(model) ? undefined : "Requires the OpenAI Codex endpoint and API";
+  }
+  return settings.allowUnsupported ? undefined : safeRestriction(feature, settings, model);
+}
+
 function inactive(feature: Feature, settings: Settings): boolean {
   const value = settings[feature];
   return value === null || value === false || value === ServiceTier.DEFAULT;
 }
 
-function action(feature: Feature, settings: Settings, format: RequestFormat): string {
+function action(feature: Feature, settings: Settings, format: RequestFormat, model: RequestModel): string {
   const descriptions = {
     verbosity: format === RequestFormat.RESPONSES ? "Set text.verbosity" : "Set verbosity",
     reasoningSummary:
       settings.reasoningSummary === ReasoningSummary.NONE ? "Remove reasoning.summary" : "Set reasoning.summary",
     webSearch: "Add native web search if absent",
-    serviceTier: "Set service_tier to priority",
+    serviceTier: isCodexModel(model)
+      ? "Set service_tier to priority and x-codex-routing-hint"
+      : "Set service_tier to priority",
+    codexOriginator: "Set originator to codex-tui",
   };
   return descriptions[feature];
 }
@@ -147,10 +165,10 @@ export function featureDecision(feature: Feature, settings: Settings, model: Req
   if (!format || (format === RequestFormat.COMPLETIONS && feature !== Feature.VERBOSITY)) {
     return { apply: false, description: "Skipped: unsupported API format" };
   }
-  const restriction = settings.allowUnsupported ? undefined : safeRestriction(feature, settings, model);
+  const restriction = supportRestriction(feature, settings, model);
   if (restriction) {
     return { apply: false, description: `Skipped: ${restriction}` };
   }
-  const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
-  return { apply: true, description: action(feature, settings, format) + suffix };
+  const suffix = settings.allowUnsupported && feature !== Feature.CODEX_ORIGINATOR ? " (support checks bypassed)" : "";
+  return { apply: true, description: action(feature, settings, format, model) + suffix };
 }

@@ -23,6 +23,7 @@ Run `/pi-openai` to show each setting's effective value, source, and intended re
 /pi-openai reasoningSummary auto
 /pi-openai webSearch true
 /pi-openai serviceTier priority
+/pi-openai codexOriginator true
 ```
 
 Changes apply to subsequent requests without a reload. They are temporary until you save them:
@@ -59,19 +60,21 @@ No configuration is required. To customize it, create `.pi/pi-openai.jsonc` in y
   "reasoningSummary": null,
   "webSearch": false,
   "serviceTier": "default",
+  "codexOriginator": false,
 }
 ```
 
 The example above uses the default values. Comments and trailing commas are supported. The global path follows Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
-| Setting            | Values                                                | Behavior                                                                                          |
-| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `enabled`          | `true`, `false`                                       | Set to `false` to leave requests unchanged.                                                       |
-| `allowUnsupported` | `true`, `false`                                       | Bypass provider and model support checks. Defaults to `false`.                                    |
-| `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                             |
-| `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged. |
-| `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.            |
-| `serviceTier`      | `"priority"`, `"default"`                             | Request priority processing. `"default"` leaves the provider payload unchanged.                   |
+| Setting            | Values                                                | Behavior                                                                                                                                 |
+| ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`          | `true`, `false`                                       | Set to `false` to leave requests unchanged.                                                                                              |
+| `allowUnsupported` | `true`, `false`                                       | Bypass provider and model support checks. Defaults to `false`.                                                                           |
+| `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                                                                    |
+| `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged.                                        |
+| `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.                                                   |
+| `serviceTier`      | `"priority"`, `"default"`                             | Request priority processing and add `x-codex-routing-hint` on Codex requests. `"default"` leaves the payload unchanged and adds no hint. |
+| `codexOriginator`  | `true`, `false`                                       | Use `originator: codex-tui` on Codex requests. Defaults to `false`; does not change the User-Agent or login flow.                        |
 
 Use unquoted values in commands, for example `/pi-openai verbosity null`.
 
@@ -97,6 +100,7 @@ Run `/reload` after editing configuration files. Reloading or starting another s
 | `PI_OPENAI_REASONING_SUMMARY` | `reasoningSummary` |
 | `PI_OPENAI_WEB_SEARCH`        | `webSearch`        |
 | `PI_OPENAI_SERVICE_TIER`      | `serviceTier`      |
+| `PI_OPENAI_CODEX_ORIGINATOR`  | `codexOriginator`  |
 
 Values use the same spelling as command arguments:
 
@@ -112,6 +116,7 @@ By default, overrides require a recognized provider endpoint and a model in the 
 
 - Verbosity and reasoning summaries are checked for OpenAI, Codex, GitHub Copilot, and Azure endpoints.
 - Reasoning summaries require a reasoning-capable model. `concise` is skipped as unverified.
+- Codex header overrides require the `openai-codex` provider, its recognized ChatGPT endpoint, and the `openai-codex-responses` API. `allowUnsupported` does not relax this boundary. The originator override does not depend on the model allowlist.
 - Native web search and priority processing are limited to recognized OpenAI and Codex endpoints. Priority processing is skipped for `-pro` models.
 
 Use `/pi-openai status` to see why a setting is skipped. To attempt an unverified combination:
@@ -123,6 +128,13 @@ Use `/pi-openai status` to see why a setting is skipped. To attempt an unverifie
 This bypasses provider and model support checks, but not value validation or API-format checks. Requests whose model or payload format does not match the selected model are left unchanged.
 
 Request behavior describes intended overrides, not server acceptance. The server can reject unsupported combinations. Web search makes a tool available; it does not force the model to use it.
+
+### Codex transport
+
+Priority Codex requests send `x-codex-routing-hint: model=<model-id>;tier=priority`, derived after payload hooks run. Other providers keep the existing body-only priority behavior. Default settings do not remove headers supplied by other extensions or user configuration.
+
+Pi hardcodes its Codex originator after merging custom headers. The extension uses a temporary, async-request-scoped in-memory patch of `Headers.prototype.set` to override that assignment for opted-in Codex requests.
+It restores the method when those requests finish and does not edit Pi's installed files. The shared `@pi-pack/shared/unsafe` utility records Pi `1.0.0` as the tested version and shows a warning before first use on a different running version. The patch still applies after the warning. HTTP and WebSocket requests are covered. Cached WebSockets reconnect when the overridden handshake headers change; session IDs and prompt-cache keys stay unchanged.
 
 ## License
 

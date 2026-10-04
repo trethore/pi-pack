@@ -7,6 +7,7 @@ export interface Settings {
   reasoningSummary: ReasoningSummary | null;
   webSearch: boolean;
   serviceTier: ServiceTier;
+  codexOriginator: boolean;
 }
 
 export const Setting = {
@@ -39,6 +40,7 @@ export const defaults: Readonly<Settings> = {
   reasoningSummary: null,
   webSearch: false,
   serviceTier: ServiceTier.DEFAULT,
+  codexOriginator: false,
 };
 
 export const choices: { [K in Setting]: readonly Settings[K][] } = {
@@ -48,6 +50,7 @@ export const choices: { [K in Setting]: readonly Settings[K][] } = {
   reasoningSummary: [...Object.values(ReasoningSummary), null],
   webSearch: [true, false],
   serviceTier: Object.values(ServiceTier),
+  codexOriginator: [true, false],
 };
 
 export const environmentNames: Record<Setting, string> = {
@@ -57,6 +60,7 @@ export const environmentNames: Record<Setting, string> = {
   reasoningSummary: "PI_OPENAI_REASONING_SUMMARY",
   webSearch: "PI_OPENAI_WEB_SEARCH",
   serviceTier: "PI_OPENAI_SERVICE_TIER",
+  codexOriginator: "PI_OPENAI_CODEX_ORIGINATOR",
 };
 
 export function isSetting(value: string): value is Setting {
@@ -113,6 +117,7 @@ export function resolveSettings(layers: Layers): EffectiveSettings {
     reasoningSummary: Source.DEFAULT,
     webSearch: Source.DEFAULT,
     serviceTier: Source.DEFAULT,
+    codexOriginator: Source.DEFAULT,
   };
   const order = [Source.COMMAND, Source.ENVIRONMENT, Source.PROJECT, Source.GLOBAL] as const;
   for (const key of settingNames) {

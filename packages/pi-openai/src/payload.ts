@@ -46,7 +46,7 @@ function addWebSearch(payload: Record<string, unknown>): void {
   }
 }
 
-function matchesRequest(payload: unknown, model: RequestModel): payload is Record<string, unknown> {
+export function matchesRequest(payload: unknown, model: RequestModel): payload is Record<string, unknown> {
   if (!isObject(payload) || payload.model !== model.id) {
     return false;
   }

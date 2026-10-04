@@ -42,6 +42,7 @@ it("merges each key with command > environment > project > global precedence", (
     webSearch: true,
     serviceTier: "priority",
     allowUnsupported: true,
+    codexOriginator: false,
   });
   expect(resolved.sources).toEqual({
     enabled: "global",
@@ -50,6 +51,7 @@ it("merges each key with command > environment > project > global precedence", (
     webSearch: "global",
     serviceTier: "environment",
     allowUnsupported: "command",
+    codexOriginator: "default",
   });
 });
 

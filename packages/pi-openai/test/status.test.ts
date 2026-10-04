@@ -107,3 +107,23 @@ it("explains the modern-model support boundary in status", () => {
   expect(markdown).toContain("Skipped: Model support is limited to known GPT-5.5 and newer models");
   expect(markdown).not.toContain("Remove reasoning.summary");
 });
+
+it("shows the independent Codex originator setting and priority routing behavior", () => {
+  // Arrange
+  const codex = {
+    ...model,
+    provider: "openai-codex",
+    api: "openai-codex-responses",
+    baseUrl: "https://chatgpt.com/backend-api",
+  };
+  const configured = resolveSettings(layers({ command: { serviceTier: "priority", codexOriginator: true } }));
+
+  // Act
+  const active = statusMarkdown(configured, codex, "global");
+  const unchanged = statusMarkdown(resolveSettings(layers()), codex, "global");
+
+  // Assert
+  expect(active).toContain("| codexOriginator | `true` | command | Set originator to codex-tui |");
+  expect(active).toContain("Set service_tier to priority and x-codex-routing-hint");
+  expect(unchanged).toContain("| codexOriginator | `false` | default | Leave unchanged |");
+});

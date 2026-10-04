@@ -13,6 +13,7 @@ import { extensionName } from "#src/constants";
 import { transformPayload } from "#src/payload";
 import { resolveSettings, type Layers } from "#src/settings";
 import { renderStatus, statusMarkdown } from "#src/status";
+import { wrapCodexProvider } from "#src/transport";
 
 const statusEntry = `${extensionName}-status`;
 const saveReminder = `Use /${extensionName} save to save the current settings.`;
@@ -73,17 +74,53 @@ async function executeCommand(
 
 export default function openai(pi: ExtensionAPI): void {
   let state: State | undefined;
+  let restoreProvider: (() => void) | undefined;
 
   pi.on(Events.SessionStart, async (_event, ctx) => {
     state = undefined;
+    restoreProvider?.();
+    restoreProvider = undefined;
     const paths = configPaths(ctx.cwd);
     try {
       state = { paths, layers: await loadConfiguration(paths) };
+      const provider = ctx.modelRegistry.getProvider("openai-codex");
+      if (provider) {
+        const native = ctx.modelRegistry.getRegisteredNativeProvider(provider.id);
+        const config = ctx.modelRegistry.getRegisteredProviderConfig(provider.id);
+        const wrapped = wrapCodexProvider(
+          provider,
+          () => state && resolveSettings(state.layers).values,
+          (message) => ctx.ui.notify(message, "warning"),
+        );
+        pi.registerProvider(wrapped.provider);
+        restoreProvider = () => {
+          try {
+            wrapped.dispose();
+          } finally {
+            if (ctx.modelRegistry.getRegisteredNativeProvider(provider.id) === wrapped.provider) {
+              if (native) {
+                pi.registerProvider(native);
+              } else if (config) {
+                pi.registerProvider(provider.id, config);
+              } else {
+                pi.unregisterProvider(provider.id);
+              }
+            }
+          }
+        };
+      }
     } catch (error) {
+      state = undefined;
       throw new Error(`${extensionName}: ${error instanceof Error ? error.message : "Could not load configuration."}`, {
         cause: error,
       });
     }
+  });
+
+  pi.on(Events.SessionShutdown, () => {
+    state = undefined;
+    restoreProvider?.();
+    restoreProvider = undefined;
   });
 
   pi.on(Events.BeforeProviderRequest, (event, ctx) => {
