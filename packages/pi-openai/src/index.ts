@@ -93,7 +93,12 @@ export default function openai(pi: ExtensionAPI): void {
     if (!state) {
       return undefined;
     }
-    return transformPayload(event.payload, resolveSettings(state.layers).values, ctx.model);
+    return transformPayload(
+      event.payload,
+      resolveSettings(state.layers).values,
+      ctx.model,
+      process.env.AZURE_OPENAI_DEPLOYMENT_NAME_MAP,
+    );
   });
 
   pi.registerEntryRenderer<string>(statusEntry, (entry, _options, theme) => {

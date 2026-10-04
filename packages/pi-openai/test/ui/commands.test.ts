@@ -7,6 +7,8 @@ it.each(["", " ", "status", " status "])("shows status for %j", (input) => {
 });
 
 it.each([
+  ["serviceTier fast", { type: "set", setting: "serviceTier", override: { serviceTier: "fast" } }],
+  ["serviceTier priority", { type: "set", setting: "serviceTier", override: { serviceTier: "fast" } }],
   ["verbosity low", { type: "set", setting: "verbosity", override: { verbosity: "low" } }],
   ["reasoningSummary null", { type: "set", setting: "reasoningSummary", override: { reasoningSummary: null } }],
   ["allowUnsupported true", { type: "set", setting: "allowUnsupported", override: { allowUnsupported: true } }],
@@ -36,6 +38,8 @@ it.each([
 });
 
 it.each([
+  ["serviceTier ", ["serviceTier default", "serviceTier fast"]],
+  ["serviceTier f", ["serviceTier fast"]],
   ["ver", ["verbosity"]],
   ["verbosity ", ["verbosity low", "verbosity medium", "verbosity high", "verbosity null"]],
   ["verbosity n", ["verbosity null"]],

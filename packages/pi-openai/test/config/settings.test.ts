@@ -27,7 +27,7 @@ it("merges each key with command > environment > project > global precedence", (
   const input = layers({
     global: { enabled: false, verbosity: "high", reasoningSummary: "auto", webSearch: true },
     project: { verbosity: "medium", reasoningSummary: null },
-    environment: { verbosity: "low", serviceTier: "priority" },
+    environment: { verbosity: "low", serviceTier: "fast" },
     command: { verbosity: null, allowUnsupported: true },
   });
 
@@ -40,7 +40,7 @@ it("merges each key with command > environment > project > global precedence", (
     verbosity: null,
     reasoningSummary: null,
     webSearch: true,
-    serviceTier: "priority",
+    serviceTier: "fast",
     allowUnsupported: true,
   });
   expect(resolved.sources).toEqual({
@@ -96,4 +96,17 @@ it("distinguishes null, none, omission, and typed booleans", () => {
   expect(() => validateSettings({ enabled: "false" })).toThrow();
   expect(() => validateSettings({ webSearch: null })).toThrow();
   expect(() => validateSettings({ serviceTier: null })).toThrow();
+});
+
+it("normalizes the legacy priority tier in JSON, environment and command values", () => {
+  // Arrange
+  const expected = { serviceTier: "fast" };
+
+  // Act / Assert
+  expect(validateSettings({ serviceTier: "priority" })).toEqual(expected);
+  expect(parseSetting("serviceTier", " priority ")).toEqual(expected);
+  expect(readEnvironment({ PI_OPENAI_SERVICE_TIER: " priority " })).toEqual(expected);
+  expect(choices.serviceTier).toEqual(["default", "fast"]);
+  expect(() => validateSettings({ serviceTier: " priority " })).toThrow();
+  expect(() => parseSetting("serviceTier", "PRIORITY")).toThrow();
 });

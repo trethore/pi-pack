@@ -63,8 +63,13 @@ export function isSetting(value: string): value is Setting {
   return settingNames.some((name) => name === value);
 }
 
+function normalizeValue(key: Setting, value: unknown): unknown {
+  return key === Setting.SERVICE_TIER && value === "priority" ? ServiceTier.FAST : value;
+}
+
 function setValue<K extends Setting>(target: Partial<Pick<Settings, K>>, key: K, value: unknown): void {
-  const valid = choices[key].find((choice) => choice === value);
+  const normalized = normalizeValue(key, value);
+  const valid = choices[key].find((choice) => choice === normalized);
   if (valid === undefined) {
     throw new Error(`${key} must be one of: ${choices[key].map(String).join(", ")}`);
   }
@@ -82,7 +87,8 @@ export function validateSettings(input: Record<string, unknown>): Partial<Settin
 }
 
 export function parseSetting(key: Setting, text: string): Partial<Settings> {
-  const value = choices[key].find((choice) => String(choice) === text.trim());
+  const normalized = normalizeValue(key, text.trim());
+  const value = choices[key].find((choice) => String(choice) === normalized);
   const result: Partial<Settings> = {};
   setValue(result, key, value);
   return result;

@@ -56,13 +56,29 @@ function payloadFormat(payload: Record<string, unknown>): RequestFormat | undefi
   return undefined;
 }
 
+function requestModelId(model: RequestModel, deploymentNameMap: string | undefined): string {
+  if (model.provider !== "azure-openai-responses" || model.api !== "azure-openai-responses") {
+    return model.id;
+  }
+  // Match Pi's deployment-map parsing. Request-scoped overrides are not exposed to extensions.
+  const deployments = new Map<string, string>();
+  for (const entry of deploymentNameMap?.split(",") ?? []) {
+    const [id, deployment] = entry.trim().split("=", 2);
+    if (id && deployment) {
+      deployments.set(id.trim(), deployment.trim());
+    }
+  }
+  return deployments.get(model.id) || model.id;
+}
+
 function matchingRequestFormat(
   payload: Record<string, unknown>,
   settings: Settings,
   model: RequestModel,
+  deploymentNameMap: string | undefined,
 ): RequestFormat | undefined {
   // Pi exposes the selected model, which may differ from a redirected request.
-  if (payload.model !== model.id) {
+  if (payload.model !== requestModelId(model, deploymentNameMap)) {
     return undefined;
   }
   const format = payloadFormat(payload);
@@ -72,11 +88,16 @@ function matchingRequestFormat(
   return format;
 }
 
-export function transformPayload(payload: unknown, settings: Settings, model: RequestModel | undefined): unknown {
+export function transformPayload(
+  payload: unknown,
+  settings: Settings,
+  model: RequestModel | undefined,
+  deploymentNameMap?: string,
+): unknown {
   if (!settings.enabled || !model || !isObject(payload)) {
     return undefined;
   }
-  const format = matchingRequestFormat(payload, settings, model);
+  const format = matchingRequestFormat(payload, settings, model, deploymentNameMap);
   if (!format) {
     return undefined;
   }
@@ -92,7 +113,7 @@ export function transformPayload(payload: unknown, settings: Settings, model: Re
     addWebSearch(result);
   }
   if (featureDecision(Feature.SERVICE_TIER, settings, model, format).apply) {
-    result.service_tier = ServiceTier.PRIORITY;
+    result.service_tier = ServiceTier.FAST;
   }
   return Object.keys(result).some((key) => result[key] !== payload[key]) ? result : undefined;
 }

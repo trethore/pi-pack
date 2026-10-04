@@ -24,7 +24,6 @@ export interface Decision {
 const supportedResponsesApis = new Set(["openai-responses", "azure-openai-responses"]);
 const supportedModels = new Set([
   "gpt-5.5",
-  "gpt-5.5-pro",
   "gpt-5.6-luna",
   "gpt-5.6-sol",
   "gpt-5.6-terra",
@@ -83,17 +82,9 @@ function summaryRestriction(settings: Settings, model: RequestModel): string | u
   return undefined;
 }
 
-function hostedFeatureRestriction(
-  feature: typeof Feature.WEB_SEARCH | typeof Feature.SERVICE_TIER,
-  model: RequestModel,
-  id: string,
-): string | undefined {
-  const host = endpoint(model);
-  if (host !== Endpoint.OPENAI) {
+function hostedFeatureRestriction(model: RequestModel): string | undefined {
+  if (endpoint(model) !== Endpoint.OPENAI) {
     return "Native feature support is unverified on this endpoint";
-  }
-  if (feature === Feature.SERVICE_TIER && id.endsWith("-pro")) {
-    return "Priority processing support is unverified for this model";
   }
   return undefined;
 }
@@ -112,7 +103,7 @@ function safeRestriction(feature: Feature, settings: Settings, model: RequestMod
   if (feature === Feature.REASONING_SUMMARY) {
     return summaryRestriction(settings, model);
   }
-  return hostedFeatureRestriction(feature, model, id);
+  return hostedFeatureRestriction(model);
 }
 
 function inactive(feature: Feature, settings: Settings): boolean {
@@ -132,7 +123,7 @@ function actionDecision(feature: Feature, settings: Settings, format: RequestFor
     reasoningSummary:
       settings.reasoningSummary === ReasoningSummary.NONE ? "Remove reasoning.summary" : "Set reasoning.summary",
     webSearch: "Add native web search if absent",
-    serviceTier: "Set service_tier to priority",
+    serviceTier: "Set service_tier to fast (Fast mode)",
   };
   const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
   return { apply: true, description: descriptions[feature] + suffix };

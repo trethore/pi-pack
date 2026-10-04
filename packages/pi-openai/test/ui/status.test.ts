@@ -97,7 +97,7 @@ it.each([30, 60, 100, 160])(
 it("explains the modern-model support boundary in status", () => {
   // Arrange
   const effective = resolveSettings(
-    layers({ command: { verbosity: "low", reasoningSummary: "none", webSearch: true, serviceTier: "priority" } }),
+    layers({ command: { verbosity: "low", reasoningSummary: "none", webSearch: true, serviceTier: "fast" } }),
   );
 
   // Act
@@ -117,7 +117,7 @@ it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior f
         verbosity: "low",
         reasoningSummary: "auto",
         webSearch: true,
-        serviceTier: "priority",
+        serviceTier: "fast",
       },
     }),
   );
