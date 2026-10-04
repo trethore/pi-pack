@@ -13,7 +13,7 @@ import { extensionName } from "#src/constants";
 import { transformPayload } from "#src/payload";
 import { resolveSettings, type Layers } from "#src/settings";
 import { renderStatus, statusMarkdown } from "#src/status";
-import { wrapCodexProvider } from "#src/transport";
+import { wrapOpenAIProvider } from "#src/transport";
 
 const statusEntry = `${extensionName}-status`;
 const saveReminder = `Use /${extensionName} save to save the current settings.`;
@@ -21,6 +21,18 @@ const saveReminder = `Use /${extensionName} save to save the current settings.`;
 interface State {
   paths: ConfigPaths;
   layers: Layers;
+}
+
+async function showStatus(state: State, pi: ExtensionAPI, ctx: ExtensionCommandContext): Promise<void> {
+  const destination = await saveDestination(state.paths);
+  const registered = ctx.model && ctx.modelRegistry.find(ctx.model.provider, ctx.model.id);
+  const subscription = registered !== undefined && ctx.modelRegistry.isUsingOAuth(registered);
+  const markdown = statusMarkdown(resolveSettings(state.layers), ctx.model, destination, subscription);
+  if (ctx.mode === "tui") {
+    pi.appendEntry(statusEntry, markdown);
+  } else {
+    ctx.ui.notify(markdown, "info");
+  }
 }
 
 async function executeCommand(
@@ -31,16 +43,9 @@ async function executeCommand(
 ): Promise<void> {
   const { paths, layers } = state;
   switch (command.type) {
-    case Command.STATUS: {
-      const destination = await saveDestination(paths);
-      const markdown = statusMarkdown(resolveSettings(layers), ctx.model, destination);
-      if (ctx.mode === "tui") {
-        pi.appendEntry(statusEntry, markdown);
-      } else {
-        ctx.ui.notify(markdown, "info");
-      }
+    case Command.STATUS:
+      await showStatus(state, pi, ctx);
       break;
-    }
     case Command.SET:
       Object.assign(layers.command, command.override);
       ctx.ui.notify(
@@ -74,26 +79,41 @@ async function executeCommand(
 
 export default function openai(pi: ExtensionAPI): void {
   let state: State | undefined;
-  let restoreProvider: (() => void) | undefined;
+  const providerRestorers: Array<() => void> = [];
+
+  function restoreProviders(): void {
+    const errors: unknown[] = [];
+    for (const restore of providerRestorers.splice(0).toReversed()) {
+      try {
+        restore();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, "Could not restore OpenAI providers.");
+    }
+  }
 
   pi.on(Events.SessionStart, async (_event, ctx) => {
     state = undefined;
-    restoreProvider?.();
-    restoreProvider = undefined;
+    restoreProviders();
     const paths = configPaths(ctx.cwd);
     try {
       state = { paths, layers: await loadConfiguration(paths) };
-      const provider = ctx.modelRegistry.getProvider("openai-codex");
-      if (provider) {
+      for (const id of ["openai", "openai-codex"]) {
+        const provider = ctx.modelRegistry.getProvider(id);
+        if (!provider) {
+          continue;
+        }
         const native = ctx.modelRegistry.getRegisteredNativeProvider(provider.id);
         const config = ctx.modelRegistry.getRegisteredProviderConfig(provider.id);
-        const wrapped = wrapCodexProvider(
+        const wrapped = wrapOpenAIProvider(
           provider,
           () => state && resolveSettings(state.layers).values,
           (message) => ctx.ui.notify(message, "warning"),
         );
-        pi.registerProvider(wrapped.provider);
-        restoreProvider = () => {
+        providerRestorers.push(() => {
           try {
             wrapped.dispose();
           } finally {
@@ -107,10 +127,12 @@ export default function openai(pi: ExtensionAPI): void {
               }
             }
           }
-        };
+        });
+        pi.registerProvider(wrapped.provider);
       }
     } catch (error) {
       state = undefined;
+      restoreProviders();
       throw new Error(`${extensionName}: ${error instanceof Error ? error.message : "Could not load configuration."}`, {
         cause: error,
       });
@@ -119,8 +141,7 @@ export default function openai(pi: ExtensionAPI): void {
 
   pi.on(Events.SessionShutdown, () => {
     state = undefined;
-    restoreProvider?.();
-    restoreProvider = undefined;
+    restoreProviders();
   });
 
   pi.on(Events.BeforeProviderRequest, (event, ctx) => {

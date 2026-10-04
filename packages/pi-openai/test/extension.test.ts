@@ -17,7 +17,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import openai from "#src/index";
 import { environmentNames } from "#src/settings";
 import { createWorkspace, model } from "#test/support";
-import { codexModel, codexToken, mockWebSockets } from "#test/codex-support";
+import { codexModel, codexResponse, codexToken, mockWebSockets, subscriptionModel } from "#test/codex-support";
 
 let workspace: Awaited<ReturnType<typeof createWorkspace>>;
 beforeEach(async () => {
@@ -70,7 +70,7 @@ function harness(mode: ExtensionContext["mode"] = "tui", registry?: ModelRegistr
     ui: { notify },
     model,
     thinkingLevel: "high",
-    modelRegistry: registry ?? { getProvider: () => undefined },
+    modelRegistry: registry ?? { getProvider: () => undefined, find: () => undefined, isUsingOAuth: () => false },
   } as unknown as ExtensionCommandContext;
   openai(api);
   return {
@@ -388,24 +388,22 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
     vi.stubEnv("PI_OPENAI_REASONING_SUMMARY", "none");
     vi.stubEnv("PI_OPENAI_WEB_SEARCH", "true");
     vi.stubEnv("PI_OPENAI_SERVICE_TIER", "priority");
-    const extension = harness("print");
+    vi.stubEnv("PI_OPENAI_CODEX_ORIGINATOR", "true");
+    const runtime = await createRuntime();
+    const extension = harness("print", new ModelRegistry(runtime));
     await extension.emit("session_start");
-    const runtime = await ModelRuntime.create({
-      authPath: workspace.agentDir + "/auth.json",
-      modelsPath: null,
-      modelsStorePath: workspace.agentDir + "/models-cache.json",
-      refreshOnCreate: false,
-    });
     const requestModel = runtime.getModel("openai", model.id);
     if (!requestModel) {
       throw new Error("Missing built-in OpenAI model");
     }
     let sent: unknown;
+    let sentHeaders = new Headers();
     const fetch = vi.fn((_url: unknown, init?: RequestInit) => {
       if (typeof init?.body !== "string") {
         throw new Error("Expected a JSON request body");
       }
       sent = JSON.parse(init.body) as unknown;
+      sentHeaders = new Headers(init.headers);
       return Promise.resolve(
         new Response('{"error":{"message":"Test response"}}', {
           status: 400,
@@ -440,6 +438,11 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
       tools: [{ type: "web_search" }],
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
+    expect(sentHeaders.get("originator")).toBe(apiKey.startsWith("sk-") ? null : "codex-tui");
+    expect(sentHeaders.get("x-codex-routing-hint")).toBe(
+      apiKey.startsWith("sk-") ? null : `model=${model.id};tier=priority`,
+    );
+    await extension.emit("session_shutdown");
     if (apiKey.startsWith("sk-")) {
       expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
     } else {
@@ -449,8 +452,12 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
   },
 );
 
-it("applies loaded Codex settings to real Pi WebSockets and restores the provider on reload failure", async () => {
+it.each([
+  { name: "legacy Codex WebSockets", requestModel: codexModel, transport: "websocket" as const },
+  { name: "OpenAI subscription HTTP", requestModel: subscriptionModel, transport: "sse" as const },
+])("applies loaded settings to $name and restores providers on reload failure", async ({ requestModel, transport }) => {
   // Arrange
+  const providerId = requestModel.provider;
   const { Socket, sockets } = mockWebSockets();
   vi.stubGlobal("WebSocket", Socket);
   const loaded = await loadExtension();
@@ -459,18 +466,23 @@ it("applies loaded Codex settings to real Pi WebSockets and restores the provide
   await writeFile(
     workspace.agentDir + "/auth.json",
     JSON.stringify({
-      "openai-codex": { type: "oauth", access: codexToken, refresh: "test", expires: Date.now() + 3600000 },
+      [providerId]: { type: "oauth", access: codexToken, refresh: "test", expires: Date.now() + 3600000 },
     }),
   );
   const runtime = await createRuntime();
-  const original = runtime.getProvider("openai-codex");
+  const originals = ["openai", "openai-codex"].map((id) => runtime.getProvider(id)!);
+  const sentHeaders: Headers[] = [];
+  const fetch = vi.fn((_input: unknown, init?: RequestInit) => {
+    sentHeaders.push(new Headers(init?.headers));
+    return Promise.resolve(codexResponse());
+  });
   loaded.runtime.registerNativeProvider = (provider) => runtime.registerNativeProvider(provider);
   loaded.runtime.registerProvider = (name, config) => runtime.registerProvider(name, config);
   loaded.runtime.unregisterProvider = (name) => runtime.unregisterProvider(name);
   const ctx = {
     cwd: workspace.cwd,
     mode: "print",
-    model: codexModel,
+    model: requestModel,
     modelRegistry: new ModelRegistry(runtime),
     ui: { notify: vi.fn() },
   } as unknown as ExtensionCommandContext;
@@ -487,12 +499,12 @@ it("applies loaded Codex settings to real Pi WebSockets and restores the provide
   async function send(): Promise<void> {
     const result = await runtime
       .streamSimple(
-        codexModel,
+        requestModel,
         { messages: [] },
         {
-          apiKey: codexToken,
           sessionId: "loaded-extension-session",
-          transport: "websocket",
+          transport,
+          fetch,
           onPayload: (payload) => emit("before_provider_request", { payload }),
         },
       )
@@ -520,13 +532,24 @@ it("applies loaded Codex settings to real Pi WebSockets and restores the provide
     await expect(emit("session_start")).rejects.toThrow("Invalid project configuration");
 
     // Assert
-    expect(runtime.getProvider("openai-codex")).toBe(original);
-    expect(sockets).toHaveLength(4);
-    expect(sockets.map((socket) => socket.headers.get("originator"))).toEqual(["pi", "codex-tui", "codex-tui", "pi"]);
-    expect(sockets.map((socket) => socket.headers.get("x-codex-routing-hint"))).toEqual([
+    for (const original of originals) {
+      expect(runtime.getProvider(original.id)).toBe(original);
+    }
+    const legacy = transport === "websocket";
+    expect(sockets).toHaveLength(legacy ? 4 : 0);
+    expect(fetch).toHaveBeenCalledTimes(legacy ? 0 : 4);
+    const headers = legacy ? sockets.map((socket) => socket.headers) : sentHeaders;
+    const initialOriginator = legacy ? "pi" : null;
+    expect(headers.map((entry) => entry.get("originator"))).toEqual([
+      initialOriginator,
+      "codex-tui",
+      "codex-tui",
+      initialOriginator,
+    ]);
+    expect(headers.map((entry) => entry.get("x-codex-routing-hint"))).toEqual([
       null,
-      `model=${codexModel.id};tier=priority`,
-      `model=${codexModel.id};tier=priority`,
+      `model=${requestModel.id};tier=priority`,
+      `model=${requestModel.id};tier=priority`,
       null,
     ]);
   } finally {
@@ -537,18 +560,22 @@ it("applies loaded Codex settings to real Pi WebSockets and restores the provide
   }
 });
 
-it.each(["builtin", "native", "config"])("restores the previous %s provider registration on shutdown", async (kind) => {
+it.each(
+  ["openai", "openai-codex"].flatMap((providerId) =>
+    ["builtin", "native", "config"].map((kind) => ({ providerId, kind })),
+  ),
+)("restores the previous $providerId $kind registration on shutdown", async ({ providerId, kind }) => {
   // Arrange
   const runtime = await createRuntime();
   const registry = new ModelRegistry(runtime);
-  const original = registry.getProvider("openai-codex")!;
+  const original = registry.getProvider(providerId)!;
   if (kind === "native") {
     registry.registerProvider({ ...original, name: "Other extension" });
   } else if (kind === "config") {
-    registry.registerProvider("openai-codex", { headers: { "x-other-extension": "keep" } });
+    registry.registerProvider(providerId, { headers: { "x-other-extension": "keep" } });
   }
-  const native = registry.getRegisteredNativeProvider("openai-codex");
-  const config = registry.getRegisteredProviderConfig("openai-codex");
+  const native = registry.getRegisteredNativeProvider(providerId);
+  const config = registry.getRegisteredProviderConfig(providerId);
   const extension = harness("print", registry);
 
   // Act
@@ -557,18 +584,18 @@ it.each(["builtin", "native", "config"])("restores the previous %s provider regi
   await extension.emit("session_shutdown");
 
   // Assert
-  expect(registry.getRegisteredNativeProvider("openai-codex")).toBe(native);
-  expect(registry.getRegisteredProviderConfig("openai-codex")).toEqual(config);
+  expect(registry.getRegisteredNativeProvider(providerId)).toBe(native);
+  expect(registry.getRegisteredProviderConfig(providerId)).toEqual(config);
   if (kind === "builtin") {
-    expect(registry.getProvider("openai-codex")).toBe(original);
+    expect(registry.getProvider(providerId)).toBe(original);
   }
 });
 
-it("does not undo a provider replacement installed by another extension", async () => {
+it.each(["openai", "openai-codex"])("does not undo another extension's replacement of %s", async (providerId) => {
   // Arrange
   const runtime = await createRuntime();
   const registry = new ModelRegistry(runtime);
-  const replacement = { ...registry.getProvider("openai-codex")!, name: "New owner" };
+  const replacement = { ...registry.getProvider(providerId)!, name: "New owner" };
   const extension = harness("print", registry);
   await extension.emit("session_start");
   registry.registerProvider(replacement);
@@ -577,5 +604,79 @@ it("does not undo a provider replacement installed by another extension", async 
   await extension.emit("session_shutdown");
 
   // Assert
-  expect(registry.getRegisteredNativeProvider("openai-codex")).toBe(replacement);
+  expect(registry.getRegisteredNativeProvider(providerId)).toBe(replacement);
+});
+
+it.each(["api_key", "oauth"])("reports the selected OpenAI account's %s status", async (type) => {
+  // Arrange
+  await workspace.write("project", '{"codexOriginator":true,"serviceTier":"priority"}');
+  const credentials =
+    type === "oauth"
+      ? { type, access: "chatgpt-access-token", refresh: "test", expires: Date.now() + 3600000 }
+      : { type, key: "sk-proj-test" };
+  await writeFile(workspace.agentDir + "/auth.json", JSON.stringify({ openai: credentials }));
+  const runtime = await createRuntime();
+  const extension = harness("print", new ModelRegistry(runtime));
+  await extension.emit("session_start");
+
+  // Act
+  await runtime.refresh({ allowNetwork: false, providers: ["openai"] });
+  await extension.command("status");
+
+  // Assert
+  expect(extension.notify).toHaveBeenCalledWith(
+    expect.stringContaining(
+      type === "oauth"
+        ? "subscription headers; server support unverified"
+        : "Skipped: Requires OpenAI ChatGPT subscription authentication",
+    ),
+    "info",
+  );
+  await extension.emit("session_shutdown");
+});
+
+it("rolls back the first provider if wrapping the second provider fails", async () => {
+  // Arrange
+  const runtime = await createRuntime();
+  const registry = new ModelRegistry(runtime);
+  const original = registry.getProvider("openai")!;
+  vi.spyOn(registry, "getProvider")
+    .mockReturnValueOnce(original)
+    .mockImplementationOnce(() => {
+      throw new Error("Provider unavailable");
+    });
+  const extension = harness("print", registry);
+
+  // Act / Assert
+  await expect(extension.emit("session_start")).rejects.toThrow("pi-openai: Provider unavailable");
+  expect(registry.getRegisteredNativeProvider("openai")).toBeUndefined();
+  expect(runtime.getProvider("openai")).toBe(original);
+  await extension.emit("session_shutdown");
+});
+
+it("attempts to restore both providers even if one restoration fails", async () => {
+  // Arrange
+  const runtime = await createRuntime();
+  const registry = new ModelRegistry(runtime);
+  const original = registry.getProvider("openai");
+  const extension = harness("print", registry);
+  await extension.emit("session_start");
+  const unregister = registry.unregisterProvider.bind(registry);
+  const restore = vi.spyOn(registry, "unregisterProvider").mockImplementation((id) => {
+    if (id === "openai-codex") {
+      throw new Error("Restoration blocked");
+    }
+    unregister(id);
+  });
+
+  // Act / Assert
+  try {
+    await expect(extension.emit("session_shutdown")).rejects.toThrow("Could not restore OpenAI providers.");
+    expect(restore).toHaveBeenCalledWith("openai-codex");
+    expect(restore).toHaveBeenCalledWith("openai");
+    expect(runtime.getProvider("openai")).toBe(original);
+  } finally {
+    restore.mockRestore();
+    unregister("openai-codex");
+  }
 });

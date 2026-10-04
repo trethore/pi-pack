@@ -14,6 +14,12 @@ export const codexModel: Model<"openai-codex-responses"> = {
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 };
 
+export const subscriptionModel: Model<"openai-responses"> = {
+  ...codexModel,
+  ...model,
+  api: "openai-responses",
+};
+
 const claims = { "https://api.openai.com/auth": { chatgpt_account_id: "test-account" } };
 export const codexToken = `test.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.test`;
 

@@ -66,15 +66,15 @@ No configuration is required. To customize it, create `.pi/pi-openai.jsonc` in y
 
 The example above uses the default values. Comments and trailing commas are supported. The global path follows Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
-| Setting            | Values                                                | Behavior                                                                                                                                 |
-| ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`          | `true`, `false`                                       | Set to `false` to leave requests unchanged.                                                                                              |
-| `allowUnsupported` | `true`, `false`                                       | Bypass provider and model support checks. Defaults to `false`.                                                                           |
-| `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                                                                    |
-| `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged.                                        |
-| `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.                                                   |
-| `serviceTier`      | `"priority"`, `"default"`                             | Request priority processing and add `x-codex-routing-hint` on Codex requests. `"default"` leaves the payload unchanged and adds no hint. |
-| `codexOriginator`  | `true`, `false`                                       | Use `originator: codex-tui` on Codex requests. Defaults to `false`; does not change the User-Agent or login flow.                        |
+| Setting            | Values                                                | Behavior                                                                                                                                                                 |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`          | `true`, `false`                                       | Set to `false` to leave requests unchanged.                                                                                                                              |
+| `allowUnsupported` | `true`, `false`                                       | Bypass provider and model support checks. Defaults to `false`.                                                                                                           |
+| `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                                                                                                    |
+| `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged.                                                                        |
+| `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.                                                                                   |
+| `serviceTier`      | `"priority"`, `"default"`                             | Request priority processing and add `x-codex-routing-hint` on ChatGPT subscription and legacy Codex requests. `"default"` leaves the payload unchanged and adds no hint. |
+| `codexOriginator`  | `true`, `false`                                       | Use `originator: codex-tui` on ChatGPT subscription and legacy Codex requests. Defaults to `false`; does not change the User-Agent or login flow.                        |
 
 Use unquoted values in commands, for example `/pi-openai verbosity null`.
 
@@ -116,7 +116,7 @@ By default, overrides require a recognized provider endpoint and a model in the 
 
 - Verbosity and reasoning summaries are checked for OpenAI, Codex, GitHub Copilot, and Azure endpoints.
 - Reasoning summaries require a reasoning-capable model. `concise` is skipped as unverified.
-- Codex header overrides require the `openai-codex` provider, its recognized ChatGPT endpoint, and the `openai-codex-responses` API. `allowUnsupported` does not relax this boundary. The originator override does not depend on the model allowlist.
+- Codex header overrides apply to ChatGPT subscription requests using `openai` with its official Responses endpoint, or legacy `openai-codex` requests using the recognized ChatGPT endpoint and `openai-codex-responses` API. API-key requests and custom endpoints do not receive these overrides. `allowUnsupported` does not relax this boundary. The originator override does not depend on the model allowlist.
 - Native web search and priority processing are limited to recognized OpenAI and Codex endpoints. Priority processing is skipped for `-pro` models.
 
 Use `/pi-openai status` to see why a setting is skipped. To attempt an unverified combination:
@@ -131,9 +131,11 @@ Request behavior describes intended overrides, not server acceptance. The server
 
 ### Codex transport
 
-Priority Codex requests send `x-codex-routing-hint: model=<model-id>;tier=priority`, derived after payload hooks run. Other providers keep the existing body-only priority behavior. Default settings do not remove headers supplied by other extensions or user configuration.
+Priority ChatGPT subscription and legacy Codex requests send `x-codex-routing-hint: model=<model-id>;tier=priority`, derived after payload hooks run. API-key requests and other providers keep the existing body-only priority behavior. Default settings do not remove headers supplied by other extensions or user configuration.
 
-Pi hardcodes its Codex originator after merging custom headers. The extension uses a temporary, async-request-scoped in-memory patch of `Headers.prototype.set` to override that assignment for opted-in Codex requests.
+For `openai`, a request-scoped fetch wrapper sets the headers without a monkey patch. It follows Pi's subscription-token classification: a nonempty bearer token not starting with `sk-`, checked on the final outgoing Authorization header so request-level credential overrides take precedence. It only decorates the official Responses URL. Status uses the selected account's authentication; request-level overrides are checked when sending. Server support for these headers on this endpoint is unverified.
+
+Pi hardcodes its legacy Codex originator after merging custom headers. The extension uses a temporary, async-request-scoped in-memory patch of `Headers.prototype.set` to override that assignment for opted-in Codex requests.
 It restores the method when those requests finish and does not edit Pi's installed files. The shared `@pi-pack/shared/unsafe` utility records Pi `1.0.0` as the tested version and shows a warning before first use on a different running version. The patch still applies after the warning. HTTP and WebSocket requests are covered. Cached WebSockets reconnect when the overridden handshake headers change; session IDs and prompt-cache keys stay unchanged.
 
 ## License

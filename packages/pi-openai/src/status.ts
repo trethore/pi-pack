@@ -11,7 +11,12 @@ function inlineCode(text: string): string {
   return `\`${text.replace(/[\p{Cc}`|\\]/gu, "?")}\``;
 }
 
-function behavior(key: Setting, effective: EffectiveSettings, model: RequestModel | undefined): string {
+function behavior(
+  key: Setting,
+  effective: EffectiveSettings,
+  model: RequestModel | undefined,
+  subscription: boolean,
+): string {
   const { values } = effective;
   if (key === Setting.ENABLED) {
     return values.enabled ? "Active" : "No request overrides";
@@ -19,13 +24,14 @@ function behavior(key: Setting, effective: EffectiveSettings, model: RequestMode
   if (key === Setting.ALLOW_UNSUPPORTED) {
     return values.allowUnsupported ? "Support checks bypassed" : "Compatibility checks enabled";
   }
-  return featureDecision(key, values, model).description;
+  return featureDecision(key, values, model, subscription).description;
 }
 
 export function statusMarkdown(
   effective: EffectiveSettings,
   model: RequestModel | undefined,
   destination: Destination,
+  subscription = false,
 ): string {
   const identity = model ? `${inlineCode(model.provider)} / ${inlineCode(model.id)}` : "None";
   const lines = [
@@ -40,7 +46,7 @@ export function statusMarkdown(
     "| --- | --- | --- | --- |",
     ...settingNames.map(
       (key) =>
-        `| ${key} | ${inlineCode(String(effective.values[key]))} | ${effective.sources[key]} | ${behavior(key, effective, model)} |`,
+        `| ${key} | ${inlineCode(String(effective.values[key]))} | ${effective.sources[key]} | ${behavior(key, effective, model, subscription)} |`,
     ),
     "",
     `Save destination: **${destination}**. Saves all effective settings, including environment and command overrides.`,

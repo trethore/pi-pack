@@ -4,13 +4,26 @@ import {
   type Provider,
   type StreamOptions,
 } from "@earendil-works/pi-ai";
-import { Feature, featureDecision, isCodexModel, type RequestModel } from "#src/compatibility";
+import { Feature, featureDecision, isCodexModel, isOpenAIResponsesModel, type RequestModel } from "#src/compatibility";
 import { ServiceTier } from "#src/constants";
 import { withCodexOriginator } from "#src/originator";
 import { matchesRequest } from "#src/payload";
 import type { Settings } from "#src/settings";
 
 const routingHeader = "x-codex-routing-hint";
+
+function subscriptionHeaders(input: string | URL | Request, init: RequestInit | undefined): Headers | undefined {
+  const url = new URL(input instanceof Request ? input.url : input);
+  if (url.origin !== "https://api.openai.com" || url.pathname !== "/v1/responses") {
+    return undefined;
+  }
+  const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+  // Pi treats non-sk bearer tokens as ChatGPT sign-in. Check outgoing auth so overrides win.
+  if (!/^Bearer\s+(?!sk-)\S+$/i.test(headers.get("authorization") ?? "")) {
+    return undefined;
+  }
+  return headers;
+}
 
 function priorityRoutingHint(
   body: Record<string, unknown>,
@@ -28,7 +41,7 @@ function priorityRoutingHint(
   return `model=${model.id};tier=priority`;
 }
 
-export function wrapCodexProvider(
+export function wrapOpenAIProvider(
   provider: Provider,
   getSettings: () => Settings | undefined,
   warn: (message: string) => void,
@@ -57,12 +70,16 @@ export function wrapCodexProvider(
     options: T | undefined,
     start: (options: T | undefined) => AssistantMessageEventStream,
   ): AssistantMessageEventStream {
-    if (!isCodexModel(model) || !options) {
+    const legacy = isCodexModel(model);
+    const openai = isOpenAIResponsesModel(model);
+    if ((!legacy && !openai) || !options) {
       return start(options);
     }
     const settings = getSettings();
-    const changeOriginator = settings !== undefined && featureDecision(Feature.CODEX_ORIGINATOR, settings, model).apply;
-    const originator = { enabled: changeOriginator };
+    const changeOriginator =
+      settings !== undefined && featureDecision(Feature.CODEX_ORIGINATOR, settings, model, openai).apply;
+    const originator = { enabled: legacy && changeOriginator };
+    let routingHint: string | undefined;
     const headers = { ...options.headers };
     const requestOptions: T = {
       ...options,
@@ -73,8 +90,8 @@ export function wrapCodexProvider(
         const body = replacement === undefined ? payload : replacement;
         const matches = matchesRequest(body, model);
         originator.enabled = changeOriginator && matches;
-        const routingHint = matches ? priorityRoutingHint(body, settings, model) : undefined;
-        if (routingHint) {
+        routingHint = matches ? priorityRoutingHint(body, settings, model) : undefined;
+        if (legacy && routingHint) {
           for (const name of Object.keys(headers)) {
             if (name.toLowerCase() === routingHeader) {
               Reflect.deleteProperty(headers, name);
@@ -82,11 +99,33 @@ export function wrapCodexProvider(
           }
           headers[routingHeader] = routingHint;
         }
-        updateSession(options.sessionId, originator.enabled, routingHint);
+        if (legacy) {
+          updateSession(options.sessionId, originator.enabled, routingHint);
+        }
         return replacement;
       },
     };
-    return withCodexOriginator(originator, () => start(requestOptions), warn);
+    if (legacy) {
+      return withCodexOriginator(originator, () => start(requestOptions), warn);
+    }
+    const fetch = options.fetch ?? globalThis.fetch;
+    requestOptions.fetch = (input, init) => {
+      if (!originator.enabled && !routingHint) {
+        return fetch(input, init);
+      }
+      const outgoingHeaders = subscriptionHeaders(input, init);
+      if (!outgoingHeaders) {
+        return fetch(input, init);
+      }
+      if (originator.enabled) {
+        outgoingHeaders.set("originator", "codex-tui");
+      }
+      if (routingHint) {
+        outgoingHeaders.set(routingHeader, routingHint);
+      }
+      return fetch(input, { ...init, headers: outgoingHeaders });
+    };
+    return start(requestOptions);
   }
 
   return {

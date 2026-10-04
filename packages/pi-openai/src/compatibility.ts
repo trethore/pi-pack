@@ -79,6 +79,10 @@ export function isCodexModel(model: RequestModel): boolean {
   return model.api === "openai-codex-responses" && endpoint(model) === Endpoint.CODEX;
 }
 
+export function isOpenAIResponsesModel(model: RequestModel): boolean {
+  return model.api === "openai-responses" && endpoint(model) === Endpoint.OPENAI;
+}
+
 function summaryRestriction(settings: Settings, model: RequestModel): string | undefined {
   if (!model.reasoning) {
     return "Model is not reasoning-capable";
@@ -125,9 +129,16 @@ function safeRestriction(
   return hostedFeatureRestriction(feature, model, id);
 }
 
-function supportRestriction(feature: Feature, settings: Settings, model: RequestModel): string | undefined {
+function supportRestriction(
+  feature: Feature,
+  settings: Settings,
+  model: RequestModel,
+  subscription: boolean,
+): string | undefined {
   if (feature === Feature.CODEX_ORIGINATOR) {
-    return isCodexModel(model) ? undefined : "Requires the OpenAI Codex endpoint and API";
+    return isCodexModel(model) || (subscription && isOpenAIResponsesModel(model))
+      ? undefined
+      : "Requires OpenAI ChatGPT subscription authentication or the legacy Codex endpoint and API";
   }
   return settings.allowUnsupported ? undefined : safeRestriction(feature, settings, model);
 }
@@ -137,21 +148,35 @@ function inactive(feature: Feature, settings: Settings): boolean {
   return value === null || value === false || value === ServiceTier.DEFAULT;
 }
 
-function action(feature: Feature, settings: Settings, format: RequestFormat, model: RequestModel): string {
+function action(
+  feature: Feature,
+  settings: Settings,
+  format: RequestFormat,
+  model: RequestModel,
+  subscription: boolean,
+): string {
+  const subscriptionHeaders = subscription && isOpenAIResponsesModel(model);
   const descriptions = {
     verbosity: format === RequestFormat.RESPONSES ? "Set text.verbosity" : "Set verbosity",
     reasoningSummary:
       settings.reasoningSummary === ReasoningSummary.NONE ? "Remove reasoning.summary" : "Set reasoning.summary",
     webSearch: "Add native web search if absent",
-    serviceTier: isCodexModel(model)
-      ? "Set service_tier to priority and x-codex-routing-hint"
-      : "Set service_tier to priority",
+    serviceTier:
+      isCodexModel(model) || subscriptionHeaders
+        ? "Set service_tier to priority and x-codex-routing-hint"
+        : "Set service_tier to priority",
     codexOriginator: "Set originator to codex-tui",
   };
-  return descriptions[feature];
+  const unverified = subscriptionHeaders && (feature === Feature.CODEX_ORIGINATOR || feature === Feature.SERVICE_TIER);
+  return descriptions[feature] + (unverified ? " (subscription headers; server support unverified)" : "");
 }
 
-export function featureDecision(feature: Feature, settings: Settings, model: RequestModel | undefined): Decision {
+export function featureDecision(
+  feature: Feature,
+  settings: Settings,
+  model: RequestModel | undefined,
+  subscription?: boolean,
+): Decision {
   if (!settings.enabled) {
     return { apply: false, description: "Disabled: leave unchanged" };
   }
@@ -165,10 +190,10 @@ export function featureDecision(feature: Feature, settings: Settings, model: Req
   if (!format || (format === RequestFormat.COMPLETIONS && feature !== Feature.VERBOSITY)) {
     return { apply: false, description: "Skipped: unsupported API format" };
   }
-  const restriction = supportRestriction(feature, settings, model);
+  const restriction = supportRestriction(feature, settings, model, subscription === true);
   if (restriction) {
     return { apply: false, description: `Skipped: ${restriction}` };
   }
   const suffix = settings.allowUnsupported && feature !== Feature.CODEX_ORIGINATOR ? " (support checks bypassed)" : "";
-  return { apply: true, description: action(feature, settings, format, model) + suffix };
+  return { apply: true, description: action(feature, settings, format, model, subscription === true) + suffix };
 }

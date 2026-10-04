@@ -127,3 +127,21 @@ it("shows the independent Codex originator setting and priority routing behavior
   expect(active).toContain("Set service_tier to priority and x-codex-routing-hint");
   expect(unchanged).toContain("| codexOriginator | `false` | default | Leave unchanged |");
 });
+
+it.each([false, true])("distinguishes OpenAI subscription headers from API-key behavior: %s", (subscription) => {
+  // Arrange
+  const effective = resolveSettings(layers({ command: { codexOriginator: true, serviceTier: "priority" } }));
+
+  // Act
+  const markdown = statusMarkdown(effective, model, "global", subscription);
+
+  // Assert
+  if (subscription) {
+    expect(markdown).toContain("Set originator to codex-tui (subscription headers; server support unverified)");
+    expect(markdown).toContain("Set service_tier to priority and x-codex-routing-hint");
+  } else {
+    expect(markdown).toContain("Skipped: Requires OpenAI ChatGPT subscription authentication");
+    expect(markdown).toContain("| serviceTier | `priority` | command | Set service_tier to priority |");
+    expect(markdown).not.toContain("x-codex-routing-hint");
+  }
+});

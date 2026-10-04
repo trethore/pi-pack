@@ -4,13 +4,21 @@ import {
   type Provider,
   type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
+import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { featureDecision, Feature } from "#src/compatibility";
 import { transformPayload } from "#src/payload";
 import type { Settings } from "#src/settings";
-import { wrapCodexProvider } from "#src/transport";
-import { codexBody, codexModel, codexResponse, codexToken, mockWebSockets } from "#test/codex-support";
+import { wrapOpenAIProvider } from "#src/transport";
+import {
+  codexBody,
+  codexModel,
+  codexResponse,
+  codexToken,
+  mockWebSockets,
+  subscriptionModel,
+} from "#test/codex-support";
 import { model, settings } from "#test/support";
 
 const host = vi.hoisted(() => ({ version: "1.0.0" }));
@@ -42,15 +50,17 @@ afterEach(() => {
 function harness(overrides: Partial<Settings> = {}, original: Provider = openaiCodexProvider()) {
   let current = settings(overrides);
   const warn = vi.fn();
-  const wrapped = wrapCodexProvider(original, () => current, warn);
+  const wrapped = wrapOpenAIProvider(original, () => current, warn);
   disposers.push(wrapped.dispose);
-  const requests: Array<{ headers: Headers; body: Record<string, unknown> }> = [];
-  const fetch = vi.fn((_url: unknown, init?: RequestInit) => {
+  const requests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
+  const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const request = input instanceof Request ? input : undefined;
     requests.push({
-      headers: new Headers(init?.headers),
-      body: codexBody(init?.body),
+      url: String(input instanceof Request ? input.url : input),
+      headers: new Headers(init?.headers ?? request?.headers),
+      body: codexBody(init?.body ?? (request && (await request.text()))),
     });
-    return Promise.resolve(codexResponse());
+    return codexResponse();
   });
   return {
     ...wrapped,
@@ -60,7 +70,11 @@ function harness(overrides: Partial<Settings> = {}, original: Provider = openaiC
     update(next: Partial<Settings>) {
       current = { ...current, ...next };
     },
-    async send(options: SimpleStreamOptions = {}, requestModel = codexModel, detailed = false) {
+    async send(
+      options: SimpleStreamOptions = {},
+      requestModel = original.id === "openai" ? subscriptionModel : codexModel,
+      detailed = false,
+    ) {
       const requestOptions = {
         apiKey: codexToken,
         transport: "sse" as const,
@@ -153,7 +167,7 @@ it.each([
 ])("uses the final payload rather than a stale tier or model: %j", async (payload) => {
   // Arrange
   const client = harness({ serviceTier: "priority", codexOriginator: true });
-  const onPayload = vi.fn(async () => payload);
+  const onPayload = vi.fn(async () => ({ ...payload, stream: true }));
 
   // Act
   await client.send({ onPayload });
@@ -414,9 +428,9 @@ it("restores the patch when a pending request is aborted", async () => {
   expect(Headers.prototype.set).toBe(originalSet);
 });
 
-it("warns once on an untested Pi version only when the originator patch is used", async () => {
+it.each(["1.0.1", "1.0.2"])("warns once on Pi %s only when the legacy originator patch is used", async (version) => {
   // Arrange
-  host.version = "1.0.1";
+  host.version = version;
   const client = harness();
 
   // Act
@@ -430,7 +444,7 @@ it("warns once on an untested Pi version only when the originator patch is used"
   expect(client.warn).toHaveBeenCalledOnce();
   expect(client.warn).toHaveBeenCalledWith(expect.stringContaining("pi-openai/codex-originator"));
   expect(client.warn).toHaveBeenCalledWith(expect.stringContaining("tested with Pi 1.0.0"));
-  expect(client.warn).toHaveBeenCalledWith(expect.stringContaining("running version is 1.0.1"));
+  expect(client.warn).toHaveBeenCalledWith(expect.stringContaining(`running version is ${version}`));
   expect(client.requests[1]!.headers.get("originator")).toBe("codex-tui");
   expect(client.requests[2]!.headers.get("originator")).toBe("codex-tui");
 });
@@ -459,4 +473,223 @@ it("reports restoration failures instead of creating an unhandled rejection", as
     spy.mockRestore();
     defineProperty(Headers.prototype, "set", { value: originalSet });
   }
+});
+
+it.each([
+  { name: "defaults", values: {}, originator: "custom", hint: "custom-hint" },
+  {
+    name: "priority",
+    values: { serviceTier: "priority" },
+    originator: "custom",
+    hint: `model=${model.id};tier=priority`,
+  },
+  { name: "originator", values: { codexOriginator: true }, originator: "codex-tui", hint: "custom-hint" },
+  {
+    name: "both",
+    values: { serviceTier: "priority", codexOriginator: true },
+    originator: "codex-tui",
+    hint: `model=${model.id};tier=priority`,
+  },
+  {
+    name: "disabled",
+    values: { enabled: false, serviceTier: "priority", codexOriginator: true },
+    originator: "custom",
+    hint: "custom-hint",
+  },
+] satisfies Array<{ name: string; values: Partial<Settings>; originator: string; hint: string }>)(
+  "sends OpenAI subscription headers for $name without patching Headers",
+  async ({ values, originator, hint }) => {
+    // Arrange
+    host.version = "1.0.2";
+    const client = harness(values, openaiProvider());
+    const headers = Object.freeze({ Originator: "custom", "X-Codex-Routing-Hint": "custom-hint", "x-custom": "keep" });
+    const fetch = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      expect(Headers.prototype.set).toBe(originalSet);
+      return client.fetch(input, init);
+    });
+
+    // Act
+    await client.send({ headers, fetch, sessionId: "subscription-session" });
+    const sent = client.requests[0]!;
+
+    // Assert
+    expect(sent.url).toBe("https://api.openai.com/v1/responses");
+    expect(sent.headers.get("originator")).toBe(originator);
+    expect(sent.headers.get("x-codex-routing-hint")).toBe(hint);
+    expect(sent.headers.get("authorization")).toBe(`Bearer ${codexToken}`);
+    expect(sent.headers.get("x-custom")).toBe("keep");
+    expect(sent.headers.get("user-agent")).toMatch(/^pi /);
+    expect(sent.headers.get("session_id")).toBe("subscription-session");
+    expect(sent.body.prompt_cache_key).toBe("subscription-session");
+    expect(headers).toEqual({ Originator: "custom", "X-Codex-Routing-Hint": "custom-hint", "x-custom": "keep" });
+    expect(client.warn).not.toHaveBeenCalled();
+  },
+);
+
+it("uses each OpenAI request's effective credentials, including Authorization overrides", async () => {
+  // Arrange
+  const client = harness({ codexOriginator: true, serviceTier: "priority" }, openaiProvider());
+
+  // Act
+  await client.send({ apiKey: "sk-proj-test" });
+  await client.send({ apiKey: "chatgpt-access-token" }, subscriptionModel, true);
+  await client.send({ headers: { Authorization: "Bearer sk-other-key" } });
+  await client.send({ apiKey: "sk-proj-test", headers: { Authorization: "Bearer chatgpt-override" } });
+  await client.send({ headers: { Authorization: null } });
+  await client.send({ headers: { Authorization: "Basic test" } });
+
+  // Assert
+  expect(client.requests.map(({ headers }) => headers.get("originator"))).toEqual([
+    null,
+    "codex-tui",
+    null,
+    "codex-tui",
+    null,
+    null,
+  ]);
+  expect(client.requests.map(({ headers }) => headers.get("x-codex-routing-hint"))).toEqual([
+    null,
+    `model=${model.id};tier=priority`,
+    null,
+    `model=${model.id};tier=priority`,
+    null,
+    null,
+  ]);
+  expect(client.requests.every(({ body }) => body.service_tier === "priority")).toBe(true);
+});
+
+it.each([
+  { model: model.id, input: [], service_tier: "default" },
+  { model: "different-model", input: [], service_tier: "priority" },
+  { model: model.id, messages: [], service_tier: "priority" },
+])("derives OpenAI subscription headers from the final payload: %j", async (payload) => {
+  // Arrange
+  const client = harness({ codexOriginator: true, serviceTier: "priority" }, openaiProvider());
+  const onPayload = vi.fn(async () => ({ ...payload, stream: true }));
+
+  // Act
+  await client.send({ onPayload });
+
+  // Assert
+  expect(onPayload).toHaveBeenCalledOnce();
+  expect(client.requests[0]!.headers.get("originator")).toBe(
+    payload.model === model.id && "input" in payload ? "codex-tui" : null,
+  );
+  expect(client.requests[0]!.headers.has("x-codex-routing-hint")).toBe(false);
+});
+
+it("does not infer OpenAI priority opt-in from an existing payload", async () => {
+  // Arrange
+  const client = harness({}, openaiProvider());
+
+  // Act
+  await client.send({ onPayload: () => ({ model: model.id, input: [], service_tier: "priority", stream: true }) });
+
+  // Assert
+  expect(client.requests[0]!.headers.has("x-codex-routing-hint")).toBe(false);
+});
+
+it.each([
+  { baseUrl: "https://proxy.example/v1" },
+  { baseUrl: "https://api.openai.com.evil.example/v1" },
+  { provider: "custom-openai" },
+])("does not add subscription headers outside the official OpenAI route: %j", async (override) => {
+  // Arrange
+  const client = harness({ codexOriginator: true, serviceTier: "priority", allowUnsupported: true }, openaiProvider());
+
+  // Act
+  await client.send({}, { ...subscriptionModel, ...override });
+
+  // Assert
+  expect(client.requests[0]!.headers.has("originator")).toBe(false);
+  expect(client.requests[0]!.headers.has("x-codex-routing-hint")).toBe(false);
+});
+
+it.each([false, true])(
+  "keeps subscription priority support checks with allowUnsupported=%s",
+  async (allowUnsupported) => {
+    // Arrange
+    const client = harness({ codexOriginator: true, serviceTier: "priority", allowUnsupported }, openaiProvider());
+
+    // Act
+    await client.send({}, { ...subscriptionModel, id: "unknown-model" });
+    await client.send({}, { ...subscriptionModel, id: "custom;tier=default" });
+
+    // Assert
+    expect(client.requests.every(({ headers }) => headers.get("originator") === "codex-tui")).toBe(true);
+    expect(client.requests[0]!.headers.get("x-codex-routing-hint")).toBe(
+      allowUnsupported ? "model=unknown-model;tier=priority" : null,
+    );
+    expect(client.requests[1]!.headers.has("x-codex-routing-hint")).toBe(false);
+  },
+);
+
+it.each([
+  "https://api.openai.com/v1/responses",
+  "https://proxy.example/v1/responses",
+  "https://api.openai.com/v1/files",
+])("preserves Request inputs and only decorates the Responses URL: %s", async (url) => {
+  // Arrange
+  const original: Provider = openaiProvider();
+  const client = harness(
+    { codexOriginator: true, serviceTier: "priority" },
+    {
+      ...original,
+      streamSimple(requestModel, messages, options) {
+        return original.streamSimple(requestModel, messages, {
+          ...options,
+          fetch(_input, init) {
+            return options!.fetch!(new Request(url, init));
+          },
+        });
+      },
+    },
+  );
+
+  // Act
+  await client.send();
+
+  // Assert
+  const sent = client.requests[0]!;
+  expect(sent.url).toBe(url);
+  expect(sent.body).toMatchObject({ model: model.id, service_tier: "priority" });
+  expect(sent.headers.get("authorization")).toBe(`Bearer ${codexToken}`);
+  const official = url === "https://api.openai.com/v1/responses";
+  expect(sent.headers.get("originator")).toBe(official ? "codex-tui" : null);
+  expect(sent.headers.get("x-codex-routing-hint")).toBe(official ? `model=${model.id};tier=priority` : null);
+});
+
+it("uses the default fetch and keeps overlapping subscription requests isolated", async () => {
+  // Arrange
+  const client = harness({ codexOriginator: true, serviceTier: "priority" }, openaiProvider());
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  vi.stubGlobal("fetch", client.fetch);
+
+  // Act
+  const pending = client.provider
+    .streamSimple(subscriptionModel, context, {
+      apiKey: codexToken,
+      async onPayload(payload) {
+        entered.resolve();
+        await resume.promise;
+        (payload as Record<string, unknown>).service_tier = "priority";
+      },
+    })
+    .result();
+  await entered.promise;
+  client.update({ codexOriginator: false, serviceTier: "default" });
+  try {
+    await client.provider.streamSimple(subscriptionModel, context, { apiKey: codexToken }).result();
+  } finally {
+    resume.resolve();
+    await pending;
+  }
+
+  // Assert
+  expect(client.requests.map(({ headers }) => headers.get("originator"))).toEqual([null, "codex-tui"]);
+  expect(client.requests.map(({ headers }) => headers.get("x-codex-routing-hint"))).toEqual([
+    null,
+    `model=${model.id};tier=priority`,
+  ]);
 });
