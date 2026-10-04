@@ -109,6 +109,7 @@ function harness(hasUI = true) {
     },
     async respond(input = 100, output = 20) {
       await this.emit("turn_start");
+      await this.emit("before_provider_request", { payload: {} });
       now += 1000;
       await this.emit("message_end", assistant(input, output));
     },
@@ -176,6 +177,45 @@ it("notifies only when control returns to the user, with uncached tokens and ful
   await extension.emit("agent_settled");
   expect(extension.notify.mock.calls).toEqual([["7s | 30.0 tok/s | \u2191 300 \u2193 60 | $0.0200", "info"]]);
   expect(extension.setWidget).not.toHaveBeenCalled();
+});
+
+it("excludes preparation time but includes latency before the assistant message starts", async () => {
+  // Arrange
+  await configure({ format: "<tokps> <timetaken>" });
+  const extension = harness();
+  const response = assistant(100, 60);
+  await extension.emit("session_start");
+  await extension.emit("agent_start");
+  await extension.emit("turn_start");
+
+  // Act
+  now = 5000;
+  await extension.emit("before_provider_request", { payload: {} });
+  now = 7000;
+  await extension.emit("message_start", { message: response.message });
+  now = 8000;
+  await extension.emit("message_end", response);
+  await extension.emit("agent_settled");
+
+  // Assert
+  expect(extension.notify.mock.calls).toEqual([["20.0 tok/s 8s", "info"]]);
+});
+
+it("reports unavailable speed when the provider request event is missing", async () => {
+  // Arrange
+  await configure({ format: "<tokps> <output_tokens> <timetaken>" });
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.emit("agent_start");
+  await extension.emit("turn_start");
+
+  // Act
+  now = 1000;
+  await extension.emit("message_end", assistant());
+  await extension.emit("agent_settled");
+
+  // Assert
+  expect(extension.notify.mock.calls).toEqual([["N/A 20 1s", "info"]]);
 });
 
 it("starts fresh after settling without counting idle time or other message roles", async () => {
@@ -284,7 +324,8 @@ it.each([
 
   // Assert
   expect(extension.handlers.has("message_end")).toBe(usage);
-  expect(extension.handlers.has("turn_start")).toBe(timing);
+  expect(extension.handlers.has("before_provider_request")).toBe(timing);
+  expect(extension.handlers.has("turn_start")).toBe(false);
   expect(extension.handlers.has("tool_execution_end")).toBe(false);
 });
 
@@ -418,8 +459,10 @@ it.each(["notify", "live"])(
       ],
     });
     let requests = 0;
-    session.agent.streamFunction = () => {
+    session.agent.streamFunction = async (requestModel, _context, options) => {
       requests++;
+      now += 3000;
+      await options?.onPayload?.({}, requestModel);
       now += 1000;
       const message = assistant().message;
       if (requests === 1) {
@@ -444,7 +487,7 @@ it.each(["notify", "live"])(
       await session.prompt("Run the test tool and finish.");
 
       // Assert
-      const expected = "7s | 20.0 tok/s | \u2191 200 \u2193 40 | $0.0200";
+      const expected = "13s | 20.0 tok/s | \u2191 200 \u2193 40 | $0.0200";
       expect(extensionsResult.errors).toEqual([]);
       expect(errors).not.toHaveBeenCalled();
       expect(executed).toHaveBeenCalledOnce();

@@ -59,8 +59,7 @@ export default function metrics(pi: ExtensionAPI): void {
     );
 
     if (turn.needsSpeed) {
-      // Assistant message_start can arrive after request latency, so time from turn_start instead.
-      subscriptions.push(pi.on(Events.TurnStart, () => turn.startRequest()));
+      subscriptions.push(pi.on(Events.BeforeProviderRequest, () => turn.startRequest()));
     }
     if (turn.needsUsage || live) {
       subscriptions.push(
