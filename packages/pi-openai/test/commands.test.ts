@@ -10,7 +10,6 @@ it.each([
   ["verbosity low", { type: "set", setting: "verbosity", override: { verbosity: "low" } }],
   ["reasoningSummary null", { type: "set", setting: "reasoningSummary", override: { reasoningSummary: null } }],
   ["allowUnsupported true", { type: "set", setting: "allowUnsupported", override: { allowUnsupported: true } }],
-  ["codexOriginator true", { type: "set", setting: "codexOriginator", override: { codexOriginator: true } }],
   ["reset", { type: "reset", setting: undefined }],
   ["reset verbosity", { type: "reset", setting: "verbosity" }],
   ["save", { type: "save", destination: undefined }],
@@ -43,7 +42,6 @@ it.each([
   ["reasoningSummary n", ["reasoningSummary none", "reasoningSummary null"]],
   ["save ", ["save project", "save global"]],
   ["reset web", ["reset webSearch"]],
-  ["codexOriginator f", ["codexOriginator false"]],
   ["allowUnsupported t", ["allowUnsupported true"]],
 ])("completes %j with full replacement arguments", (prefix, expected) => {
   // Act / Assert
@@ -68,7 +66,6 @@ it("discovers all subcommands without a help command", () => {
     "reasoningSummary",
     "webSearch",
     "serviceTier",
-    "codexOriginator",
     "reset",
     "save",
   ]);

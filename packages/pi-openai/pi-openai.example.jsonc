@@ -17,10 +17,6 @@
   // false leaves existing tools unchanged.
   "webSearch": false,
 
-  // "priority" requests priority processing and adds x-codex-routing-hint on subscription and legacy Codex requests.
-  // "default" leaves the payload unchanged and does not add a routing hint.
-  "serviceTier": "default",
-
-  // Set originator to codex-tui on ChatGPT subscription and legacy Codex requests.
-  "codexOriginator": false
+  // "priority" requests priority processing; "default" leaves the payload unchanged.
+  "serviceTier": "default"
 }

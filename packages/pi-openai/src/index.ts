@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionCommandContext, ProviderConfig } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
 import { Command, completeArguments, parseCommand } from "#src/commands";
 import {
@@ -13,7 +13,6 @@ import { extensionName } from "#src/constants";
 import { transformPayload } from "#src/payload";
 import { resolveSettings, type Layers } from "#src/settings";
 import { renderStatus, statusMarkdown } from "#src/status";
-import { wrapOpenAIProvider } from "#src/transport";
 
 const statusEntry = `${extensionName}-status`;
 const saveReminder = `Use /${extensionName} save to save the current settings.`;
@@ -21,18 +20,6 @@ const saveReminder = `Use /${extensionName} save to save the current settings.`;
 interface State {
   paths: ConfigPaths;
   layers: Layers;
-}
-
-async function showStatus(state: State, pi: ExtensionAPI, ctx: ExtensionCommandContext): Promise<void> {
-  const destination = await saveDestination(state.paths);
-  const registered = ctx.model && ctx.modelRegistry.find(ctx.model.provider, ctx.model.id);
-  const subscription = registered !== undefined && ctx.modelRegistry.isUsingOAuth(registered);
-  const markdown = statusMarkdown(resolveSettings(state.layers), ctx.model, destination, subscription);
-  if (ctx.mode === "tui") {
-    pi.appendEntry(statusEntry, markdown);
-  } else {
-    ctx.ui.notify(markdown, "info");
-  }
 }
 
 async function executeCommand(
@@ -43,9 +30,16 @@ async function executeCommand(
 ): Promise<void> {
   const { paths, layers } = state;
   switch (command.type) {
-    case Command.STATUS:
-      await showStatus(state, pi, ctx);
+    case Command.STATUS: {
+      const destination = await saveDestination(paths);
+      const markdown = statusMarkdown(resolveSettings(layers), ctx.model, destination);
+      if (ctx.mode === "tui") {
+        pi.appendEntry(statusEntry, markdown);
+      } else {
+        ctx.ui.notify(markdown, "info");
+      }
       break;
+    }
     case Command.SET:
       Object.assign(layers.command, command.override);
       ctx.ui.notify(
@@ -79,71 +73,17 @@ async function executeCommand(
 
 export default function openai(pi: ExtensionAPI): void {
   let state: State | undefined;
-  const providerRestorers: Array<() => void> = [];
-
-  function restoreProviders(): void {
-    const errors: unknown[] = [];
-    for (const restore of providerRestorers.splice(0).toReversed()) {
-      try {
-        restore();
-      } catch (error) {
-        errors.push(error);
-      }
-    }
-    if (errors.length > 0) {
-      throw new AggregateError(errors, "Could not restore OpenAI providers.");
-    }
-  }
 
   pi.on(Events.SessionStart, async (_event, ctx) => {
     state = undefined;
-    restoreProviders();
     const paths = configPaths(ctx.cwd);
     try {
       state = { paths, layers: await loadConfiguration(paths) };
-      for (const id of ["openai", "openai-codex"]) {
-        const provider = ctx.modelRegistry.getProvider(id);
-        if (!provider) {
-          continue;
-        }
-        const native = ctx.modelRegistry.getRegisteredNativeProvider(provider.id);
-        const config = ctx.modelRegistry.getRegisteredProviderConfig(provider.id);
-        const wrapped = wrapOpenAIProvider(
-          provider,
-          () => state && resolveSettings(state.layers).values,
-          (message) => ctx.ui.notify(message, "warning"),
-        );
-        providerRestorers.push(() => {
-          try {
-            wrapped.dispose();
-          } finally {
-            if (ctx.modelRegistry.getRegisteredNativeProvider(provider.id) === wrapped.provider) {
-              if (native) {
-                pi.registerProvider(native);
-              } else if (config) {
-                // Pi 1.0.2 gives stored configs wider optional model fields than the extension API.
-                // oxlint-disable-next-line typescript/no-unsafe-type-assertion
-                pi.registerProvider(provider.id, config as ProviderConfig);
-              } else {
-                pi.unregisterProvider(provider.id);
-              }
-            }
-          }
-        });
-        pi.registerProvider(wrapped.provider);
-      }
     } catch (error) {
-      state = undefined;
-      restoreProviders();
       throw new Error(`${extensionName}: ${error instanceof Error ? error.message : "Could not load configuration."}`, {
         cause: error,
       });
     }
-  });
-
-  pi.on(Events.SessionShutdown, () => {
-    state = undefined;
-    restoreProviders();
   });
 
   pi.on(Events.BeforeProviderRequest, (event, ctx) => {

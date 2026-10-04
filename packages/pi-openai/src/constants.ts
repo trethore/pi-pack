@@ -11,7 +11,6 @@ export const Feature = {
   REASONING_SUMMARY: "reasoningSummary",
   WEB_SEARCH: "webSearch",
   SERVICE_TIER: "serviceTier",
-  CODEX_ORIGINATOR: "codexOriginator",
 } as const;
 export type Feature = (typeof Feature)[keyof typeof Feature];
 
