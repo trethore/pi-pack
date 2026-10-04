@@ -1,19 +1,42 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
+import { readOptionalFile } from "@pi-pack/shared/files";
+import { isObject } from "@pi-pack/shared/validation";
 
 interface ConfigLoaderOptions<T> {
   name: string;
+  knownKeys: readonly (keyof T & string)[];
   defaults: () => T;
   validate: (value: Record<string, unknown>) => T;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+export function configPaths(name: string, cwd: string, agentDir = getAgentDir()) {
+  return {
+    global: join(agentDir, `${name}.jsonc`),
+    project: join(cwd, ".pi", `${name}.jsonc`),
+  };
 }
 
-export function parseConfig(source: string): Record<string, unknown> {
+export interface ConfigWarningOptions {
+  ui?: Pick<ExtensionUIContext, "notify">;
+  onWarning?: (message: string) => void;
+}
+
+interface ConfigLoadOptions extends ConfigWarningOptions {
+  agentDir?: string;
+}
+
+export function createWarningReporter({ ui, onWarning }: ConfigWarningOptions): (message: string) => void {
+  return onWarning ?? ((message) => ui?.notify(message, "warning"));
+}
+
+interface ConfigWarnings {
+  knownKeys: readonly string[];
+  onWarning?: (message: string) => void;
+}
+
+export function parseConfig(source: string, warnings?: ConfigWarnings): Record<string, unknown> {
   const errors: ParseError[] = [];
   const value: unknown = parse(source, errors, { allowTrailingComma: true });
   const firstError = errors[0];
@@ -23,6 +46,12 @@ export function parseConfig(source: string): Record<string, unknown> {
   if (!isObject(value)) {
     throw new Error("Expected a configuration object");
   }
+  if (warnings?.onWarning) {
+    const unknownKeys = Object.keys(value).filter((key) => !warnings.knownKeys.includes(key));
+    if (unknownKeys.length > 0) {
+      warnings.onWarning(`Unknown configuration entries: ${unknownKeys.map((key) => JSON.stringify(key)).join(", ")}.`);
+    }
+  }
   return value;
 }
 
@@ -30,21 +59,27 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function createConfigLoader<T>({ name, defaults, validate }: ConfigLoaderOptions<T>) {
-  return async function loadConfig(cwd: string, agentDir = getAgentDir()): Promise<T> {
-    const locations = [join(cwd, ".pi", `${name}.jsonc`), join(agentDir, `${name}.jsonc`)];
-    for (const file of locations) {
-      let source: string;
+export function createConfigLoader<T>({ name, knownKeys, defaults, validate }: ConfigLoaderOptions<T>) {
+  return async function loadConfig(cwd: string, { agentDir, ...warnings }: ConfigLoadOptions = {}): Promise<T> {
+    const onWarning = createWarningReporter(warnings);
+    const paths = configPaths(name, cwd, agentDir);
+    for (const file of [paths.project, paths.global]) {
+      let source: string | undefined;
       try {
-        source = await readFile(file, "utf8");
+        source = await readOptionalFile(file);
       } catch (error) {
-        if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
-          continue;
-        }
         throw new Error(`${name}: could not read ${file}: ${errorMessage(error)}`, { cause: error });
       }
+      if (source === undefined) {
+        continue;
+      }
       try {
-        return validate(parseConfig(source));
+        return validate(
+          parseConfig(source, {
+            knownKeys,
+            onWarning: (message) => onWarning(`${name}: ${file}: ${message}`),
+          }),
+        );
       } catch (error) {
         throw new Error(`${name}: invalid configuration in ${file}: ${errorMessage(error)}`, { cause: error });
       }

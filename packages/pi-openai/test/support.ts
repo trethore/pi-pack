@@ -2,9 +2,9 @@ import type { Destination } from "#src/constants";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { configPaths } from "#src/config";
-import { defaults, type Layers, type Settings } from "#src/settings";
-import type { RequestModel } from "#src/compatibility";
+import { configPaths } from "#src/config/files";
+import { defaults, type Layers, type Settings } from "#src/config/settings";
+import type { RequestModel } from "#src/request/compatibility";
 
 export const model: RequestModel = {
   id: "gpt-6-sol",

@@ -1,8 +1,8 @@
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { parseConfig } from "@pi-pack/shared/config";
-import { afterEach, beforeEach, expect, it } from "vitest";
-import { loadConfiguration, saveConfiguration, saveDestination } from "#src/config";
-import { resolveSettings } from "#src/settings";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { loadConfiguration, saveConfiguration, saveDestination } from "#src/config/files";
+import { resolveSettings } from "#src/config/settings";
 import { createWorkspace, settings } from "#test/support";
 
 let workspace: Awaited<ReturnType<typeof createWorkspace>>;
@@ -19,7 +19,7 @@ it("loads JSONC layers and lets project null cancel a global override", async ()
   await workspace.write("project", '{"verbosity":null}');
 
   // Act
-  const loaded = await loadConfiguration(workspace.paths, { PI_OPENAI_SERVICE_TIER: "priority" });
+  const loaded = await loadConfiguration(workspace.paths, { environment: { PI_OPENAI_SERVICE_TIER: "fast" } });
   const result = resolveSettings(loaded);
 
   // Assert
@@ -31,7 +31,7 @@ it("loads JSONC layers and lets project null cancel a global override", async ()
 
 it("uses defaults and selects global when no configuration exists", async () => {
   // Act
-  const loaded = await loadConfiguration(workspace.paths, {});
+  const loaded = await loadConfiguration(workspace.paths, { environment: {} });
 
   // Assert
   expect(resolveSettings(loaded).values).toEqual(settings());
@@ -45,7 +45,7 @@ it.each(["global", "project"] as const)(
     await workspace.write(destination, '{"verbosity":"invalid"}');
 
     // Act / Assert
-    await expect(loadConfiguration(workspace.paths, {})).rejects.toThrow(
+    await expect(loadConfiguration(workspace.paths, { environment: {} })).rejects.toThrow(
       `Invalid ${destination} configuration: verbosity`,
     );
   },
@@ -56,7 +56,9 @@ it.each(["{", "null", "[]", "", '{"enabled":1}'])("rejects invalid document %s",
   await workspace.write("project", source);
 
   // Act / Assert
-  await expect(loadConfiguration(workspace.paths, {})).rejects.toThrow("Invalid project configuration");
+  await expect(loadConfiguration(workspace.paths, { environment: {} })).rejects.toThrow(
+    "Invalid project configuration",
+  );
 });
 
 it("does not hide invalid environment settings behind disabled config", async () => {
@@ -64,9 +66,9 @@ it("does not hide invalid environment settings behind disabled config", async ()
   await workspace.write("project", '{"enabled":false}');
 
   // Act / Assert
-  await expect(loadConfiguration(workspace.paths, { PI_OPENAI_VERBOSITY: "secret-invalid-value" })).rejects.toThrow(
-    "PI_OPENAI_VERBOSITY must be one of",
-  );
+  await expect(
+    loadConfiguration(workspace.paths, { environment: { PI_OPENAI_VERBOSITY: "secret-invalid-value" } }),
+  ).rejects.toThrow("PI_OPENAI_VERBOSITY must be one of");
 });
 
 it("reports unreadable files without exposing paths in the message", async () => {
@@ -74,8 +76,10 @@ it("reports unreadable files without exposing paths in the message", async () =>
   await mkdir(workspace.paths.project);
 
   // Act / Assert
-  await expect(loadConfiguration(workspace.paths, {})).rejects.toThrow("Could not read project configuration.");
-  await expect(loadConfiguration(workspace.paths, {})).rejects.not.toThrow(workspace.root);
+  await expect(loadConfiguration(workspace.paths, { environment: {} })).rejects.toThrow(
+    "Could not read project configuration.",
+  );
+  await expect(loadConfiguration(workspace.paths, { environment: {} })).rejects.not.toThrow(workspace.root);
 });
 
 it("selects an existing project config over global and notices new files", async () => {
@@ -150,9 +154,25 @@ it("rejects duplicate setting keys instead of saving a misleading effective valu
   await workspace.write("project", source);
 
   // Act / Assert
-  await expect(loadConfiguration(workspace.paths, {})).rejects.toThrow("Duplicate setting: verbosity");
+  await expect(loadConfiguration(workspace.paths, { environment: {} })).rejects.toThrow("Duplicate setting: verbosity");
   await expect(saveConfiguration(workspace.paths, "project", settings())).rejects.toThrow(
     "Duplicate setting: verbosity",
   );
   expect(await workspace.read("project")).toBe(source);
+});
+
+it("uses a custom warning reporter instead of UI notifications", async () => {
+  // Arrange
+  await workspace.write("project", '{"verbosty":"high"}');
+  const notify = vi.fn();
+  const onWarning = vi.fn();
+
+  // Act
+  await loadConfiguration(workspace.paths, { environment: {}, ui: { notify }, onWarning });
+
+  // Assert
+  expect(onWarning.mock.calls).toEqual([
+    ['pi-openai: project configuration: Unknown configuration entries: "verbosty".'],
+  ]);
+  expect(notify).not.toHaveBeenCalled();
 });

@@ -1,8 +1,8 @@
 import { initTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { beforeAll, expect, it, vi } from "vitest";
-import { resolveSettings } from "#src/settings";
-import { renderStatus, statusMarkdown } from "#src/status";
+import { resolveSettings } from "#src/config/settings";
+import { renderStatus, statusMarkdown } from "#src/ui/status";
 import { layers, model } from "#test/support";
 
 beforeAll(() => {
@@ -106,4 +106,70 @@ it("explains the modern-model support boundary in status", () => {
   // Assert
   expect(markdown).toContain("Skipped: Model support is limited to known GPT-5.5 and newer models");
   expect(markdown).not.toContain("Remove reasoning.summary");
+});
+
+it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior for %s with the unsafe flag", (api) => {
+  // Arrange
+  const effective = resolveSettings(
+    layers({
+      command: {
+        allowUnsupported: true,
+        verbosity: "low",
+        reasoningSummary: "auto",
+        webSearch: true,
+        serviceTier: "priority",
+      },
+    }),
+  );
+
+  // Act
+  const markdown = statusMarkdown(effective, { ...model, api }, "global");
+
+  // Assert
+  for (const setting of ["verbosity", "reasoningSummary", "webSearch", "serviceTier"]) {
+    const row = markdown.split("\n").find((line) => line.startsWith(`| ${setting} |`));
+    expect(row).toContain("Attempt on compatible request payload (support checks bypassed)");
+  }
+  expect(markdown).not.toContain("Skipped:");
+});
+
+it.each([
+  {
+    provider: "azure-openai-responses",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.openai.azure.com",
+    id: "gpt-6-sol",
+    search: "Add native web search if absent",
+    tier: "Set service_tier to priority",
+  },
+  {
+    provider: "azure-openai-responses",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.openai.azure.com",
+    id: "gpt-6.1-sol",
+    search: "Add native web search if absent",
+    tier: "Skipped: Priority processing support is unverified for this Azure model",
+  },
+  {
+    provider: "github-copilot",
+    api: "openai-responses",
+    baseUrl: "https://api.githubcopilot.com",
+    id: "gpt-6-sol",
+    search: "Skipped: Native feature support is unverified on this endpoint",
+    tier: "Skipped: Native feature support is unverified on this endpoint",
+  },
+])("shows provider feature handling for $provider / $id", ({ search, tier, ...identity }) => {
+  // Arrange
+  const effective = resolveSettings(
+    layers({ command: { verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" } }),
+  );
+
+  // Act
+  const markdown = statusMarkdown(effective, { ...model, ...identity }, "global");
+
+  // Assert
+  expect(markdown).toContain("| verbosity | `low` | command | Set text.verbosity |");
+  expect(markdown).toContain("| reasoningSummary | `auto` | command | Set reasoning.summary |");
+  expect(markdown).toContain(`| webSearch | \`true\` | command | ${search} |`);
+  expect(markdown).toContain(`| serviceTier | \`priority\` | command | ${tier} |`);
 });

@@ -12,6 +12,7 @@ const defaultFormat = "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <out
 
 export const loadConfig = createConfigLoader({
   name: EXTENSION_NAME,
+  knownKeys: ["enabled", "mode", "format"],
   defaults: (): MetricsConfig => ({ enabled: true, mode: "notify", format: defaultFormat }),
   validate(value): MetricsConfig {
     const enabled = booleanOption(value.enabled, "enabled", true);

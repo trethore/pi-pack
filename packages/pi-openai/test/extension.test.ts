@@ -11,7 +11,7 @@ import {
 import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import openai from "#src/index";
-import { environmentNames } from "#src/settings";
+import { environmentNames } from "#src/config/settings";
 import { createWorkspace, model } from "#test/support";
 
 let workspace: Awaited<ReturnType<typeof createWorkspace>>;
@@ -21,6 +21,7 @@ beforeEach(async () => {
     vi.stubEnv(name, undefined);
   }
   vi.stubEnv("PI_CODING_AGENT_DIR", workspace.agentDir);
+  vi.stubEnv("AZURE_OPENAI_DEPLOYMENT_NAME_MAP", undefined);
 });
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -145,28 +146,34 @@ it.each([
   expect(await workspace.read("project")).toBe(config);
 });
 
-it("applies runtime commands to subsequent requests and model changes", async () => {
-  // Arrange
-  const extension = harness();
-  await extension.emit("session_start");
-  await extension.command("verbosity low");
-  extension.ctx.model = {
-    ...extension.ctx.model,
-    provider: "custom",
-    baseUrl: "https://custom.example/v1",
-  } as ExtensionContext["model"];
-  const event = { payload: { model: model.id, input: [] } };
+it.each(["openai-responses", "custom-responses", "openai-codex-responses"])(
+  "applies runtime support overrides to subsequent requests using %s",
+  async (api) => {
+    // Arrange
+    const extension = harness();
+    await extension.emit("session_start");
+    await extension.command("verbosity low");
+    extension.ctx.model = {
+      ...extension.ctx.model,
+      api,
+      provider: "custom",
+      baseUrl: "https://custom.example/v1",
+    } as ExtensionContext["model"];
+    const event = { payload: { model: model.id, input: [] } };
 
-  // Act / Assert
-  expect(await extension.emit("before_provider_request", event)).toBeUndefined();
-  await extension.command("allowUnsupported true");
-  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
-  await extension.command("status");
-  expect(extension.appendEntry).toHaveBeenCalledWith(
-    "pi-openai-status",
-    expect.stringContaining("support checks bypassed"),
-  );
-});
+    // Act / Assert
+    expect(await extension.emit("before_provider_request", event)).toBeUndefined();
+    await extension.command("allowUnsupported true");
+    expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
+    await extension.command("status");
+    expect(extension.appendEntry).toHaveBeenCalledWith(
+      "pi-openai-status",
+      expect.stringContaining("support checks bypassed"),
+    );
+    await extension.command("allowUnsupported false");
+    expect(await extension.emit("before_provider_request", event)).toBeUndefined();
+  },
+);
 
 const saveCases: Array<[string, Destination | undefined, Destination]> = [
   ["save", undefined, "global"],
@@ -348,14 +355,22 @@ it("loads through Pi's TypeScript loader with all workspace dependencies", async
   expect(loaded.extensions.some((extension) => extension.handlers.has("before_provider_request"))).toBe(true);
 });
 
-it.each(["sk-proj-test", "chatgpt-access-token"])(
-  "modifies real Pi OpenAI requests using %s without restoring auth-rejected fields",
-  async (apiKey) => {
+it.each([
+  { provider: "openai", apiKey: "sk-proj-test", tier: "priority" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "fast" },
+  { provider: "openai", apiKey: "chatgpt-access-token", tier: "priority" },
+  { provider: "openai", apiKey: "chatgpt-access-token", tier: "fast" },
+  { provider: "azure-openai-responses", apiKey: "azure-test", tier: "priority" },
+  { provider: "azure-openai-responses", apiKey: "azure-test", tier: "fast" },
+])(
+  "modifies real Pi $provider requests using $apiKey and $tier without restoring auth-rejected fields",
+  async ({ provider, apiKey, tier }) => {
     // Arrange
     vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
     vi.stubEnv("PI_OPENAI_REASONING_SUMMARY", "none");
     vi.stubEnv("PI_OPENAI_WEB_SEARCH", "true");
-    vi.stubEnv("PI_OPENAI_SERVICE_TIER", "priority");
+    vi.stubEnv("PI_OPENAI_SERVICE_TIER", tier);
+    vi.stubEnv("AZURE_OPENAI_DEPLOYMENT_NAME_MAP", `${model.id}=production-assistant`);
     const extension = harness("print");
     await extension.emit("session_start");
     const runtime = await ModelRuntime.create({
@@ -364,10 +379,20 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
       modelsStorePath: workspace.agentDir + "/models-cache.json",
       refreshOnCreate: false,
     });
-    const requestModel = runtime.getModel("openai", model.id);
-    if (!requestModel) {
+    const builtInModel = runtime.getModel("openai", model.id);
+    if (!builtInModel) {
       throw new Error("Missing built-in OpenAI model");
     }
+    const requestModel =
+      provider === "openai"
+        ? builtInModel
+        : {
+            ...builtInModel,
+            provider,
+            api: "azure-openai-responses" as const,
+            baseUrl: "https://example.openai.azure.com",
+          };
+    extension.ctx.model = requestModel;
     let sent: unknown;
     const fetch = vi.fn((_url: unknown, init?: RequestInit) => {
       if (typeof init?.body !== "string") {
@@ -402,13 +427,13 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
     // Assert
     expect(fetch).toHaveBeenCalledOnce();
     expect(sent).toMatchObject({
+      model: provider === "openai" ? model.id : "production-assistant",
       text: { verbosity: "low" },
       reasoning: { effort: "high" },
-      service_tier: "priority",
-      tools: [{ type: "web_search" }],
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
-    if (apiKey.startsWith("sk-")) {
+    expect(sent).toMatchObject({ service_tier: "priority", tools: [{ type: "web_search" }] });
+    if (provider === "azure-openai-responses" || apiKey.startsWith("sk-")) {
       expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
     } else {
       expect(sent).not.toHaveProperty("max_output_tokens");
@@ -416,3 +441,52 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
     }
   },
 );
+
+it("warns about unknown entries in both config layers without disabling known settings", async () => {
+  // Arrange
+  await workspace.write("global", '{"verbosity":"high", "verbosty":"secret"}');
+  await workspace.write("project", '{"webSerch":true}');
+  const extension = harness();
+
+  // Act
+  await extension.emit("session_start");
+  const payload = await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } });
+
+  // Assert
+  expect(extension.notify.mock.calls).toEqual([
+    ['pi-openai: global configuration: Unknown configuration entries: "verbosty".', "warning"],
+    ['pi-openai: project configuration: Unknown configuration entries: "webSerch".', "warning"],
+  ]);
+  expect(payload).toHaveProperty("text.verbosity", "high");
+});
+
+it.each(
+  (["global", "project", "environment", "command"] as const).flatMap((source) =>
+    ["priority", "fast"].map((tier) => ({ source, tier })),
+  ),
+)("normalizes $tier from $source in status, saved configuration and requests", async ({ source, tier }) => {
+  // Arrange
+  if (source === "global" || source === "project") {
+    await workspace.write(source, JSON.stringify({ serviceTier: tier }));
+  } else if (source === "environment") {
+    vi.stubEnv("PI_OPENAI_SERVICE_TIER", tier);
+  }
+  const extension = harness();
+  await extension.emit("session_start");
+
+  // Act
+  if (source === "command") {
+    await extension.command(`serviceTier ${tier}`);
+  }
+  await extension.command("status");
+  await extension.command("save project");
+  const payload = await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } });
+
+  // Assert
+  expect(extension.appendEntry).toHaveBeenCalledWith(
+    "pi-openai-status",
+    expect.stringContaining(`| serviceTier | \`priority\` | ${source} | Set service_tier to priority |`),
+  );
+  expect(parseConfig(await workspace.read("project"))).toHaveProperty("serviceTier", "priority");
+  expect(payload).toHaveProperty("service_tier", "priority");
+});

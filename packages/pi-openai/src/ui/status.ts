@@ -1,8 +1,8 @@
 import { DynamicBorder, getMarkdownTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown } from "@earendil-works/pi-tui";
-import { featureDecision, type RequestModel } from "#src/compatibility";
+import { featureDecision, type RequestModel } from "#src/request/compatibility";
 import { extensionName, type Destination } from "#src/constants";
-import { Setting, settingNames, type EffectiveSettings } from "#src/settings";
+import { Setting, settingNames, type EffectiveSettings } from "#src/config/settings";
 
 const supportWarning =
   "Request behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.";

@@ -8,7 +8,7 @@ import {
   resolveSettings,
   settingNames,
   validateSettings,
-} from "#src/settings";
+} from "#src/config/settings";
 import { layers } from "#test/support";
 
 it("uses independent defaults with source information", () => {
@@ -96,4 +96,17 @@ it("distinguishes null, none, omission, and typed booleans", () => {
   expect(() => validateSettings({ enabled: "false" })).toThrow();
   expect(() => validateSettings({ webSearch: null })).toThrow();
   expect(() => validateSettings({ serviceTier: null })).toThrow();
+});
+
+it("normalizes the fast alias in JSON, environment and command values", () => {
+  // Arrange
+  const expected = { serviceTier: "priority" };
+
+  // Act / Assert
+  expect(validateSettings({ serviceTier: "fast" })).toEqual(expected);
+  expect(parseSetting("serviceTier", " fast ")).toEqual(expected);
+  expect(readEnvironment({ PI_OPENAI_SERVICE_TIER: " fast " })).toEqual(expected);
+  expect(choices.serviceTier).toEqual(["default", "priority"]);
+  expect(() => validateSettings({ serviceTier: " fast " })).toThrow();
+  expect(() => parseSetting("serviceTier", "FAST")).toThrow();
 });

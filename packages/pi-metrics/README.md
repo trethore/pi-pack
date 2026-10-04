@@ -4,7 +4,7 @@ Show per-turn token usage, speed, duration, and estimated cost in Pi.
 
 ## Installation
 
-Requires Pi `1.0.0` or a compatible later release.
+Requires Pi `1.0.2` or a compatible later release.
 
 From the repository root, install pi-metrics globally:
 

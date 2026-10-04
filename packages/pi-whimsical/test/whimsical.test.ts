@@ -36,14 +36,16 @@ async function configure(source: string, global = false): Promise<void> {
 function harness(hasUI = true) {
   const handlers = new Map<string, (event: never, ctx: ExtensionContext) => unknown>();
   const setWorkingMessage = vi.fn();
+  const notify = vi.fn();
   const api = {
     on(name: string, handler: (event: never, ctx: ExtensionContext) => unknown) {
       handlers.set(name, handler);
     },
   } as unknown as ExtensionAPI;
-  const ctx = { cwd, hasUI, ui: { setWorkingMessage } } as unknown as ExtensionContext;
+  const ctx = { cwd, hasUI, ui: { setWorkingMessage, notify } } as unknown as ExtensionContext;
   whimsical(api);
   return {
+    notify,
     setWorkingMessage,
     async emit(name: string) {
       const handler = handlers.get(name);
@@ -57,7 +59,7 @@ function harness(hasUI = true) {
 
 it("enables built-in messages when no configuration exists", async () => {
   // Act
-  const config = await loadConfig(cwd, agentDir);
+  const config = await loadConfig(cwd, { agentDir });
 
   // Assert
   expect(config).toEqual({ enabled: true, messages: [] });
@@ -68,7 +70,7 @@ it("reads global JSONC with comments and trailing commas", async () => {
   await configure('{ // custom\n "messages": ["Thinking...",], }', true);
 
   // Act / Assert
-  await expect(loadConfig(cwd, agentDir)).resolves.toEqual({ enabled: true, messages: ["Thinking..."] });
+  await expect(loadConfig(cwd, { agentDir })).resolves.toEqual({ enabled: true, messages: ["Thinking..."] });
 });
 
 it("uses project configuration instead of merging with global configuration", async () => {
@@ -77,7 +79,7 @@ it("uses project configuration instead of merging with global configuration", as
   await configure('{"enabled":false}');
 
   // Act / Assert
-  await expect(loadConfig(cwd, agentDir)).resolves.toEqual({ enabled: false, messages: [] });
+  await expect(loadConfig(cwd, { agentDir })).resolves.toEqual({ enabled: false, messages: [] });
 });
 
 it.each([
@@ -94,8 +96,8 @@ it.each([
   await configure("{}", true);
 
   // Act / Assert
-  await expect(loadConfig(cwd, agentDir)).rejects.toThrow(reason);
-  await expect(loadConfig(cwd, agentDir)).rejects.toThrow(join(cwd, ".pi", "pi-whimsical.jsonc"));
+  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow(reason);
+  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow(join(cwd, ".pi", "pi-whimsical.jsonc"));
 });
 
 it("reports unreadable configuration", async () => {
@@ -103,7 +105,7 @@ it("reports unreadable configuration", async () => {
   await mkdir(join(cwd, ".pi", "pi-whimsical.jsonc"));
 
   // Act / Assert
-  await expect(loadConfig(cwd, agentDir)).rejects.toThrow("could not read");
+  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow("could not read");
 });
 
 it.each(["{}", '{"messages":[]}'])("uses the supplied built-in list for %s", async (source) => {
@@ -208,4 +210,23 @@ it("loads the package entry and shared imports through Pi's TypeScript loader", 
   // Assert
   expect(result.errors).toEqual([]);
   expect(result.extensions.some((extension) => extension.handlers.has("turn_start"))).toBe(true);
+});
+
+it("warns on session start and reload while still applying known entries", async () => {
+  // Arrange
+  await configure('{"messages":["Thinking..."], "mesages":["secret"]}');
+  const extension = harness();
+
+  // Act
+  await extension.emit("session_start");
+  await extension.emit("turn_start");
+  await extension.emit("session_start");
+
+  // Assert
+  expect(extension.setWorkingMessage).toHaveBeenCalledWith("Thinking...");
+  expect(extension.notify).toHaveBeenCalledTimes(2);
+  expect(extension.notify).toHaveBeenLastCalledWith(
+    `pi-whimsical: ${join(cwd, ".pi", "pi-whimsical.jsonc")}: Unknown configuration entries: "mesages".`,
+    "warning",
+  );
 });

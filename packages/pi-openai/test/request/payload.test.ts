@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { featureDecision, type Feature, type RequestModel } from "#src/compatibility";
-import { transformPayload } from "#src/payload";
-import type { Settings } from "#src/settings";
+import { RequestFormat, featureDecision, type Feature, type RequestModel } from "#src/request/compatibility";
+import { transformPayload } from "#src/request/payload";
+import type { Settings } from "#src/config/settings";
 import { model, settings } from "#test/support";
 
 const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });
@@ -10,26 +10,35 @@ function payloadFor(requestModel = model): Record<string, unknown> {
   return { model: requestModel.id, input: [], stream: true, store: false };
 }
 
-it("does not change requests with default settings", () => {
+it.each(["fast", "priority"])("does not change an existing %s tier with default settings", (tier) => {
   // Arrange
   const payload = {
     ...payloadFor(),
     text: { verbosity: "high" },
     reasoning: { summary: "auto" },
-    service_tier: "priority",
+    service_tier: tier,
   };
 
   // Act / Assert
   expect(transformPayload(payload, settings(), model)).toBeUndefined();
 });
 
-it("changes supported Responses fields without mutating or losing unrelated data", () => {
+it.each([
+  { provider: "openai", api: "openai-responses", baseUrl: "https://api.openai.com/v1" },
+  { provider: "azure-openai-responses", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
+  {
+    provider: "azure-openai-responses",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.services.ai.azure.com/openai/v1/",
+  },
+])("changes supported $provider Responses fields without mutating or losing unrelated data", (overrides) => {
   // Arrange
+  const requestModel = { ...model, ...overrides };
   const text = Object.freeze({ format: { type: "json_object" }, verbosity: "high" });
   const reasoning = Object.freeze({ effort: "high", summary: "detailed" });
   const tools = Object.freeze([{ type: "function", name: "read" }]);
   const payload = Object.freeze({
-    ...payloadFor(),
+    ...payloadFor(requestModel),
     text,
     reasoning,
     tools,
@@ -39,7 +48,7 @@ it("changes supported Responses fields without mutating or losing unrelated data
   });
 
   // Act
-  const result = transformPayload(payload, active, model);
+  const result = transformPayload(payload, active, requestModel);
 
   // Assert
   expect(result).toEqual({
@@ -131,7 +140,9 @@ it("sets top-level verbosity and skips Responses-only features on Chat Completio
 
 it.each([
   { provider: "github-copilot", baseUrl: "https://api.individual.githubcopilot.com" },
-  { provider: "azure-openai-responses", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
+  { provider: "github-copilot", baseUrl: "https://api.githubcopilot.com" },
+  { provider: "github-copilot", baseUrl: "https://api.business.githubcopilot.com" },
+  { provider: "github-copilot", baseUrl: "https://api.enterprise.githubcopilot.com" },
 ])("applies parameter overrides but not native features on $provider", (overrides) => {
   // Arrange
   const requestModel = { ...model, ...overrides };
@@ -141,26 +152,67 @@ it.each([
 
   // Assert
   expect(result).toEqual({ ...payloadFor(requestModel), text: { verbosity: "low" }, reasoning: { summary: "auto" } });
+  for (const feature of ["webSearch", "serviceTier"] as const) {
+    expect(featureDecision(feature, active, requestModel)).toEqual({
+      apply: false,
+      description: "Skipped: Native feature support is unverified on this endpoint",
+    });
+  }
+  expect(transformPayload(payloadFor(requestModel), { ...active, allowUnsupported: true }, requestModel)).toMatchObject(
+    {
+      tools: [{ type: "web_search" }],
+      service_tier: "priority",
+    },
+  );
 });
 
-it("supports modern models through the legacy Codex API", () => {
-  // Arrange
-  const codex = {
-    ...model,
+it.each([
+  {
     provider: "openai-codex",
     api: "openai-codex-responses",
     baseUrl: "https://chatgpt.com/backend-api",
-    id: "gpt-5.5",
-  };
+  },
+  { provider: "openai", api: "openai-codex-responses", baseUrl: "https://api.openai.com/v1" },
+  { provider: "openai-codex", api: "openai-responses", baseUrl: "https://chatgpt.com/backend-api/codex" },
+])("requires allowUnsupported for $provider / $api", (overrides) => {
+  // Arrange
+  const requestModel = { ...model, ...overrides };
+  const payload = payloadFor(requestModel);
 
-  // Act / Assert
-  expect(transformPayload(payloadFor(codex), active, codex)).toEqual({
-    ...payloadFor(codex),
+  // Act
+  const result = transformPayload(payload, active, requestModel);
+  const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel);
+
+  // Assert
+  expect(result).toBeUndefined();
+  expect(featureDecision("verbosity", active, requestModel).apply).toBe(false);
+  expect(bypassed).toEqual({
+    ...payload,
     text: { verbosity: "low" },
     reasoning: { summary: "auto" },
     tools: [{ type: "web_search" }],
     service_tier: "priority",
   });
+});
+
+it.each([
+  { model: model.id, input: 42 },
+  { model: model.id, input: [], messages: [] },
+  { model: "some-other-model", input: [] },
+])("preserves payload safeguards for legacy requests with allowUnsupported: %j", (payload) => {
+  // Arrange
+  const legacy = {
+    ...model,
+    provider: "openai-codex",
+    api: "openai-codex-responses",
+    baseUrl: "https://chatgpt.com/backend-api",
+  };
+
+  // Act
+  const result = transformPayload(payload, { ...active, allowUnsupported: true }, legacy);
+
+  // Assert
+  expect(result).toBeUndefined();
 });
 
 it("requires allowUnsupported for a custom endpoint even with an OpenAI model ID", () => {
@@ -192,18 +244,99 @@ it.each([
   [],
   "text",
   {},
+  { input: [] },
+  { model: model.id },
   { model: model.id, input: 42 },
+  { model: model.id, messages: "Hello" },
   { model: model.id, input: [], messages: [] },
+  { model: model.id, contents: [] },
+  { model: "some-other-model", input: [] },
 ])("ignores malformed or mismatched payload %j even with the bypass", (payload) => {
   // Act / Assert
   expect(transformPayload(payload, { ...active, allowUnsupported: true }, model)).toBeUndefined();
+  expect(
+    transformPayload(payload, { ...active, allowUnsupported: true }, { ...model, api: "unknown-api" }),
+  ).toBeUndefined();
 });
 
+describe.each(["anthropic-messages", "google-generative-ai", "unknown-api", "openai-responses", "openai-completions"])(
+  "unsafe payload inference for %s",
+  (api) => {
+    const custom = {
+      ...model,
+      api,
+      provider: "custom",
+      baseUrl: "https://gateway.example/v1",
+      id: "deployment-name",
+      reasoning: false,
+    };
+
+    it.each([{ input: [] }, { input: "Hello" }])("infers Responses format from input $input", ({ input }) => {
+      // Arrange
+      const payload = Object.freeze({ ...payloadFor(custom), input });
+
+      // Act
+      const result = transformPayload(payload, { ...active, allowUnsupported: true }, custom);
+
+      // Assert
+      expect(transformPayload(payload, active, custom)).toBeUndefined();
+      expect(result).toEqual({
+        ...payload,
+        text: { verbosity: "low" },
+        reasoning: { summary: "auto" },
+        tools: [{ type: "web_search" }],
+        service_tier: "priority",
+      });
+      expect(payload).not.toHaveProperty("text");
+    });
+
+    it("infers Completions format and only changes verbosity", () => {
+      // Arrange
+      const payload = Object.freeze({ model: custom.id, messages: [], reasoning_effort: "high" });
+
+      // Act
+      const result = transformPayload(payload, { ...active, allowUnsupported: true }, custom);
+
+      // Assert
+      expect(transformPayload(payload, active, custom)).toBeUndefined();
+      expect(result).toEqual({ ...payload, verbosity: "low" });
+      expect(payload).not.toHaveProperty("verbosity");
+    });
+
+    it("leaves inactive and disabled overrides unchanged", () => {
+      // Arrange
+      const payload = payloadFor(custom);
+
+      // Act / Assert
+      expect(transformPayload(payload, settings({ allowUnsupported: true }), custom)).toBeUndefined();
+      expect(transformPayload(payload, { ...active, enabled: false, allowUnsupported: true }, custom)).toBeUndefined();
+      expect(transformPayload(payload, { ...active, allowUnsupported: true }, undefined)).toBeUndefined();
+    });
+  },
+);
+
+it.each(["openai-responses", "openai-completions"])(
+  "requires the unsafe flag when the payload disagrees with the declared %s API",
+  (api) => {
+    // Arrange
+    const requestModel = { ...model, api };
+    const payload = api === "openai-responses" ? { model: model.id, messages: [] } : payloadFor();
+
+    // Act
+    const result = transformPayload(payload, active, requestModel);
+    const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel);
+
+    // Assert
+    expect(result).toBeUndefined();
+    expect(bypassed).toHaveProperty(api === "openai-responses" ? "verbosity" : "text.verbosity", "low");
+  },
+);
+
 it.each(["anthropic-messages", "google-generative-ai", "unknown-api"])(
-  "never injects into %s even with the bypass",
+  "rejects an unverified %s API by default even on a supported provider and model",
   (api) => {
     // Act / Assert
-    expect(transformPayload(payloadFor(), { ...active, allowUnsupported: true }, { ...model, api })).toBeUndefined();
+    expect(transformPayload(payloadFor(), active, { ...model, api })).toBeUndefined();
   },
 );
 
@@ -222,6 +355,13 @@ it("leaves unrecognized nested field shapes intact", () => {
 
   // Act / Assert
   expect(transformPayload(payload, { ...active, serviceTier: "default" }, model)).toBeUndefined();
+  expect(
+    transformPayload(
+      payload,
+      { ...active, serviceTier: "default", allowUnsupported: true },
+      { ...model, api: "unknown-api" },
+    ),
+  ).toBeUndefined();
 });
 
 it("disabled overrides win over the unsupported bypass", () => {
@@ -235,7 +375,7 @@ const restrictions: Array<[Feature, Partial<Settings>, Partial<RequestModel>, st
   ["verbosity", {}, { baseUrl: "invalid" }, "endpoint support is unverified"],
   ["reasoningSummary", {}, { reasoning: false }, "not reasoning-capable"],
   ["reasoningSummary", { reasoningSummary: "concise" }, {}, "Concise summary support is unverified"],
-  ["serviceTier", {}, { id: "gpt-5.5-pro" }, "Priority processing support is unverified"],
+  ["serviceTier", {}, { id: "gpt-5.5-pro" }, "Model support is limited to known GPT-5.5 and newer models"],
 ];
 
 describe("compatibility decisions", () => {
@@ -247,8 +387,12 @@ describe("compatibility decisions", () => {
     expect(decision.apply).toBe(false);
     expect(decision.description).toContain(reason);
     expect(
-      featureDecision(feature, { ...active, ...override, allowUnsupported: true }, { ...model, ...modelOverride })
-        .apply,
+      featureDecision(
+        feature,
+        { ...active, ...override, allowUnsupported: true },
+        { ...model, ...modelOverride },
+        RequestFormat.RESPONSES,
+      ).apply,
     ).toBe(true);
   });
 
@@ -278,23 +422,9 @@ describe("compatibility decisions", () => {
     });
   });
 
-  it("retains modern Pro parameter and search support without assuming priority support", () => {
-    // Arrange
-    const pro = { ...model, id: "gpt-5.5-pro" };
-
-    // Act
-    const result = transformPayload(payloadFor(pro), active, pro);
-
-    // Assert
-    expect(result).toEqual({
-      ...payloadFor(pro),
-      text: { verbosity: "low" },
-      reasoning: { summary: "auto" },
-      tools: [{ type: "web_search" }],
-    });
-  });
-
   it.each([
+    "gpt-5.5-pro",
+    "gpt-5.5-pro-2026-04-23",
     "gpt-4o",
     "gpt-4.1",
     "o1",
@@ -311,23 +441,25 @@ describe("compatibility decisions", () => {
     "gpt-5.4",
     "gpt-5.4-mini",
     "gpt-5.4-2026-03-05",
-  ])("leaves older model %s unchanged unless support checks are explicitly bypassed", (id) => {
+  ])("leaves unlisted model %s unchanged unless support checks are explicitly bypassed", (id) => {
     // Arrange
-    const older = { ...model, id };
-    const payload = { ...payloadFor(older), reasoning: { effort: "high", summary: "auto" } };
+    const unlisted = { ...model, id };
+    const payload = { ...payloadFor(unlisted), reasoning: { effort: "high", summary: "auto" } };
 
     // Act / Assert
-    expect(transformPayload(payload, active, older)).toBeUndefined();
-    expect(transformPayload(payload, { ...active, reasoningSummary: "none" }, older)).toBeUndefined();
-    expect(transformPayload(payload, { ...active, allowUnsupported: true }, older)).toHaveProperty(
+    expect(transformPayload(payload, active, unlisted)).toBeUndefined();
+    expect(transformPayload(payload, { ...active, reasoningSummary: "none" }, unlisted)).toBeUndefined();
+    expect(transformPayload(payload, { ...active, allowUnsupported: true }, unlisted)).toHaveProperty(
       "text.verbosity",
       "low",
     );
-    expect(transformPayload(payload, settings({ reasoningSummary: "none", allowUnsupported: true }), older)).toEqual({
-      ...payload,
-      reasoning: { effort: "high" },
-    });
-    expect(featureDecision("webSearch", active, older).description).toContain("GPT-5.5 and newer");
+    expect(transformPayload(payload, settings({ reasoningSummary: "none", allowUnsupported: true }), unlisted)).toEqual(
+      {
+        ...payload,
+        reasoning: { effort: "high" },
+      },
+    );
+    expect(featureDecision("webSearch", active, unlisted).description).toContain("GPT-5.5 and newer");
   });
 });
 

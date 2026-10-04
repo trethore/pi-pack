@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createConfigLoader } from "@pi-pack/shared/config";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { configPaths, createConfigLoader, parseConfig } from "@pi-pack/shared/config";
 
 let root: string;
 let cwd: string;
@@ -11,7 +12,7 @@ let projectFile: string;
 let globalFile: string;
 const validate = vi.fn((value: Record<string, unknown>) => value);
 const defaults = vi.fn(() => ({ items: [] as string[] }));
-const load = createConfigLoader({ name: "example", defaults, validate });
+const load = createConfigLoader({ name: "example", knownKeys: ["items", "globalOnly"], defaults, validate });
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "pi-pack-shared-"));
@@ -27,11 +28,35 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+describe("configuration paths", () => {
+  it.each(["example", "pi-openai"])("builds project and global paths for %s", (name) => {
+    // Act
+    const paths = configPaths(name, cwd, agentDir);
+
+    // Assert
+    expect(paths).toEqual({
+      global: join(agentDir, `${name}.jsonc`),
+      project: join(cwd, ".pi", `${name}.jsonc`),
+    });
+  });
+
+  it("uses the agent directory when no override is provided", () => {
+    // Act
+    const paths = configPaths("example", cwd);
+
+    // Assert
+    expect(paths).toEqual({
+      global: join(getAgentDir(), "example.jsonc"),
+      project: projectFile,
+    });
+  });
+});
+
 describe("configuration loading", () => {
   it("creates independent defaults without validating when files are absent", async () => {
     // Act
-    const first = await load(cwd, agentDir);
-    const second = await load(cwd, agentDir);
+    const first = await load(cwd, { agentDir });
+    const second = await load(cwd, { agentDir });
 
     // Assert
     expect(first).toEqual({ items: [] });
@@ -46,9 +71,9 @@ describe("configuration loading", () => {
     await writeFile(globalFile, '{ // global\n "globalOnly": true, }');
 
     // Act
-    const global = await load(cwd, agentDir);
+    const global = await load(cwd, { agentDir });
     await writeFile(projectFile, "{}");
-    const project = await load(cwd, agentDir);
+    const project = await load(cwd, { agentDir });
 
     // Assert
     expect(global).toEqual({ globalOnly: true });
@@ -70,7 +95,7 @@ describe("configuration loading", () => {
     await writeFile(globalFile, "{}");
 
     // Act
-    const result = load(cwd, agentDir);
+    const result = load(cwd, { agentDir });
 
     // Assert
     await expect(result).rejects.toThrow(`example: invalid configuration in ${projectFile}:`);
@@ -90,7 +115,7 @@ describe("configuration loading", () => {
     await writeFile(globalFile, "{}");
 
     // Act
-    const result = load(cwd, agentDir);
+    const result = load(cwd, { agentDir });
 
     // Assert
     await expect(result).rejects.toThrow(`example: invalid configuration in ${projectFile}: invalid setting`);
@@ -107,7 +132,7 @@ describe("configuration loading", () => {
     await writeFile(globalFile, "{}");
 
     // Act / Assert
-    await expect(load(cwd, agentDir)).rejects.toThrow(
+    await expect(load(cwd, { agentDir })).rejects.toThrow(
       `example: invalid configuration in ${globalFile}: invalid setting`,
     );
   });
@@ -121,12 +146,118 @@ describe("configuration loading", () => {
     }
 
     // Act
-    const result = load(cwd, agentDir);
+    const result = load(cwd, { agentDir });
 
     // Assert
     await expect(result).rejects.toThrow(`example: could not read ${file}:`);
     await expect(result).rejects.toHaveProperty("cause", expect.objectContaining({ code: "EISDIR" }));
     expect(validate).not.toHaveBeenCalled();
     expect(defaults).not.toHaveBeenCalled();
+  });
+});
+
+describe("configuration warnings", () => {
+  it("uses UI warnings by default", async () => {
+    // Arrange
+    const notify = vi.fn();
+    await writeFile(projectFile, '{"itmes":[]}');
+
+    // Act
+    await load(cwd, { agentDir, ui: { notify } });
+
+    // Assert
+    expect(notify.mock.calls).toEqual([
+      [`example: ${projectFile}: Unknown configuration entries: "itmes".`, "warning"],
+    ]);
+  });
+
+  it("uses a custom reporter instead of the default UI warning", async () => {
+    // Arrange
+    const notify = vi.fn();
+    const onWarning = vi.fn();
+    await writeFile(projectFile, '{"itmes":[]}');
+
+    // Act
+    await load(cwd, { agentDir, ui: { notify }, onWarning });
+
+    // Assert
+    expect(onWarning.mock.calls).toEqual([[`example: ${projectFile}: Unknown configuration entries: "itmes".`]]);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("remains usable without UI or a custom reporter", async () => {
+    // Arrange
+    await writeFile(projectFile, '{"itmes":[]}');
+
+    // Act / Assert
+    await expect(load(cwd, { agentDir })).resolves.toEqual({ itmes: [] });
+  });
+
+  it.each(["project", "global"])("reports unknown entries in the selected %s file", async (scope) => {
+    // Arrange
+    const file = scope === "project" ? projectFile : globalFile;
+    const onWarning = vi.fn();
+    await writeFile(file, '{"items":[], "itmes":"secret", "constructor":true}');
+
+    // Act
+    const result = await load(cwd, { agentDir, onWarning });
+
+    // Assert
+    expect(result.items).toEqual([]);
+    expect(validate).toHaveBeenCalledOnce();
+    expect(onWarning.mock.calls).toEqual([
+      [`example: ${file}: Unknown configuration entries: "itmes", "constructor".`],
+    ]);
+  });
+
+  it("does not inspect a global file shadowed by project configuration", async () => {
+    // Arrange
+    const onWarning = vi.fn();
+    await writeFile(globalFile, '{"itmes":[]}');
+    await writeFile(projectFile, '{"items":[]}');
+
+    // Act
+    await load(cwd, { agentDir, onWarning });
+
+    // Assert
+    expect(onWarning).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when defaults are used", async () => {
+    // Arrange
+    const onWarning = vi.fn();
+
+    // Act
+    await load(cwd, { agentDir, onWarning });
+
+    // Assert
+    expect(onWarning).not.toHaveBeenCalled();
+  });
+
+  it("reports only top-level unknown keys and preserves the parsed object", () => {
+    // Arrange
+    const onWarning = vi.fn();
+    const source = '{"items":{"nested":true}, "itmes":42}';
+
+    // Act
+    const result = parseConfig(source, { knownKeys: ["items"], onWarning });
+
+    // Assert
+    expect(result).toEqual({ items: { nested: true }, itmes: 42 });
+    expect(onWarning.mock.calls).toEqual([['Unknown configuration entries: "itmes".']]);
+  });
+
+  it("keeps parsing usable without a warning callback", () => {
+    // Act / Assert
+    expect(parseConfig('{"itmes":42}', { knownKeys: ["items"] })).toEqual({ itmes: 42 });
+  });
+
+  it("rejects malformed input without reporting unknown entries", () => {
+    // Arrange
+    const onWarning = vi.fn();
+
+    // Act / Assert
+    expect(() => parseConfig('{"itmes":', { knownKeys: ["items"], onWarning })).toThrow();
+    expect(onWarning).not.toHaveBeenCalled();
   });
 });

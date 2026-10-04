@@ -1,6 +1,6 @@
 {
   "name": "@pi-pack/shared",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Shared configuration and event utilities for Pi extensions.",
   "dependencies": {
     "jsonc-parser": "3.3.1"
@@ -8,6 +8,7 @@
   "exports": {
     "./config": "./src/config.ts",
     "./events": "./src/events.ts",
+    "./files": "./src/files.ts",
     "./validation": "./src/validation.ts"
   },
   "files": [
@@ -15,7 +16,7 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.0"
+    "@earendil-works/pi-coding-agent": "^1.0.2"
   },
   "type": "module"
 }

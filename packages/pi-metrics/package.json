@@ -1,12 +1,12 @@
 {
   "name": "pi-metrics",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Show per-turn token usage, speed, duration, and estimated cost in Pi.",
   "dependencies": {
-    "@pi-pack/shared": "0.0.1"
+    "@pi-pack/shared": "0.1.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-tui": "1.0.0"
+    "@earendil-works/pi-tui": "1.0.2"
   },
   "files": [
     "pi-metrics.example.jsonc",
@@ -22,8 +22,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.0",
-    "@earendil-works/pi-tui": "^1.0.0"
+    "@earendil-works/pi-coding-agent": "^1.0.2",
+    "@earendil-works/pi-tui": "^1.0.2"
   },
   "pi": {
     "extensions": [
