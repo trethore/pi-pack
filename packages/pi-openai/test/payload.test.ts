@@ -1,0 +1,343 @@
+import { describe, expect, it } from "vitest";
+import { featureDecision, type Feature, type RequestModel } from "#src/compatibility";
+import { transformPayload } from "#src/payload";
+import type { Settings } from "#src/settings";
+import { model, settings } from "#test/support";
+
+const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });
+
+function payloadFor(requestModel = model): Record<string, unknown> {
+  return { model: requestModel.id, input: [], stream: true, store: false };
+}
+
+it("does not change requests with default settings", () => {
+  // Arrange
+  const payload = {
+    ...payloadFor(),
+    text: { verbosity: "high" },
+    reasoning: { summary: "auto" },
+    service_tier: "priority",
+  };
+
+  // Act / Assert
+  expect(transformPayload(payload, settings(), model)).toBeUndefined();
+});
+
+it("changes supported Responses fields without mutating or losing unrelated data", () => {
+  // Arrange
+  const text = Object.freeze({ format: { type: "json_object" }, verbosity: "high" });
+  const reasoning = Object.freeze({ effort: "high", summary: "detailed" });
+  const tools = Object.freeze([{ type: "function", name: "read" }]);
+  const payload = Object.freeze({
+    ...payloadFor(),
+    text,
+    reasoning,
+    tools,
+    include: ["reasoning.encrypted_content"],
+    prompt_cache_key: "session",
+    tool_choice: "auto",
+  });
+
+  // Act
+  const result = transformPayload(payload, active, model);
+
+  // Assert
+  expect(result).toEqual({
+    ...payload,
+    text: { ...text, verbosity: "low" },
+    reasoning: { ...reasoning, summary: "auto" },
+    tools: [...tools, { type: "web_search" }],
+    service_tier: "priority",
+  });
+  expect(payload.text.verbosity).toBe("high");
+  expect(payload.reasoning.summary).toBe("detailed");
+  expect(payload.tools).toHaveLength(1);
+});
+
+it("adds only the requested fields to a minimal request", () => {
+  // Act
+  const result = transformPayload(payloadFor(), active, model);
+
+  // Assert
+  expect(result).toEqual({
+    ...payloadFor(),
+    text: { verbosity: "low" },
+    reasoning: { summary: "auto" },
+    tools: [{ type: "web_search" }],
+    service_tier: "priority",
+  });
+  expect(result).not.toHaveProperty("temperature");
+  expect(result).not.toHaveProperty("max_output_tokens");
+  expect(result).not.toHaveProperty("reasoning.effort");
+});
+
+it("removes summaries without removing reasoning effort or encrypted reasoning", () => {
+  // Arrange
+  const payload = {
+    ...payloadFor(),
+    reasoning: { summary: "auto", effort: "high" },
+    include: ["reasoning.encrypted_content"],
+  };
+
+  // Act
+  const result = transformPayload(payload, settings({ reasoningSummary: "none" }), model);
+
+  // Assert
+  expect(result).toEqual({ ...payload, reasoning: { effort: "high" } });
+  expect(payload.reasoning.summary).toBe("auto");
+});
+
+it("does not create reasoning when removing an absent summary", () => {
+  // Act / Assert
+  expect(transformPayload(payloadFor(), settings({ reasoningSummary: "none" }), model)).toBeUndefined();
+});
+
+it.each(["web_search", "web_search_preview", "web_search_preview_2025_03_11", "web_search_2025_08_26"])(
+  "preserves an existing %s tool and its options",
+  (type) => {
+    // Arrange
+    const payload = {
+      ...payloadFor(),
+      tools: [{ type, search_context_size: "low", filters: { allowed_domains: ["example.com"] } }],
+    };
+
+    // Act / Assert
+    expect(transformPayload(payload, settings({ webSearch: true }), model)).toBeUndefined();
+    expect(payload.tools).toHaveLength(1);
+  },
+);
+
+it("does not remove native tools when webSearch is false or force tool choice", () => {
+  // Arrange
+  const payload = { ...payloadFor(), tools: [{ type: "web_search" }], tool_choice: "none" };
+
+  // Act / Assert
+  expect(transformPayload(payload, settings({ webSearch: false }), model)).toBeUndefined();
+  expect(transformPayload({ ...payload, tools: [] }, settings({ webSearch: true }), model)).toEqual({ ...payload });
+});
+
+it("sets top-level verbosity and skips Responses-only features on Chat Completions", () => {
+  // Arrange
+  const completions = { ...model, api: "openai-completions" };
+  const payload = { model: model.id, messages: [], reasoning_effort: "high" };
+
+  // Act
+  const result = transformPayload(payload, active, completions);
+
+  // Assert
+  expect(result).toEqual({ ...payload, verbosity: "low" });
+  expect(transformPayload(payload, { ...active, allowUnsupported: true }, completions)).toEqual(result);
+});
+
+it.each([
+  { provider: "github-copilot", baseUrl: "https://api.individual.githubcopilot.com" },
+  { provider: "azure-openai-responses", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
+])("applies parameter overrides but not native features on $provider", (overrides) => {
+  // Arrange
+  const requestModel = { ...model, ...overrides };
+
+  // Act
+  const result = transformPayload(payloadFor(requestModel), active, requestModel);
+
+  // Assert
+  expect(result).toEqual({ ...payloadFor(requestModel), text: { verbosity: "low" }, reasoning: { summary: "auto" } });
+});
+
+it("supports modern models through the legacy Codex API", () => {
+  // Arrange
+  const codex = {
+    ...model,
+    provider: "openai-codex",
+    api: "openai-codex-responses",
+    baseUrl: "https://chatgpt.com/backend-api",
+    id: "gpt-5.5",
+  };
+
+  // Act / Assert
+  expect(transformPayload(payloadFor(codex), active, codex)).toEqual({
+    ...payloadFor(codex),
+    text: { verbosity: "low" },
+    reasoning: { summary: "auto" },
+    tools: [{ type: "web_search" }],
+    service_tier: "priority",
+  });
+});
+
+it("requires allowUnsupported for a custom endpoint even with an OpenAI model ID", () => {
+  // Arrange
+  const custom = { ...model, baseUrl: "https://gateway.example/v1" };
+
+  // Act / Assert
+  expect(transformPayload(payloadFor(), active, custom)).toBeUndefined();
+  expect(transformPayload(payloadFor(), { ...active, allowUnsupported: true }, custom)).toEqual(
+    transformPayload(payloadFor(), active, model),
+  );
+});
+
+it("bypasses provider and model metadata restrictions only when explicitly requested", () => {
+  // Arrange
+  const custom = { ...model, provider: "custom", id: "deployment-name", reasoning: false };
+
+  // Act / Assert
+  expect(transformPayload(payloadFor(custom), active, custom)).toBeUndefined();
+  expect(transformPayload(payloadFor(custom), { ...active, allowUnsupported: true }, custom)).toHaveProperty(
+    "reasoning.summary",
+    "auto",
+  );
+});
+
+it.each([
+  undefined,
+  null,
+  [],
+  "text",
+  {},
+  { model: model.id, input: 42 },
+  { model: model.id, input: [], messages: [] },
+])("ignores malformed or mismatched payload %j even with the bypass", (payload) => {
+  // Act / Assert
+  expect(transformPayload(payload, { ...active, allowUnsupported: true }, model)).toBeUndefined();
+});
+
+it.each(["anthropic-messages", "google-generative-ai", "unknown-api"])(
+  "never injects into %s even with the bypass",
+  (api) => {
+    // Act / Assert
+    expect(transformPayload(payloadFor(), { ...active, allowUnsupported: true }, { ...model, api })).toBeUndefined();
+  },
+);
+
+it("does not guess the target when the physical and selected models differ", () => {
+  // Arrange
+  const payload = { ...payloadFor(), model: "some-other-model" };
+
+  // Act / Assert
+  expect(transformPayload(payload, { ...active, allowUnsupported: true }, model)).toBeUndefined();
+  expect(transformPayload(payloadFor(), active, undefined)).toBeUndefined();
+});
+
+it("leaves unrecognized nested field shapes intact", () => {
+  // Arrange
+  const payload = { ...payloadFor(), text: null, reasoning: [], tools: "custom" };
+
+  // Act / Assert
+  expect(transformPayload(payload, { ...active, serviceTier: "default" }, model)).toBeUndefined();
+});
+
+it("disabled overrides win over the unsupported bypass", () => {
+  // Act / Assert
+  expect(transformPayload(payloadFor(), { ...active, enabled: false, allowUnsupported: true }, model)).toBeUndefined();
+});
+
+const restrictions: Array<[Feature, Partial<Settings>, Partial<RequestModel>, string]> = [
+  ["verbosity", {}, { id: "gpt-99" }, "Model support is limited to known GPT-5.5 and newer models"],
+  ["verbosity", {}, { baseUrl: "https://api.openai.com.evil.example/v1" }, "endpoint support is unverified"],
+  ["verbosity", {}, { baseUrl: "invalid" }, "endpoint support is unverified"],
+  ["reasoningSummary", {}, { reasoning: false }, "not reasoning-capable"],
+  ["reasoningSummary", { reasoningSummary: "concise" }, {}, "Concise summary support is unverified"],
+  ["serviceTier", {}, { id: "gpt-5.5-pro" }, "Priority processing support is unverified"],
+];
+
+describe("compatibility decisions", () => {
+  it.each(restrictions)("explains why %s is skipped for %j / %j", (feature, override, modelOverride, reason) => {
+    // Act
+    const decision = featureDecision(feature, { ...active, ...override }, { ...model, ...modelOverride });
+
+    // Assert
+    expect(decision.apply).toBe(false);
+    expect(decision.description).toContain(reason);
+    expect(
+      featureDecision(feature, { ...active, ...override, allowUnsupported: true }, { ...model, ...modelOverride })
+        .apply,
+    ).toBe(true);
+  });
+
+  it.each([
+    "gpt-5.5",
+    "gpt-5.5-2026-04-23",
+    "gpt-5.6-luna",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-6-astra",
+    "gpt-6-luna",
+    "gpt-6-sol",
+    "gpt-6.1-sol",
+  ])("recognizes modern model %s across all features", (id) => {
+    // Arrange
+    const requestModel = { ...model, id };
+
+    // Act
+    const result = transformPayload(payloadFor(requestModel), active, requestModel);
+
+    // Assert
+    expect(result).toMatchObject({
+      text: { verbosity: "low" },
+      reasoning: { summary: "auto" },
+      tools: [{ type: "web_search" }],
+      service_tier: "priority",
+    });
+  });
+
+  it("retains modern Pro parameter and search support without assuming priority support", () => {
+    // Arrange
+    const pro = { ...model, id: "gpt-5.5-pro" };
+
+    // Act
+    const result = transformPayload(payloadFor(pro), active, pro);
+
+    // Assert
+    expect(result).toEqual({
+      ...payloadFor(pro),
+      text: { verbosity: "low" },
+      reasoning: { summary: "auto" },
+      tools: [{ type: "web_search" }],
+    });
+  });
+
+  it.each([
+    "gpt-4o",
+    "gpt-4.1",
+    "o1",
+    "o3",
+    "o3-mini",
+    "o3-pro",
+    "o4-mini",
+    "computer-use-preview",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5.1",
+    "gpt-5.2",
+    "gpt-5.3-codex",
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "gpt-5.4-2026-03-05",
+  ])("leaves older model %s unchanged unless support checks are explicitly bypassed", (id) => {
+    // Arrange
+    const older = { ...model, id };
+    const payload = { ...payloadFor(older), reasoning: { effort: "high", summary: "auto" } };
+
+    // Act / Assert
+    expect(transformPayload(payload, active, older)).toBeUndefined();
+    expect(transformPayload(payload, { ...active, reasoningSummary: "none" }, older)).toBeUndefined();
+    expect(transformPayload(payload, { ...active, allowUnsupported: true }, older)).toHaveProperty(
+      "text.verbosity",
+      "low",
+    );
+    expect(transformPayload(payload, settings({ reasoningSummary: "none", allowUnsupported: true }), older)).toEqual({
+      ...payload,
+      reasoning: { effort: "high" },
+    });
+    expect(featureDecision("webSearch", active, older).description).toContain("GPT-5.5 and newer");
+  });
+});
+
+it("supports Responses requests with a string input", () => {
+  // Arrange
+  const payload = { model: model.id, input: "Hello" };
+
+  // Act / Assert
+  expect(transformPayload(payload, settings({ verbosity: "low" }), model)).toEqual({
+    ...payload,
+    text: { verbosity: "low" },
+  });
+});

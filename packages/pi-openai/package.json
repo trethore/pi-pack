@@ -1,0 +1,39 @@
+{
+  "name": "pi-openai",
+  "version": "0.0.1",
+  "description": "Configure OpenAI-compatible request parameters in Pi.",
+  "dependencies": {
+    "@pi-pack/shared": "0.0.1",
+    "jsonc-parser": "3.3.1"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-tui": "1.0.0"
+  },
+  "files": [
+    "pi-openai.example.jsonc",
+    "src"
+  ],
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "keywords": [
+    "openai",
+    "pi-extension",
+    "pi-package"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.0.0",
+    "@earendil-works/pi-tui": "^1.0.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "dev": "pi -e ."
+  },
+  "type": "module"
+}
