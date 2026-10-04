@@ -78,7 +78,10 @@ export default function openai(pi: ExtensionAPI): void {
     state = undefined;
     const paths = configPaths(ctx.cwd);
     try {
-      state = { paths, layers: await loadConfiguration(paths) };
+      state = {
+        paths,
+        layers: await loadConfiguration(paths, { ui: ctx.ui }),
+      };
     } catch (error) {
       throw new Error(`${extensionName}: ${error instanceof Error ? error.message : "Could not load configuration."}`, {
         cause: error,

@@ -8,6 +8,7 @@ interface WhimsicalConfig {
 
 export const loadConfig = createConfigLoader({
   name: "pi-whimsical",
+  knownKeys: ["enabled", "messages"],
   defaults: (): WhimsicalConfig => ({ enabled: true, messages: [] }),
   validate(value): WhimsicalConfig {
     const enabled = booleanOption(value.enabled, "enabled", true);

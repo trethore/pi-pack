@@ -117,7 +117,7 @@ function harness(hasUI = true) {
 
 it("provides all defaults without a config file", async () => {
   // Act
-  const config = await loadConfig(cwd, agentDir);
+  const config = await loadConfig(cwd, { agentDir });
 
   // Assert
   expect(config).toEqual({
@@ -132,9 +132,9 @@ it("accepts global JSONC and lets project configuration replace it", async () =>
   await writeFile(join(agentDir, "pi-metrics.jsonc"), '{ // live metrics\n "mode": "live", "format": "<cost>", }');
 
   // Act
-  const global = await loadConfig(cwd, agentDir);
+  const global = await loadConfig(cwd, { agentDir });
   await configure({ enabled: false });
-  const project = await loadConfig(cwd, agentDir);
+  const project = await loadConfig(cwd, { agentDir });
 
   // Assert
   expect(global).toEqual({ enabled: true, mode: "live", format: "<cost>" });
@@ -153,7 +153,7 @@ it.each([
   await configure(config);
 
   // Act / Assert
-  await expect(loadConfig(cwd, agentDir)).rejects.toThrow(reason);
+  await expect(loadConfig(cwd, { agentDir })).rejects.toThrow(reason);
 });
 
 it("notifies only when control returns to the user, with uncached tokens and full cost", async () => {
@@ -463,3 +463,18 @@ it.each(["notify", "live"])(
     }
   },
 );
+
+it.each([true, false])("warns about unknown entries even when enabled is %s", async (enabled) => {
+  // Arrange
+  await configure({ enabled, mod: "live" });
+  const extension = harness();
+
+  // Act
+  await extension.emit("session_start");
+
+  // Assert
+  expect(extension.notify.mock.calls).toEqual([
+    [`pi-metrics: ${join(cwd, ".pi", "pi-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
+  ]);
+  await expect(loadConfig(cwd, { agentDir })).resolves.toMatchObject({ enabled, mode: "notify" });
+});

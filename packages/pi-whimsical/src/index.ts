@@ -10,7 +10,7 @@ export default function whimsical(pi: ExtensionAPI): void {
 
   pi.on(Events.SessionStart, async (_event, ctx) => {
     enabled = false;
-    const config = await loadConfig(ctx.cwd);
+    const config = await loadConfig(ctx.cwd, { ui: ctx.ui });
     enabled = config.enabled;
     messages = config.messages.length > 0 ? config.messages : defaultMessages;
   });

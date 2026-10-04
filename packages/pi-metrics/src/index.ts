@@ -23,7 +23,7 @@ export default function metrics(pi: ExtensionAPI): void {
     }
     subscriptions = [];
     clearWidget(ctx);
-    const config = await loadConfig(ctx.cwd);
+    const config = await loadConfig(ctx.cwd, { ui: ctx.ui });
     if (!config.enabled || !ctx.hasUI) {
       return;
     }

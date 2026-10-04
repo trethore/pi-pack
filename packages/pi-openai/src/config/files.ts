@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { parseConfig } from "@pi-pack/shared/config";
+import { createWarningReporter, parseConfig, type ConfigWarningOptions } from "@pi-pack/shared/config";
 import { applyEdits, modify, parseTree } from "jsonc-parser";
 import { Destination, extensionName } from "#src/constants";
 import {
@@ -58,9 +58,18 @@ function rejectDuplicateSettings(source: string): void {
   }
 }
 
-function parseSource(source: string, destination: Destination): Partial<Settings> {
+function parseSource(
+  source: string,
+  destination: Destination,
+  onWarning?: (message: string) => void,
+): Partial<Settings> {
   try {
-    const settings = validateSettings(parseConfig(source));
+    const settings = validateSettings(
+      parseConfig(source, {
+        knownKeys: settingNames,
+        onWarning: (message) => onWarning?.(`${extensionName}: ${destination} configuration: ${message}`),
+      }),
+    );
     rejectDuplicateSettings(source);
     return settings;
   } catch (error) {
@@ -69,14 +78,22 @@ function parseSource(source: string, destination: Destination): Partial<Settings
   }
 }
 
-export async function loadConfiguration(paths: ConfigPaths, environment = process.env): Promise<Layers> {
+interface LoadConfigurationOptions extends ConfigWarningOptions {
+  environment?: NodeJS.ProcessEnv;
+}
+
+export async function loadConfiguration(
+  paths: ConfigPaths,
+  { environment = process.env, ...warnings }: LoadConfigurationOptions = {},
+): Promise<Layers> {
+  const onWarning = createWarningReporter(warnings);
   const [global, project] = await Promise.all([
     readSource(paths.global, Destination.GLOBAL),
     readSource(paths.project, Destination.PROJECT),
   ]);
   return {
-    global: global === undefined ? {} : parseSource(global, Destination.GLOBAL),
-    project: project === undefined ? {} : parseSource(project, Destination.PROJECT),
+    global: global === undefined ? {} : parseSource(global, Destination.GLOBAL, onWarning),
+    project: project === undefined ? {} : parseSource(project, Destination.PROJECT, onWarning),
     environment: readEnvironment(environment),
     command: {},
   };

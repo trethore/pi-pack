@@ -422,3 +422,21 @@ it.each(["sk-proj-test", "chatgpt-access-token"])(
     }
   },
 );
+
+it("warns about unknown entries in both config layers without disabling known settings", async () => {
+  // Arrange
+  await workspace.write("global", '{"verbosity":"high", "verbosty":"secret"}');
+  await workspace.write("project", '{"webSerch":true}');
+  const extension = harness();
+
+  // Act
+  await extension.emit("session_start");
+  const payload = await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } });
+
+  // Assert
+  expect(extension.notify.mock.calls).toEqual([
+    ['pi-openai: global configuration: Unknown configuration entries: "verbosty".', "warning"],
+    ['pi-openai: project configuration: Unknown configuration entries: "webSerch".', "warning"],
+  ]);
+  expect(payload).toHaveProperty("text.verbosity", "high");
+});
