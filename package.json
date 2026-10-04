@@ -1,6 +1,6 @@
 {
   "name": "pi-pack",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Monorepo for pi extensions.",
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.0.2",

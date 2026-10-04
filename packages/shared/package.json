@@ -1,6 +1,6 @@
 {
   "name": "@pi-pack/shared",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Shared configuration and event utilities for Pi extensions.",
   "dependencies": {
     "jsonc-parser": "3.3.1"

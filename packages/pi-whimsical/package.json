@@ -1,9 +1,9 @@
 {
   "name": "pi-whimsical",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Replace Pi's working message with a random whimsical message.",
   "dependencies": {
-    "@pi-pack/shared": "0.0.1"
+    "@pi-pack/shared": "0.1.0"
   },
   "files": [
     "pi-whimsical.example.jsonc",
