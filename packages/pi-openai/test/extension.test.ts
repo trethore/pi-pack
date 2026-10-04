@@ -572,7 +572,10 @@ it.each(
   if (kind === "native") {
     registry.registerProvider({ ...original, name: "Other extension" });
   } else if (kind === "config") {
-    registry.registerProvider(providerId, { headers: { "x-other-extension": "keep" } });
+    registry.registerProvider(providerId, {
+      headers: { "x-other-extension": "keep" },
+      models: [{ ...original.getModels()[0]!, samplingParams: undefined }],
+    });
   }
   const native = registry.getRegisteredNativeProvider(providerId);
   const config = registry.getRegisteredProviderConfig(providerId);

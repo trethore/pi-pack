@@ -21,7 +21,12 @@ import {
 } from "#test/codex-support";
 import { model, settings } from "#test/support";
 
-const host = vi.hoisted(() => ({ version: "1.0.0" }));
+const { VERSION, host } = await vi.hoisted(async () => {
+  const agent = await vi.importActual<typeof import("@earendil-works/pi-coding-agent")>(
+    "@earendil-works/pi-coding-agent",
+  );
+  return { VERSION: agent.VERSION, host: { version: agent.VERSION } };
+});
 vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@earendil-works/pi-coding-agent")>()),
   get VERSION() {
@@ -30,7 +35,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => ({
 }));
 
 beforeEach(() => {
-  host.version = "1.0.0";
+  host.version = VERSION;
 });
 
 const context = normalizeContext({ messages: [] });
@@ -121,6 +126,7 @@ it.each([
     const sent = client.requests[0]!;
 
     // Assert
+    expect(client.warn).not.toHaveBeenCalled();
     expect(sent.headers.get("originator")).toBe(originator);
     expect(sent.headers.get("x-codex-routing-hint")).toBe(hint ? `model=${codexModel.id};tier=priority` : null);
     expect(sent.body.service_tier).toBe(hint ? "priority" : undefined);
@@ -428,26 +434,29 @@ it("restores the patch when a pending request is aborted", async () => {
   expect(Headers.prototype.set).toBe(originalSet);
 });
 
-it.each(["1.0.1", "1.0.2"])("warns once on Pi %s only when the legacy originator patch is used", async (version) => {
-  // Arrange
-  host.version = version;
-  const client = harness();
+it.each(["1.0.0", `${VERSION}+test`])(
+  "warns once on Pi %s only when the legacy originator patch is used",
+  async (version) => {
+    // Arrange
+    host.version = version;
+    const client = harness();
 
-  // Act
-  await client.send();
-  expect(client.warn).not.toHaveBeenCalled();
-  client.update({ codexOriginator: true });
-  await client.send();
-  await client.send();
+    // Act
+    await client.send();
+    expect(client.warn).not.toHaveBeenCalled();
+    client.update({ codexOriginator: true });
+    await client.send();
+    await client.send();
 
-  // Assert
-  expect(client.warn).toHaveBeenCalledOnce();
-  expect(client.warn).toHaveBeenCalledWith(expect.stringContaining("pi-openai/codex-originator"));
-  expect(client.warn).toHaveBeenCalledWith(expect.stringContaining("tested with Pi 1.0.0"));
-  expect(client.warn).toHaveBeenCalledWith(expect.stringContaining(`running version is ${version}`));
-  expect(client.requests[1]!.headers.get("originator")).toBe("codex-tui");
-  expect(client.requests[2]!.headers.get("originator")).toBe("codex-tui");
-});
+    // Assert
+    expect(client.warn).toHaveBeenCalledOnce();
+    expect(client.warn).toHaveBeenCalledWith(expect.stringContaining("pi-openai/codex-originator"));
+    expect(client.warn).toHaveBeenCalledWith(expect.stringContaining(`tested with Pi ${VERSION}`));
+    expect(client.warn).toHaveBeenCalledWith(expect.stringContaining(`running version is ${version}`));
+    expect(client.requests[1]!.headers.get("originator")).toBe("codex-tui");
+    expect(client.requests[2]!.headers.get("originator")).toBe("codex-tui");
+  },
+);
 
 it("reports restoration failures instead of creating an unhandled rejection", async () => {
   // Arrange
@@ -500,7 +509,6 @@ it.each([
   "sends OpenAI subscription headers for $name without patching Headers",
   async ({ values, originator, hint }) => {
     // Arrange
-    host.version = "1.0.2";
     const client = harness(values, openaiProvider());
     const headers = Object.freeze({ Originator: "custom", "X-Codex-Routing-Hint": "custom-hint", "x-custom": "keep" });
     const fetch = vi.fn((input: string | URL | Request, init?: RequestInit) => {

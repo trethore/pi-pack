@@ -10,7 +10,7 @@ const scope = new AsyncLocalStorage<OriginatorScope>();
 const patchId = "pi-openai/codex-originator";
 const patch = createPiMethodPatch({
   id: patchId,
-  testedPiVersion: "1.0.0",
+  testedPiVersion: "1.0.2",
   target: Headers.prototype,
   key: "set",
   wrap(original) {

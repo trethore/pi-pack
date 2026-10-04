@@ -19,7 +19,7 @@ const target = {
 
 const patch = createPiMethodPatch({
   id: "my-extension/format",
-  testedPiVersion: "1.0.0",
+  testedPiVersion: "1.0.2",
   target,
   key: "format",
   wrap(original) {

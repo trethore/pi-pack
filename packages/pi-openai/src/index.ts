@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ProviderConfig } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
 import { Command, completeArguments, parseCommand } from "#src/commands";
 import {
@@ -121,7 +121,9 @@ export default function openai(pi: ExtensionAPI): void {
               if (native) {
                 pi.registerProvider(native);
               } else if (config) {
-                pi.registerProvider(provider.id, config);
+                // Pi 1.0.2 gives stored configs wider optional model fields than the extension API.
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+                pi.registerProvider(provider.id, config as ProviderConfig);
               } else {
                 pi.unregisterProvider(provider.id);
               }

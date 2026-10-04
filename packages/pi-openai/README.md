@@ -4,7 +4,7 @@ Configure OpenAI-compatible request parameters with layered settings, environmen
 
 ## Installation
 
-Requires Pi `1.0.0` or a compatible later release.
+Requires Pi `1.0.2` or a compatible later release.
 
 From the repository root, install pi-openai globally:
 
@@ -136,7 +136,7 @@ Priority ChatGPT subscription and legacy Codex requests send `x-codex-routing-hi
 For `openai`, a request-scoped fetch wrapper sets the headers without a monkey patch. It follows Pi's subscription-token classification: a nonempty bearer token not starting with `sk-`, checked on the final outgoing Authorization header so request-level credential overrides take precedence. It only decorates the official Responses URL. Status uses the selected account's authentication; request-level overrides are checked when sending. Server support for these headers on this endpoint is unverified.
 
 Pi hardcodes its legacy Codex originator after merging custom headers. The extension uses a temporary, async-request-scoped in-memory patch of `Headers.prototype.set` to override that assignment for opted-in Codex requests.
-It restores the method when those requests finish and does not edit Pi's installed files. The shared `@pi-pack/shared/unsafe` utility records Pi `1.0.0` as the tested version and shows a warning before first use on a different running version. The patch still applies after the warning. HTTP and WebSocket requests are covered. Cached WebSockets reconnect when the overridden handshake headers change; session IDs and prompt-cache keys stay unchanged.
+It restores the method when those requests finish and does not edit Pi's installed files. The shared `@pi-pack/shared/unsafe` utility records Pi `1.0.2` as the tested version and shows a warning before first use on a different running version. The patch still applies after the warning. HTTP and WebSocket requests are covered. Cached WebSockets reconnect when the overridden handshake headers change; session IDs and prompt-cache keys stay unchanged.
 
 ## License
 
