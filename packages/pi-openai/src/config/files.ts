@@ -1,23 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
   configPaths as sharedConfigPaths,
   createWarningReporter,
-  parseConfig,
   type ConfigWarningOptions,
 } from "@pi-pack/shared/config";
 import { readOptionalFile } from "@pi-pack/shared/files";
-import { applyEdits, modify, parseTree } from "jsonc-parser";
 import { Destination, extensionName } from "#src/constants";
-import {
-  isSetting,
-  readEnvironment,
-  settingNames,
-  validateSettings,
-  type Layers,
-  type Settings,
-} from "#src/config/settings";
+import { readEnvironment, type Layers } from "#src/config/settings";
+import type { ScopePatch } from "#src/config/changes";
+import { parseSource, patchSource } from "#src/config/document";
 
 export { Destination } from "#src/constants";
 
@@ -36,42 +29,6 @@ async function readSource(file: string, destination: Destination): Promise<strin
     return await readOptionalFile(file);
   } catch (error) {
     throw new Error(`Could not read ${destination} configuration.`, { cause: error });
-  }
-}
-
-function rejectDuplicateSettings(source: string): void {
-  const seen = new Set<string>();
-  const properties = parseTree(source)?.children ?? [];
-  for (const property of properties) {
-    const key: unknown = property.children?.[0]?.value;
-    if (typeof key !== "string" || !isSetting(key)) {
-      continue;
-    }
-    // JSONC edits target the first property, but parsing uses the last duplicate.
-    if (seen.has(key)) {
-      throw new Error(`Duplicate setting: ${key}`);
-    }
-    seen.add(key);
-  }
-}
-
-function parseSource(
-  source: string,
-  destination: Destination,
-  onWarning?: (message: string) => void,
-): Partial<Settings> {
-  try {
-    const settings = validateSettings(
-      parseConfig(source, {
-        knownKeys: settingNames,
-        onWarning: (message) => onWarning?.(`${extensionName}: ${destination} configuration: ${message}`),
-      }),
-    );
-    rejectDuplicateSettings(source);
-    return settings;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid configuration";
-    throw new Error(`Invalid ${destination} configuration: ${message}`, { cause: error });
   }
 }
 
@@ -121,31 +78,32 @@ export async function saveDestination(
 export async function saveConfiguration(
   paths: ConfigPaths,
   destination: Destination,
-  settings: Settings,
+  patches: ScopePatch[],
   { projectTrusted }: ProjectTrustOptions,
 ): Promise<void> {
   if (destination === Destination.PROJECT && !projectTrusted) {
     throw new Error("Project is not trusted; refusing to save project configuration.");
   }
+  if (patches.length === 0) {
+    return;
+  }
   const file = paths[destination];
   const existing = await readSource(file, destination);
-  if (existing !== undefined) {
-    parseSource(existing, destination);
-  }
-  let source = existing ?? "{}\n";
-  for (const key of settingNames) {
-    source = applyEdits(
-      source,
-      modify(source, [key], settings[key], {
-        formattingOptions: { insertSpaces: true, tabSize: 2, eol: source.includes("\r\n") ? "\r\n" : "\n" },
-      }),
-    );
+  const configuration = existing === undefined ? {} : parseSource(existing, destination);
+  const original = existing ?? "{}\n";
+  const source = patchSource(original, configuration, patches);
+  if (source === original) {
+    return;
   }
   const temporary = `${file}.${randomUUID()}.tmp`;
   try {
     const mode = existing === undefined ? 0o600 : (await stat(file)).mode & 0o777;
     await mkdir(dirname(file), { recursive: true });
     await writeFile(temporary, source, { flag: "wx", mode });
+    if (existing !== undefined) {
+      // File creation applies umask; restore the existing permissions before replacement.
+      await chmod(temporary, mode);
+    }
     await rename(temporary, file);
   } catch {
     throw new Error(`Could not save ${destination} configuration.`);

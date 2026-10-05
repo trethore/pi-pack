@@ -10,7 +10,7 @@ function payloadFor(requestModel = model): Record<string, unknown> {
   return { model: requestModel.id, input: [], stream: true, store: false };
 }
 
-it.each(["fast", "priority"])("does not change an existing %s tier with default settings", (tier) => {
+it.each(["fast", "priority", "ultrafast"])("does not change an existing %s tier with default settings", (tier) => {
   // Arrange
   const payload = {
     ...payloadFor(),
@@ -25,9 +25,9 @@ it.each(["fast", "priority"])("does not change an existing %s tier with default 
 
 it.each([
   { provider: "openai", api: "openai-responses", baseUrl: "https://api.openai.com/v1" },
-  { provider: "azure-openai-responses", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
+  { provider: "azure", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
   {
-    provider: "azure-openai-responses",
+    provider: "azure",
     api: "azure-openai-responses",
     baseUrl: "https://example.services.ai.azure.com/openai/v1/",
   },

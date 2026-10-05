@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ "$#" -ne 1 || -z "${1:-}" ]]; then
-  echo "Usage: npm run import:pi -- <tag> (example: npm run import:pi -- v1.0.2)" >&2
+  echo "Usage: npm run import:pi -- <tag> (example: npm run import:pi -- v1.0.3)" >&2
   exit 1
 fi
 

@@ -1,4 +1,12 @@
 import { Destination, Feature, ReasoningSummary, ServiceTier, Verbosity } from "#src/constants";
+import {
+  matchesScope,
+  scopeRank,
+  scopeRules,
+  type ModelIdentity,
+  type ScopedSettings,
+  type Selector,
+} from "#src/config/scopes";
 
 export interface Settings {
   enabled: boolean;
@@ -24,10 +32,16 @@ const Source = {
   COMMAND: "command",
 } as const;
 type Source = (typeof Source)[keyof typeof Source];
-export type Layers = Record<Exclude<Source, typeof Source.DEFAULT>, Partial<Settings>>;
+export interface Layers {
+  global: ScopedSettings;
+  project: ScopedSettings;
+  environment: Partial<Settings>;
+  command: ScopedSettings;
+}
 export interface EffectiveSettings {
   values: Settings;
   sources: Record<Setting, Source>;
+  scopes: Record<Setting, Selector>;
 }
 
 export const settingNames: Setting[] = Object.values(Setting);
@@ -111,7 +125,8 @@ export function readEnvironment(environment: NodeJS.ProcessEnv): Partial<Setting
   return result;
 }
 
-export function resolveSettings(layers: Layers): EffectiveSettings {
+export function resolveSettings(layers: Layers, model?: ModelIdentity): EffectiveSettings {
+  const values = { ...defaults };
   const sources: Record<Setting, Source> = {
     enabled: Source.DEFAULT,
     allowUnsupported: Source.DEFAULT,
@@ -120,12 +135,25 @@ export function resolveSettings(layers: Layers): EffectiveSettings {
     webSearch: Source.DEFAULT,
     serviceTier: Source.DEFAULT,
   };
-  const order = [Source.COMMAND, Source.ENVIRONMENT, Source.PROJECT, Source.GLOBAL] as const;
-  for (const key of settingNames) {
-    sources[key] = order.find((source) => Object.hasOwn(layers[source], key)) ?? Source.DEFAULT;
-  }
-  return {
-    values: { ...defaults, ...layers.global, ...layers.project, ...layers.environment, ...layers.command },
-    sources,
+  const scopes: Record<Setting, Selector> = {
+    enabled: {},
+    allowUnsupported: {},
+    verbosity: {},
+    reasoningSummary: {},
+    webSearch: {},
+    serviceTier: {},
   };
+  for (const source of [Source.GLOBAL, Source.PROJECT, Source.ENVIRONMENT, Source.COMMAND]) {
+    const rules = scopeRules(layers[source])
+      .filter((rule) => matchesScope(rule.match, model))
+      .sort((left, right) => scopeRank(left.match) - scopeRank(right.match));
+    for (const rule of rules) {
+      Object.assign(values, rule.settings);
+      for (const key of settingNames.filter((setting) => Object.hasOwn(rule.settings, setting))) {
+        sources[key] = source;
+        scopes[key] = { ...rule.match };
+      }
+    }
+  }
+  return { values, sources, scopes };
 }

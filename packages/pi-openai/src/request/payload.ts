@@ -1,6 +1,6 @@
 import { isObject } from "@pi-pack/shared/validation";
 import { Feature, RequestFormat, featureDecision, requestFormat, type RequestModel } from "#src/request/compatibility";
-import { ReasoningSummary, ServiceTier } from "#src/constants";
+import { ReasoningSummary } from "#src/constants";
 import type { Settings } from "#src/config/settings";
 
 function setVerbosity(payload: Record<string, unknown>, settings: Settings, format: RequestFormat): void {
@@ -54,7 +54,7 @@ function payloadFormat(payload: Record<string, unknown>): RequestFormat | undefi
 }
 
 function requestModelId(model: RequestModel, deploymentNameMap: string | undefined): string {
-  if (model.provider !== "azure-openai-responses" || model.api !== "azure-openai-responses") {
+  if (model.provider !== "azure" || model.api !== "azure-openai-responses") {
     return model.id;
   }
   // Match Pi's deployment-map parsing. Request-scoped overrides are not exposed to extensions.
@@ -110,7 +110,7 @@ export function transformPayload(
     addWebSearch(result);
   }
   if (featureDecision(Feature.SERVICE_TIER, settings, model, format).apply) {
-    result.service_tier = ServiceTier.PRIORITY;
+    result.service_tier = settings.serviceTier;
   }
   return Object.keys(result).some((key) => result[key] !== payload[key]) ? result : undefined;
 }

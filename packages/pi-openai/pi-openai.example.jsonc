@@ -1,23 +1,30 @@
 {
   "enabled": true,
 
-  // Unsafe: bypass all support checks and infer the format from the payload.
-  // Value validation, disabled settings, and payload safeguards still apply.
+  // Unsafe: bypass support checks, but retain payload and identity safeguards.
   "allowUnsupported": false,
 
-  // "low", "medium", "high", or null to leave the provider payload unchanged.
-  // Omitted keys inherit. Project null cancels an inherited override.
+  // Top-level settings apply to All models. Omitted keys inherit.
+  // null leaves the provider payload unchanged.
   "verbosity": null,
-
-  // "auto", "concise", "detailed", "none", or null.
-  // "none" removes reasoning.summary; null leaves the provider payload unchanged.
   "reasoningSummary": null,
-
-  // Make native server-side web search available.
-  // false leaves existing tools unchanged.
   "webSearch": false,
+  "serviceTier": "default",
 
-  // "priority" requests priority processing; "fast" is accepted as an alias.
-  // "default" leaves the payload unchanged, rather than forcing a standard tier.
-  "serviceTier": "default"
+  // Exact matches; every supplied field must match.
+  // Project values always override global values, regardless of specificity.
+  "overrides": [
+    {
+      "match": { "api": "openai-responses" },
+      "settings": { "reasoningSummary": "auto" }
+    },
+    {
+      "match": { "model": "gpt-6-sol" },
+      "settings": { "verbosity": "low" }
+    },
+    {
+      "match": { "provider": "openai", "model": "gpt-6-sol" },
+      "settings": { "verbosity": "medium" }
+    }
+  ]
 }

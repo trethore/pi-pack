@@ -6,7 +6,7 @@ import { model, settings } from "#test/support";
 const azure = {
   ...model,
   id: "gpt-5.5",
-  provider: "azure-openai-responses",
+  provider: "azure",
   api: "azure-openai-responses",
   baseUrl: "https://example.openai.azure.com",
 };
@@ -55,8 +55,8 @@ it.each([false, true])("rejects unexpected deployments with allowUnsupported=%s"
 it.each([
   { provider: "openai", api: "openai-responses" },
   { provider: "custom", api: "azure-openai-responses" },
-  { provider: "azure-openai-responses", api: "openai-responses" },
-  { provider: "azure-openai-responses", api: "unknown-api" },
+  { provider: "azure", api: "openai-responses" },
+  { provider: "azure", api: "unknown-api" },
 ])("does not apply Azure mappings to $provider / $api", (identity) => {
   // Arrange
   const requestModel = { ...azure, ...identity };
