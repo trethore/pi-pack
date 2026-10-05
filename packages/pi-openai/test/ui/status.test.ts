@@ -26,8 +26,8 @@ it("shows a Markdown table with effective values, sources, behavior and save des
   expect(markdown).toContain("| reasoningSummary | `none` | command | Remove reasoning.summary |");
   expect(markdown).toContain("| serviceTier | `default` | default | Leave unchanged |");
   expect(markdown).toContain("Model: `openai` / `gpt-6-sol`");
-  expect(markdown).toContain("Save destination: **project**");
-  expect(markdown).toContain("Saves pending edits at their original scopes");
+  expect(markdown).toContain("Default set destination: **project**");
+  expect(markdown).toContain("Pending edits keep their recorded sources and scopes");
   expect(markdown).toContain("Unset selects its own target per setting, skipping absent values and pending removals.");
   expect(markdown).toContain("### All models");
   expect(markdown).toContain("## Effective settings");
@@ -81,13 +81,17 @@ it("escapes model metadata rather than allowing table or terminal injection", ()
 });
 
 it.each([30, 60, 100, 160])(
-  "renders within %i columns using green true, red false/null and a yellow warning",
+  "renders within %i columns using green true, red false/null/Removed and a yellow warning",
   (width) => {
     // Arrange
     const colors = { success: "32", error: "31", warning: "33", border: "34" };
     const fg = vi.fn((color: keyof typeof colors, text: string) => `\u001b[${colors[color]}m${text}\u001b[0m`);
     const theme = { fg } as unknown as Theme;
-    const component = renderStatus(statusMarkdown(layers(), model, "global"), theme);
+    const changes: Changes = {
+      pending: [{ destination: "global" as const, match: {}, settings: {}, unset: ["verbosity"] }],
+      receipts: [],
+    };
+    const component = renderStatus(statusMarkdown(layers(), model, "global", changes), theme);
 
     // Act
     const output = component.render(width);
@@ -97,6 +101,7 @@ it.each([30, 60, 100, 160])(
     expect(fg).toHaveBeenCalledWith("success", "true");
     expect(fg).toHaveBeenCalledWith("error", "false");
     expect(fg).toHaveBeenCalledWith("error", "null");
+    expect(fg).toHaveBeenCalledWith("error", "Removed");
     expect(fg).toHaveBeenCalledWith("warning", expect.stringContaining("Request behavior"));
     const border = `\u001b[34m${"\u2500".repeat(width)}\u001b[0m`;
     expect(output[0]).toBe(border);
@@ -253,7 +258,7 @@ it("keeps saved-only receipts out of the default target and effective values", (
   // Arrange
   const input = layers({ command: { verbosity: "low" } });
   const changes = {
-    pending: [{ match: {}, settings: { verbosity: "low" as const } }],
+    pending: [{ destination: "global" as const, match: {}, settings: { verbosity: "low" as const } }],
     receipts: [
       {
         destination: "project" as const,
@@ -301,10 +306,10 @@ it("lists all unsaved edits in a Temporary section immediately before effective 
   // Arrange
   const input = layers({ global: { reasoningSummary: "auto" } });
   const changes: Changes = { pending: [], receipts: [] };
-  setCommand(input, changes, { model: model.id }, { verbosity: "low" });
-  setCommand(input, changes, { provider: model.provider }, { verbosity: "high", webSearch: false });
-  setCommand(input, changes, { model: "other" }, { verbosity: null });
-  setCommand(input, changes, {}, { enabled: false });
+  setCommand(input, changes, { model: model.id }, { verbosity: "low" }, "global");
+  setCommand(input, changes, { provider: model.provider }, { verbosity: "high", webSearch: false }, "global");
+  setCommand(input, changes, { model: "other" }, { verbosity: null }, "global");
+  setCommand(input, changes, {}, { enabled: false }, "global");
   const before = structuredClone(changes);
 
   // Act
@@ -314,11 +319,11 @@ it("lists all unsaved edits in a Temporary section immediately before effective 
   // Assert
   expect(markdown.indexOf("## Temporary")).toBeGreaterThan(markdown.indexOf("### `model=other`"));
   expect(temporary).not.toContain("##");
-  expect(temporary).toContain("| `All models` | enabled | `false` | Yes |");
-  expect(temporary).toContain("| `provider=openai` | verbosity | `high` | Yes |");
-  expect(temporary).toContain("| `provider=openai` | webSearch | `false` | Yes |");
-  expect(temporary).toContain("| `model=gpt-6-sol` | verbosity | `low` | Yes |");
-  expect(temporary).toContain("| `model=other` | verbosity | `null` | No |");
+  expect(temporary).toContain("| `All models` | enabled | `false` | global | Yes |");
+  expect(temporary).toContain("| `provider=openai` | verbosity | `high` | global | Yes |");
+  expect(temporary).toContain("| `provider=openai` | webSearch | `false` | global | Yes |");
+  expect(temporary).toContain("| `model=gpt-6-sol` | verbosity | `low` | global | Yes |");
+  expect(temporary).toContain("| `model=other` | verbosity | `null` | global | No |");
   expect(temporary).not.toContain("reasoningSummary");
   expect(temporary).toContain("\n\nUse `/pi-openai save` to save the changes.\n");
   expect(markdown).not.toContain("Pending save groups");
@@ -329,11 +334,11 @@ it.each(["save", "undo"])("shows no unsaved edits after %s without hiding saved 
   // Arrange
   const input = layers();
   const changes: Changes = { pending: [], receipts: [] };
-  setCommand(input, changes, {}, { verbosity: "low" });
+  setCommand(input, changes, {}, { verbosity: "low" }, "global");
 
   // Act
   if (action === "save") {
-    completeSave(changes, prepareSave(input, changes), "global");
+    completeSave(changes, prepareSave(changes));
   } else {
     undoCommand(input, changes);
   }
@@ -354,16 +359,16 @@ it("escapes temporary scopes and handles pending edits without a selected model"
   // Arrange
   const input = layers();
   const changes: Changes = { pending: [], receipts: [] };
-  setCommand(input, changes, { model: "bad`|\n\u001b[31m\\value" }, { verbosity: "low" });
-  setCommand(input, changes, {}, { webSearch: true });
+  setCommand(input, changes, { model: "bad`|\n\u001b[31m\\value" }, { verbosity: "low" }, "global");
+  setCommand(input, changes, {}, { webSearch: true }, "global");
 
   // Act
   const markdown = statusMarkdown(input, undefined, "global", changes);
   const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
 
   // Assert
-  expect(temporary).toContain("| `model=bad????[31m?value` | verbosity | `low` | No |");
-  expect(temporary).toContain("| `All models` | webSearch | `true` | Yes |");
+  expect(temporary).toContain("| `model=bad????[31m?value` | verbosity | `low` | global | No |");
+  expect(temporary).toContain("| `All models` | webSearch | `true` | global | Yes |");
   expect(temporary).not.toContain("\u001b");
 });
 
@@ -371,17 +376,17 @@ it("shows pending removals separately from explicit null values without changing
   // Arrange
   const input = layers({ global: { verbosity: "high" } });
   const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, {}, "verbosity");
-  setCommand(input, changes, {}, { reasoningSummary: null });
+  unsetCommand(input, changes, {}, "verbosity", "global");
+  setCommand(input, changes, {}, { reasoningSummary: null }, "global");
 
   // Act
   const markdown = statusMarkdown(input, model, "global", changes);
   const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
 
   // Assert
-  expect(temporary).toContain("| `All models` | verbosity | Remove explicit value | Yes |");
-  expect(temporary).toContain("| `All models` | reasoningSummary | `null` | Yes |");
-  expect(temporary).toContain("Removals affect the save destination on next session/reload");
+  expect(temporary).toContain("| `All models` | verbosity | `Removed` | global | Yes |");
+  expect(temporary).toContain("| `All models` | reasoningSummary | `null` | global | Yes |");
+  expect(temporary).toContain("Removals affect their recorded source on next session/reload");
   expect(temporary).toContain("\n\nUse `/pi-openai save` to save the changes.\n");
   expect(markdown.split("## Effective settings")[1]).toContain("| verbosity | `high` | global |");
 });
@@ -390,15 +395,15 @@ it("shows saved removals as receipts rather than values or unsaved edits", () =>
   // Arrange
   const input = layers({ global: { verbosity: "high" } });
   const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, { model: model.id }, "verbosity");
-  completeSave(changes, prepareSave(input, changes), "global");
+  unsetCommand(input, changes, { model: model.id }, "verbosity", "global");
+  completeSave(changes, prepareSave(changes));
 
   // Act
   const markdown = statusMarkdown(input, model, "global", changes);
 
   // Assert
   expect(markdown).toContain("Saved only; not loaded");
-  expect(markdown).toContain("| verbosity | Removed explicit value |");
+  expect(markdown).toContain("| verbosity | `Removed` |");
   expect(markdown).toContain("No unsaved command edits.");
   expect(markdown).not.toContain("Use `/pi-openai save` to save the changes.");
   expect(markdown.split("## Effective settings")[1]).toContain("| verbosity | `high` | global |");
@@ -408,12 +413,65 @@ it("keeps pending removal scopes available as the default command target", () =>
   // Arrange
   const input = layers();
   const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, { model: model.id }, "verbosity");
+  unsetCommand(input, changes, { model: model.id }, "verbosity", "global");
 
   // Act
   const markdown = statusMarkdown(input, model, "global", changes);
 
   // Assert
   expect(markdown).toContain("Default command target: `model=gpt-6-sol`");
-  expect(markdown).toContain("| `model=gpt-6-sol` | verbosity | Remove explicit value | Yes |");
+  expect(markdown).toContain("| `model=gpt-6-sol` | verbosity | `Removed` | global | Yes |");
+});
+
+it.each(["global", "project"] as const)(
+  "shows the recorded %s source for pending additions and removals",
+  (destination) => {
+    // Arrange
+    const input = layers({ global: { verbosity: "high" } });
+    const changes: Changes = { pending: [], receipts: [] };
+    unsetCommand(input, changes, {}, "verbosity", destination);
+    setCommand(input, changes, { model: model.id }, { webSearch: true }, destination);
+
+    // Act
+    const markdown = statusMarkdown(input, model, destination === "global" ? "project" : "global", changes);
+    const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
+
+    // Assert
+    expect(temporary).toContain("| Scope | Setting | Value | Source | Matches selected model |");
+    expect(temporary).toContain(`| \`All models\` | verbosity | \`Removed\` | ${destination} | Yes |`);
+    expect(temporary).toContain(`| \`model=gpt-6-sol\` | webSearch | \`true\` | ${destination} | Yes |`);
+  },
+);
+
+it("distinguishes same-scope sources and does not mark a saved runtime value as an older pending value", () => {
+  // Arrange
+  const input = layers();
+  const changes: Changes = { pending: [], receipts: [] };
+  setCommand(input, changes, {}, { verbosity: "low" }, "global");
+  setCommand(input, changes, {}, { verbosity: "high" }, "project");
+  completeSave(changes, prepareSave(changes, { source: "project" }));
+
+  // Act
+  const markdown = statusMarkdown(input, model, "project", changes);
+
+  // Assert
+  expect(markdown).toContain("| verbosity | `high` | command, saved |");
+  expect(markdown).toContain("| `All models` | verbosity | `low` | global | Yes |");
+  expect(markdown).toContain("Saved to **project** for next session/reload");
+});
+
+it("shows separate pending project and global removals of the same scoped setting", () => {
+  // Arrange
+  const input = layers();
+  const changes: Changes = { pending: [], receipts: [] };
+  unsetCommand(input, changes, { model: model.id }, "verbosity", "project");
+  unsetCommand(input, changes, { model: model.id }, "verbosity", "global");
+
+  // Act
+  const markdown = statusMarkdown(input, model, "project", changes);
+  const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
+
+  // Assert
+  expect(temporary).toContain("| `model=gpt-6-sol` | verbosity | `Removed` | project | Yes |");
+  expect(temporary).toContain("| `model=gpt-6-sol` | verbosity | `Removed` | global | Yes |");
 });

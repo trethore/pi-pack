@@ -8,143 +8,175 @@ function changes(): Changes {
   return { pending: [], receipts: [] };
 }
 
-it("captures pending keys and scopes without copying inherited or environment settings", () => {
+it("captures each setting, source and scope without copying inherited or environment values", () => {
   // Arrange
   const input = layers({ global: { webSearch: true }, environment: { verbosity: "high" } });
   const edits = changes();
   const match = { model: model.id };
 
   // Act
-  setCommand(input, edits, match, { verbosity: "low" });
+  setCommand(input, edits, match, { verbosity: "low", reasoningSummary: null }, "project");
   match.model = "changed-later";
-  const batch = prepareSave(input, edits);
+  const batch = prepareSave(edits);
 
   // Assert
-  expect(batch.patches).toEqual([{ match: { model: model.id }, settings: { verbosity: "low" } }]);
+  expect(batch).toEqual([
+    { destination: "project", match: { model: model.id }, settings: { verbosity: "low" } },
+    { destination: "project", match: { model: model.id }, settings: { reasoningSummary: null } },
+  ]);
   expect(resolveSettings(input, model).values).toMatchObject({ verbosity: "low", webSearch: true });
   expect(resolveSettings(input, { ...model, id: "other" }).values.verbosity).toBe("high");
 });
 
-it("keeps scopes and settings active after a retargeted save", () => {
+it("keeps source and scope fixed and runtime values active after saving", () => {
   // Arrange
   const input = layers({ global: { verbosity: "medium" } });
   const edits = changes();
-  setCommand(input, edits, { model: model.id }, { verbosity: "low" });
+  setCommand(input, edits, { model: model.id }, { verbosity: "low" }, "project");
   const before = structuredClone(input);
-  const batch = prepareSave(input, edits, { provider: model.provider });
+  const batch = prepareSave(edits);
 
   // Act
-  completeSave(edits, batch, "project");
+  completeSave(edits, batch);
 
   // Assert
   expect(input).toEqual(before);
   expect(edits.pending).toEqual([]);
   expect(edits.receipts).toEqual([
-    {
-      destination: "project",
-      match: { provider: model.provider },
-      settings: { verbosity: "low" },
-    },
+    { destination: "project", match: { model: model.id }, settings: { verbosity: "low" } },
   ]);
   expect(automaticScope(input, model)).toEqual({ model: model.id });
-  expect(prepareSave(input, edits).patches).toEqual([]);
+  expect(prepareSave(edits)).toEqual([]);
 });
 
-it("merges disjoint keys and identical values when retargeting", () => {
+it("keeps edits to the same setting and scope separate by source", () => {
   // Arrange
   const input = layers();
   const edits = changes();
-  setCommand(input, edits, { model: model.id }, { verbosity: "low" });
-  setCommand(input, edits, { provider: model.provider }, { verbosity: "low", webSearch: true });
 
-  // Act / Assert
-  expect(prepareSave(input, edits, {}).patches).toEqual([
-    {
-      match: {},
-      settings: { verbosity: "low", webSearch: true },
-    },
+  // Act
+  setCommand(input, edits, {}, { verbosity: "low" }, "global");
+  setCommand(input, edits, {}, { verbosity: "high" }, "project");
+  unsetCommand(input, edits, {}, "verbosity", "global");
+
+  // Assert
+  expect(edits.pending).toEqual([
+    { destination: "project", match: {}, settings: { verbosity: "high" } },
+    { destination: "global", match: {}, settings: {}, unset: ["verbosity"] },
   ]);
 });
 
-it("rejects conflicting pending values before retargeting", () => {
+it("filters saves by exact scope kind across models and by source without retargeting", () => {
   // Arrange
   const input = layers();
   const edits = changes();
-  setCommand(input, edits, { model: model.id }, { verbosity: "low" });
-  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" });
+  setCommand(input, edits, {}, { enabled: false }, "global");
+  setCommand(input, edits, { model: model.id }, { verbosity: "low" }, "global");
+  setCommand(input, edits, { model: "other" }, { verbosity: "high" }, "project");
+  setCommand(input, edits, { provider: model.provider, model: model.id }, { webSearch: true }, "project");
+  const before = structuredClone(edits);
 
   // Act / Assert
-  expect(() => prepareSave(input, edits, {})).toThrow("Conflicting verbosity");
-  expect(edits.pending).toHaveLength(2);
-  expect(prepareSave(input, edits).patches).toHaveLength(2);
+  expect(prepareSave(edits, { scope: "model" })).toEqual(before.pending.slice(1, 3));
+  expect(prepareSave(edits, { scope: "all" })).toEqual(before.pending.slice(0, 1));
+  expect(prepareSave(edits, { source: "project" })).toEqual(before.pending.slice(2));
+  expect(prepareSave(edits, { source: "project", scope: "model" })).toEqual(before.pending.slice(2, 3));
+  expect(prepareSave(edits, { scope: "api" })).toEqual([]);
+  expect(edits).toEqual(before);
 });
 
-it("rejects conflicts with a saved runtime target without copying unrelated target keys", () => {
+it("clears only saved edits and leaves other files and scopes pending", () => {
   // Arrange
   const input = layers();
   const edits = changes();
-  setCommand(input, edits, {}, { verbosity: "high", webSearch: true });
-  completeSave(edits, prepareSave(input, edits), "global");
-  setCommand(input, edits, { model: model.id }, { verbosity: "low" });
+  setCommand(input, edits, {}, { verbosity: "low" }, "global");
+  setCommand(input, edits, {}, { verbosity: "high" }, "project");
+  setCommand(input, edits, { model: model.id }, { verbosity: "medium" }, "project");
 
-  // Act / Assert
-  expect(() => prepareSave(input, edits, {})).toThrow("Conflicting verbosity");
-  setCommand(input, edits, { model: model.id }, { verbosity: "high" });
-  expect(prepareSave(input, edits, {}).patches).toEqual([{ match: {}, settings: { verbosity: "high" } }]);
+  // Act
+  completeSave(edits, prepareSave(edits, { source: "project", scope: "all" }));
+
+  // Assert
+  expect(edits.pending).toEqual([
+    { destination: "global", match: {}, settings: { verbosity: "low" } },
+    { destination: "project", match: { model: model.id }, settings: { verbosity: "medium" } },
+  ]);
+  expect(edits.receipts).toEqual([{ destination: "project", match: {}, settings: { verbosity: "high" } }]);
 });
 
-it("undoes only the selected runtime scope and preserves persisted receipts", () => {
+it("undoes the selected setting at both sources without changing saved receipts", () => {
   // Arrange
   const input = layers({ global: { verbosity: "medium" } });
   const edits = changes();
-  const selector = { model: model.id };
-  setCommand(input, edits, selector, { verbosity: "low", webSearch: true });
-  completeSave(edits, prepareSave(input, edits), "global");
-  setCommand(input, edits, { provider: model.provider }, { reasoningSummary: "auto" });
+  const match = { model: model.id };
+  setCommand(input, edits, match, { verbosity: "low", webSearch: true }, "global");
+  completeSave(edits, prepareSave(edits));
+  unsetCommand(input, edits, match, "verbosity", "global");
+  unsetCommand(input, edits, match, "verbosity", "project");
+  setCommand(input, edits, { provider: model.provider }, { reasoningSummary: "auto" }, "project");
 
   // Act / Assert
-  undoCommand(input, edits, selector, "verbosity");
+  undoCommand(input, edits, match, "verbosity");
   expect(resolveSettings(input, model).values).toMatchObject({ verbosity: "medium", webSearch: true });
-  undoCommand(input, edits, selector);
-  expect(automaticScope(input, model)).toEqual({ provider: model.provider });
   expect(edits.pending).toHaveLength(1);
+  undoCommand(input, edits, match);
+  expect(automaticScope(input, model)).toEqual({ provider: model.provider });
   undoCommand(input, edits);
   expect(input.command).toEqual({});
   expect(edits.pending).toEqual([]);
   expect(edits.receipts).toHaveLength(1);
 });
 
-it("does not lose edits made while a save is in progress", () => {
+it("does not lose replaced edits or retain unrelated saved keys during an asynchronous save", () => {
   // Arrange
   const input = layers();
   const edits = changes();
-  setCommand(input, edits, {}, { verbosity: "low" });
-  const batch = prepareSave(input, edits);
+  setCommand(input, edits, {}, { verbosity: "low", webSearch: true }, "global");
+  const batch = prepareSave(edits);
 
   // Act
-  setCommand(input, edits, {}, { verbosity: "high" });
-  completeSave(edits, batch, "global");
+  setCommand(input, edits, {}, { verbosity: "high" }, "global");
+  completeSave(edits, batch);
 
   // Assert
-  expect(edits.pending).toEqual([{ match: {}, settings: { verbosity: "high" } }]);
-  expect(edits.receipts[0]?.settings).toEqual({ verbosity: "low" });
+  expect(edits.pending).toEqual([{ destination: "global", match: {}, settings: { verbosity: "high" } }]);
+  expect(edits.receipts).toEqual([
+    { destination: "global", match: {}, settings: { verbosity: "low", webSearch: true } },
+  ]);
   expect(input.command.verbosity).toBe("high");
 });
 
-it("preserves undo during a save and merges receipts per destination and selector", () => {
+it("does not retain an unchanged saved edit when another key is undone during a save", () => {
   // Arrange
   const input = layers();
   const edits = changes();
-  setCommand(input, edits, {}, { verbosity: "low" });
-  const batch = prepareSave(input, edits);
+  setCommand(input, edits, {}, { verbosity: "low", webSearch: true }, "global");
+  const batch = prepareSave(edits);
+
+  // Act
+  undoCommand(input, edits, {}, "verbosity");
+  completeSave(edits, batch);
+
+  // Assert
+  expect(edits.pending).toEqual([]);
+  expect(input.command).toEqual({ webSearch: true });
+  expect(edits.receipts[0]?.settings).toEqual({ verbosity: "low", webSearch: true });
+});
+
+it("preserves undo during a save and merges receipts per source and selector", () => {
+  // Arrange
+  const input = layers();
+  const edits = changes();
+  setCommand(input, edits, {}, { verbosity: "low" }, "global");
+  const batch = prepareSave(edits);
   undoCommand(input, edits);
 
   // Act
-  completeSave(edits, batch, "global");
-  setCommand(input, edits, {}, { webSearch: true });
-  completeSave(edits, prepareSave(input, edits), "global");
-  setCommand(input, edits, {}, { verbosity: "high" });
-  completeSave(edits, prepareSave(input, edits), "project");
+  completeSave(edits, batch);
+  setCommand(input, edits, {}, { webSearch: true }, "global");
+  completeSave(edits, prepareSave(edits));
+  setCommand(input, edits, {}, { verbosity: "high" }, "project");
+  completeSave(edits, prepareSave(edits));
 
   // Assert
   expect(edits.receipts).toEqual([
@@ -158,14 +190,18 @@ it("undoes exact scopes and exposes broader command overrides before loaded valu
   // Arrange
   const input = layers({ environment: { verbosity: "medium" } });
   const edits = changes();
-  setCommand(input, edits, {}, { verbosity: "medium" });
-  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" });
-  setCommand(input, edits, { model: model.id }, { verbosity: "low", webSearch: true });
+  setCommand(input, edits, {}, { verbosity: "medium" }, "global");
+  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" }, "global");
+  setCommand(input, edits, { model: model.id }, { verbosity: "low", webSearch: true }, "project");
 
   // Act / Assert
   undoCommand(input, edits, commandScope(input, model), "verbosity");
   expect(resolveSettings(input, model).values).toMatchObject({ verbosity: "high", webSearch: true });
-  expect(edits.pending).toContainEqual({ match: { model: model.id }, settings: { webSearch: true } });
+  expect(edits.pending).toContainEqual({
+    destination: "project",
+    match: { model: model.id },
+    settings: { webSearch: true },
+  });
   undoCommand(input, edits, commandScope(input, model, "all"));
   expect(resolveSettings(input, model).values.verbosity).toBe("high");
   expect(edits.pending).toHaveLength(2);
@@ -179,10 +215,12 @@ it("undoes exact scopes and exposes broader command overrides before loaded valu
 it("does not fall through when the automatic undo target has no command value for the setting", () => {
   // Arrange
   const input = layers({
-    global: { overrides: [{ match: { provider: model.provider, model: model.id }, settings: { webSearch: true } }] },
+    global: {
+      overrides: [{ match: { provider: model.provider, model: model.id }, settings: { webSearch: true } }],
+    },
   });
   const edits = changes();
-  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" });
+  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" }, "global");
   const before = structuredClone(edits);
 
   // Act
@@ -195,140 +233,70 @@ it("does not fall through when the automatic undo target has no command value fo
   expect(edits).toEqual(before);
 });
 
-it("stages removal without changing loaded configuration and keeps the scope available for undo", () => {
+it("replaces sets and removals only at the same source, scope and key", () => {
   // Arrange
   const input = layers({ global: { verbosity: "high" } });
   const edits = changes();
-  const match = { model: model.id };
-  setCommand(input, edits, match, { verbosity: "low" });
+  setCommand(input, edits, {}, { verbosity: null, webSearch: true }, "global");
+  unsetCommand(input, edits, {}, "verbosity", "project");
 
-  // Act
-  unsetCommand(input, edits, match, "verbosity");
-  const target = commandScope(input, model, undefined, edits.pending);
-
-  // Assert
-  expect(input.command).toEqual({});
+  // Act / Assert
+  unsetCommand(input, edits, {}, "verbosity", "global");
+  expect(input.command).toEqual({ webSearch: true });
   expect(input.global).toEqual({ verbosity: "high" });
-  expect(resolveSettings(input, model).values.verbosity).toBe("high");
-  expect(edits.pending).toEqual([{ match, settings: {}, unset: ["verbosity"] }]);
-  expect(target).toEqual(match);
-  undoCommand(input, edits, target, "verbosity");
-  expect(edits.pending).toEqual([]);
+  setCommand(input, edits, {}, { verbosity: "low" }, "global");
+  expect(edits.pending).toEqual([
+    { destination: "global", match: {}, settings: { webSearch: true } },
+    { destination: "project", match: {}, settings: {}, unset: ["verbosity"] },
+    { destination: "global", match: {}, settings: { verbosity: "low" } },
+  ]);
 });
 
-it("replaces pending sets with removals and removals with sets without losing other edits", () => {
+it("replaces saved values with removals while preserving other receipts", () => {
   // Arrange
   const input = layers();
   const edits = changes();
-  setCommand(input, edits, {}, { verbosity: null, webSearch: true });
-
-  // Act / Assert
-  unsetCommand(input, edits, {}, "verbosity");
-  unsetCommand(input, edits, {}, "reasoningSummary");
-  unsetCommand(input, edits, {}, "verbosity");
-  expect(edits.pending).toEqual([
-    { match: {}, settings: { webSearch: true }, unset: ["verbosity", "reasoningSummary"] },
-  ]);
-  setCommand(input, edits, {}, { verbosity: null });
-  expect(edits.pending).toEqual([
-    { match: {}, settings: { webSearch: true, verbosity: null }, unset: ["reasoningSummary"] },
-  ]);
-  undoCommand(input, edits, {}, "webSearch");
-  undoCommand(input, edits, {}, "reasoningSummary");
-  expect(edits.pending).toEqual([{ match: {}, settings: { verbosity: null } }]);
-});
-
-it("merges identical removals and disjoint settings when retargeting", () => {
-  // Arrange
-  const input = layers();
-  const edits = changes();
-  unsetCommand(input, edits, { model: model.id }, "verbosity");
-  unsetCommand(input, edits, { provider: model.provider }, "verbosity");
-  setCommand(input, edits, { api: model.api }, { webSearch: true });
+  setCommand(input, edits, {}, { verbosity: "low", webSearch: true }, "global");
+  setCommand(input, edits, {}, { verbosity: "high" }, "project");
+  completeSave(edits, prepareSave(edits));
 
   // Act
-  const batch = prepareSave(input, edits, {});
+  unsetCommand(input, edits, {}, "verbosity", "global");
+  completeSave(edits, prepareSave(edits));
 
   // Assert
-  expect(batch.patches).toEqual([{ match: {}, settings: { webSearch: true }, unset: ["verbosity"] }]);
-  expect(edits.pending).toHaveLength(3);
-});
-
-it.each([true, false])("rejects conflicting set and removal retargets with removal first: %s", (removalFirst) => {
-  // Arrange
-  const input = layers();
-  const edits = changes();
-  const remove = () => unsetCommand(input, edits, { model: model.id }, "verbosity");
-  const set = () => setCommand(input, edits, { provider: model.provider }, { verbosity: null });
-  if (removalFirst) {
-    remove();
-    set();
-  } else {
-    set();
-    remove();
-  }
-
-  // Act / Assert
-  expect(() => prepareSave(input, edits, {})).toThrow("Conflicting verbosity edits");
-  expect(edits.pending).toHaveLength(2);
-});
-
-it("rejects retargeting removal over an existing saved command value", () => {
-  // Arrange
-  const input = layers();
-  const edits = changes();
-  setCommand(input, edits, {}, { verbosity: "high" });
-  completeSave(edits, prepareSave(input, edits), "global");
-  unsetCommand(input, edits, { model: model.id }, "verbosity");
-
-  // Act / Assert
-  expect(() => prepareSave(input, edits, {})).toThrow("Conflicting verbosity edits");
-});
-
-it("replaces saved values with removal receipts and keeps receipts separate by destination", () => {
-  // Arrange
-  const input = layers();
-  const edits = changes();
-  setCommand(input, edits, {}, { verbosity: "low", webSearch: true });
-  completeSave(edits, prepareSave(input, edits), "global");
-  unsetCommand(input, edits, {}, "verbosity");
-
-  // Act / Assert
-  completeSave(edits, prepareSave(input, edits), "global");
   expect(edits.receipts).toEqual([
+    { destination: "project", match: {}, settings: { verbosity: "high" } },
     { destination: "global", match: {}, settings: { webSearch: true }, unset: ["verbosity"] },
   ]);
-  setCommand(input, edits, {}, { verbosity: null });
-  completeSave(edits, prepareSave(input, edits), "project");
-  expect(edits.receipts).toContainEqual({ destination: "project", match: {}, settings: { verbosity: null } });
-  setCommand(input, edits, {}, { verbosity: "high" });
-  completeSave(edits, prepareSave(input, edits), "global");
-  expect(edits.receipts).toContainEqual({
-    destination: "global",
-    match: {},
-    settings: { webSearch: true, verbosity: "high" },
-  });
 });
 
 it.each(["set", "unset", "undo"])("keeps %s during a removal save", (action) => {
   // Arrange
   const input = layers();
   const edits = changes();
-  unsetCommand(input, edits, {}, "verbosity");
-  const batch = prepareSave(input, edits);
+  unsetCommand(input, edits, {}, "verbosity", "global");
+  const batch = prepareSave(edits);
 
   // Act
   if (action === "set") {
-    setCommand(input, edits, {}, { verbosity: "low" });
+    setCommand(input, edits, {}, { verbosity: "low" }, "global");
   } else if (action === "unset") {
-    unsetCommand(input, edits, {}, "webSearch");
+    unsetCommand(input, edits, {}, "verbosity", "project");
   } else {
     undoCommand(input, edits);
   }
-  const pending = structuredClone(edits.pending);
-  completeSave(edits, batch, "global");
+  completeSave(edits, batch);
 
   // Assert
-  expect(edits.pending).toEqual(pending);
+  expect(edits.pending).toEqual(
+    action === "undo"
+      ? []
+      : [
+          action === "set"
+            ? { destination: "global", match: {}, settings: { verbosity: "low" } }
+            : { destination: "project", match: {}, settings: {}, unset: ["verbosity"] },
+        ],
+  );
   expect(edits.receipts).toEqual([{ destination: "global", match: {}, settings: {}, unset: ["verbosity"] }]);
 });

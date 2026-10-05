@@ -3,7 +3,7 @@ import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import * as files from "@pi-pack/shared/files";
 import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { loadConfiguration, saveConfiguration, saveDestination } from "#src/config/files";
+import { loadConfiguration, saveConfiguration, defaultDestination } from "#src/config/files";
 import { resolveSettings } from "#src/config/settings";
 import { createWorkspace, model, settings } from "#test/support";
 
@@ -46,7 +46,7 @@ it("uses defaults and selects global when no configuration exists", async () => 
 
   // Assert
   expect(resolveSettings(loaded).values).toEqual(settings());
-  await expect(saveDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("global");
+  await expect(defaultDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("global");
 });
 
 it.each(["global", "project"] as const)(
@@ -103,9 +103,9 @@ it("selects an existing project config over global and notices new files", async
   await workspace.write("global", "{}");
 
   // Act / Assert
-  await expect(saveDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("global");
+  await expect(defaultDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("global");
   await workspace.write("project", "{}");
-  await expect(saveDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("project");
+  await expect(defaultDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("project");
 });
 
 it.each(["global", "project"] as const)(
@@ -247,7 +247,7 @@ it("selects global without inspecting project configuration when untrusted", asy
   };
 
   // Act
-  const destination = await saveDestination(paths, { projectTrusted: false });
+  const destination = await defaultDestination(paths, { projectTrusted: false });
 
   // Assert
   expect(destination).toBe("global");
@@ -475,7 +475,7 @@ it("removes top-level settings while preserving unrelated data and explicit null
 
   // Assert
   expect(parseConfig(saved)).toEqual({ reasoningSummary: null, future: 42 });
-  expect(saved).toContain("// Keep summary.");
+  expect(saved).toBe(source.replace('  "verbosity": "high",\r\n', ""));
   expect(saved.replaceAll("\r\n", "")).not.toContain("\n");
 });
 

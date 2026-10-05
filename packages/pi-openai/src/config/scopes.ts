@@ -96,6 +96,11 @@ export function scopeRules(settings: ScopedSettings): ScopeRule[] {
   return [{ match: {}, settings: unscoped }, ...overrides];
 }
 
+export function matchesScopeFilter(selector: Selector, scope: ScopeName): boolean {
+  const fields: readonly SelectorField[] = scopeFields[scope];
+  return selectorFields.every((field) => (selector[field] !== undefined) === fields.includes(field));
+}
+
 export function explicitScope(scope: ScopeName, model: ModelIdentity | undefined): Selector {
   if (scope === "all") {
     return {};
@@ -114,11 +119,7 @@ export function explicitScope(scope: ScopeName, model: ModelIdentity | undefined
   return match;
 }
 
-export function commandScopeRules(
-  layers: Layers,
-  model: ModelIdentity | undefined,
-  pending: ScopeRule[] = [],
-): ScopeRule[] {
+function commandScopeRules(layers: Layers, model: ModelIdentity | undefined, pending: ScopeRule[] = []): ScopeRule[] {
   const candidates = (["global", "project", "command"] as const).flatMap((source, priority) =>
     [...scopeRules(layers[source]), ...(source === "command" ? pending : [])]
       .filter((rule) => matchesScope(rule.match, model))

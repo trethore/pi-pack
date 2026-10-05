@@ -16,39 +16,39 @@ npm run install:global:pi-openai
 
 Configure verbosity, reasoning summaries, native web search, and service-tier overrides for OpenAI-compatible requests. By default, the extension leaves requests unchanged.
 
-Run `/pi-openai` to see a table for **All models**, a table for every configured or runtime scope, and a final **Effective settings** table for the selected model. Status marks matching scopes, the default command target, value sources, and the save destination. The **Temporary** section lists pending sets and removals, with a reminder to use `/pi-openai save` when edits remain unsaved.
+Run `/pi-openai` to see tables for **All models**, configured or runtime scopes, and **Effective settings** for the selected model. Status marks matching scopes, the default command target, value sources, and the default destination for new sets. The **Temporary** table lists each pending edit with its recorded global or project source. Removals appear as **Removed** in red.
 
 ```text
 /pi-openai verbosity medium
 /pi-openai reasoningSummary auto
 /pi-openai webSearch true
 /pi-openai serviceTier priority
-```
-
-Value-setting commands edit the most specific existing scope matching the selected model. With only flat configuration, they affect **All models**, as before. Value overrides apply to subsequent requests without a reload and are temporary until saved:
-
-```text
 /pi-openai save
 ```
 
+Value-setting commands edit the most specific existing scope matching the selected model. With only flat configuration, they affect **All models**. Command overrides apply to subsequent requests without a reload and are temporary until saved.
+
+Each pending edit owns its **source file, scope, setting, and operation**. Saving commits these recorded edits; it never chooses a different destination or moves them to another scope.
+
 ### Commands
 
-| Command                                             | Description                                                                                                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `/pi-openai` or `/pi-openai status`                 | Show all scopes, effective settings, compatibility decisions, and save destination.                              |
-| `/pi-openai <setting> <value>`                      | Override a setting at the automatic target scope for this session.                                               |
-| `/pi-openai <setting> <value> --scope <scope>`      | Override a setting at an explicit scope, creating it if needed.                                                  |
-| `/pi-openai unset <setting>`                        | Stage removal at the most specific matching scope still defining that setting; skip pending removals.            |
-| `/pi-openai unset <setting> --scope <scope>`        | Stage removal only at this scope; do not fall through if the setting is absent or already pending removal.       |
-| `/pi-openai undo [setting]`                         | Discard one or all command overrides and pending edits at the automatic target scope.                            |
-| `/pi-openai undo [setting] --scope <scope>`         | Discard command overrides and pending edits at an explicit scope.                                                |
-| `/pi-openai undo --all-scopes`                      | Clear every runtime override and pending edit.                                                                   |
-| `/pi-openai save`                                   | Save pending edits at their original scopes to the project file if it exists and is trusted, otherwise globally. |
-| `/pi-openai save project`                           | Save pending edits to the project file, creating it if needed. Requires project trust.                           |
-| `/pi-openai save global`                            | Save pending edits to the global file.                                                                           |
-| `/pi-openai save [project\|global] --scope <scope>` | Retarget all pending edits to one scope in the saved file only.                                                  |
+| Command                                                    | Description                                                                                                |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/pi-openai` or `/pi-openai status`                        | Show scopes, effective settings, pending edits, and compatibility decisions.                               |
+| `/pi-openai <setting> <value>`                             | Override a setting at the automatic target scope and record its default file destination.                  |
+| `/pi-openai <setting> <value> --scope <scope>`             | Override a setting at an explicit scope, creating that scope if needed.                                    |
+| `/pi-openai <setting> <value> --source global\|project`    | Choose the pending edit's destination explicitly. Can combine with `--scope`.                              |
+| `/pi-openai unset <setting>`                               | Stage removal of the next eligible explicit value at its actual source and scope.                          |
+| `/pi-openai unset <setting> --scope <scope>`               | Search only this scope, considering project then global. Do not fall through to another scope.             |
+| `/pi-openai undo [setting]`                                | Discard one or all command overrides and pending edits at the automatic target scope, across both sources. |
+| `/pi-openai undo [setting] --scope <scope>`                | Discard command overrides and pending edits at an explicit scope, across both sources.                     |
+| `/pi-openai undo --all-scopes`                             | Clear every runtime override and pending edit.                                                             |
+| `/pi-openai save`                                          | Save all pending edits to their recorded sources and scopes.                                               |
+| `/pi-openai save --source global\|project`                 | Save only pending edits recorded for that source.                                                          |
+| `/pi-openai save --scope <scope>`                          | Save only pending edits of this exact scope kind, across all model identities.                             |
+| `/pi-openai save --source global\|project --scope <scope>` | Save only edits matching both filters. Leave all other edits pending.                                      |
 
-Scope names are `all`, `model`, `provider`, `api`, `provider+model`, `model+api`, `provider+api`, and `provider+model+api`. Identities come from the selected model and are captured when the command runs:
+Scope names are `all`, `model`, `provider`, `api`, `provider+model`, `model+api`, `provider+api`, and `provider+model+api`. For set, unset, and undo, selector identities come from the selected model:
 
 ```text
 /pi-openai verbosity low --scope provider+model
@@ -56,64 +56,95 @@ Scope names are `all`, `model`, `provider`, `api`, `provider+model`, `model+api`
 /pi-openai enabled false --scope all
 ```
 
-Switching models does not move existing overrides. With no selected model, set/undo/unset commands require `--scope all`; `undo --all-scopes` can still clear everything, and a bare save can persist previously captured edits.
+Edits capture these identities when staged. Switching models does not move existing edits. With no selected model, set/undo/unset require `--scope all`; `undo --all-scopes` can still clear everything. Saving, including filtered saving, does not require a selected model.
 
-Commands complete setting names, canonical values, and scope options. `undo` replaces the former `reset` command; `reset` is no longer accepted. Undo affects runtime state only: it discards command overrides and pending edits, including removals, without editing files. It is not a step-by-step history undo and does not restore built-in defaults when another loaded layer supplies a value. Empty runtime-only scopes disappear once their overrides and pending edits are discarded.
+Commands complete setting names, canonical values, scope options, and source options. `--source` is supported only for setting values and saving. `undo` replaces the former `reset` command; `reset` is no longer accepted.
+
+Undo affects runtime state only. It discards command overrides and pending edits, including removals, without editing files. It is not a step-by-step history undo and does not restore built-in defaults when another loaded layer supplies a value. Empty runtime-only scopes disappear once their overrides and pending edits are discarded.
+
+### Choosing a source when setting
+
+Without `--source`, new sets target the **trusted project file if it exists**, otherwise the global file. The choice is recorded when staging the edit, not when saving. Creating or deleting a project file afterward does not move existing pending edits.
+
+```text
+/pi-openai verbosity low --source global
+/pi-openai verbosity high --scope model --source project
+```
+
+`--source global` targets global even when a project file exists. `--source project` targets project even when its file does not exist; a notice says that the file will be created **on save**. Staging never creates a file. Untrusted projects cannot be targeted. A pending project edit does not change the default destination for subsequent sets until the project file exists.
+
+Setting an existing global value without `--source` creates or changes a project override when the trusted project file exists. It does not edit the global value. Use `--source global` when that is the intended destination. A project or environment value can still mask a saved global value after reload; forcing the destination does not bypass precedence.
+
+Repeated edits replace only the pending operation with the same **source + scope + setting**. The same setting can have separate global and project edits. Command overrides remain a single live layer: the latest set at a scope supplies its runtime value, independently of its file destination.
 
 ### Removing saved settings
 
-Use `unset` to stage removal of an explicit configuration value, then save it:
+Use `unset` to stage removal of an explicit value, then save:
 
 ```text
 /pi-openai unset verbosity --scope model
 /pi-openai status
-/pi-openai save global
+/pi-openai save
 /reload
 ```
 
-The Temporary table shows **Remove explicit value**, not `null`. Unset removes any command override for that setting at the same scope and replaces a pending set with a pending removal. Loaded configuration is unchanged: the saved deletion affects requests only after reload or a new session. Setting the same key again replaces its pending removal; `undo verbosity --scope model` cancels it without writing a file.
+Unset records the value's actual source. Within the same scope, it selects project before global and skips removals already staged. If both files define verbosity at that scope, two unsets produce separate rows:
 
-The save destination determines which file loses the setting. A bare `save` uses the trusted project file if it exists, otherwise the global file; use `save global` or `save project` to choose explicitly. Unset never removes environment variables or values from other files or scopes. Removing an explicit value exposes inherited values after reload, not necessarily built-in defaults.
+| Scope           | Setting   | Value   | Source  |
+| --------------- | --------- | ------- | ------- |
+| `model=example` | verbosity | Removed | project |
+| `model=example` | verbosity | Removed | global  |
 
-Automatic unset targeting is specific to the requested setting. It considers matching configuration and command scopes that explicitly define that key, excludes scopes with a pending removal for it, and uses the scope ranking below. Repeating `/pi-openai unset verbosity` walks the remaining scopes toward **All models**, even if a previously targeted scope still defines other settings. Environment values and built-in defaults are not removable candidates.
+A bare `save` applies both removals to their own files. `save --source project` saves only the project removal and leaves the global removal pending. This exposes the global fallback after reload unless it is also removed.
 
-An explicit `--scope` never falls through to another scope. When that scope has no explicit value or already has a pending removal, unset reports **Nothing to unset** at info level and adds no edit. Automatic unset reports the same message when no eligible scope remains. Other pending edits are unchanged. Invalid commands or a missing selected model without `--scope all` still report errors.
+Unset considers matching file values and pending sets for the requested key. It accounts for this session's saved values and removals, so saving between unsets does not reselect an already removed value from the loaded snapshot. Environment values and built-in defaults are never removable candidates. External file edits require a reload to update targeting.
 
-Unset accounts for this session's saved values and removals at their actual file scopes, so saving between unset commands does not reselect an already removed value from the loaded snapshot. A value still present in another file remains eligible; saving does not automatically switch destinations. External file edits require a reload to update targeting.
+Unset removes the runtime command override for that setting at the same scope and replaces any pending set at the selected source with a removal. Other-source pending edits remain separate. Loaded configuration is unchanged: a saved deletion affects requests only after reload or a new session. Removing an explicit value exposes inherited values, not necessarily built-in defaults.
 
-When the last setting in an override is removed, saving also removes the empty override block and omits an empty `overrides` array. Unknown settings or extra fields are preserved rather than deleting their block. Removing an absent setting does not create a file or an override.
+An explicit `--scope` never falls through to another scope. If neither source still has an eligible value there, unset reports **Nothing to unset** and adds no edit. Automatic unset reports the same when no eligible scope remains. Other pending edits are unchanged.
 
-Pending removal scopes remain targets for value-setting commands and `undo`, so you can replace or cancel a removal. They are skipped by subsequent automatic unsets of the same setting. Undoing a pending removal makes the loaded value eligible for unset again.
+Setting the same source, scope, and key again replaces its removal. `undo verbosity --scope model` cancels the pending verbosity edits at that scope in both sources without writing files. Pending removal scopes remain targets for set and undo. Undoing a removal makes its loaded value eligible for unset again.
+
+When the last setting in an override is removed, saving also removes the empty override block and an empty `overrides` array. Unknown settings or extra fields are preserved rather than deleting their block. Removing an absent setting does not create a file or an override. Removed entry lines do not leave empty placeholder lines.
 
 ### Automatic target selection
 
-Value-setting commands and `undo` use the default target shown in status, independently of whether it defines the setting being changed. Unset uses the same ranking but only among its eligible scopes:
+Set and undo use the default target shown in status, independently of whether it defines the setting being changed:
 
 1. Prefer more selector fields.
 2. On equal field counts, prefer runtime overrides or pending edits, then project configuration, then global configuration.
 3. Within the same source level, prefer model over provider over API. For two fields: provider+model > model+api > provider+api.
-4. Set/undo fall back to All models when no scoped rule matches. Unset considers All models only if it still defines the requested setting; otherwise it reports Nothing to unset.
+4. Fall back to All models when no scoped rule matches.
 
-Every successful edit confirmation names the target. An explicit scope bypasses automatic selection. Runtime scopes remain candidates after saving. A scope created only by a retargeted save is not a default target for set/undo until reloaded, but unset can remove its saved values.
+Unset ranks only eligible values for the requested key. It prefers more selector fields, then project over global on equal field counts, then the field ordering above. Pending sets retain their recorded file priority. It reaches All models only if that scope still defines an eligible value. In particular, a more specific global scope is visited before a broader project scope; among equally specific scopes, project values come first.
 
-Targeting is separate from effective-value resolution. All matching scopes contribute values, but a command edits only one scope. For example, a more specific global scope can be the command target while a broader project value would mask it after a global save and reload. A broader command edit can also be masked by a more specific runtime override; the confirmation reports this.
+Successful set and unset confirmations name the scope and source. An explicit scope bypasses automatic scope selection. Runtime scopes remain candidates for set/undo after saving. Unset can also remove values saved during the current session after their runtime override has been undone.
+
+Targeting is separate from effective-value resolution. All matching scopes contribute values, but a command edits only one scope. For example, a more specific global scope can be the command target while a broader project value masks it after a global save and reload. A broader command edit can also be masked by a more specific runtime override; the confirmation reports this.
 
 ### Saving
 
-Saving writes **only pending explicit edits**, including removals, across all edited scopes. It does not copy environment values, defaults, or inherited values. Comments outside removed entries, unrelated keys, and other scopes are preserved. With no pending edits, save does nothing.
+Saving writes **only pending explicit edits**. It does not copy environment values, defaults, or inherited values. Files are reread before writing, preserving intervening changes to unrelated settings, comments outside removed entries, unknown keys, and other scopes. The staged operation wins for its own source, scope, and setting.
 
-An explicit save scope retargets the file write, not live overrides:
+Save options are **filters**, not destinations or retargeting instructions:
 
 ```text
-/pi-openai verbosity low --scope model
-/pi-openai save global --scope provider
+/pi-openai verbosity low --scope model --source global
+/pi-openai reasoningSummary auto --scope api --source project
+/pi-openai save --source global --scope model
+/pi-openai status
+/pi-openai save
 ```
 
-The current session keeps the model-scoped override. The global file receives a provider-scoped setting for future sessions or reloads. Retargeting merges disjoint keys, identical values, and repeated removals. It rejects conflicting values or a set and removal for the same key, including conflicts with runtime values already at the target. Retargeted removals delete only at the destination scope; retargeting does not delete previously saved source rules.
+The filtered save writes only global model-scoped edits. The project API edit stays pending until the final save. `save --scope model` includes model-only edits for every captured model, not only the currently selected one. It excludes `provider+model` and `model+api` edits; use their exact scope names to select them. `save --scope all` selects only All models edits, not every scope. With no matching pending edits, save does nothing.
 
-**Saving does not change the current session's loaded configuration or runtime settings.** Successful saves clear pending flags but keep runtime overrides active. Status shows saved values and **Removed explicit value** receipts separately at their actual persisted scopes, marked for the next session/reload.
+The old positional commands `save global` and `save project` are no longer accepted. Choose a destination on the **setting command** with `--source`. Use `save --source` only to select edits already recorded for that file. Save no longer supports moving edits to another scope; choose the correct `--scope` when setting the value.
 
-Undo after saving cannot reverse a persisted write. It exposes the configuration loaded at session start, not the newly written file. Run `/reload` or start a new session to load saved settings and clear runtime overrides. Normal project/environment precedence still applies after reload; saving globally cannot bypass it.
+Each file is replaced atomically, but a save across both files is not a single transaction. Each successful file save clears only its captured edits and produces a concise confirmation. If a later file fails, edits for failed or unattempted files remain pending; already successful saves are not repeated. Edits replaced while saving remain pending. Project trust is checked before a save that includes project edits.
+
+**Saving does not change the current session's loaded configuration or runtime settings.** Successful saves keep runtime overrides active. Status shows saved values and **Removed** receipts separately at their recorded sources and scopes, marked for the next session/reload.
+
+Undo after saving cannot reverse a persisted write. It exposes the configuration loaded at session start, not the newly written file. Run `/reload` or start a new session to load saved settings and clear runtime overrides. Normal project/environment precedence still applies after reload.
 
 ## Configuration
 

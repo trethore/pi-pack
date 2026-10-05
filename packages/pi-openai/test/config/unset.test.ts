@@ -5,41 +5,48 @@ import {
   setCommand,
   undoCommand,
   unsetCommand,
-  unsetScope,
+  unsetTarget,
   type Changes,
 } from "#src/config/changes";
-import { explicitScope, scopeNames } from "#src/config/scopes";
+import { explicitScope, scopeNames, scopeSize } from "#src/config/scopes";
 import { layers, model } from "#test/support";
 
-it("walks matching scopes from most specific to All models without changing loaded configuration", () => {
+it.each([false, true])("walks scopes by specificity and removes project before global with saves: %s", (saveEach) => {
   // Arrange
   const scopes = scopeNames.map((scope) => explicitScope(scope, model)).toReversed();
-  const input = layers({
-    global: {
-      verbosity: "high",
-      overrides: scopes
-        .filter((match) => Object.keys(match).length > 0)
-        .map((match) => ({
-          match,
-          settings: { verbosity: "low", webSearch: true },
-        })),
-    },
-  });
+  const configuration = {
+    verbosity: "high" as const,
+    overrides: scopes
+      .filter((match) => Object.keys(match).length > 0)
+      .map((match) => ({
+        match,
+        settings: { verbosity: "low" as const, webSearch: true },
+      })),
+  };
+  const input = layers({ global: structuredClone(configuration), project: configuration });
   const changes: Changes = { pending: [], receipts: [] };
   const before = structuredClone(input);
 
   // Act / Assert
-  for (const match of scopes) {
-    expect(unsetScope(input, changes, model, "verbosity")).toEqual(match);
-    unsetCommand(input, changes, match, "verbosity");
+  const targets = [3, 2, 1, 0].flatMap((size) =>
+    (["project", "global"] as const).flatMap((destination) =>
+      scopes.filter((match) => scopeSize(match) === size).map((match) => ({ match, destination })),
+    ),
+  );
+  for (const { match, destination } of targets) {
+    expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match, destination });
+    unsetCommand(input, changes, match, "verbosity", destination);
+    if (saveEach) {
+      completeSave(changes, prepareSave(changes));
+    }
   }
-  expect(unsetScope(input, changes, model, "verbosity")).toBeUndefined();
-  expect(changes.pending).toHaveLength(scopes.length);
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
+  expect(changes.pending).toHaveLength(saveEach ? 0 : scopes.length * 2);
   expect(input).toEqual(before);
-  expect(unsetScope(input, changes, model, "webSearch")).toEqual(scopes[0]);
+  expect(unsetTarget(input, changes, model, "webSearch")).toEqual({ match: scopes[0], destination: "project" });
 });
 
-it("skips more specific scopes that do not define the requested setting and nonmatching scopes", () => {
+it("skips more specific scopes without the setting and nonmatching scopes", () => {
   // Arrange
   const match = { provider: model.provider };
   const input = layers({
@@ -53,60 +60,61 @@ it("skips more specific scopes that do not define the requested setting and nonm
   });
   const changes: Changes = { pending: [], receipts: [] };
 
-  // Act
-  const target = unsetScope(input, changes, model, "verbosity");
-
-  // Assert
-  expect(target).toEqual(match);
+  // Act / Assert
+  expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match, destination: "global" });
   expect(changes.pending).toEqual([]);
 });
 
-it("uses source priority to break equal specificity ties only among scopes defining the setting", () => {
+it("uses file source priority to break equal specificity ties, including pending sets", () => {
   // Arrange
   const input = layers({
     global: { overrides: [{ match: { model: model.id }, settings: { verbosity: "low" } }] },
     project: { overrides: [{ match: { provider: model.provider }, settings: { verbosity: "high" } }] },
   });
   const changes: Changes = { pending: [], receipts: [] };
-  setCommand(input, changes, { api: model.api }, { verbosity: null });
+  setCommand(input, changes, { api: model.api }, { verbosity: null }, "global");
 
   // Act / Assert
-  for (const match of [{ api: model.api }, { provider: model.provider }, { model: model.id }]) {
-    expect(unsetScope(input, changes, model, "verbosity")).toEqual(match);
-    unsetCommand(input, changes, match, "verbosity");
+  for (const target of [
+    { match: { provider: model.provider }, destination: "project" as const },
+    { match: { model: model.id }, destination: "global" as const },
+    { match: { api: model.api }, destination: "global" as const },
+  ]) {
+    expect(unsetTarget(input, changes, model, "verbosity")).toEqual(target);
+    unsetCommand(input, changes, target.match, "verbosity", target.destination);
   }
-  expect(unsetScope(input, changes, model, "verbosity")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
 });
 
-it("does not fall through an explicit absent or already pending scope", () => {
+it("walks both sources at an explicit scope without falling through to another scope", () => {
   // Arrange
+  const match = { model: model.id };
   const input = layers({
-    global: {
-      verbosity: "high",
-      overrides: [{ match: { model: model.id }, settings: { verbosity: "low" } }],
-    },
+    global: { verbosity: "high", overrides: [{ match, settings: { verbosity: "low" } }] },
+    project: { overrides: [{ match, settings: { verbosity: "medium" } }] },
   });
   const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, { model: model.id }, "verbosity");
-  const before = structuredClone(changes);
 
   // Act / Assert
-  expect(unsetScope(input, changes, model, "verbosity", "provider")).toBeUndefined();
-  expect(unsetScope(input, changes, model, "verbosity", "model")).toBeUndefined();
-  expect(unsetScope(input, changes, model, "verbosity", "all")).toEqual({});
-  expect(unsetScope(input, changes, model, "verbosity")).toEqual({});
-  expect(changes).toEqual(before);
+  for (const destination of ["project", "global"] as const) {
+    expect(unsetTarget(input, changes, model, "verbosity", "model")).toEqual({ match, destination });
+    unsetCommand(input, changes, match, "verbosity", destination);
+  }
+  expect(unsetTarget(input, changes, model, "verbosity", "provider")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity", "model")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity", "all")).toEqual({ match: {}, destination: "global" });
+  expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match: {}, destination: "global" });
 });
 
-it("ignores environment values and defaults rather than synthesizing a removal", () => {
+it("ignores environment values and defaults rather than synthesizing removals", () => {
   // Arrange
   const input = layers({ environment: { verbosity: "low", webSearch: true } });
   const changes: Changes = { pending: [], receipts: [] };
 
   // Act / Assert
-  expect(unsetScope(input, changes, model, "verbosity")).toBeUndefined();
-  expect(unsetScope(input, changes, model, "webSearch", "all")).toBeUndefined();
-  expect(unsetScope(input, changes, model, "enabled")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "webSearch", "all")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "enabled")).toBeUndefined();
   expect(changes.pending).toEqual([]);
 });
 
@@ -117,75 +125,87 @@ it("recognizes explicit null and false values as removable settings", () => {
 
   // Act / Assert
   for (const setting of ["verbosity", "enabled", "webSearch"] as const) {
-    expect(unsetScope(input, changes, model, setting)).toEqual({});
+    expect(unsetTarget(input, changes, model, setting)).toEqual({ match: {}, destination: "global" });
   }
 });
 
-it("makes a scope available again when its pending removal is undone or replaced with a set", () => {
+it("makes a source eligible again after undo or replacing its removal with a set", () => {
   // Arrange
   const match = { model: model.id };
   const input = layers({ global: { overrides: [{ match, settings: { verbosity: "high" } }] } });
   const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, match, "verbosity");
+  unsetCommand(input, changes, match, "verbosity", "global");
 
   // Act / Assert
-  expect(unsetScope(input, changes, model, "verbosity")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
   undoCommand(input, changes, match, "verbosity");
-  expect(unsetScope(input, changes, model, "verbosity")).toEqual(match);
-  unsetCommand(input, changes, match, "verbosity");
-  setCommand(input, changes, match, { verbosity: "low" });
-  expect(unsetScope(input, changes, model, "verbosity")).toEqual(match);
+  expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match, destination: "global" });
+  unsetCommand(input, changes, match, "verbosity", "global");
+  setCommand(input, changes, match, { verbosity: "low" }, "global");
+  expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match, destination: "global" });
 });
 
-it("skips saved removals without changing the loaded layers", () => {
-  // Arrange
-  const match = { model: model.id };
-  const input = layers({
-    global: { verbosity: "high", overrides: [{ match, settings: { verbosity: "low" } }] },
-  });
-  const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, match, "verbosity");
-  completeSave(changes, prepareSave(input, changes), "global");
-  const before = structuredClone({ input, changes });
-
-  // Act / Assert
-  expect(unsetScope(input, changes, model, "verbosity")).toEqual({});
-  expect(unsetScope(input, changes, model, "verbosity", "model")).toBeUndefined();
-  expect({ input, changes }).toEqual(before);
-});
-
-it("does not hide a value in another file when one destination has a saved removal", () => {
+it("accounts for source-filtered saves without hiding the other file or changing loaded settings", () => {
   // Arrange
   const match = { model: model.id };
   const input = layers({
     global: { overrides: [{ match, settings: { verbosity: "low" } }] },
     project: { overrides: [{ match, settings: { verbosity: "high" } }] },
   });
+  const before = structuredClone(input);
   const changes: Changes = { pending: [], receipts: [] };
-  unsetCommand(input, changes, match, "verbosity");
-  const batch = prepareSave(input, changes);
-  completeSave(changes, batch, "project");
+  unsetCommand(input, changes, match, "verbosity", "project");
+  completeSave(changes, prepareSave(changes, { source: "project" }));
 
   // Act / Assert
-  expect(unsetScope(input, changes, model, "verbosity")).toEqual(match);
-  completeSave(changes, batch, "global");
-  expect(unsetScope(input, changes, model, "verbosity")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match, destination: "global" });
+  unsetCommand(input, changes, match, "verbosity", "global");
+  completeSave(changes, prepareSave(changes));
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
+  expect(input).toEqual(before);
 });
 
-it("can remove saved-only values at their actual persisted scope", () => {
+it("can remove saved-only values at their recorded source and scope after undo", () => {
   // Arrange
   const input = layers();
   const changes: Changes = { pending: [], receipts: [] };
   const match = { provider: model.provider };
-  setCommand(input, changes, { model: model.id }, { verbosity: "low" });
-  completeSave(changes, prepareSave(input, changes, match), "global");
+  setCommand(input, changes, match, { verbosity: "low" }, "project");
+  completeSave(changes, prepareSave(changes));
   undoCommand(input, changes);
 
   // Act / Assert
-  expect(unsetScope(input, changes, model, "verbosity")).toEqual(match);
-  unsetCommand(input, changes, match, "verbosity");
-  completeSave(changes, prepareSave(input, changes), "global");
-  expect(unsetScope(input, changes, model, "verbosity")).toBeUndefined();
+  expect(unsetTarget(input, changes, model, "verbosity")).toEqual({ match, destination: "project" });
+  unsetCommand(input, changes, match, "verbosity", "project");
+  completeSave(changes, prepareSave(changes));
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
+});
+
+it("does not reconsider saved runtime command values after their file value was removed", () => {
+  // Arrange
+  const input = layers();
+  const changes: Changes = { pending: [], receipts: [] };
+  setCommand(input, changes, {}, { verbosity: "low" }, "global");
+  completeSave(changes, prepareSave(changes));
+  unsetCommand(input, changes, {}, "verbosity", "global");
+  completeSave(changes, prepareSave(changes));
+
+  // Act / Assert
+  expect(unsetTarget(input, changes, model, "verbosity")).toBeUndefined();
+});
+
+it("excludes project values and edits if trust is revoked", () => {
+  // Arrange
+  const input = layers({ global: { verbosity: "low" }, project: { verbosity: "high" } });
+  const changes: Changes = { pending: [], receipts: [] };
+  setCommand(input, changes, { model: model.id }, { verbosity: "medium" }, "project");
+
+  // Act / Assert
+  expect(unsetTarget(input, changes, model, "verbosity", undefined, false)).toEqual({
+    match: {},
+    destination: "global",
+  });
+  expect(unsetTarget(input, changes, model, "verbosity", "model", false)).toBeUndefined();
 });
 
 it("requires --scope all without a selected model and reports missing explicit settings as absent", () => {
@@ -194,8 +214,8 @@ it("requires --scope all without a selected model and reports missing explicit s
   const changes: Changes = { pending: [], receipts: [] };
 
   // Act / Assert
-  expect(() => unsetScope(input, changes, undefined, "verbosity")).toThrow("No model selected; use --scope all.");
-  expect(() => unsetScope(input, changes, undefined, "verbosity", "model")).toThrow("--scope all");
-  expect(unsetScope(input, changes, undefined, "verbosity", "all")).toEqual({});
-  expect(unsetScope(input, changes, undefined, "webSearch", "all")).toBeUndefined();
+  expect(() => unsetTarget(input, changes, undefined, "verbosity")).toThrow("No model selected; use --scope all.");
+  expect(() => unsetTarget(input, changes, undefined, "verbosity", "model")).toThrow("--scope all");
+  expect(unsetTarget(input, changes, undefined, "verbosity", "all")).toEqual({ match: {}, destination: "global" });
+  expect(unsetTarget(input, changes, undefined, "webSearch", "all")).toBeUndefined();
 });
