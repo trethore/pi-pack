@@ -1,6 +1,7 @@
 # pi-openai
 
-Control verbosity, reasoning summaries, native web search, and service tiers for OpenAI-compatible requests in Pi. **Default settings leave requests unchanged.**
+Control verbosity, reasoning summaries, native web search, and service tiers for OpenAI-compatible requests in Pi. \
+**Default settings leave requests unchanged.**
 
 ## Installation
 
@@ -19,7 +20,8 @@ Try lower verbosity for the selected model, then inspect the result:
 /pi-openai
 ```
 
-Command overrides apply to subsequent requests without reloading, subject to precedence and compatibility checks. To keep the pending changes:
+Command overrides apply to subsequent requests without reloading, subject to precedence and compatibility checks.
+To keep the pending changes:
 
 ```text
 /pi-openai save
@@ -302,7 +304,8 @@ Active tiers set `service_tier` to the requested value. Chat Completions skips b
 <details>
 <summary>Azure eligibility and deployment names</summary>
 
-- **Priority:** Check Azure's [model/version, region, and deployment eligibility](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/priority-processing). Eligible deployment types are Global Standard and US Data Zone Standard, not Regional Standard or EU Data Zone Standard. Priority requests can fall back to standard processing. Azure also lists `gpt-6.1-sol` in its latency targets; this extension skips its priority override by default.
+- **Priority:** Check Azure's [model/version, region, and deployment eligibility](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/priority-processing). Eligible deployment types are Global Standard and US Data Zone Standard, not Regional Standard or EU Data Zone Standard.
+  Priority requests can fall back to standard processing. Azure also lists `gpt-6.1-sol` in its latency targets; this extension skips its priority override by default.
 - **Web search:** Azure's [Responses guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/web-search) documents `web_search`. Administrators can block it. Bing grounding sends data outside your compliance and geographic boundaries.
 
 The extension does not check deployment eligibility or subscription policies. Status reports model-level compatibility, not individual request acceptance.
@@ -339,20 +342,27 @@ This bypasses API, provider, endpoint, model, and feature-support checks, includ
 | Array `messages`, no `input`            | Chat Completions verbosity only |
 | Both fields or neither compatible shape | None                            |
 
-Validation and disabled settings still apply. Request model identity must match the selected model or expected Azure deployment, even with this flag. Incompatible nested fields are preserved. Status cannot predict payload-specific safeguards before a request is made.
+Validation and disabled settings still apply. Request model identity must match the selected model or expected Azure deployment, even with this flag.
+Incompatible nested fields are preserved. Status cannot predict payload-specific safeguards before a request is made.
 
 </details>
 
 ## Troubleshooting
 
-| Symptom                          | Check                                                                                                                                               |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A command has no visible effect  | Run `/pi-openai`: inspect effective scope, disabled settings, and skip reasons.                                                                     |
-| A saved value loses after reload | Project/environment precedence still applies; `--source global` does not bypass it.                                                                 |
-| Configuration is unavailable     | Invalid files/environment values stop all extension overrides. Fix the error, then reload; restart Pi to supply corrected shell environment values. |
-| A project edit is refused        | The project must be trusted.                                                                                                                        |
+**Q: Why does a command have no visible effect?**  
+A: Run `/pi-openai` and inspect the effective scope, disabled settings, and skip reasons.
 
-Configuration validation includes nonmatching scopes. Duplicate known keys/selectors and unknown selector fields are errors; unknown settings produce warnings.
+**Q: Why does a saved value disappear after reload?**  
+A: Project and environment precedence still applies. `--source global` does not bypass it.
+
+**Q: Why is configuration unavailable?**  
+A: Invalid files or environment values stop all extension overrides. Fix the error, then reload. Restart Pi if you need to supply corrected shell environment values.
+
+**Q: Why is a project edit refused?**  
+A: The project must be trusted before it can be edited.
+
+Configuration validation includes nonmatching scopes.
+Duplicate known keys/selectors and unknown selector fields are errors; unknown settings produce warnings.
 
 ## License
 
