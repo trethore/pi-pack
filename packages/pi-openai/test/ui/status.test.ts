@@ -2,6 +2,7 @@ import { initTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { beforeAll, expect, it, vi } from "vitest";
 import { renderStatus, statusMarkdown } from "#src/ui/status";
+import { completeSave, prepareSave, resetCommand, setCommand, type Changes } from "#src/config/changes";
 import { layers, model } from "#test/support";
 
 beforeAll(() => {
@@ -28,7 +29,7 @@ it("shows a Markdown table with effective values, sources, behavior and save des
   expect(markdown).toContain("Save destination: **project**");
   expect(markdown).toContain("Saves pending edits at their original scopes");
   expect(markdown).toContain("### All models");
-  expect(markdown).toContain("### Effective settings");
+  expect(markdown).toContain("## Effective settings");
   expect(markdown).not.toContain(model.baseUrl);
 });
 
@@ -137,7 +138,7 @@ it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior f
   // Assert
   for (const setting of ["verbosity", "reasoningSummary", "webSearch", "serviceTier"]) {
     const row = markdown
-      .split("### Effective settings")[1]
+      .split("## Effective settings")[1]
       ?.split("\n")
       .find((line) => line.startsWith(`| ${setting} |`));
     expect(row).toContain("Attempt on compatible request payload (support checks bypassed)");
@@ -240,7 +241,7 @@ it("shows all scopes, matching markers, provenance, and a final effective table"
   expect(markdown.match(/### `provider=openai`/g)).toHaveLength(1);
   expect(markdown).toContain("Default command target: `provider=openai`");
   expect(markdown).toContain("| verbosity | `medium` | project |");
-  const effective = markdown.split("### Effective settings")[1];
+  const effective = markdown.split("## Effective settings")[1];
   expect(effective).toContain("| verbosity | `medium` | project | Set text.verbosity | `provider=openai` |");
   expect(effective).toContain("| webSearch | `true` | global |");
   expect(effective).toContain("| enabled | `true` | default |");
@@ -269,8 +270,8 @@ it("keeps saved-only receipts out of the default target and effective values", (
   expect(markdown).toContain("Saved to **project** for next session/reload (not loaded)");
   expect(markdown).toContain("| verbosity | `high` |");
   expect(markdown).toContain("Default command target: `All models`");
-  expect(markdown.split("### Effective settings")[1]).toContain("| verbosity | `low` | command |");
-  expect(markdown.split("### Effective settings")[1]).not.toContain("`high`");
+  expect(markdown.split("## Effective settings")[1]).toContain("| verbosity | `low` | command |");
+  expect(markdown.split("## Effective settings")[1]).not.toContain("`high`");
 });
 
 it("escapes configured selectors in every scope heading and table", () => {
@@ -292,4 +293,72 @@ it("escapes configured selectors in every scope heading and table", () => {
   // Assert
   expect(markdown).toContain("model=bad????[31m?value");
   expect(markdown).not.toContain("\u001b");
+});
+
+it("lists all unsaved edits in a Temporary section immediately before effective settings", () => {
+  // Arrange
+  const input = layers({ global: { reasoningSummary: "auto" } });
+  const changes: Changes = { pending: [], receipts: [] };
+  setCommand(input, changes, { model: model.id }, { verbosity: "low" });
+  setCommand(input, changes, { provider: model.provider }, { verbosity: "high", webSearch: false });
+  setCommand(input, changes, { model: "other" }, { verbosity: null });
+  setCommand(input, changes, {}, { enabled: false });
+  const before = structuredClone(changes);
+
+  // Act
+  const markdown = statusMarkdown(input, model, "global", changes);
+  const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
+
+  // Assert
+  expect(markdown.indexOf("## Temporary")).toBeGreaterThan(markdown.indexOf("### `model=other`"));
+  expect(temporary).not.toContain("##");
+  expect(temporary).toContain("| `All models` | enabled | `false` | Yes |");
+  expect(temporary).toContain("| `provider=openai` | verbosity | `high` | Yes |");
+  expect(temporary).toContain("| `provider=openai` | webSearch | `false` | Yes |");
+  expect(temporary).toContain("| `model=gpt-6-sol` | verbosity | `low` | Yes |");
+  expect(temporary).toContain("| `model=other` | verbosity | `null` | No |");
+  expect(temporary).not.toContain("reasoningSummary");
+  expect(markdown).not.toContain("Pending save groups");
+  expect(changes).toEqual(before);
+});
+
+it.each(["save", "reset"])("shows no unsaved edits after %s without hiding saved runtime values", (action) => {
+  // Arrange
+  const input = layers();
+  const changes: Changes = { pending: [], receipts: [] };
+  setCommand(input, changes, {}, { verbosity: "low" });
+
+  // Act
+  if (action === "save") {
+    completeSave(changes, prepareSave(input, changes), "global");
+  } else {
+    resetCommand(input, changes);
+  }
+  const markdown = statusMarkdown(input, model, "global", changes);
+  const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
+
+  // Assert
+  expect(temporary?.trim()).toBe("No unsaved command edits.");
+  if (action === "save") {
+    expect(markdown).toContain("| verbosity | `low` | command, saved |");
+  } else {
+    expect(markdown).toContain("| verbosity | `null` | default |");
+  }
+});
+
+it("escapes temporary scopes and handles pending edits without a selected model", () => {
+  // Arrange
+  const input = layers();
+  const changes: Changes = { pending: [], receipts: [] };
+  setCommand(input, changes, { model: "bad`|\n\u001b[31m\\value" }, { verbosity: "low" });
+  setCommand(input, changes, {}, { webSearch: true });
+
+  // Act
+  const markdown = statusMarkdown(input, undefined, "global", changes);
+  const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
+
+  // Assert
+  expect(temporary).toContain("| `model=bad????[31m?value` | verbosity | `low` | No |");
+  expect(temporary).toContain("| `All models` | webSearch | `true` | Yes |");
+  expect(temporary).not.toContain("\u001b");
 });

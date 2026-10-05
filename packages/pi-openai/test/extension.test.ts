@@ -745,7 +745,9 @@ it("fails conflicting save retargets without losing pending edits or creating fi
   await extension.command("status");
   expect(extension.appendEntry).toHaveBeenLastCalledWith(
     "pi-openai-status",
-    expect.stringContaining("Pending save groups: 2"),
+    expect.stringContaining(
+      "| `provider=openai` | verbosity | `high` | Yes |\n| `model=gpt-6-sol` | verbosity | `low` | Yes |",
+    ),
   );
   await extension.command("save");
   expect(parseConfig(await workspace.read("global"))).toEqual({
@@ -889,7 +891,7 @@ it("retains edits made during a save and rejects overlapping saves", async () =>
   await extension.command("status");
   expect(extension.appendEntry).toHaveBeenLastCalledWith(
     "pi-openai-status",
-    expect.stringContaining("Pending save groups: 1"),
+    expect.stringContaining("| `All models` | verbosity | `high` | Yes |"),
   );
   await extension.command("save global");
   expect(parseConfig(await workspace.read("global"))).toEqual({ verbosity: "high" });

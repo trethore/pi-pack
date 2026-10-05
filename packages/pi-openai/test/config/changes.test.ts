@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { completeSave, prepareSave, resetCommand, setCommand, type Changes } from "#src/config/changes";
-import { automaticScope } from "#src/config/scopes";
+import { automaticScope, commandScope } from "#src/config/scopes";
 import { resolveSettings } from "#src/config/settings";
 import { layers, model } from "#test/support";
 
@@ -152,4 +152,45 @@ it("preserves reset during a save and merges receipts per destination and select
     { destination: "project", match: {}, settings: { verbosity: "high" } },
   ]);
   expect(edits.pending).toEqual([]);
+});
+
+it("resets exact scopes and exposes broader command overrides before loaded values", () => {
+  // Arrange
+  const input = layers({ environment: { verbosity: "medium" } });
+  const edits = changes();
+  setCommand(input, edits, {}, { verbosity: "medium" });
+  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" });
+  setCommand(input, edits, { model: model.id }, { verbosity: "low", webSearch: true });
+
+  // Act / Assert
+  resetCommand(input, edits, commandScope(input, model), "verbosity");
+  expect(resolveSettings(input, model).values).toMatchObject({ verbosity: "high", webSearch: true });
+  expect(edits.pending).toContainEqual({ match: { model: model.id }, settings: { webSearch: true } });
+  resetCommand(input, edits, commandScope(input, model, "all"));
+  expect(resolveSettings(input, model).values.verbosity).toBe("high");
+  expect(edits.pending).toHaveLength(2);
+  resetCommand(input, edits, commandScope(input, model, "provider"));
+  expect(resolveSettings(input, model).values.verbosity).toBe("medium");
+  resetCommand(input, edits);
+  expect(input.command).toEqual({});
+  expect(edits.pending).toEqual([]);
+});
+
+it("does not fall through when the automatic reset target has no command value for the setting", () => {
+  // Arrange
+  const input = layers({
+    global: { overrides: [{ match: { provider: model.provider, model: model.id }, settings: { webSearch: true } }] },
+  });
+  const edits = changes();
+  setCommand(input, edits, { provider: model.provider }, { verbosity: "high" });
+  const before = structuredClone(edits);
+
+  // Act
+  const target = commandScope(input, model);
+  resetCommand(input, edits, target, "verbosity");
+
+  // Assert
+  expect(target).toEqual({ provider: model.provider, model: model.id });
+  expect(resolveSettings(input, model).values.verbosity).toBe("high");
+  expect(edits).toEqual(before);
 });

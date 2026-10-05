@@ -130,6 +130,32 @@ function scopeTable(
   return lines.join("\n");
 }
 
+function temporaryTable(changes: Changes, model: RequestModel | undefined): string {
+  const lines = ["## Temporary", ""];
+  if (changes.pending.length === 0) {
+    lines.push("No unsaved command edits.");
+  } else {
+    lines.push(
+      "Unsaved command edits at their original scopes. Matching edits can still be masked by more specific command overrides.",
+      "",
+      "| Scope | Setting | Value | Matches selected model |",
+      "| --- | --- | --- | --- |",
+    );
+    const pending = [...changes.pending].sort(
+      (left, right) =>
+        scopeRank(left.match) - scopeRank(right.match) || scopeId(left.match).localeCompare(scopeId(right.match)),
+    );
+    for (const rule of pending) {
+      const scope = inlineCode(scopeLabel(rule.match));
+      const matches = matchesScope(rule.match, model) ? "Yes" : "No";
+      for (const key of settingNames.filter((setting) => Object.hasOwn(rule.settings, setting))) {
+        lines.push(`| ${scope} | ${key} | ${inlineCode(String(rule.settings[key]))} | ${matches} |`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
 export function statusMarkdown(
   layers: Layers,
   model: RequestModel | undefined,
@@ -154,7 +180,9 @@ export function statusMarkdown(
     `),
     "",
     ...scopeViews(layers, changes).map((view) => scopeTable(view, changes, model, target) + "\n"),
-    "### Effective settings",
+    temporaryTable(changes, model),
+    "",
+    "## Effective settings",
     "",
     "| Setting | Value | Source | Request behavior | Source scope |",
     "| --- | --- | --- | --- | --- |",
@@ -162,8 +190,6 @@ export function statusMarkdown(
       (key) =>
         `| ${key} | ${inlineCode(String(effective.values[key]))} | ${effective.sources[key]} | ${behavior(key, effective, model)} | ${inlineCode(scopeLabel(effective.scopes[key]))} |`,
     ),
-    "",
-    `Pending save groups: ${changes.pending.length}.`,
     "",
     supportWarning,
     "",
