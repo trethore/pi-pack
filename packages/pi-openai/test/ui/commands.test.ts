@@ -1,25 +1,42 @@
 import { expect, it } from "vitest";
-import { completeArguments, parseCommand } from "#src/ui/commands";
+import { ServiceTier, Verbosity, Destination } from "#src/constants";
+import { Setting } from "#src/config/settings";
+import { completeArguments, parseCommand, Command } from "#src/ui/commands";
 
 it.each(["", " ", "status", " status "])("shows status for %j", (input) => {
   // Act / Assert
-  expect(parseCommand(input)).toEqual({ type: "status" });
+  expect(parseCommand(input)).toEqual({ type: Command.STATUS });
 });
 
 it.each([
-  ["serviceTier fast", { type: "set", setting: "serviceTier", override: { serviceTier: "priority" } }],
-  ["serviceTier priority", { type: "set", setting: "serviceTier", override: { serviceTier: "priority" } }],
-  ["serviceTier ultrafast", { type: "set", setting: "serviceTier", override: { serviceTier: "ultrafast" } }],
-  ["verbosity low", { type: "set", setting: "verbosity", override: { verbosity: "low" } }],
-  ["reasoningSummary null", { type: "set", setting: "reasoningSummary", override: { reasoningSummary: null } }],
-  ["allowUnsupported true", { type: "set", setting: "allowUnsupported", override: { allowUnsupported: true } }],
-  ["undo", { type: "undo", setting: undefined }],
-  ["undo verbosity", { type: "undo", setting: "verbosity" }],
-  ["unset verbosity", { type: "unset", setting: "verbosity" }],
-  ["save", { type: "save" }],
-  ["save --source project", { type: "save", source: "project" }],
-  ["save --source global", { type: "save", source: "global" }],
-])("parses %s", (input, expected) => {
+  [
+    "serviceTier fast",
+    { type: Command.SET, setting: Setting.SERVICE_TIER, override: { serviceTier: ServiceTier.PRIORITY } },
+  ],
+  [
+    "serviceTier priority",
+    { type: Command.SET, setting: Setting.SERVICE_TIER, override: { serviceTier: ServiceTier.PRIORITY } },
+  ],
+  [
+    "serviceTier ultrafast",
+    { type: Command.SET, setting: Setting.SERVICE_TIER, override: { serviceTier: ServiceTier.ULTRAFAST } },
+  ],
+  ["verbosity low", { type: Command.SET, setting: Setting.VERBOSITY, override: { verbosity: Verbosity.LOW } }],
+  [
+    "reasoningSummary null",
+    { type: Command.SET, setting: Setting.REASONING_SUMMARY, override: { reasoningSummary: null } },
+  ],
+  [
+    "allowUnsupported true",
+    { type: Command.SET, setting: Setting.ALLOW_UNSUPPORTED, override: { allowUnsupported: true } },
+  ],
+  ["undo", { type: Command.UNDO, setting: undefined }],
+  ["undo verbosity", { type: Command.UNDO, setting: Setting.VERBOSITY }],
+  ["unset verbosity", { type: Command.UNSET, setting: Setting.VERBOSITY }],
+  ["save", { type: Command.SAVE }],
+  ["save --source project", { type: Command.SAVE, source: Destination.PROJECT }],
+  ["save --source global", { type: Command.SAVE, source: Destination.GLOBAL }],
+] satisfies Array<[string, Command]>)("parses %s", (input, expected) => {
   // Act / Assert
   expect(parseCommand(input)).toEqual(expected);
 });
@@ -92,19 +109,22 @@ it("discovers all subcommands without a help command", () => {
 it.each([
   [
     "verbosity low --scope model",
-    { type: "set", setting: "verbosity", override: { verbosity: "low" }, scope: "model" },
+    { type: Command.SET, setting: Setting.VERBOSITY, override: { verbosity: Verbosity.LOW }, scope: "model" },
   ],
   [
     "verbosity --scope provider low",
-    { type: "set", setting: "verbosity", override: { verbosity: "low" }, scope: "provider" },
+    { type: Command.SET, setting: Setting.VERBOSITY, override: { verbosity: Verbosity.LOW }, scope: "provider" },
   ],
-  ["undo verbosity --scope all", { type: "undo", setting: "verbosity", scope: "all" }],
-  ["unset verbosity --scope model", { type: "unset", setting: "verbosity", scope: "model" }],
-  ["unset --scope all verbosity", { type: "unset", setting: "verbosity", scope: "all" }],
-  ["undo --all-scopes", { type: "undo", setting: undefined, allScopes: true }],
-  ["save --source project --scope provider+model", { type: "save", source: "project", scope: "provider+model" }],
-  ["save --scope api --source global", { type: "save", source: "global", scope: "api" }],
-])("parses scoped command %s", (input, expected) => {
+  ["undo verbosity --scope all", { type: Command.UNDO, setting: Setting.VERBOSITY, scope: "all" }],
+  ["unset verbosity --scope model", { type: Command.UNSET, setting: Setting.VERBOSITY, scope: "model" }],
+  ["unset --scope all verbosity", { type: Command.UNSET, setting: Setting.VERBOSITY, scope: "all" }],
+  ["undo --all-scopes", { type: Command.UNDO, setting: undefined, allScopes: true }],
+  [
+    "save --source project --scope provider+model",
+    { type: Command.SAVE, source: Destination.PROJECT, scope: "provider+model" },
+  ],
+  ["save --scope api --source global", { type: Command.SAVE, source: Destination.GLOBAL, scope: "api" }],
+] satisfies Array<[string, Command]>)("parses scoped command %s", (input, expected) => {
   // Act / Assert
   expect(parseCommand(input)).toEqual(expected);
 });
@@ -169,14 +189,25 @@ it.each(["save --scope model --scope ", "undo --all-scopes ", "status --", "save
 it.each([
   [
     "verbosity low --source global",
-    { type: "set", setting: "verbosity", override: { verbosity: "low" }, source: "global" },
+    {
+      type: Command.SET,
+      setting: Setting.VERBOSITY,
+      override: { verbosity: Verbosity.LOW },
+      source: Destination.GLOBAL,
+    },
   ],
   [
     "verbosity --source project low --scope model",
-    { type: "set", setting: "verbosity", override: { verbosity: "low" }, source: "project", scope: "model" },
+    {
+      type: Command.SET,
+      setting: Setting.VERBOSITY,
+      override: { verbosity: Verbosity.LOW },
+      source: Destination.PROJECT,
+      scope: "model",
+    },
   ],
-  ["save --source project --scope api", { type: "save", source: "project", scope: "api" }],
-])("parses source options in %s", (input, expected) => {
+  ["save --source project --scope api", { type: Command.SAVE, source: Destination.PROJECT, scope: "api" }],
+] satisfies Array<[string, Command]>)("parses source options in %s", (input, expected) => {
   // Act / Assert
   expect(parseCommand(input)).toEqual(expected);
 });

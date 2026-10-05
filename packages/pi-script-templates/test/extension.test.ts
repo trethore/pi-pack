@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
+import type { SessionStartEvent } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
+import type { ScriptTemplatesConfig } from "#src/config";
+import { Scope } from "#src/constants";
 import { createHarness } from "#test/harness";
 import { countingScript, useWorkspace } from "#test/workspace";
 
@@ -28,7 +31,7 @@ it("shares results across system, append system, and prompt-template surfaces", 
   expect(await readFile(command.sourceInfo.path, "utf8")).toContain("{{platform}} $1");
 });
 
-it.each(["new", "resume", "fork"])(
+it.each(["new", "resume", "fork"] satisfies Array<SessionStartEvent["reason"]>)(
   "retains cached output and configuration across %s, including new extension instances",
   async (reason) => {
     // Arrange
@@ -74,26 +77,29 @@ it("reload clears cached outputs, failures, prompt bodies, and configuration", a
   expect(await files.runs()).toBe("xxx");
 });
 
-it.each(["system", "appendSystem", "promptTemplates"])("can disable the %s surface independently", async (surface) => {
-  // Arrange
-  await files.configure({ surfaces: { [surface]: false } });
-  await files.script("platform", countingScript("resolved"));
-  const command = await files.prompt("environment", "{{platform}}");
-  const extension = createHarness(files.cwd, [command]);
-  await extension.start();
+it.each(["system", "appendSystem", "promptTemplates"] satisfies Array<keyof ScriptTemplatesConfig["surfaces"]>)(
+  "can disable the %s surface independently",
+  async (surface) => {
+    // Arrange
+    await files.configure({ surfaces: { [surface]: false } });
+    await files.script("platform", countingScript("resolved"));
+    const command = await files.prompt("environment", "{{platform}}");
+    const extension = createHarness(files.cwd, [command]);
+    await extension.start();
 
-  // Act
-  const prompt = await extension.input("/environment");
-  const options = await extension.system();
+    // Act
+    const prompt = await extension.input("/environment");
+    const options = await extension.system();
 
-  // Assert
-  expect(options.customPrompt).toBe(surface === "system" ? "{{platform}}" : "resolved");
-  expect(options.appendSystemPrompt).toBe(surface === "appendSystem" ? "{{platform}}" : "resolved");
-  expect(prompt).toEqual(
-    surface === "promptTemplates" ? { action: "continue" } : { action: "transform", text: "resolved" },
-  );
-  expect(await files.runs()).toBe("x");
-});
+    // Assert
+    expect(options.customPrompt).toBe(surface === "system" ? "{{platform}}" : "resolved");
+    expect(options.appendSystemPrompt).toBe(surface === "appendSystem" ? "{{platform}}" : "resolved");
+    expect(prompt).toEqual(
+      surface === "promptTemplates" ? { action: "continue" } : { action: "transform", text: "resolved" },
+    );
+    expect(await files.runs()).toBe("x");
+  },
+);
 
 it("does not execute anything when all surfaces are disabled", async () => {
   // Arrange
@@ -135,7 +141,7 @@ it("warns about a failure once per reload, including after session replacement",
 it("uses a new cache entry if trust changes without reusing privileged project output", async () => {
   // Arrange
   await files.script("platform", countingScript("project"));
-  await files.script("platform", countingScript("global"), "global");
+  await files.script("platform", countingScript("global"), Scope.GLOBAL);
   const trusted = createHarness(files.cwd);
   await trusted.system();
 

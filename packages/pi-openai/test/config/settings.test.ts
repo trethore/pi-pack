@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { Verbosity, ReasoningSummary, ServiceTier } from "#src/constants";
 import {
   choices,
-  defaults,
   environmentNames,
   parseSetting,
   readEnvironment,
   resolveSettings,
   settingNames,
   validateSettings,
+  Setting,
+  type Settings,
 } from "#src/config/settings";
 import { layers, model } from "#test/support";
 
@@ -17,17 +19,48 @@ it("uses independent defaults with source information", () => {
   const second = resolveSettings(layers());
 
   // Assert
-  expect(first.values).toEqual(defaults);
+  expect(first.values).toEqual({
+    enabled: true,
+    allowUnsupported: false,
+    verbosity: null,
+    reasoningSummary: null,
+    webSearch: false,
+    serviceTier: "default",
+  } satisfies Settings);
   expect(first.values).not.toBe(second.values);
   expect(Object.values(first.sources)).toEqual(settingNames.map(() => "default"));
+});
+
+it("keeps the documented setting names and accepted values", () => {
+  // Act / Assert
+  expect(choices).toEqual({
+    enabled: [true, false],
+    allowUnsupported: [true, false],
+    verbosity: ["low", "medium", "high", null],
+    reasoningSummary: ["auto", "concise", "detailed", "none", null],
+    webSearch: [true, false],
+    serviceTier: ["default", "priority", "ultrafast"],
+  });
+});
+
+it("keeps the documented environment variable names", () => {
+  // Act / Assert
+  expect(environmentNames).toEqual({
+    enabled: "PI_OPENAI_ENABLED",
+    allowUnsupported: "PI_OPENAI_ALLOW_UNSUPPORTED",
+    verbosity: "PI_OPENAI_VERBOSITY",
+    reasoningSummary: "PI_OPENAI_REASONING_SUMMARY",
+    webSearch: "PI_OPENAI_WEB_SEARCH",
+    serviceTier: "PI_OPENAI_SERVICE_TIER",
+  });
 });
 
 it("merges each key with command > environment > project > global precedence", () => {
   // Arrange
   const input = layers({
-    global: { enabled: false, verbosity: "high", reasoningSummary: "auto", webSearch: true },
-    project: { verbosity: "medium", reasoningSummary: null },
-    environment: { verbosity: "low", serviceTier: "priority" },
+    global: { enabled: false, verbosity: Verbosity.HIGH, reasoningSummary: ReasoningSummary.AUTO, webSearch: true },
+    project: { verbosity: Verbosity.MEDIUM, reasoningSummary: null },
+    environment: { verbosity: Verbosity.LOW, serviceTier: ServiceTier.PRIORITY },
     command: { verbosity: null, allowUnsupported: true },
   });
 
@@ -91,8 +124,8 @@ it("ignores unrelated keys without reading inherited settings", () => {
 it("distinguishes null, none, omission, and typed booleans", () => {
   // Act / Assert
   expect(validateSettings({})).toEqual({});
-  expect(parseSetting("reasoningSummary", "null")).toEqual({ reasoningSummary: null });
-  expect(parseSetting("reasoningSummary", "none")).toEqual({ reasoningSummary: "none" });
+  expect(parseSetting(Setting.REASONING_SUMMARY, "null")).toEqual({ reasoningSummary: null });
+  expect(parseSetting(Setting.REASONING_SUMMARY, "none")).toEqual({ reasoningSummary: "none" });
   expect(() => validateSettings({ enabled: "false" })).toThrow();
   expect(() => validateSettings({ webSearch: null })).toThrow();
   expect(() => validateSettings({ serviceTier: null })).toThrow();
@@ -104,22 +137,25 @@ it("normalizes the fast alias in JSON, environment and command values", () => {
 
   // Act / Assert
   expect(validateSettings({ serviceTier: "fast" })).toEqual(expected);
-  expect(parseSetting("serviceTier", " fast ")).toEqual(expected);
+  expect(parseSetting(Setting.SERVICE_TIER, " fast ")).toEqual(expected);
   expect(readEnvironment({ PI_OPENAI_SERVICE_TIER: " fast " })).toEqual(expected);
   expect(choices.serviceTier).toEqual(["default", "priority", "ultrafast"]);
   expect(() => validateSettings({ serviceTier: " fast " })).toThrow();
-  expect(() => parseSetting("serviceTier", "FAST")).toThrow();
+  expect(() => parseSetting(Setting.SERVICE_TIER, "FAST")).toThrow();
 });
 
 it("merges matching scopes per key and reports their exact provenance", () => {
   // Arrange
   const input = layers({
     global: {
-      verbosity: "high",
+      verbosity: Verbosity.HIGH,
       overrides: [
-        { match: { model: model.id }, settings: { verbosity: "low" } },
-        { match: { provider: model.provider }, settings: { verbosity: "medium", serviceTier: "priority" } },
-        { match: { api: model.api }, settings: { verbosity: "high", reasoningSummary: "auto" } },
+        { match: { model: model.id }, settings: { verbosity: Verbosity.LOW } },
+        {
+          match: { provider: model.provider },
+          settings: { verbosity: Verbosity.MEDIUM, serviceTier: ServiceTier.PRIORITY },
+        },
+        { match: { api: model.api }, settings: { verbosity: Verbosity.HIGH, reasoningSummary: ReasoningSummary.AUTO } },
         { match: { model: "other" }, settings: { enabled: false } },
       ],
     },
@@ -162,7 +198,7 @@ it("prioritizes all combinations without relying on declaration order", () => {
         overrides: selectors
           .slice(0, index + 1)
           .toReversed()
-          .map((match) => ({ match, settings: { verbosity: "low" } })),
+          .map((match) => ({ match, settings: { verbosity: Verbosity.LOW } })),
       },
     });
     expect(resolveSettings(input, model).scopes.verbosity).toEqual(selectors[index]);
@@ -176,11 +212,11 @@ it("keeps layer precedence stronger than selector specificity", () => {
       overrides: [
         {
           match: { provider: model.provider, model: model.id, api: model.api },
-          settings: { verbosity: "high", reasoningSummary: "auto", webSearch: true },
+          settings: { verbosity: Verbosity.HIGH, reasoningSummary: ReasoningSummary.AUTO, webSearch: true },
         },
       ],
     },
-    project: { verbosity: "low", reasoningSummary: null, webSearch: false },
+    project: { verbosity: Verbosity.LOW, reasoningSummary: null, webSearch: false },
   });
 
   // Act / Assert
@@ -190,7 +226,7 @@ it("keeps layer precedence stronger than selector specificity", () => {
     webSearch: false,
   });
   expect(resolveSettings(input, model).scopes.verbosity).toEqual({});
-  input.environment = { verbosity: "medium" };
+  input.environment = { verbosity: Verbosity.MEDIUM };
   expect(resolveSettings(input, model).sources.verbosity).toBe("environment");
   input.command = { overrides: [{ match: { api: model.api }, settings: { verbosity: null } }] };
   expect(resolveSettings(input, model).values.verbosity).toBeNull();
@@ -200,8 +236,11 @@ it("keeps layer precedence stronger than selector specificity", () => {
 it("ignores every scoped rule when no model is selected", () => {
   // Arrange
   const input = layers({
-    global: { verbosity: "medium", overrides: [{ match: { model: model.id }, settings: { verbosity: "high" } }] },
-    command: { overrides: [{ match: { api: model.api }, settings: { verbosity: "low" } }] },
+    global: {
+      verbosity: Verbosity.MEDIUM,
+      overrides: [{ match: { model: model.id }, settings: { verbosity: Verbosity.HIGH } }],
+    },
+    command: { overrides: [{ match: { api: model.api }, settings: { verbosity: Verbosity.LOW } }] },
   });
 
   // Act / Assert

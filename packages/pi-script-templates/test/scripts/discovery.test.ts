@@ -1,13 +1,14 @@
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
+import { Scope } from "#src/constants";
 import { countingScript, useWorkspace } from "#test/workspace";
 
 const files = useWorkspace();
 
 it("prefers project scripts across extensions and warns without absolute paths", async () => {
   // Arrange
-  await files.script("platform", countingScript("global"), "global", "js");
+  await files.script("platform", countingScript("global"), Scope.GLOBAL, "js");
   await files.script("platform", countingScript("project"));
   const workspace = await files.load();
 
@@ -24,9 +25,9 @@ it("prefers project scripts across extensions and warns without absolute paths",
 
 it("rejects ambiguous scripts in the winning scope without global fallback", async () => {
   // Arrange
-  await files.script("platform", countingScript("global"), "global");
+  await files.script("platform", countingScript("global"), Scope.GLOBAL);
   await files.script("platform", countingScript("project"));
-  await files.script("platform", countingScript("ambiguous"), "project", "js");
+  await files.script("platform", countingScript("ambiguous"), Scope.PROJECT, "js");
   const workspace = await files.load();
 
   // Act
@@ -41,8 +42,8 @@ it("rejects ambiguous scripts in the winning scope without global fallback", asy
 
 it("does not let ambiguity in the overridden global scope block a project script", async () => {
   // Arrange
-  await files.script("platform", "", "global");
-  await files.script("platform", "", "global", "js");
+  await files.script("platform", "", Scope.GLOBAL);
+  await files.script("platform", "", Scope.GLOBAL, "js");
   await files.script("platform", countingScript("project"));
   const workspace = await files.load();
 
@@ -53,7 +54,7 @@ it("does not let ambiguity in the overridden global scope block a project script
 
 it("uses global scripts in untrusted projects without probing project scripts", async () => {
   // Arrange
-  await files.script("platform", countingScript("global"), "global");
+  await files.script("platform", countingScript("global"), Scope.GLOBAL);
   await files.script("platform", countingScript("project"));
   const workspace = await files.load(false);
 
@@ -66,8 +67,8 @@ it("supports script symlinks and ignores directories with script-like names", as
   // Arrange
   const target = join(files.root, "target.mjs");
   await writeFile(target, countingScript("linked"));
-  await symlink(target, join(files.directory("global"), "script-templates", "linked.mjs"));
-  await mkdir(join(files.directory("project"), "script-templates", "linked.js"));
+  await symlink(target, join(files.directory(Scope.GLOBAL), "script-templates", "linked.mjs"));
+  await mkdir(join(files.directory(Scope.PROJECT), "script-templates", "linked.js"));
   const workspace = await files.load();
 
   // Act / Assert
@@ -77,7 +78,7 @@ it("supports script symlinks and ignores directories with script-like names", as
 
 it("treats absent script directories as empty and warns on unreadable ones", async () => {
   // Arrange
-  await rm(join(files.directory("project"), "script-templates"), { recursive: true });
+  await rm(join(files.directory(Scope.PROJECT), "script-templates"), { recursive: true });
   const globalDirectory = join(files.agentDir, "script-templates");
   await rm(globalDirectory, { recursive: true });
   await writeFile(globalDirectory, "not a directory");

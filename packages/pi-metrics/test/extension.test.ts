@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Events } from "@pi-pack/shared/events";
 import {
   createAgentSession,
   DefaultResourceLoader,
@@ -44,9 +45,9 @@ async function configure(config: Record<string, unknown>): Promise<void> {
 
 type AssistantMessage = Extract<MessageEndEvent["message"], { role: "assistant" }>;
 
-function assistant(input = 100, output = 20): { type: "message_end"; message: AssistantMessage } {
+function assistant(input = 100, output = 20): { type: typeof Events.MessageEnd; message: AssistantMessage } {
   return {
-    type: "message_end",
+    type: Events.MessageEnd,
     message: {
       role: "assistant",
       content: [{ type: "text", text: "Done" }],
@@ -112,10 +113,10 @@ function harness(hasUI = true) {
       }
     },
     async respond(input = 100, output = 20) {
-      await this.emit("turn_start");
-      await this.emit("before_provider_request", { payload: {} });
+      await this.emit(Events.TurnStart);
+      await this.emit(Events.BeforeProviderRequest, { payload: {} });
       now += 1000;
-      await this.emit("message_end", assistant(input, output));
+      await this.emit(Events.MessageEnd, assistant(input, output));
     },
   };
 }
@@ -164,21 +165,21 @@ it.each([
 it("notifies only when control returns to the user, with uncached tokens and full cost", async () => {
   // Arrange
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
 
   // Act
   await extension.respond();
   now += 5000;
-  await extension.emit("tool_execution_end");
-  await extension.emit("turn_end");
+  await extension.emit(Events.ToolExecutionEnd);
+  await extension.emit(Events.TurnEnd);
   await extension.respond(200, 40);
   await extension.emit("agent_end");
 
   // Assert
   expect(extension.notify).not.toHaveBeenCalled();
-  await extension.emit("agent_settled");
-  await extension.emit("agent_settled");
+  await extension.emit(Events.AgentSettled);
+  await extension.emit(Events.AgentSettled);
   expect(extension.notify.mock.calls).toEqual([["7s | 30.0 tok/s | \u2191 300 \u2193 60 | $0.0200", "info"]]);
   expect(extension.setWidget).not.toHaveBeenCalled();
 });
@@ -188,18 +189,18 @@ it("excludes preparation time but includes latency before the assistant message 
   await configure({ format: "<tokps> <timetaken>" });
   const extension = harness();
   const response = assistant(100, 60);
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
-  await extension.emit("turn_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
+  await extension.emit(Events.TurnStart);
 
   // Act
   now = 5000;
-  await extension.emit("before_provider_request", { payload: {} });
+  await extension.emit(Events.BeforeProviderRequest, { payload: {} });
   now = 7000;
   await extension.emit("message_start", { message: response.message });
   now = 8000;
-  await extension.emit("message_end", response);
-  await extension.emit("agent_settled");
+  await extension.emit(Events.MessageEnd, response);
+  await extension.emit(Events.AgentSettled);
 
   // Assert
   expect(extension.notify.mock.calls).toEqual([["20.0 tok/s 8s", "info"]]);
@@ -209,14 +210,14 @@ it("reports unavailable speed when the provider request event is missing", async
   // Arrange
   await configure({ format: "<tokps> <output_tokens> <timetaken>" });
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
-  await extension.emit("turn_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
+  await extension.emit(Events.TurnStart);
 
   // Act
   now = 1000;
-  await extension.emit("message_end", assistant());
-  await extension.emit("agent_settled");
+  await extension.emit(Events.MessageEnd, assistant());
+  await extension.emit(Events.AgentSettled);
 
   // Assert
   expect(extension.notify.mock.calls).toEqual([["N/A 20 1s", "info"]]);
@@ -226,19 +227,19 @@ it("starts fresh after settling without counting idle time or other message role
   // Arrange
   await configure({ format: "<input_tokens>/<output_tokens> <timetaken>" });
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
   await extension.respond(1000, 500);
-  await extension.emit("agent_settled");
+  await extension.emit(Events.AgentSettled);
   now += 60000;
 
   // Act
-  await extension.emit("message_end", assistant(900, 900));
-  await extension.emit("agent_start");
-  await extension.emit("message_end", { message: { role: "user" } });
-  await extension.emit("message_end", { message: { role: "toolResult" } });
+  await extension.emit(Events.MessageEnd, assistant(900, 900));
+  await extension.emit(Events.AgentStart);
+  await extension.emit(Events.MessageEnd, { message: { role: "user" } });
+  await extension.emit(Events.MessageEnd, { message: { role: "toolResult" } });
   await extension.respond(10, 5);
-  await extension.emit("agent_settled");
+  await extension.emit(Events.AgentSettled);
 
   // Assert
   expect(extension.notify).toHaveBeenLastCalledWith("10/5 1s", "info");
@@ -249,17 +250,17 @@ it("updates one live widget after model responses and tools, then retains final 
   await configure({ mode: "live", format: "<input_tokens> <timetaken>" });
   const extension = harness();
   const timer = vi.spyOn(globalThis, "setInterval");
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Act
-  await extension.emit("agent_start");
+  await extension.emit(Events.AgentStart);
   await extension.respond();
   now += 2000;
-  await extension.emit("tool_execution_end");
+  await extension.emit(Events.ToolExecutionEnd);
   now += 1000;
-  await extension.emit("tool_execution_end", { parentToolCallId: "outer" });
+  await extension.emit(Events.ToolExecutionEnd, { parentToolCallId: "outer" });
   await extension.respond(200);
-  await extension.emit("agent_settled");
+  await extension.emit(Events.AgentSettled);
 
   // Assert
   expect(
@@ -274,10 +275,10 @@ it("updates one live widget after model responses and tools, then retains final 
   expect(extension.notify).not.toHaveBeenCalled();
   expect(timer).not.toHaveBeenCalled();
   now += 60000;
-  await extension.emit("tool_execution_end");
+  await extension.emit(Events.ToolExecutionEnd);
   expect(extension.setWidget).toHaveBeenCalledTimes(6);
   expect(renderWidget(extension.setWidget.mock.lastCall?.[1], 40)).toEqual(["300 5s".padStart(40)]);
-  await extension.emit("agent_start");
+  await extension.emit(Events.AgentStart);
   expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual(["0 0s".padStart(80)]);
 });
 
@@ -287,11 +288,11 @@ it.each([false, true])("registers no metric handlers when disabled (hasUI=%s)", 
   const extension = harness(hasUI);
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
   await extension.respond();
-  await extension.emit("tool_execution_end");
-  await extension.emit("agent_settled");
+  await extension.emit(Events.ToolExecutionEnd);
+  await extension.emit(Events.AgentSettled);
 
   // Assert
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
@@ -305,7 +306,7 @@ it("does not track metrics without a UI", async () => {
   const extension = harness(false);
 
   // Act
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Assert
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
@@ -324,7 +325,7 @@ it.each([
   const extension = harness();
 
   // Act
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Assert
   expect(extension.handlers.has("message_end")).toBe(usage);
@@ -337,16 +338,16 @@ it("removes old handlers and widgets before reloading disabled configuration", a
   // Arrange
   await configure({ mode: "live" });
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
   await extension.respond();
   await configure({ enabled: false });
   vi.mocked(performance.now).mockClear();
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("agent_settled");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentSettled);
+  await extension.emit(Events.AgentStart);
 
   // Assert
   expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
@@ -358,14 +359,14 @@ it("removes old handlers and widgets before reloading disabled configuration", a
 it("reloads configuration without duplicating subscriptions", async () => {
   // Arrange
   const extension = harness();
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
   await configure({ format: "<output_tokens>" });
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
   await extension.respond();
-  await extension.emit("agent_settled");
+  await extension.emit(Events.AgentSettled);
 
   // Assert
   expect(extension.notify.mock.calls).toEqual([["20", "info"]]);
@@ -375,11 +376,11 @@ it("clears the live widget on shutdown", async () => {
   // Arrange
   await configure({ mode: "live" });
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
 
   // Act
-  await extension.emit("session_shutdown");
+  await extension.emit(Events.SessionShutdown);
 
   // Assert
   expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
@@ -391,7 +392,7 @@ it("stays inactive when configuration loading fails", async () => {
   const extension = harness();
 
   // Act / Assert
-  await expect(extension.emit("session_start")).rejects.toThrow("enabled must be a boolean");
+  await expect(extension.emit(Events.SessionStart)).rejects.toThrow("enabled must be a boolean");
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
 });
 
@@ -517,7 +518,7 @@ it.each([true, false])("warns about unknown entries even when enabled is %s", as
   const extension = harness();
 
   // Act
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Assert
   expect(extension.notify.mock.calls).toEqual([
@@ -536,9 +537,9 @@ it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
     extension.isProjectTrusted.mockReturnValue(false);
 
     // Act
-    await extension.emit("session_start");
-    await extension.emit("agent_start");
-    await extension.emit("agent_settled");
+    await extension.emit(Events.SessionStart);
+    await extension.emit(Events.AgentStart);
+    await extension.emit(Events.AgentSettled);
 
     // Assert
     expect(extension.notify.mock.calls).toEqual([["Global metrics", "info"]]);
@@ -550,13 +551,13 @@ it("clears trusted project widgets and handlers when reloading untrusted", async
   await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"enabled":false}');
   await configure({ mode: "live" });
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
   extension.isProjectTrusted.mockReturnValue(false);
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("agent_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
 
   // Assert
   expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);

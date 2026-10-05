@@ -3,8 +3,9 @@ import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import * as files from "@pi-pack/shared/files";
 import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { Destination, ServiceTier, Verbosity, ReasoningSummary } from "#src/constants";
 import { loadConfiguration, saveConfiguration, defaultDestination } from "#src/config/files";
-import { resolveSettings } from "#src/config/settings";
+import { resolveSettings, Setting } from "#src/config/settings";
 import { createWorkspace, model, settings } from "#test/support";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
@@ -23,8 +24,8 @@ afterEach(async () => {
 
 it("loads JSONC layers and lets project null cancel a global override", async () => {
   // Arrange
-  await workspace.write("global", '{ // global\n "verbosity": "high", "webSearch": true, }');
-  await workspace.write("project", '{"verbosity":null}');
+  await workspace.write(Destination.GLOBAL, '{ // global\n "verbosity": "high", "webSearch": true, }');
+  await workspace.write(Destination.PROJECT, '{"verbosity":null}');
 
   // Act
   const loaded = await loadConfiguration(workspace.paths, {
@@ -34,7 +35,7 @@ it("loads JSONC layers and lets project null cancel a global override", async ()
   const result = resolveSettings(loaded);
 
   // Assert
-  expect(result.values).toEqual(settings({ verbosity: null, webSearch: true, serviceTier: "priority" }));
+  expect(result.values).toEqual(settings({ verbosity: null, webSearch: true, serviceTier: ServiceTier.PRIORITY }));
   expect(result.sources.verbosity).toBe("project");
   expect(result.sources.webSearch).toBe("global");
   expect(result.sources.serviceTier).toBe("environment");
@@ -49,7 +50,7 @@ it("uses defaults and selects global when no configuration exists", async () => 
   await expect(defaultDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("global");
 });
 
-it.each(["global", "project"] as const)(
+it.each([Destination.GLOBAL, Destination.PROJECT] as const)(
   "reports invalid %s configuration without falling back",
   async (destination) => {
     // Arrange
@@ -64,7 +65,7 @@ it.each(["global", "project"] as const)(
 
 it.each(["{", "null", "[]", "", '{"enabled":1}'])("rejects invalid document %s", async (source) => {
   // Arrange
-  await workspace.write("project", source);
+  await workspace.write(Destination.PROJECT, source);
 
   // Act / Assert
   await expect(loadConfiguration(workspace.paths, { projectTrusted: true, environment: {} })).rejects.toThrow(
@@ -74,7 +75,7 @@ it.each(["{", "null", "[]", "", '{"enabled":1}'])("rejects invalid document %s",
 
 it("does not hide invalid environment settings behind disabled config", async () => {
   // Arrange
-  await workspace.write("project", '{"enabled":false}');
+  await workspace.write(Destination.PROJECT, '{"enabled":false}');
 
   // Act / Assert
   await expect(
@@ -100,19 +101,23 @@ it("reports unreadable files without exposing paths in the message", async () =>
 
 it("selects an existing project config over global and notices new files", async () => {
   // Arrange
-  await workspace.write("global", "{}");
+  await workspace.write(Destination.GLOBAL, "{}");
 
   // Act / Assert
   await expect(defaultDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("global");
-  await workspace.write("project", "{}");
+  await workspace.write(Destination.PROJECT, "{}");
   await expect(defaultDestination(workspace.paths, { projectTrusted: true })).resolves.toBe("project");
 });
 
-it.each(["global", "project"] as const)(
+it.each([Destination.GLOBAL, Destination.PROJECT] as const)(
   "creates %s configuration and missing parent directories",
   async (destination) => {
     // Arrange
-    const values = settings({ verbosity: "low", reasoningSummary: "none", allowUnsupported: true });
+    const values = settings({
+      verbosity: Verbosity.LOW,
+      reasoningSummary: ReasoningSummary.NONE,
+      allowUnsupported: true,
+    });
     await rm(destination === "global" ? workspace.agentDir : workspace.cwd, { recursive: true });
 
     // Act
@@ -127,12 +132,14 @@ it.each(["global", "project"] as const)(
 it("preserves comments, unknown keys, line endings and saved nulls", async () => {
   // Arrange
   const original = '{\r\n  // keep this\r\n  "verbosity": "high", // inline\r\n  "future": {"nested":42},\r\n}\r\n';
-  await workspace.write("project", original);
-  const values = settings({ reasoningSummary: "none", serviceTier: "priority" });
+  await workspace.write(Destination.PROJECT, original);
+  const values = settings({ reasoningSummary: ReasoningSummary.NONE, serviceTier: ServiceTier.PRIORITY });
 
   // Act
-  await saveConfiguration(workspace.paths, "project", [{ match: {}, settings: values }], { projectTrusted: true });
-  const source = await workspace.read("project");
+  await saveConfiguration(workspace.paths, Destination.PROJECT, [{ match: {}, settings: values }], {
+    projectTrusted: true,
+  });
+  const source = await workspace.read(Destination.PROJECT);
 
   // Assert
   expect(source).toContain("// keep this");
@@ -144,24 +151,26 @@ it("preserves comments, unknown keys, line endings and saved nulls", async () =>
 
 it("refuses to overwrite malformed configuration", async () => {
   // Arrange
-  await workspace.write("project", "{invalid");
+  await workspace.write(Destination.PROJECT, "{invalid");
 
   // Act / Assert
   await expect(
-    saveConfiguration(workspace.paths, "project", [{ match: {}, settings: settings() }], { projectTrusted: true }),
+    saveConfiguration(workspace.paths, Destination.PROJECT, [{ match: {}, settings: settings() }], {
+      projectTrusted: true,
+    }),
   ).rejects.toThrow("Invalid project configuration");
-  expect(await workspace.read("project")).toBe("{invalid");
+  expect(await workspace.read(Destination.PROJECT)).toBe("{invalid");
 });
 
 it("reports unreadable save targets without creating temporary files", async () => {
   // Arrange
   const paths = { ...workspace.paths, project: workspace.agentDir + "/block/config.jsonc" };
-  await workspace.write("global", "{}");
+  await workspace.write(Destination.GLOBAL, "{}");
   await mkdir(paths.project, { recursive: true });
 
   // Act / Assert
   await expect(
-    saveConfiguration(paths, "project", [{ match: {}, settings: settings() }], { projectTrusted: true }),
+    saveConfiguration(paths, Destination.PROJECT, [{ match: {}, settings: settings() }], { projectTrusted: true }),
   ).rejects.toThrow("Could not read project configuration");
   expect(await readdir(workspace.agentDir + "/block")).toEqual(["config.jsonc"]);
 });
@@ -169,21 +178,23 @@ it("reports unreadable save targets without creating temporary files", async () 
 it("rejects duplicate setting keys instead of saving a misleading effective value", async () => {
   // Arrange
   const source = '{"verbosity":"high", "verbosity":"low"}';
-  await workspace.write("project", source);
+  await workspace.write(Destination.PROJECT, source);
 
   // Act / Assert
   await expect(loadConfiguration(workspace.paths, { projectTrusted: true, environment: {} })).rejects.toThrow(
     "Duplicate setting: verbosity",
   );
   await expect(
-    saveConfiguration(workspace.paths, "project", [{ match: {}, settings: settings() }], { projectTrusted: true }),
+    saveConfiguration(workspace.paths, Destination.PROJECT, [{ match: {}, settings: settings() }], {
+      projectTrusted: true,
+    }),
   ).rejects.toThrow("Duplicate setting: verbosity");
-  expect(await workspace.read("project")).toBe(source);
+  expect(await workspace.read(Destination.PROJECT)).toBe(source);
 });
 
 it("uses a custom warning reporter instead of UI notifications", async () => {
   // Arrange
-  await workspace.write("project", '{"verbosty":"high"}');
+  await workspace.write(Destination.PROJECT, '{"verbosty":"high"}');
   const notify = vi.fn();
   const onWarning = vi.fn();
 
@@ -199,11 +210,11 @@ it("uses a custom warning reporter instead of UI notifications", async () => {
 
 it.each(["valid", "malformed", "unreadable"])("ignores %s project configuration when untrusted", async (kind) => {
   // Arrange
-  await workspace.write("global", '{"verbosity":"high","webSearch":true}');
+  await workspace.write(Destination.GLOBAL, '{"verbosity":"high","webSearch":true}');
   if (kind === "unreadable") {
     await mkdir(workspace.paths.project);
   } else {
-    await workspace.write("project", kind === "valid" ? '{"verbosity":"low","unknown":true}' : "{invalid");
+    await workspace.write(Destination.PROJECT, kind === "valid" ? '{"verbosity":"low","unknown":true}' : "{invalid");
   }
   const read = vi.spyOn(files, "readOptionalFile");
   const onWarning = vi.fn();
@@ -218,14 +229,14 @@ it.each(["valid", "malformed", "unreadable"])("ignores %s project configuration 
   // Assert
   expect(loaded.project).toEqual({});
   expect(loaded.global).toEqual({ verbosity: "high", webSearch: true });
-  expect(resolveSettings(loaded).values).toEqual(settings({ verbosity: "medium", webSearch: true }));
+  expect(resolveSettings(loaded).values).toEqual(settings({ verbosity: Verbosity.MEDIUM, webSearch: true }));
   expect(read.mock.calls).toEqual([[workspace.paths.global]]);
   expect(onWarning).not.toHaveBeenCalled();
 });
 
 it("uses defaults when untrusted and only project configuration exists", async () => {
   // Arrange
-  await workspace.write("project", '{"verbosity":"high"}');
+  await workspace.write(Destination.PROJECT, '{"verbosity":"high"}');
 
   // Act
   const loaded = await loadConfiguration(workspace.paths, { projectTrusted: false, environment: {} });
@@ -237,7 +248,7 @@ it("uses defaults when untrusted and only project configuration exists", async (
 
 it("selects global without inspecting project configuration when untrusted", async () => {
   // Arrange
-  await workspace.write("project", "{}");
+  await workspace.write(Destination.PROJECT, "{}");
   const inspect = vi.fn(() => workspace.paths.project);
   const paths = {
     global: workspace.paths.global,
@@ -256,7 +267,7 @@ it("selects global without inspecting project configuration when untrusted", asy
 
 it("rejects untrusted project saves before accessing the target", async () => {
   // Arrange
-  await workspace.write("project", "{invalid");
+  await workspace.write(Destination.PROJECT, "{invalid");
   const read = vi.spyOn(files, "readOptionalFile");
   const target = vi.fn(() => workspace.paths.project);
   const paths = {
@@ -268,31 +279,33 @@ it("rejects untrusted project saves before accessing the target", async () => {
 
   // Act / Assert
   await expect(
-    saveConfiguration(paths, "project", [{ match: {}, settings: settings() }], { projectTrusted: false }),
+    saveConfiguration(paths, Destination.PROJECT, [{ match: {}, settings: settings() }], { projectTrusted: false }),
   ).rejects.toThrow("Project is not trusted; refusing to save project configuration.");
   expect(read).not.toHaveBeenCalled();
   expect(target).not.toHaveBeenCalled();
-  expect(await workspace.read("project")).toBe("{invalid");
+  expect(await workspace.read(Destination.PROJECT)).toBe("{invalid");
 });
 
 it("allows global saves while untrusted without touching project configuration", async () => {
   // Arrange
-  await workspace.write("project", "{invalid");
-  const values = settings({ verbosity: "high" });
+  await workspace.write(Destination.PROJECT, "{invalid");
+  const values = settings({ verbosity: Verbosity.HIGH });
 
   // Act
-  await saveConfiguration(workspace.paths, "global", [{ match: {}, settings: values }], { projectTrusted: false });
+  await saveConfiguration(workspace.paths, Destination.GLOBAL, [{ match: {}, settings: values }], {
+    projectTrusted: false,
+  });
 
   // Assert
-  expect(parseConfig(await workspace.read("global"))).toEqual(values);
-  expect(await workspace.read("project")).toBe("{invalid");
+  expect(parseConfig(await workspace.read(Destination.GLOBAL))).toEqual(values);
+  expect(await workspace.read(Destination.PROJECT)).toBe("{invalid");
 });
 
 it("loads scoped rules and warns contextually without broadening misspelled selectors", async () => {
   // Arrange
   const onWarning = vi.fn();
   await workspace.write(
-    "global",
+    Destination.GLOBAL,
     JSON.stringify({
       overrides: [
         {
@@ -339,17 +352,17 @@ it.each([
   '{"overrides":[{"match":{"model":"x","provider":"p"},"settings":{}},{"match":{"provider":"p","model":"x"},"settings":{}}]}',
 ])("rejects invalid scoped configuration on load and save: %s", async (source) => {
   // Arrange
-  await workspace.write("project", source);
+  await workspace.write(Destination.PROJECT, source);
   const patches = [{ match: {}, settings: { webSearch: true } }];
 
   // Act / Assert
   await expect(loadConfiguration(workspace.paths, { projectTrusted: true, environment: {} })).rejects.toThrow(
     "Invalid project configuration",
   );
-  await expect(saveConfiguration(workspace.paths, "project", patches, { projectTrusted: true })).rejects.toThrow(
-    "Invalid project configuration",
-  );
-  expect(await workspace.read("project")).toBe(source);
+  await expect(
+    saveConfiguration(workspace.paths, Destination.PROJECT, patches, { projectTrusted: true }),
+  ).rejects.toThrow("Invalid project configuration");
+  expect(await workspace.read(Destination.PROJECT)).toBe(source);
 });
 
 it("patches existing selectors without losing comments, other rules, or unrelated settings", async () => {
@@ -368,19 +381,19 @@ it("patches existing selectors without losing comments, other rules, or unrelate
     {"match": {"api": "other"}, "settings": {"webSearch": true}}
   ]
 }\n`;
-  await workspace.write("project", source.replaceAll("\n", "\r\n"));
+  await workspace.write(Destination.PROJECT, source.replaceAll("\n", "\r\n"));
 
   // Act
   await saveConfiguration(
     workspace.paths,
-    "project",
+    Destination.PROJECT,
     [
       { match: { provider: "openai", model: "gpt-6-sol" }, settings: { verbosity: null } },
-      { match: { api: "openai-responses" }, settings: { serviceTier: "priority" } },
+      { match: { api: "openai-responses" }, settings: { serviceTier: ServiceTier.PRIORITY } },
     ],
     { projectTrusted: true },
   );
-  const saved = await workspace.read("project");
+  const saved = await workspace.read(Destination.PROJECT);
 
   // Assert
   expect(saved).toContain("// Retain summary.");
@@ -405,19 +418,19 @@ it("creates scoped files and rereads external edits on subsequent saves", async 
   const match = { provider: "__proto__", model: "a/b" };
 
   // Act
-  await saveConfiguration(workspace.paths, "global", [{ match, settings: { verbosity: "low" } }], {
+  await saveConfiguration(workspace.paths, Destination.GLOBAL, [{ match, settings: { verbosity: Verbosity.LOW } }], {
     projectTrusted: true,
   });
   await workspace.write(
-    "global",
-    (await workspace.read("global")).replace('"verbosity": "low"', '"verbosity": "low", "webSearch": true'),
+    Destination.GLOBAL,
+    (await workspace.read(Destination.GLOBAL)).replace('"verbosity": "low"', '"verbosity": "low", "webSearch": true'),
   );
-  await saveConfiguration(workspace.paths, "global", [{ match, settings: { reasoningSummary: null } }], {
+  await saveConfiguration(workspace.paths, Destination.GLOBAL, [{ match, settings: { reasoningSummary: null } }], {
     projectTrusted: true,
   });
 
   // Assert
-  expect(parseConfig(await workspace.read("global"))).toEqual({
+  expect(parseConfig(await workspace.read(Destination.GLOBAL))).toEqual({
     overrides: [{ match, settings: { verbosity: "low", webSearch: true, reasoningSummary: null } }],
   });
   expect((await stat(workspace.paths.global)).mode & 0o777).toBe(0o600);
@@ -425,21 +438,26 @@ it("creates scoped files and rereads external edits on subsequent saves", async 
 
 it("does not touch files when there are no patches", async () => {
   // Act
-  await saveConfiguration(workspace.paths, "global", [], { projectTrusted: true });
+  await saveConfiguration(workspace.paths, Destination.GLOBAL, [], { projectTrusted: true });
 
   // Assert
-  await expect(workspace.read("global")).rejects.toHaveProperty("code", "ENOENT");
+  await expect(workspace.read(Destination.GLOBAL)).rejects.toHaveProperty("code", "ENOENT");
 });
 
 it("preserves existing permissions even when the process umask is more restrictive", async () => {
   // Arrange
-  await workspace.write("global", '{"verbosity":"high"}');
+  await workspace.write(Destination.GLOBAL, '{"verbosity":"high"}');
   await filesystem.chmod(workspace.paths.global, 0o660);
 
   // Act
-  await saveConfiguration(workspace.paths, "global", [{ match: {}, settings: { verbosity: "low" } }], {
-    projectTrusted: true,
-  });
+  await saveConfiguration(
+    workspace.paths,
+    Destination.GLOBAL,
+    [{ match: {}, settings: { verbosity: Verbosity.LOW } }],
+    {
+      projectTrusted: true,
+    },
+  );
 
   // Assert
   expect((await stat(workspace.paths.global)).mode & 0o777).toBe(0o660);
@@ -448,16 +466,21 @@ it("preserves existing permissions even when the process umask is more restricti
 it("keeps the original file and removes temporary files if atomic replacement fails", async () => {
   // Arrange
   const source = '{ // retain\n "verbosity": "high" }';
-  await workspace.write("global", source);
+  await workspace.write(Destination.GLOBAL, source);
   vi.mocked(filesystem.rename).mockRejectedValueOnce(new Error("rename failed"));
 
   // Act / Assert
   await expect(
-    saveConfiguration(workspace.paths, "global", [{ match: { model: "gpt-6-sol" }, settings: { verbosity: "low" } }], {
-      projectTrusted: true,
-    }),
+    saveConfiguration(
+      workspace.paths,
+      Destination.GLOBAL,
+      [{ match: { model: "gpt-6-sol" }, settings: { verbosity: Verbosity.LOW } }],
+      {
+        projectTrusted: true,
+      },
+    ),
   ).rejects.toThrow("Could not save global configuration.");
-  expect(await workspace.read("global")).toBe(source);
+  expect(await workspace.read(Destination.GLOBAL)).toBe(source);
   expect(await readdir(workspace.agentDir)).toEqual(["pi-openai.jsonc"]);
 });
 
@@ -465,13 +488,18 @@ it("removes top-level settings while preserving unrelated data and explicit null
   // Arrange
   const source =
     '{\r\n  "verbosity": "high",\r\n  // Keep summary.\r\n  "reasoningSummary": null,\r\n  "future": 42\r\n}\r\n';
-  await workspace.write("global", source);
+  await workspace.write(Destination.GLOBAL, source);
 
   // Act
-  await saveConfiguration(workspace.paths, "global", [{ match: {}, settings: {}, unset: ["verbosity"] }], {
-    projectTrusted: true,
-  });
-  const saved = await workspace.read("global");
+  await saveConfiguration(
+    workspace.paths,
+    Destination.GLOBAL,
+    [{ match: {}, settings: {}, unset: [Setting.VERBOSITY] }],
+    {
+      projectTrusted: true,
+    },
+  );
+  const saved = await workspace.read(Destination.GLOBAL);
 
   // Assert
   expect(parseConfig(saved)).toEqual({ reasoningSummary: null, future: 42 });
@@ -482,7 +510,7 @@ it("removes top-level settings while preserving unrelated data and explicit null
 it("removes empty override blocks and handles shifted indexes across mixed patches", async () => {
   // Arrange
   await workspace.write(
-    "project",
+    Destination.PROJECT,
     JSON.stringify({
       verbosity: "high",
       overrides: [
@@ -496,18 +524,18 @@ it("removes empty override blocks and handles shifted indexes across mixed patch
   // Act
   await saveConfiguration(
     workspace.paths,
-    "project",
+    Destination.PROJECT,
     [
-      { match: { model: "first" }, settings: {}, unset: ["verbosity"] },
-      { match: { model: "second" }, settings: { reasoningSummary: null }, unset: ["verbosity"] },
-      { match: { model: "third" }, settings: {}, unset: ["verbosity"] },
+      { match: { model: "first" }, settings: {}, unset: [Setting.VERBOSITY] },
+      { match: { model: "second" }, settings: { reasoningSummary: null }, unset: [Setting.VERBOSITY] },
+      { match: { model: "third" }, settings: {}, unset: [Setting.VERBOSITY] },
       { match: { model: "fourth" }, settings: { webSearch: true } },
     ],
     { projectTrusted: true },
   );
 
   // Assert
-  expect(parseConfig(await workspace.read("project"))).toEqual({
+  expect(parseConfig(await workspace.read(Destination.PROJECT))).toEqual({
     verbosity: "high",
     overrides: [
       { match: { model: "second" }, settings: { webSearch: true, reasoningSummary: null } },
@@ -519,7 +547,7 @@ it("removes empty override blocks and handles shifted indexes across mixed patch
 it("removes the overrides property when its final rule becomes empty", async () => {
   // Arrange
   await workspace.write(
-    "global",
+    Destination.GLOBAL,
     JSON.stringify({
       verbosity: "high",
       overrides: [{ match: { model: model.id }, settings: { verbosity: null } }],
@@ -529,13 +557,13 @@ it("removes the overrides property when its final rule becomes empty", async () 
   // Act
   await saveConfiguration(
     workspace.paths,
-    "global",
-    [{ match: { model: model.id }, settings: {}, unset: ["verbosity"] }],
+    Destination.GLOBAL,
+    [{ match: { model: model.id }, settings: {}, unset: [Setting.VERBOSITY] }],
     { projectTrusted: true },
   );
 
   // Assert
-  expect(parseConfig(await workspace.read("global"))).toEqual({ verbosity: "high" });
+  expect(parseConfig(await workspace.read(Destination.GLOBAL))).toEqual({ verbosity: "high" });
 });
 
 it.each([{ settings: { verbosity: "low", future: 42 } }, { settings: { verbosity: "low" }, future: 42 }])(
@@ -543,17 +571,22 @@ it.each([{ settings: { verbosity: "low", future: 42 } }, { settings: { verbosity
   async (extra) => {
     // Arrange
     const match = { model: model.id };
-    await workspace.write("global", JSON.stringify({ overrides: [{ match, ...extra }] }));
+    await workspace.write(Destination.GLOBAL, JSON.stringify({ overrides: [{ match, ...extra }] }));
 
     // Act
-    await saveConfiguration(workspace.paths, "global", [{ match, settings: {}, unset: ["verbosity"] }], {
-      projectTrusted: true,
-    });
+    await saveConfiguration(
+      workspace.paths,
+      Destination.GLOBAL,
+      [{ match, settings: {}, unset: [Setting.VERBOSITY] }],
+      {
+        projectTrusted: true,
+      },
+    );
 
     // Assert
     const remaining = { ...extra.settings };
     Reflect.deleteProperty(remaining, "verbosity");
-    expect(parseConfig(await workspace.read("global"))).toEqual({
+    expect(parseConfig(await workspace.read(Destination.GLOBAL))).toEqual({
       overrides: [{ match, ...extra, settings: remaining }],
     });
   },
@@ -564,34 +597,34 @@ it.each([{}, { model: "absent" }])(
   async (match) => {
     // Act / Assert
     const patches = [{ match, settings: {}, unset: ["verbosity" as const] }];
-    await saveConfiguration(workspace.paths, "global", patches, { projectTrusted: true });
-    await expect(workspace.read("global")).rejects.toHaveProperty("code", "ENOENT");
+    await saveConfiguration(workspace.paths, Destination.GLOBAL, patches, { projectTrusted: true });
+    await expect(workspace.read(Destination.GLOBAL)).rejects.toHaveProperty("code", "ENOENT");
     const source = '{ // Keep formatting.\n "webSearch": true\n}\n';
-    await workspace.write("global", source);
-    await saveConfiguration(workspace.paths, "global", patches, { projectTrusted: true });
-    expect(await workspace.read("global")).toBe(source);
+    await workspace.write(Destination.GLOBAL, source);
+    await saveConfiguration(workspace.paths, Destination.GLOBAL, patches, { projectTrusted: true });
+    expect(await workspace.read(Destination.GLOBAL)).toBe(source);
   },
 );
 
 it("preserves settings added externally before a removal is saved", async () => {
   // Arrange
   const match = { model: model.id };
-  await workspace.write("global", JSON.stringify({ overrides: [{ match, settings: { verbosity: "low" } }] }));
+  await workspace.write(Destination.GLOBAL, JSON.stringify({ overrides: [{ match, settings: { verbosity: "low" } }] }));
   await loadConfiguration(workspace.paths, { projectTrusted: true, environment: {} });
   await workspace.write(
-    "global",
+    Destination.GLOBAL,
     JSON.stringify({
       overrides: [{ match, settings: { verbosity: "low", webSearch: true } }],
     }),
   );
 
   // Act
-  await saveConfiguration(workspace.paths, "global", [{ match, settings: {}, unset: ["verbosity"] }], {
+  await saveConfiguration(workspace.paths, Destination.GLOBAL, [{ match, settings: {}, unset: [Setting.VERBOSITY] }], {
     projectTrusted: true,
   });
 
   // Assert
-  expect(parseConfig(await workspace.read("global"))).toEqual({
+  expect(parseConfig(await workspace.read(Destination.GLOBAL))).toEqual({
     overrides: [{ match, settings: { webSearch: true } }],
   });
 });
@@ -607,15 +640,20 @@ it.each([
   '{"webSearch":true,/* keep */"verbosity":null/* keep */,}',
 ])("removes JSONC entries without damaging surrounding commas or comments: %s", async (source) => {
   // Arrange
-  await workspace.write("global", source);
+  await workspace.write(Destination.GLOBAL, source);
   const expected = parseConfig(source);
   Reflect.deleteProperty(expected, "verbosity");
 
   // Act
-  await saveConfiguration(workspace.paths, "global", [{ match: {}, settings: {}, unset: ["verbosity"] }], {
-    projectTrusted: true,
-  });
-  const saved = await workspace.read("global");
+  await saveConfiguration(
+    workspace.paths,
+    Destination.GLOBAL,
+    [{ match: {}, settings: {}, unset: [Setting.VERBOSITY] }],
+    {
+      projectTrusted: true,
+    },
+  );
+  const saved = await workspace.read(Destination.GLOBAL);
 
   // Assert
   expect(parseConfig(saved)).toEqual(expected);
@@ -625,7 +663,7 @@ it.each([
 it("keeps comments for neighboring rules when deleting an override with trailing commas", async () => {
   // Arrange
   await workspace.write(
-    "global",
+    Destination.GLOBAL,
     `{
   "overrides": [
     {"match": {"model": "first"}, "settings": {"verbosity": "low",}},
@@ -638,11 +676,11 @@ it("keeps comments for neighboring rules when deleting an override with trailing
   // Act
   await saveConfiguration(
     workspace.paths,
-    "global",
-    [{ match: { model: "first" }, settings: {}, unset: ["verbosity"] }],
+    Destination.GLOBAL,
+    [{ match: { model: "first" }, settings: {}, unset: [Setting.VERBOSITY] }],
     { projectTrusted: true },
   );
-  const saved = await workspace.read("global");
+  const saved = await workspace.read(Destination.GLOBAL);
 
   // Assert
   expect(saved).toContain("// Keep the other rule.");

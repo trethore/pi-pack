@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { Verbosity, ReasoningSummary, ServiceTier, Feature } from "#src/constants";
 import { featureDecision } from "#src/request/compatibility";
 import { transformPayload } from "#src/request/payload";
 import { model, settings } from "#test/support";
@@ -10,7 +11,12 @@ const azure = {
   api: "azure-openai-responses",
   baseUrl: "https://example.openai.azure.com",
 };
-const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });
+const active = settings({
+  verbosity: Verbosity.LOW,
+  reasoningSummary: ReasoningSummary.AUTO,
+  webSearch: true,
+  serviceTier: ServiceTier.PRIORITY,
+});
 
 it.each([
   [undefined, azure.id],
@@ -130,7 +136,7 @@ it.each([
 
   // Assert
   expect(result).toHaveProperty("service_tier", "priority");
-  expect(featureDecision("serviceTier", active, requestModel)).toEqual({
+  expect(featureDecision(Feature.SERVICE_TIER, active, requestModel)).toEqual({
     apply: true,
     description: "Set service_tier to priority",
   });
@@ -155,7 +161,7 @@ it.each(["gpt-5.6-luna", "gpt-6-astra", "gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-so
       reasoning: { summary: "auto" },
       tools: [{ type: "web_search" }],
     });
-    expect(featureDecision("serviceTier", active, requestModel)).toEqual({
+    expect(featureDecision(Feature.SERVICE_TIER, active, requestModel)).toEqual({
       apply: false,
       description: "Skipped: Priority processing support is unverified for this Azure model",
     });

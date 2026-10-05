@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
+import { ServiceTier, Feature, Verbosity, ReasoningSummary } from "#src/constants";
 import { featureDecision, RequestFormat } from "#src/request/compatibility";
 import { transformPayload } from "#src/request/payload";
 import { model, settings } from "#test/support";
 
 const astra = { ...model, id: "gpt-6-astra" };
-const ultrafast = settings({ serviceTier: "ultrafast" });
+const ultrafast = settings({ serviceTier: ServiceTier.ULTRAFAST });
 
 it.each(["gpt-6-astra", "gpt-6-astra-2026-10-01"])("requests ultrafast for OpenAI %s", (id) => {
   // Arrange
@@ -17,7 +18,7 @@ it.each(["gpt-6-astra", "gpt-6-astra-2026-10-01"])("requests ultrafast for OpenA
   // Assert
   expect(result).toEqual({ ...payload, service_tier: "ultrafast" });
   expect(payload.service_tier).toBe("priority");
-  expect(featureDecision("serviceTier", ultrafast, requestModel)).toEqual({
+  expect(featureDecision(Feature.SERVICE_TIER, ultrafast, requestModel)).toEqual({
     apply: true,
     description: "Set service_tier to ultrafast",
   });
@@ -37,7 +38,12 @@ it.each([
   // Arrange
   const requestModel = { ...model, id };
   const payload = { model: id, input: [], service_tier: "auto" };
-  const active = { ...ultrafast, verbosity: "low", reasoningSummary: "auto", webSearch: true } as const;
+  const active = {
+    ...ultrafast,
+    verbosity: Verbosity.LOW,
+    reasoningSummary: ReasoningSummary.AUTO,
+    webSearch: true,
+  } as const;
 
   // Act
   const result = transformPayload(payload, active, requestModel);
@@ -50,7 +56,7 @@ it.each([
     reasoning: { summary: "auto" },
     tools: [{ type: "web_search" }],
   });
-  expect(featureDecision("serviceTier", active, requestModel)).toEqual({
+  expect(featureDecision(Feature.SERVICE_TIER, active, requestModel)).toEqual({
     apply: false,
     description: "Skipped: Ultrafast support is unverified for this model",
   });
@@ -74,7 +80,7 @@ it.each([
 
   // Assert
   expect(result).toBeUndefined();
-  expect(featureDecision("serviceTier", ultrafast, requestModel)).toEqual({
+  expect(featureDecision(Feature.SERVICE_TIER, ultrafast, requestModel)).toEqual({
     apply: false,
     description: "Skipped: Ultrafast support is unverified on this endpoint",
   });
@@ -111,7 +117,7 @@ it.each([false, true])("keeps ultrafast Responses-only with allowUnsupported=%s"
 
   // Act / Assert
   expect(transformPayload(payload, active, requestModel)).toBeUndefined();
-  expect(featureDecision("serviceTier", active, requestModel, RequestFormat.COMPLETIONS)).toEqual({
+  expect(featureDecision(Feature.SERVICE_TIER, active, requestModel, RequestFormat.COMPLETIONS)).toEqual({
     apply: false,
     description: "Skipped: requires a Responses payload",
   });
@@ -130,6 +136,6 @@ it.each([false, true])(
     expect(transformPayload({ ...payload, input: 42 }, active, astra)).toBeUndefined();
     expect(transformPayload(payload, active, undefined)).toBeUndefined();
     expect(transformPayload(payload, { ...active, enabled: false }, astra)).toBeUndefined();
-    expect(transformPayload(payload, { ...active, serviceTier: "default" }, astra)).toBeUndefined();
+    expect(transformPayload(payload, { ...active, serviceTier: ServiceTier.DEFAULT }, astra)).toBeUndefined();
   },
 );

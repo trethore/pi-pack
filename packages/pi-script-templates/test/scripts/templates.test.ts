@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest";
+import { Scope } from "#src/constants";
 import { clearWorkspaces } from "#src/workspace";
 import { countingScript, useWorkspace } from "#test/workspace";
 
@@ -37,7 +38,7 @@ it("passes the active workspace and template identity and inherits environment v
     process.cwd(), process.env.PI_WORKSPACE_CWD, process.env.PI_SCRIPT_TEMPLATE_NAME,
     process.env.PI_SCRIPT_TEMPLATE_SCOPE, process.env.PI_SCRIPT_TEMPLATES_TEST
   ]));`,
-    "global",
+    Scope.GLOBAL,
   );
   const workspace = await files.load();
 

@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
+import { Scope } from "#src/constants";
 import { getWorkspace } from "#src/workspace";
 import { countingScript, useWorkspace } from "#test/workspace";
 
@@ -21,7 +22,7 @@ it("does not execute unused scripts or scripts while disabled", async () => {
 
 it("keeps global-script results separate for different workspaces", async () => {
   // Arrange
-  await files.script("cwd", "process.stdout.write(process.env.PI_WORKSPACE_CWD);", "global");
+  await files.script("cwd", "process.stdout.write(process.env.PI_WORKSPACE_CWD);", Scope.GLOBAL);
   const otherCwd = join(files.root, "other");
   await mkdir(otherCwd);
   const first = await files.load();

@@ -2,14 +2,15 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
+import { Scope } from "#src/constants";
 import { executeScript } from "#src/scripts/execution";
 import { useWorkspace } from "#test/workspace";
 
 const files = useWorkspace();
 
 async function execute(source: string, limits = { timeoutMs: 3000, maxOutputChars: 1000 }, extension = "mjs") {
-  const path = await files.script("test", source, "project", extension);
-  return executeScript({ name: "test", path, scope: "project" }, files.cwd, limits);
+  const path = await files.script("test", source, Scope.PROJECT, extension);
+  return executeScript({ name: "test", path, scope: Scope.PROJECT }, files.cwd, limits);
 }
 
 it.each([
@@ -99,7 +100,7 @@ it("discards stderr without blocking or adding it to stdout", async () => {
 it("reports process creation failures without leaking paths", async () => {
   // Act
   const result = await executeScript(
-    { name: "test", path: join(files.root, "private.mjs"), scope: "global" },
+    { name: "test", path: join(files.root, "private.mjs"), scope: Scope.GLOBAL },
     join(files.root, "missing-private-directory"),
     { timeoutMs: 3000, maxOutputChars: 1000 },
   );

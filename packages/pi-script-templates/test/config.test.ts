@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
+import { Scope } from "#src/constants";
 import { useWorkspace } from "#test/workspace";
 
 const files = useWorkspace();
@@ -20,7 +21,7 @@ it("defaults to all surfaces and bounded execution", async () => {
 
 it("reads global JSONC and applies defaults within partial sections", async () => {
   // Arrange
-  await files.configure('{ // limits\n "execution": {"timeoutMs": 500,}, "surfaces":{"system":false,},}', "global");
+  await files.configure('{ // limits\n "execution": {"timeoutMs": 500,}, "surfaces":{"system":false,},}', Scope.GLOBAL);
 
   // Act
   const { config } = await files.load();
@@ -32,7 +33,7 @@ it("reads global JSONC and applies defaults within partial sections", async () =
 
 it("uses the project configuration rather than merging global values", async () => {
   // Arrange
-  await files.configure({ enabled: false, execution: { timeoutMs: 12 } }, "global");
+  await files.configure({ enabled: false, execution: { timeoutMs: 12 } }, Scope.GLOBAL);
   await files.configure({ surfaces: { appendSystem: false } });
 
   // Act
@@ -61,7 +62,7 @@ it.each([
   '{"execution":{"maxOutputChars":"1000"}}',
 ])("disables invalid project configuration without leaking paths or falling back: %s", async (source) => {
   // Arrange
-  await files.configure({}, "global");
+  await files.configure({}, Scope.GLOBAL);
   await files.configure(source);
 
   // Act
@@ -77,7 +78,7 @@ it.each([
 
 it("reports an unreadable config without a filesystem error or full path", async () => {
   // Arrange
-  await mkdir(join(files.directory("project"), "pi-script-templates.jsonc"));
+  await mkdir(join(files.directory(Scope.PROJECT), "pi-script-templates.jsonc"));
 
   // Act
   const { warnings } = await files.load();
@@ -103,7 +104,7 @@ it("warns about unknown keys without echoing arbitrary configuration contents", 
 
 it("does not read untrusted project configuration", async () => {
   // Arrange
-  await files.configure({ enabled: false }, "global");
+  await files.configure({ enabled: false }, Scope.GLOBAL);
   await files.configure("invalid project configuration");
 
   // Act
