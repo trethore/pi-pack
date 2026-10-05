@@ -54,7 +54,7 @@ function payloadFormat(payload: Record<string, unknown>): RequestFormat | undefi
 }
 
 function requestModelId(model: RequestModel, deploymentNameMap: string | undefined): string {
-  if (model.provider !== "azure-openai-responses" || model.api !== "azure-openai-responses") {
+  if (model.provider !== "azure" || model.api !== "azure-openai-responses") {
     return model.id;
   }
   // Match Pi's deployment-map parsing. Request-scoped overrides are not exposed to extensions.

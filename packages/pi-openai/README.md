@@ -4,7 +4,7 @@ Configure OpenAI-compatible request parameters with layered settings, environmen
 
 ## Installation
 
-Requires Pi `1.0.2` or a compatible later release.
+Requires Pi `1.0.3` or a compatible later release.
 
 From the repository root, install pi-openai globally:
 
@@ -121,7 +121,7 @@ This table describes **what the extension does**, not a guarantee of server acce
 | Provider                          | Pi API format            | `verbosity`               | `reasoningSummary`                           | `webSearch`          | `serviceTier: "priority"`                        |
 | --------------------------------- | ------------------------ | ------------------------- | -------------------------------------------- | -------------------- | ------------------------------------------------ |
 | OpenAI (`openai`)                 | `openai-responses`       | Set `text.verbosity`      | Set/remove `reasoning.summary`               | Add `web_search`     | Set `service_tier`                               |
-| Azure (`azure-openai-responses`)  | `azure-openai-responses` | Set `text.verbosity`      | Set/remove `reasoning.summary`               | Add `web_search`     | Set `service_tier` for listed Azure models below |
+| Azure (`azure`)                   | `azure-openai-responses` | Set `text.verbosity`      | Set/remove `reasoning.summary`               | Add `web_search`     | Set `service_tier` for listed Azure models below |
 | GitHub Copilot (`github-copilot`) | `openai-responses`       | Set `text.verbosity`      | Set/remove `reasoning.summary` (best-effort) | Skip: unverified     | Skip: unverified                                 |
 | Any recognized provider           | `openai-completions`     | Set top-level `verbosity` | Skip: Responses only                         | Skip: Responses only | Skip: Responses only                             |
 
@@ -170,7 +170,7 @@ Request behavior describes intended overrides, not server acceptance. The server
 
 ### Azure deployment names
 
-For the `azure-openai-responses` provider and API, the extension uses Pi's process-environment deployment mapping to match requests:
+For the `azure` provider and `azure-openai-responses` API, the extension uses Pi's process-environment deployment mapping to match requests:
 
 ```sh
 AZURE_OPENAI_DEPLOYMENT_NAME_MAP="gpt-5.5=production-assistant" pi

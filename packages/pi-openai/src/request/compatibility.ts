@@ -60,7 +60,7 @@ const endpoints = new Map<string, { name: Endpoint; pattern: RegExp }>([
     },
   ],
   [
-    "azure-openai-responses",
+    "azure",
     {
       name: Endpoint.AZURE,
       pattern: /^https:\/\/[a-z0-9-]+\.(?:openai\.azure\.com|services\.ai\.azure\.com)(?:\/[^?#]*)?$/,

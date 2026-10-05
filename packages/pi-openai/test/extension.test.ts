@@ -363,8 +363,8 @@ it.each([
   { provider: "openai", apiKey: "sk-proj-test", tier: "fast" },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "priority" },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "fast" },
-  { provider: "azure-openai-responses", apiKey: "azure-test", tier: "priority" },
-  { provider: "azure-openai-responses", apiKey: "azure-test", tier: "fast" },
+  { provider: "azure", apiKey: "azure-test", tier: "priority" },
+  { provider: "azure", apiKey: "azure-test", tier: "fast" },
 ])(
   "modifies real Pi $provider requests using $apiKey and $tier without restoring auth-rejected fields",
   async ({ provider, apiKey, tier }) => {
@@ -436,7 +436,7 @@ it.each([
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
     expect(sent).toMatchObject({ service_tier: "priority", tools: [{ type: "web_search" }] });
-    if (provider === "azure-openai-responses" || apiKey.startsWith("sk-")) {
+    if (provider === "azure" || apiKey.startsWith("sk-")) {
       expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
     } else {
       expect(sent).not.toHaveProperty("max_output_tokens");

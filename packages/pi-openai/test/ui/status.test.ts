@@ -147,7 +147,7 @@ it.each(["openai-responses", "unknown-api"])("shows payload-dependent behavior f
 
 it.each([
   {
-    provider: "azure-openai-responses",
+    provider: "azure",
     api: "azure-openai-responses",
     baseUrl: "https://example.openai.azure.com",
     id: "gpt-6-sol",
@@ -155,7 +155,7 @@ it.each([
     tier: "Set service_tier to priority",
   },
   {
-    provider: "azure-openai-responses",
+    provider: "azure",
     api: "azure-openai-responses",
     baseUrl: "https://example.openai.azure.com",
     id: "gpt-6.1-sol",
