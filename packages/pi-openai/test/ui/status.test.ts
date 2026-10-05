@@ -2,7 +2,7 @@ import { initTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { beforeAll, expect, it, vi } from "vitest";
 import { renderStatus, statusMarkdown } from "#src/ui/status";
-import { completeSave, prepareSave, resetCommand, setCommand, type Changes } from "#src/config/changes";
+import { completeSave, prepareSave, undoCommand, unsetCommand, setCommand, type Changes } from "#src/config/changes";
 import { layers, model } from "#test/support";
 
 beforeAll(() => {
@@ -28,9 +28,11 @@ it("shows a Markdown table with effective values, sources, behavior and save des
   expect(markdown).toContain("Model: `openai` / `gpt-6-sol`");
   expect(markdown).toContain("Save destination: **project**");
   expect(markdown).toContain("Saves pending edits at their original scopes");
+  expect(markdown).toContain("Unset selects its own target per setting, skipping absent values and pending removals.");
   expect(markdown).toContain("### All models");
   expect(markdown).toContain("## Effective settings");
   expect(markdown).not.toContain(model.baseUrl);
+  expect(markdown).not.toContain("Use `/pi-openai save` to save the changes.");
 });
 
 it("surrounds status with horizontal rules and leaves the support warning unquoted", () => {
@@ -318,11 +320,12 @@ it("lists all unsaved edits in a Temporary section immediately before effective 
   expect(temporary).toContain("| `model=gpt-6-sol` | verbosity | `low` | Yes |");
   expect(temporary).toContain("| `model=other` | verbosity | `null` | No |");
   expect(temporary).not.toContain("reasoningSummary");
+  expect(temporary).toContain("\n\nUse `/pi-openai save` to save the changes.\n");
   expect(markdown).not.toContain("Pending save groups");
   expect(changes).toEqual(before);
 });
 
-it.each(["save", "reset"])("shows no unsaved edits after %s without hiding saved runtime values", (action) => {
+it.each(["save", "undo"])("shows no unsaved edits after %s without hiding saved runtime values", (action) => {
   // Arrange
   const input = layers();
   const changes: Changes = { pending: [], receipts: [] };
@@ -332,13 +335,14 @@ it.each(["save", "reset"])("shows no unsaved edits after %s without hiding saved
   if (action === "save") {
     completeSave(changes, prepareSave(input, changes), "global");
   } else {
-    resetCommand(input, changes);
+    undoCommand(input, changes);
   }
   const markdown = statusMarkdown(input, model, "global", changes);
   const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
 
   // Assert
   expect(temporary?.trim()).toBe("No unsaved command edits.");
+  expect(markdown).not.toContain("Use `/pi-openai save` to save the changes.");
   if (action === "save") {
     expect(markdown).toContain("| verbosity | `low` | command, saved |");
   } else {
@@ -361,4 +365,55 @@ it("escapes temporary scopes and handles pending edits without a selected model"
   expect(temporary).toContain("| `model=bad????[31m?value` | verbosity | `low` | No |");
   expect(temporary).toContain("| `All models` | webSearch | `true` | Yes |");
   expect(temporary).not.toContain("\u001b");
+});
+
+it("shows pending removals separately from explicit null values without changing effective settings", () => {
+  // Arrange
+  const input = layers({ global: { verbosity: "high" } });
+  const changes: Changes = { pending: [], receipts: [] };
+  unsetCommand(input, changes, {}, "verbosity");
+  setCommand(input, changes, {}, { reasoningSummary: null });
+
+  // Act
+  const markdown = statusMarkdown(input, model, "global", changes);
+  const temporary = markdown.split("## Temporary\n")[1]?.split("## Effective settings")[0];
+
+  // Assert
+  expect(temporary).toContain("| `All models` | verbosity | Remove explicit value | Yes |");
+  expect(temporary).toContain("| `All models` | reasoningSummary | `null` | Yes |");
+  expect(temporary).toContain("Removals affect the save destination on next session/reload");
+  expect(temporary).toContain("\n\nUse `/pi-openai save` to save the changes.\n");
+  expect(markdown.split("## Effective settings")[1]).toContain("| verbosity | `high` | global |");
+});
+
+it("shows saved removals as receipts rather than values or unsaved edits", () => {
+  // Arrange
+  const input = layers({ global: { verbosity: "high" } });
+  const changes: Changes = { pending: [], receipts: [] };
+  unsetCommand(input, changes, { model: model.id }, "verbosity");
+  completeSave(changes, prepareSave(input, changes), "global");
+
+  // Act
+  const markdown = statusMarkdown(input, model, "global", changes);
+
+  // Assert
+  expect(markdown).toContain("Saved only; not loaded");
+  expect(markdown).toContain("| verbosity | Removed explicit value |");
+  expect(markdown).toContain("No unsaved command edits.");
+  expect(markdown).not.toContain("Use `/pi-openai save` to save the changes.");
+  expect(markdown.split("## Effective settings")[1]).toContain("| verbosity | `high` | global |");
+});
+
+it("keeps pending removal scopes available as the default command target", () => {
+  // Arrange
+  const input = layers();
+  const changes: Changes = { pending: [], receipts: [] };
+  unsetCommand(input, changes, { model: model.id }, "verbosity");
+
+  // Act
+  const markdown = statusMarkdown(input, model, "global", changes);
+
+  // Assert
+  expect(markdown).toContain("Default command target: `model=gpt-6-sol`");
+  expect(markdown).toContain("| `model=gpt-6-sol` | verbosity | Remove explicit value | Yes |");
 });

@@ -5,7 +5,7 @@ import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { loadConfiguration, saveConfiguration, saveDestination } from "#src/config/files";
 import { resolveSettings } from "#src/config/settings";
-import { createWorkspace, settings } from "#test/support";
+import { createWorkspace, model, settings } from "#test/support";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs/promises")>();
@@ -459,4 +459,194 @@ it("keeps the original file and removes temporary files if atomic replacement fa
   ).rejects.toThrow("Could not save global configuration.");
   expect(await workspace.read("global")).toBe(source);
   expect(await readdir(workspace.agentDir)).toEqual(["pi-openai.jsonc"]);
+});
+
+it("removes top-level settings while preserving unrelated data and explicit null values", async () => {
+  // Arrange
+  const source =
+    '{\r\n  "verbosity": "high",\r\n  // Keep summary.\r\n  "reasoningSummary": null,\r\n  "future": 42\r\n}\r\n';
+  await workspace.write("global", source);
+
+  // Act
+  await saveConfiguration(workspace.paths, "global", [{ match: {}, settings: {}, unset: ["verbosity"] }], {
+    projectTrusted: true,
+  });
+  const saved = await workspace.read("global");
+
+  // Assert
+  expect(parseConfig(saved)).toEqual({ reasoningSummary: null, future: 42 });
+  expect(saved).toContain("// Keep summary.");
+  expect(saved.replaceAll("\r\n", "")).not.toContain("\n");
+});
+
+it("removes empty override blocks and handles shifted indexes across mixed patches", async () => {
+  // Arrange
+  await workspace.write(
+    "project",
+    JSON.stringify({
+      verbosity: "high",
+      overrides: [
+        { match: { model: "first" }, settings: { verbosity: "low" } },
+        { match: { model: "second" }, settings: { verbosity: "low", webSearch: true } },
+        { match: { model: "third" }, settings: { verbosity: "low" } },
+      ],
+    }),
+  );
+
+  // Act
+  await saveConfiguration(
+    workspace.paths,
+    "project",
+    [
+      { match: { model: "first" }, settings: {}, unset: ["verbosity"] },
+      { match: { model: "second" }, settings: { reasoningSummary: null }, unset: ["verbosity"] },
+      { match: { model: "third" }, settings: {}, unset: ["verbosity"] },
+      { match: { model: "fourth" }, settings: { webSearch: true } },
+    ],
+    { projectTrusted: true },
+  );
+
+  // Assert
+  expect(parseConfig(await workspace.read("project"))).toEqual({
+    verbosity: "high",
+    overrides: [
+      { match: { model: "second" }, settings: { webSearch: true, reasoningSummary: null } },
+      { match: { model: "fourth" }, settings: { webSearch: true } },
+    ],
+  });
+});
+
+it("removes the overrides property when its final rule becomes empty", async () => {
+  // Arrange
+  await workspace.write(
+    "global",
+    JSON.stringify({
+      verbosity: "high",
+      overrides: [{ match: { model: model.id }, settings: { verbosity: null } }],
+    }),
+  );
+
+  // Act
+  await saveConfiguration(
+    workspace.paths,
+    "global",
+    [{ match: { model: model.id }, settings: {}, unset: ["verbosity"] }],
+    { projectTrusted: true },
+  );
+
+  // Assert
+  expect(parseConfig(await workspace.read("global"))).toEqual({ verbosity: "high" });
+});
+
+it.each([{ settings: { verbosity: "low", future: 42 } }, { settings: { verbosity: "low" }, future: 42 }])(
+  "preserves unknown override data when removing the last known setting: %j",
+  async (extra) => {
+    // Arrange
+    const match = { model: model.id };
+    await workspace.write("global", JSON.stringify({ overrides: [{ match, ...extra }] }));
+
+    // Act
+    await saveConfiguration(workspace.paths, "global", [{ match, settings: {}, unset: ["verbosity"] }], {
+      projectTrusted: true,
+    });
+
+    // Assert
+    const remaining = { ...extra.settings };
+    Reflect.deleteProperty(remaining, "verbosity");
+    expect(parseConfig(await workspace.read("global"))).toEqual({
+      overrides: [{ match, ...extra, settings: remaining }],
+    });
+  },
+);
+
+it.each([{}, { model: "absent" }])(
+  "does not create files or scopes when unsetting missing entries at %j",
+  async (match) => {
+    // Act / Assert
+    const patches = [{ match, settings: {}, unset: ["verbosity" as const] }];
+    await saveConfiguration(workspace.paths, "global", patches, { projectTrusted: true });
+    await expect(workspace.read("global")).rejects.toHaveProperty("code", "ENOENT");
+    const source = '{ // Keep formatting.\n "webSearch": true\n}\n';
+    await workspace.write("global", source);
+    await saveConfiguration(workspace.paths, "global", patches, { projectTrusted: true });
+    expect(await workspace.read("global")).toBe(source);
+  },
+);
+
+it("preserves settings added externally before a removal is saved", async () => {
+  // Arrange
+  const match = { model: model.id };
+  await workspace.write("global", JSON.stringify({ overrides: [{ match, settings: { verbosity: "low" } }] }));
+  await loadConfiguration(workspace.paths, { projectTrusted: true, environment: {} });
+  await workspace.write(
+    "global",
+    JSON.stringify({
+      overrides: [{ match, settings: { verbosity: "low", webSearch: true } }],
+    }),
+  );
+
+  // Act
+  await saveConfiguration(workspace.paths, "global", [{ match, settings: {}, unset: ["verbosity"] }], {
+    projectTrusted: true,
+  });
+
+  // Assert
+  expect(parseConfig(await workspace.read("global"))).toEqual({
+    overrides: [{ match, settings: { webSearch: true } }],
+  });
+});
+
+it.each([
+  '{"verbosity":null}',
+  '{"verbosity":null,}',
+  '{"verbosity":null,"webSearch":true}',
+  '{"webSearch":true,"verbosity":null}',
+  '{"webSearch":true,"verbosity":null,}',
+  '{"webSearch":true,/* keep */"verbosity":null,"enabled":false}',
+  '{"verbosity":null,/* keep */"webSearch":true}',
+  '{"webSearch":true,/* keep */"verbosity":null/* keep */,}',
+])("removes JSONC entries without damaging surrounding commas or comments: %s", async (source) => {
+  // Arrange
+  await workspace.write("global", source);
+  const expected = parseConfig(source);
+  Reflect.deleteProperty(expected, "verbosity");
+
+  // Act
+  await saveConfiguration(workspace.paths, "global", [{ match: {}, settings: {}, unset: ["verbosity"] }], {
+    projectTrusted: true,
+  });
+  const saved = await workspace.read("global");
+
+  // Assert
+  expect(parseConfig(saved)).toEqual(expected);
+  expect(saved.match(/\/\* keep \*\//g)).toEqual(source.match(/\/\* keep \*\//g));
+});
+
+it("keeps comments for neighboring rules when deleting an override with trailing commas", async () => {
+  // Arrange
+  await workspace.write(
+    "global",
+    `{
+  "overrides": [
+    {"match": {"model": "first"}, "settings": {"verbosity": "low",}},
+    // Keep the other rule.
+    {"match": {"model": "second"}, "settings": {"verbosity": "high",}},
+  ],
+}`,
+  );
+
+  // Act
+  await saveConfiguration(
+    workspace.paths,
+    "global",
+    [{ match: { model: "first" }, settings: {}, unset: ["verbosity"] }],
+    { projectTrusted: true },
+  );
+  const saved = await workspace.read("global");
+
+  // Assert
+  expect(saved).toContain("// Keep the other rule.");
+  expect(parseConfig(saved)).toEqual({
+    overrides: [{ match: { model: "second" }, settings: { verbosity: "high" } }],
+  });
 });

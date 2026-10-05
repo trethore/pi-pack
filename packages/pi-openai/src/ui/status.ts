@@ -20,7 +20,7 @@ import {
   scopeRules,
   type Selector,
 } from "#src/config/scopes";
-import type { Changes, SaveReceipt } from "#src/config/changes";
+import { patchKeys, type Changes, type SaveReceipt, type ScopePatch } from "#src/config/changes";
 
 const supportWarning =
   "Request behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.";
@@ -88,6 +88,13 @@ function scopeSource(view: ScopeView, key: Setting, changes: Changes): string {
   return pending ? "command, unsaved" : "command, saved";
 }
 
+function patchValue(patch: ScopePatch, key: Setting, saved = false): string {
+  if (patch.unset?.includes(key)) {
+    return saved ? "Removed explicit value" : "Remove explicit value";
+  }
+  return inlineCode(String(patch.settings[key]));
+}
+
 function scopeTable(
   view: ScopeView,
   changes: Changes,
@@ -122,9 +129,7 @@ function scopeTable(
       "",
       "| Setting | Saved value |",
       "| --- | --- |",
-      ...settingNames
-        .filter((key) => Object.hasOwn(receipt.settings, key))
-        .map((key) => `| ${key} | ${inlineCode(String(receipt.settings[key]))} |`),
+      ...patchKeys(receipt).map((key) => `| ${key} | ${patchValue(receipt, key, true)} |`),
     );
   }
   return lines.join("\n");
@@ -138,9 +143,14 @@ function temporaryTable(changes: Changes, model: RequestModel | undefined): stri
     lines.push(
       "Unsaved command edits at their original scopes. Matching edits can still be masked by more specific command overrides.",
       "",
-      "| Scope | Setting | Value | Matches selected model |",
-      "| --- | --- | --- | --- |",
     );
+    if (changes.pending.some((patch) => patch.unset?.length)) {
+      lines.push(
+        "Removals affect the save destination on next session/reload, not the currently loaded configuration.",
+        "",
+      );
+    }
+    lines.push("| Scope | Setting | Value | Matches selected model |", "| --- | --- | --- | --- |");
     const pending = [...changes.pending].sort(
       (left, right) =>
         scopeRank(left.match) - scopeRank(right.match) || scopeId(left.match).localeCompare(scopeId(right.match)),
@@ -148,10 +158,11 @@ function temporaryTable(changes: Changes, model: RequestModel | undefined): stri
     for (const rule of pending) {
       const scope = inlineCode(scopeLabel(rule.match));
       const matches = matchesScope(rule.match, model) ? "Yes" : "No";
-      for (const key of settingNames.filter((setting) => Object.hasOwn(rule.settings, setting))) {
-        lines.push(`| ${scope} | ${key} | ${inlineCode(String(rule.settings[key]))} | ${matches} |`);
+      for (const key of patchKeys(rule)) {
+        lines.push(`| ${scope} | ${key} | ${patchValue(rule, key)} | ${matches} |`);
       }
     }
+    lines.push("", `Use ${inlineCode(`/${extensionName} save`)} to save the changes.`);
   }
   return lines.join("\n");
 }
@@ -163,7 +174,7 @@ export function statusMarkdown(
   changes: Changes = { pending: [], receipts: [] },
 ): string {
   const effective = resolveSettings(layers, model);
-  const target = automaticScope(layers, model);
+  const target = automaticScope(layers, model, changes.pending);
   const identity = model ? `${inlineCode(model.provider)} / ${inlineCode(model.id)}` : "None";
   const lines = [
     dedent(`
@@ -175,6 +186,7 @@ export function statusMarkdown(
       API: ${model ? inlineCode(model.api) : "None"}
 
       Default command target: ${target ? inlineCode(scopeLabel(target)) : "Unavailable; use --scope all"}.
+      Unset selects its own target per setting, skipping absent values and pending removals.
       Save destination: **${destination}**. Saves pending edits at their original scopes unless --scope retargets the write.
       Saving changes files for future sessions/reloads only; active settings stay unchanged.
     `),

@@ -16,7 +16,7 @@ npm run install:global:pi-openai
 
 Configure verbosity, reasoning summaries, native web search, and service-tier overrides for OpenAI-compatible requests. By default, the extension leaves requests unchanged.
 
-Run `/pi-openai` to see a table for **All models**, a table for every configured or runtime scope, and a final **Effective settings** table for the selected model. Status marks matching scopes, the default command target, value sources, pending edits, and the save destination.
+Run `/pi-openai` to see a table for **All models**, a table for every configured or runtime scope, and a final **Effective settings** table for the selected model. Status marks matching scopes, the default command target, value sources, and the save destination. The **Temporary** section lists pending sets and removals, with a reminder to use `/pi-openai save` when edits remain unsaved.
 
 ```text
 /pi-openai verbosity medium
@@ -25,7 +25,7 @@ Run `/pi-openai` to see a table for **All models**, a table for every configured
 /pi-openai serviceTier priority
 ```
 
-Commands edit the most specific existing scope matching the selected model. With only flat configuration, they affect **All models**, as before. Changes apply to subsequent requests without a reload and are temporary until saved:
+Value-setting commands edit the most specific existing scope matching the selected model. With only flat configuration, they affect **All models**, as before. Value overrides apply to subsequent requests without a reload and are temporary until saved:
 
 ```text
 /pi-openai save
@@ -38,9 +38,11 @@ Commands edit the most specific existing scope matching the selected model. With
 | `/pi-openai` or `/pi-openai status`                 | Show all scopes, effective settings, compatibility decisions, and save destination.                              |
 | `/pi-openai <setting> <value>`                      | Override a setting at the automatic target scope for this session.                                               |
 | `/pi-openai <setting> <value> --scope <scope>`      | Override a setting at an explicit scope, creating it if needed.                                                  |
-| `/pi-openai reset [setting]`                        | Remove one or all command overrides at the automatic target scope.                                               |
-| `/pi-openai reset [setting] --scope <scope>`        | Remove command overrides at an explicit scope.                                                                   |
-| `/pi-openai reset --all-scopes`                     | Clear every runtime override and pending edit.                                                                   |
+| `/pi-openai unset <setting>`                        | Stage removal at the most specific matching scope still defining that setting; skip pending removals.            |
+| `/pi-openai unset <setting> --scope <scope>`        | Stage removal only at this scope; do not fall through if the setting is absent or already pending removal.       |
+| `/pi-openai undo [setting]`                         | Discard one or all command overrides and pending edits at the automatic target scope.                            |
+| `/pi-openai undo [setting] --scope <scope>`         | Discard command overrides and pending edits at an explicit scope.                                                |
+| `/pi-openai undo --all-scopes`                      | Clear every runtime override and pending edit.                                                                   |
 | `/pi-openai save`                                   | Save pending edits at their original scopes to the project file if it exists and is trusted, otherwise globally. |
 | `/pi-openai save project`                           | Save pending edits to the project file, creating it if needed. Requires project trust.                           |
 | `/pi-openai save global`                            | Save pending edits to the global file.                                                                           |
@@ -54,26 +56,51 @@ Scope names are `all`, `model`, `provider`, `api`, `provider+model`, `model+api`
 /pi-openai enabled false --scope all
 ```
 
-Switching models does not move existing overrides. With no selected model, set/reset commands require `--scope all`; `reset --all-scopes` can still clear everything, and a bare save can persist previously captured edits.
+Switching models does not move existing overrides. With no selected model, set/undo/unset commands require `--scope all`; `undo --all-scopes` can still clear everything, and a bare save can persist previously captured edits.
 
-Commands complete setting names, canonical values, and scope options. Reset affects runtime state only: it never edits files or restores built-in defaults when another loaded layer supplies a value. Empty runtime-only scopes disappear after reset.
+Commands complete setting names, canonical values, and scope options. `undo` replaces the former `reset` command; `reset` is no longer accepted. Undo affects runtime state only: it discards command overrides and pending edits, including removals, without editing files. It is not a step-by-step history undo and does not restore built-in defaults when another loaded layer supplies a value. Empty runtime-only scopes disappear once their overrides and pending edits are discarded.
+
+### Removing saved settings
+
+Use `unset` to stage removal of an explicit configuration value, then save it:
+
+```text
+/pi-openai unset verbosity --scope model
+/pi-openai status
+/pi-openai save global
+/reload
+```
+
+The Temporary table shows **Remove explicit value**, not `null`. Unset removes any command override for that setting at the same scope and replaces a pending set with a pending removal. Loaded configuration is unchanged: the saved deletion affects requests only after reload or a new session. Setting the same key again replaces its pending removal; `undo verbosity --scope model` cancels it without writing a file.
+
+The save destination determines which file loses the setting. A bare `save` uses the trusted project file if it exists, otherwise the global file; use `save global` or `save project` to choose explicitly. Unset never removes environment variables or values from other files or scopes. Removing an explicit value exposes inherited values after reload, not necessarily built-in defaults.
+
+Automatic unset targeting is specific to the requested setting. It considers matching configuration and command scopes that explicitly define that key, excludes scopes with a pending removal for it, and uses the scope ranking below. Repeating `/pi-openai unset verbosity` walks the remaining scopes toward **All models**, even if a previously targeted scope still defines other settings. Environment values and built-in defaults are not removable candidates.
+
+An explicit `--scope` never falls through to another scope. When that scope has no explicit value or already has a pending removal, unset reports **Nothing to unset** at info level and adds no edit. Automatic unset reports the same message when no eligible scope remains. Other pending edits are unchanged. Invalid commands or a missing selected model without `--scope all` still report errors.
+
+Unset accounts for this session's saved values and removals at their actual file scopes, so saving between unset commands does not reselect an already removed value from the loaded snapshot. A value still present in another file remains eligible; saving does not automatically switch destinations. External file edits require a reload to update targeting.
+
+When the last setting in an override is removed, saving also removes the empty override block and omits an empty `overrides` array. Unknown settings or extra fields are preserved rather than deleting their block. Removing an absent setting does not create a file or an override.
+
+Pending removal scopes remain targets for value-setting commands and `undo`, so you can replace or cancel a removal. They are skipped by subsequent automatic unsets of the same setting. Undoing a pending removal makes the loaded value eligible for unset again.
 
 ### Automatic target selection
 
-Commands select one existing matching scope, independently of whether it already defines the setting being changed:
+Value-setting commands and `undo` use the default target shown in status, independently of whether it defines the setting being changed. Unset uses the same ranking but only among its eligible scopes:
 
 1. Prefer more selector fields.
-2. On equal field counts, prefer runtime overrides, then project configuration, then global configuration.
+2. On equal field counts, prefer runtime overrides or pending edits, then project configuration, then global configuration.
 3. Within the same source level, prefer model over provider over API. For two fields: provider+model > model+api > provider+api.
-4. If no scoped rule matches, target All models.
+4. Set/undo fall back to All models when no scoped rule matches. Unset considers All models only if it still defines the requested setting; otherwise it reports Nothing to unset.
 
-Every confirmation names the target. An explicit scope bypasses automatic selection. Runtime scopes remain candidates after saving; a scope created only by a retargeted save is not a candidate until reloaded.
+Every successful edit confirmation names the target. An explicit scope bypasses automatic selection. Runtime scopes remain candidates after saving. A scope created only by a retargeted save is not a default target for set/undo until reloaded, but unset can remove its saved values.
 
 Targeting is separate from effective-value resolution. All matching scopes contribute values, but a command edits only one scope. For example, a more specific global scope can be the command target while a broader project value would mask it after a global save and reload. A broader command edit can also be masked by a more specific runtime override; the confirmation reports this.
 
 ### Saving
 
-Saving writes **only pending explicit edits**, across all edited scopes. It does not copy environment values, defaults, or inherited values. Existing comments, unrelated keys, and other scopes are preserved. With no pending edits, save does nothing.
+Saving writes **only pending explicit edits**, including removals, across all edited scopes. It does not copy environment values, defaults, or inherited values. Comments outside removed entries, unrelated keys, and other scopes are preserved. With no pending edits, save does nothing.
 
 An explicit save scope retargets the file write, not live overrides:
 
@@ -82,11 +109,11 @@ An explicit save scope retargets the file write, not live overrides:
 /pi-openai save global --scope provider
 ```
 
-The current session keeps the model-scoped override. The global file receives a provider-scoped setting for future sessions or reloads. Retargeting merges disjoint keys or identical values, but rejects conflicting values for the same key, including conflicts with runtime values already at the target. It does not delete previously saved source rules.
+The current session keeps the model-scoped override. The global file receives a provider-scoped setting for future sessions or reloads. Retargeting merges disjoint keys, identical values, and repeated removals. It rejects conflicting values or a set and removal for the same key, including conflicts with runtime values already at the target. Retargeted removals delete only at the destination scope; retargeting does not delete previously saved source rules.
 
-**Saving does not change the current session's loaded configuration or runtime settings.** Successful saves clear pending flags but keep runtime overrides active. Status shows saved values separately at their actual persisted scopes, marked for the next session/reload.
+**Saving does not change the current session's loaded configuration or runtime settings.** Successful saves clear pending flags but keep runtime overrides active. Status shows saved values and **Removed explicit value** receipts separately at their actual persisted scopes, marked for the next session/reload.
 
-Reset after saving exposes the configuration loaded at session start, not the newly written file. Run `/reload` or start a new session to load saved settings and clear runtime overrides. Normal project/environment precedence still applies after reload; saving globally cannot bypass it.
+Undo after saving cannot reverse a persisted write. It exposes the configuration loaded at session start, not the newly written file. Run `/reload` or start a new session to load saved settings and clear runtime overrides. Normal project/environment precedence still applies after reload; saving globally cannot bypass it.
 
 ## Configuration
 

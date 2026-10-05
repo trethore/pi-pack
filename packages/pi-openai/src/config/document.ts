@@ -1,6 +1,7 @@
 import { parseConfig } from "@pi-pack/shared/config";
 import { isObject } from "@pi-pack/shared/validation";
-import { applyEdits, modify, parseTree, type Node } from "jsonc-parser";
+import { applyEdits, createScanner, findNodeAtLocation, modify, parseTree, type Node } from "jsonc-parser";
+import type { ScopePatch } from "#src/config/changes";
 import { extensionName, type Destination } from "#src/constants";
 import { settingNames, validateSettings } from "#src/config/settings";
 import { scopeId, scopeSize, validateSelector, type ScopeRule, type ScopedSettings } from "#src/config/scopes";
@@ -99,7 +100,38 @@ export function parseSource(
   }
 }
 
+function commaAt(source: string, offset: number): number | undefined {
+  const scanner = createScanner(source, true);
+  scanner.setPosition(offset);
+  scanner.scan();
+  const tokenOffset = scanner.getTokenOffset();
+  return source[tokenOffset] === "," ? tokenOffset : undefined;
+}
+
+function remove(source: string, path: (string | number)[]): string {
+  const root = parseTree(source);
+  const value = root && findNodeAtLocation(root, path);
+  if (!value) {
+    return source;
+  }
+  const node = value.parent?.type === "property" ? value.parent : value;
+  const siblings = node.parent?.children ?? [];
+  const previous = siblings[siblings.indexOf(node) - 1];
+  const comma =
+    commaAt(source, node.offset + node.length) ??
+    (previous ? commaAt(source, previous.offset + previous.length) : undefined);
+  // jsonc-parser's property removal can also remove comments belonging to the next entry.
+  const edits = [{ offset: node.offset, length: node.length, content: "" }];
+  if (comma !== undefined) {
+    edits.push({ offset: comma, length: 1, content: "" });
+  }
+  return applyEdits(source, edits);
+}
+
 function edit(source: string, path: (string | number)[], value: unknown): string {
+  if (value === undefined) {
+    return remove(source, path);
+  }
   return applyEdits(
     source,
     modify(source, path, value, {
@@ -108,22 +140,54 @@ function edit(source: string, path: (string | number)[], value: unknown): string
   );
 }
 
-export function patchSource(source: string, configuration: ScopedSettings, patches: ScopeRule[]): string {
+function patchSettings(source: string, path: (string | number)[], patch: ScopePatch): string {
+  for (const key of settingNames.filter((setting) => Object.hasOwn(patch.settings, setting))) {
+    source = edit(source, [...path, key], patch.settings[key]);
+  }
+  for (const key of patch.unset ?? []) {
+    source = edit(source, [...path, key], undefined);
+  }
+  return source;
+}
+
+function pruneRule(source: string, rules: ScopeRule[], index: number): string {
+  const node = property(parseTree(source), "overrides")?.children?.[index];
+  if (property(node, "settings")?.children?.length !== 0) {
+    return source;
+  }
+  const hasUnknownFields = node?.children?.some((child) => {
+    const name: unknown = child.children?.[0]?.value;
+    return name !== "match" && name !== "settings";
+  });
+  if (hasUnknownFields) {
+    return source;
+  }
+  source = edit(source, ["overrides", index], undefined);
+  rules.splice(index, 1);
+  return rules.length === 0 ? edit(source, ["overrides"], undefined) : source;
+}
+
+function patchRule(source: string, rules: ScopeRule[], patch: ScopePatch): string {
+  if (scopeSize(patch.match) === 0) {
+    return patchSettings(source, [], patch);
+  }
+  let index = rules.findIndex((rule) => scopeId(rule.match) === scopeId(patch.match));
+  if (index === -1) {
+    if (Object.keys(patch.settings).length === 0) {
+      return source;
+    }
+    index = rules.length;
+    rules.push(patch);
+    source = edit(source, ["overrides", index], { match: patch.match, settings: {} });
+  }
+  source = patchSettings(source, ["overrides", index, "settings"], patch);
+  return patch.unset?.length ? pruneRule(source, rules, index) : source;
+}
+
+export function patchSource(source: string, configuration: ScopedSettings, patches: ScopePatch[]): string {
   const rules = [...(configuration.overrides ?? [])];
   for (const patch of patches) {
-    let path: (string | number)[] = [];
-    if (scopeSize(patch.match) > 0) {
-      let index = rules.findIndex((rule) => scopeId(rule.match) === scopeId(patch.match));
-      if (index === -1) {
-        index = rules.length;
-        rules.push(patch);
-        source = edit(source, ["overrides", index], { match: patch.match, settings: {} });
-      }
-      path = ["overrides", index, "settings"];
-    }
-    for (const key of settingNames.filter((setting) => Object.hasOwn(patch.settings, setting))) {
-      source = edit(source, [...path, key], patch.settings[key]);
-    }
+    source = patchRule(source, rules, patch);
   }
   return source;
 }

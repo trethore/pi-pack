@@ -9,7 +9,7 @@ import {
 import { readOptionalFile } from "@pi-pack/shared/files";
 import { Destination, extensionName } from "#src/constants";
 import { readEnvironment, type Layers } from "#src/config/settings";
-import type { ScopeRule } from "#src/config/scopes";
+import type { ScopePatch } from "#src/config/changes";
 import { parseSource, patchSource } from "#src/config/document";
 
 export { Destination } from "#src/constants";
@@ -78,7 +78,7 @@ export async function saveDestination(
 export async function saveConfiguration(
   paths: ConfigPaths,
   destination: Destination,
-  patches: ScopeRule[],
+  patches: ScopePatch[],
   { projectTrusted }: ProjectTrustOptions,
 ): Promise<void> {
   if (destination === Destination.PROJECT && !projectTrusted) {
@@ -90,7 +90,11 @@ export async function saveConfiguration(
   const file = paths[destination];
   const existing = await readSource(file, destination);
   const configuration = existing === undefined ? {} : parseSource(existing, destination);
-  const source = patchSource(existing ?? "{}\n", configuration, patches);
+  const original = existing ?? "{}\n";
+  const source = patchSource(original, configuration, patches);
+  if (source === original) {
+    return;
+  }
   const temporary = `${file}.${randomUUID()}.tmp`;
   try {
     const mode = existing === undefined ? 0o600 : (await stat(file)).mode & 0o777;

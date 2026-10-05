@@ -9,7 +9,15 @@ import {
   saveDestination,
   type ConfigPaths,
 } from "#src/config/files";
-import { completeSave, prepareSave, resetCommand, setCommand, type Changes } from "#src/config/changes";
+import {
+  completeSave,
+  prepareSave,
+  undoCommand,
+  unsetCommand,
+  unsetScope,
+  setCommand,
+  type Changes,
+} from "#src/config/changes";
 import { commandScope, explicitScope, scopeId, scopeLabel } from "#src/config/scopes";
 import { extensionName } from "#src/constants";
 import { transformPayload } from "#src/request/payload";
@@ -50,7 +58,10 @@ async function executeSave(
     await saveConfiguration(state.paths, destination, batch.patches, { projectTrusted: ctx.isProjectTrusted() });
     completeSave(state.changes, batch, destination);
     const summary = batch.patches
-      .map((patch) => `${scopeLabel(patch.match)}: ${Object.keys(patch.settings).join(", ")}`)
+      .map(
+        (patch) =>
+          `${scopeLabel(patch.match)}: ${[...Object.keys(patch.settings), ...(patch.unset ?? []).map((key) => `${key} (removed)`)].join(", ")}`,
+      )
       .join("; ");
     ctx.ui.notify(
       `${extensionName}: Saved to ${destination} (${summary}). Applies on next session/reload; active settings unchanged.`,
@@ -59,6 +70,42 @@ async function executeSave(
   } finally {
     state.saving = false;
   }
+}
+
+function executeSet(
+  command: Extract<Command, { type: "set" }>,
+  { layers, changes }: State,
+  ctx: ExtensionCommandContext,
+): void {
+  const match = commandScope(layers, ctx.model, command.scope, changes.pending);
+  setCommand(layers, changes, match, command.override);
+  const effective = resolveSettings(layers, ctx.model);
+  const masked = scopeId(effective.scopes[command.setting]) !== scopeId(match);
+  const detail = masked
+    ? ` Masked by ${scopeLabel(effective.scopes[command.setting])}; effective value = ${String(effective.values[command.setting])}.`
+    : "";
+  ctx.ui.notify(
+    `${extensionName}: ${command.setting} = ${String(command.override[command.setting])}. Scope: ${scopeLabel(match)}. Temporary, unsaved.${detail} ${saveReminder}`,
+    "info",
+  );
+}
+
+async function executeUnset(
+  command: Extract<Command, { type: "unset" }>,
+  { layers, changes, paths }: State,
+  ctx: ExtensionCommandContext,
+): Promise<void> {
+  const match = unsetScope(layers, changes, ctx.model, command.setting, command.scope);
+  if (!match) {
+    ctx.ui.notify(`${extensionName}: Nothing to unset for ${command.setting}. No pending edit added.`, "info");
+    return;
+  }
+  const destination = await saveDestination(paths, { projectTrusted: ctx.isProjectTrusted() });
+  unsetCommand(layers, changes, match, command.setting);
+  ctx.ui.notify(
+    `${extensionName}: Unset ${command.setting}. Scope: ${scopeLabel(match)}. Pending removal from ${destination} configuration unless save selects another destination. Loaded configuration unchanged until next session/reload. ${saveReminder}`,
+    "info",
+  );
 }
 
 async function executeCommand(
@@ -79,25 +126,17 @@ async function executeCommand(
       }
       break;
     }
-    case Command.SET: {
-      const match = commandScope(layers, ctx.model, command.scope);
-      setCommand(layers, changes, match, command.override);
-      const effective = resolveSettings(layers, ctx.model);
-      const masked = scopeId(effective.scopes[command.setting]) !== scopeId(match);
-      const detail = masked
-        ? ` Masked by ${scopeLabel(effective.scopes[command.setting])}; effective value = ${String(effective.values[command.setting])}.`
-        : "";
-      ctx.ui.notify(
-        `${extensionName}: ${command.setting} = ${String(command.override[command.setting])}. Scope: ${scopeLabel(match)}. Temporary, unsaved.${detail} ${saveReminder}`,
-        "info",
-      );
+    case Command.SET:
+      executeSet(command, state, ctx);
       break;
-    }
-    case Command.RESET: {
-      const match = command.allScopes ? undefined : commandScope(layers, ctx.model, command.scope);
-      resetCommand(layers, changes, match, command.setting);
+    case Command.UNSET:
+      await executeUnset(command, state, ctx);
+      break;
+    case Command.UNDO: {
+      const match = command.allScopes ? undefined : commandScope(layers, ctx.model, command.scope, changes.pending);
+      undoCommand(layers, changes, match, command.setting);
       ctx.ui.notify(
-        `${extensionName}: Reset ${command.setting ?? "command overrides"}. Scope: ${match ? scopeLabel(match) : "all scopes"}. Configuration files unchanged.`,
+        `${extensionName}: Undid ${command.setting ?? "command overrides and pending edits"}. Scope: ${match ? scopeLabel(match) : "all scopes"}. Configuration files unchanged.`,
         "info",
       );
       break;
@@ -148,7 +187,7 @@ export default function openai(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand(extensionName, {
-    description: "Manage scoped OpenAI request settings; show all scopes, reset overrides, or save pending edits",
+    description: "Manage scoped OpenAI request settings; undo overrides, unset saved settings, or save pending edits",
     getArgumentCompletions: completeArguments,
     handler: async (args, ctx) => {
       try {

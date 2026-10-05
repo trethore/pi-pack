@@ -6,18 +6,20 @@ import { isScopeName, scopeNames, type ScopeName } from "#src/config/scopes";
 export const Command = {
   STATUS: "status",
   SET: "set",
-  RESET: "reset",
+  UNDO: "undo",
+  UNSET: "unset",
   SAVE: "save",
 } as const;
 
 export type Command =
   | { type: typeof Command.STATUS }
   | { type: typeof Command.SET; setting: Setting; override: Partial<Settings>; scope?: ScopeName }
-  | { type: typeof Command.RESET; setting: Setting | undefined; scope?: ScopeName; allScopes?: true }
+  | { type: typeof Command.UNDO; setting: Setting | undefined; scope?: ScopeName; allScopes?: true }
+  | { type: typeof Command.UNSET; setting: Setting; scope?: ScopeName }
   | { type: typeof Command.SAVE; destination: Destination | undefined; scope?: ScopeName };
 
-const commandNames = [Command.STATUS, ...settingNames, Command.RESET, Command.SAVE];
-const usage = `Use /${extensionName} [status | <setting> <value> | reset [setting] | save [project|global]]. Set/reset/save accept --scope <${scopeNames.join("|")}>; reset also accepts --all-scopes.`;
+const commandNames = [Command.STATUS, ...settingNames, Command.UNDO, Command.UNSET, Command.SAVE];
+const usage = `Use /${extensionName} [status | <setting> <value> | undo [setting] | unset <setting> | save [project|global]]. Set/undo/unset/save accept --scope <${scopeNames.join("|")}>; undo also accepts --all-scopes.`;
 
 function saveCommand(destination: string | undefined): Command {
   if (destination !== undefined && destination !== Destination.PROJECT && destination !== Destination.GLOBAL) {
@@ -26,11 +28,18 @@ function saveCommand(destination: string | undefined): Command {
   return { type: Command.SAVE, destination };
 }
 
-function resetCommand(setting: string | undefined): Command {
+function undoCommand(setting: string | undefined): Command {
   if (setting !== undefined && !isSetting(setting)) {
     throw new Error(usage);
   }
-  return { type: Command.RESET, setting };
+  return { type: Command.UNDO, setting };
+}
+
+function unsetCommand(setting: string | undefined): Command {
+  if (setting === undefined || !isSetting(setting)) {
+    throw new Error(usage);
+  }
+  return { type: Command.UNSET, setting };
 }
 
 function positionalCommand(parts: string[]): Command {
@@ -41,8 +50,11 @@ function positionalCommand(parts: string[]): Command {
   if (name === Command.SAVE) {
     return saveCommand(argument);
   }
-  if (name === Command.RESET) {
-    return resetCommand(argument);
+  if (name === Command.UNDO) {
+    return undoCommand(argument);
+  }
+  if (name === Command.UNSET) {
+    return unsetCommand(argument);
   }
   if (name === Command.STATUS && argument === undefined) {
     return { type: Command.STATUS };
@@ -92,7 +104,7 @@ export function parseCommand(args: string): Command {
   }
   if (
     options.allScopes &&
-    (command.type !== Command.RESET || command.setting !== undefined || options.scope !== undefined)
+    (command.type !== Command.UNDO || command.setting !== undefined || options.scope !== undefined)
   ) {
     throw new Error(usage);
   }
@@ -103,7 +115,7 @@ function argumentsFor(name: string): readonly string[] {
   if (isSetting(name)) {
     return choices[name].map(String);
   }
-  if (name === Command.RESET) {
+  if (name === Command.UNDO || name === Command.UNSET) {
     return settingNames;
   }
   if (name === Command.SAVE) {
@@ -117,8 +129,12 @@ function validCompletion(parts: string[], value: string): boolean {
     const completed = [...parts, value, ...(value === "--scope" ? ["all"] : [])];
     const { positional } = extractOptions(completed);
     const name = positional[0] ?? "";
-    if (parts.at(-1) === "--scope" && positional.length === 1 && isSetting(name)) {
-      completed.push(String(choices[name][0]));
+    if (positional.length === 1 && (parts.at(-1) === "--scope" || value === "--scope")) {
+      if (isSetting(name) && parts.at(-1) === "--scope") {
+        completed.push(String(choices[name][0]));
+      } else if (name === Command.UNSET) {
+        completed.push("enabled");
+      }
     }
     parseCommand(completed.join(" "));
     return true;

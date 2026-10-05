@@ -114,26 +114,43 @@ export function explicitScope(scope: ScopeName, model: ModelIdentity | undefined
   return match;
 }
 
-export function automaticScope(layers: Layers, model: ModelIdentity | undefined): Selector | undefined {
-  if (!model) {
-    return undefined;
-  }
+export function commandScopeRules(
+  layers: Layers,
+  model: ModelIdentity | undefined,
+  pending: ScopeRule[] = [],
+): ScopeRule[] {
   const candidates = (["global", "project", "command"] as const).flatMap((source, priority) =>
-    scopeRules(layers[source])
+    [...scopeRules(layers[source]), ...(source === "command" ? pending : [])]
       .filter((rule) => matchesScope(rule.match, model))
-      .map((rule) => ({ match: rule.match, priority })),
+      .map((rule) => ({ rule, priority })),
   );
   candidates.sort(
     (left, right) =>
-      scopeSize(right.match) - scopeSize(left.match) ||
+      scopeSize(right.rule.match) - scopeSize(left.rule.match) ||
       right.priority - left.priority ||
-      scopeRank(right.match) - scopeRank(left.match),
+      scopeRank(right.rule.match) - scopeRank(left.rule.match),
   );
-  return { ...candidates[0]?.match };
+  return candidates.map(({ rule }) => rule);
 }
 
-export function commandScope(layers: Layers, model: ModelIdentity | undefined, scope?: ScopeName): Selector {
-  const match = scope === undefined ? automaticScope(layers, model) : explicitScope(scope, model);
+export function automaticScope(
+  layers: Layers,
+  model: ModelIdentity | undefined,
+  pending: ScopeRule[] = [],
+): Selector | undefined {
+  if (!model) {
+    return undefined;
+  }
+  return { ...commandScopeRules(layers, model, pending)[0]?.match };
+}
+
+export function commandScope(
+  layers: Layers,
+  model: ModelIdentity | undefined,
+  scope?: ScopeName,
+  pending: ScopeRule[] = [],
+): Selector {
+  const match = scope === undefined ? automaticScope(layers, model, pending) : explicitScope(scope, model);
   if (!match) {
     throw new Error("No model selected; use --scope all.");
   }
