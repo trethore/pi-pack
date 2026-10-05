@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyntheticSourceInfo, type SlashCommandInfo } from "@earendil-works/pi-coding-agent";
 import { afterEach, beforeEach, vi } from "vitest";
+import { Scope } from "#src/constants";
 import { clearWorkspaces, getWorkspace } from "#src/workspace";
-
-type Scope = "global" | "project";
 
 export function useWorkspace() {
   const workspace = {
@@ -13,20 +12,20 @@ export function useWorkspace() {
     cwd: "",
     agentDir: "",
     directory(scope: Scope) {
-      return scope === "global" ? workspace.agentDir : join(workspace.cwd, ".pi");
+      return scope === Scope.GLOBAL ? workspace.agentDir : join(workspace.cwd, ".pi");
     },
-    async script(name: string, source: string, scope: Scope = "project", extension = "mjs") {
+    async script(name: string, source: string, scope: Scope = Scope.PROJECT, extension = "mjs") {
       const path = join(workspace.directory(scope), "script-templates", `${name}.${extension}`);
       await writeFile(path, source);
       return path;
     },
-    async configure(value: unknown, scope: Scope = "project") {
+    async configure(value: unknown, scope: Scope = Scope.PROJECT) {
       await writeFile(
         join(workspace.directory(scope), "pi-script-templates.jsonc"),
         typeof value === "string" ? value : JSON.stringify(value),
       );
     },
-    async prompt(name: string, source: string, scope: Scope = "global"): Promise<SlashCommandInfo> {
+    async prompt(name: string, source: string, scope: Scope = Scope.GLOBAL): Promise<SlashCommandInfo> {
       const directory = join(workspace.directory(scope), "prompts");
       await mkdir(directory, { recursive: true });
       const path = join(directory, `${name}.md`);
@@ -36,7 +35,7 @@ export function useWorkspace() {
         source: "prompt",
         sourceInfo: createSyntheticSourceInfo(path, {
           source: "local",
-          scope: scope === "global" ? "user" : "project",
+          scope: scope === Scope.GLOBAL ? "user" : "project",
         }),
       };
     },
@@ -53,7 +52,7 @@ export function useWorkspace() {
     workspace.cwd = join(workspace.root, "project");
     workspace.agentDir = join(workspace.root, "agent");
     await Promise.all(
-      (["project", "global"] as const).map((scope) =>
+      ([Scope.PROJECT, Scope.GLOBAL] as const).map((scope) =>
         mkdir(join(workspace.directory(scope), "script-templates"), { recursive: true }),
       ),
     );

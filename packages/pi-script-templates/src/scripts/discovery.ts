@@ -1,5 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { Scope } from "#src/constants";
 import type { Script } from "#src/scripts/execution";
 
 function isMissing(error: unknown): boolean {
@@ -35,8 +36,10 @@ export async function discoverScripts(
   warn: (message: string) => void,
 ): Promise<Map<string, Script | undefined>> {
   const [global, project] = await Promise.all([
-    readScripts(join(agentDir, "script-templates"), "global", warn),
-    projectTrusted ? readScripts(join(cwd, ".pi", "script-templates"), "project", warn) : new Map<string, Script[]>(),
+    readScripts(join(agentDir, "script-templates"), Scope.GLOBAL, warn),
+    projectTrusted
+      ? readScripts(join(cwd, ".pi", "script-templates"), Scope.PROJECT, warn)
+      : new Map<string, Script[]>(),
   ]);
   const scripts = new Map<string, Script | undefined>();
   for (const name of new Set([...global.keys(), ...project.keys()])) {

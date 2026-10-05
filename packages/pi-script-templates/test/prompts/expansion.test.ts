@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { Scope } from "#src/constants";
 import { createHarness } from "#test/harness";
 import { countingScript, useWorkspace } from "#test/workspace";
 
@@ -21,20 +22,23 @@ it("does not expand ordinary input, unknown commands, skills, or extension comma
   expect(await files.runs()).toBe("");
 });
 
-it.each(["global", "project"] as const)("expands loaded %s prompt templates, including RPC input", async (scope) => {
-  // Arrange
-  await files.script("platform", countingScript("resolved"));
-  const command = await files.prompt("environment", "{{platform}}", scope);
-  const extension = createHarness(files.cwd, [command]);
+it.each([Scope.GLOBAL, Scope.PROJECT] as const)(
+  "expands loaded %s prompt templates, including RPC input",
+  async (scope) => {
+    // Arrange
+    await files.script("platform", countingScript("resolved"));
+    const command = await files.prompt("environment", "{{platform}}", scope);
+    const extension = createHarness(files.cwd, [command]);
 
-  // Act / Assert
-  expect(await extension.input("/environment", "rpc")).toEqual({ action: "transform", text: "resolved" });
-});
+    // Act / Assert
+    expect(await extension.input("/environment", "rpc")).toEqual({ action: "transform", text: "resolved" });
+  },
+);
 
 it("does not expand untrusted project prompt templates", async () => {
   // Arrange
-  await files.script("platform", countingScript("unexpected"), "global");
-  const command = await files.prompt("environment", "{{platform}}", "project");
+  await files.script("platform", countingScript("unexpected"), Scope.GLOBAL);
+  const command = await files.prompt("environment", "{{platform}}", Scope.PROJECT);
   const extension = createHarness(files.cwd, [command], false);
 
   // Act / Assert

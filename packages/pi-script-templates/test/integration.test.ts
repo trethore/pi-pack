@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Events } from "@pi-pack/shared/events";
 import {
   createAgentSession,
   DefaultResourceLoader,
@@ -9,12 +10,15 @@ import {
   SettingsManager,
   type AgentSession,
   type ExtensionError,
+  type SessionStartEvent,
 } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it } from "vitest";
 import { countingScript, useWorkspace } from "#test/workspace";
 
 const files = useWorkspace();
 const sessions: AgentSession[] = [];
+const providerName = "script-templates-test";
+const modelId = "test";
 
 afterEach(() => {
   for (const session of sessions.splice(0)) {
@@ -22,19 +26,19 @@ afterEach(() => {
   }
 });
 
-async function createSession(reason: "startup" | "new" = "startup") {
+async function createSession(reason: SessionStartEvent["reason"] = "startup") {
   const settingsManager = SettingsManager.inMemory({ compaction: { enabled: false }, retry: { enabled: false } });
   const modelRuntime = await ModelRuntime.create({
     authPath: join(files.agentDir, "auth.json"),
     modelsPath: join(files.agentDir, "models.json"),
   });
-  modelRuntime.registerProvider("script-templates-test", {
+  modelRuntime.registerProvider(providerName, {
     baseUrl: "http://localhost.invalid",
     api: "openai-completions",
     apiKey: "test-key",
     models: [
       {
-        id: "test",
+        id: modelId,
         name: "Test",
         reasoning: false,
         input: ["text"],
@@ -44,7 +48,7 @@ async function createSession(reason: "startup" | "new" = "startup") {
       },
     ],
   });
-  const model = modelRuntime.getModel("script-templates-test", "test");
+  const model = modelRuntime.getModel(providerName, modelId);
   if (!model) {
     throw new Error("Missing test model");
   }
@@ -66,7 +70,7 @@ async function createSession(reason: "startup" | "new" = "startup") {
     model,
     resourceLoader,
     sessionManager: SessionManager.inMemory(files.cwd),
-    sessionStartEvent: { type: "session_start", reason },
+    sessionStartEvent: { type: Events.SessionStart, reason },
     noTools: "all",
   });
   sessions.push(session);

@@ -20,7 +20,7 @@ import {
   scopeRules,
   type Selector,
 } from "#src/config/scopes";
-import { patchKeys, type Changes, type SaveReceipt, type ScopePatch } from "#src/config/changes";
+import { patchKeys, type Changes, type FilePatch, type ScopePatch } from "#src/config/changes";
 
 const supportWarning =
   "Request behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.";
@@ -45,7 +45,7 @@ interface ScopeView {
   active: boolean;
   settings: Partial<Settings>;
   sources: Partial<Record<Setting, string>>;
-  saved: SaveReceipt[];
+  saved: FilePatch[];
 }
 
 function scopeViews(layers: Layers, changes: Changes): ScopeView[] {
@@ -83,14 +83,17 @@ function scopeSource(view: ScopeView, key: Setting, changes: Changes): string {
     return view.sources[key] ?? "";
   }
   const pending = changes.pending.some(
-    (rule) => scopeId(rule.match) === scopeId(view.match) && Object.hasOwn(rule.settings, key),
+    (rule) =>
+      scopeId(rule.match) === scopeId(view.match) &&
+      Object.hasOwn(rule.settings, key) &&
+      rule.settings[key] === view.settings[key],
   );
   return pending ? "command, unsaved" : "command, saved";
 }
 
-function patchValue(patch: ScopePatch, key: Setting, saved = false): string {
+function patchValue(patch: ScopePatch, key: Setting): string {
   if (patch.unset?.includes(key)) {
-    return saved ? "Removed explicit value" : "Remove explicit value";
+    return inlineCode("Removed");
   }
   return inlineCode(String(patch.settings[key]));
 }
@@ -129,7 +132,7 @@ function scopeTable(
       "",
       "| Setting | Saved value |",
       "| --- | --- |",
-      ...patchKeys(receipt).map((key) => `| ${key} | ${patchValue(receipt, key, true)} |`),
+      ...patchKeys(receipt).map((key) => `| ${key} | ${patchValue(receipt, key)} |`),
     );
   }
   return lines.join("\n");
@@ -146,11 +149,11 @@ function temporaryTable(changes: Changes, model: RequestModel | undefined): stri
     );
     if (changes.pending.some((patch) => patch.unset?.length)) {
       lines.push(
-        "Removals affect the save destination on next session/reload, not the currently loaded configuration.",
+        "Removals affect their recorded source on next session/reload, not the currently loaded configuration.",
         "",
       );
     }
-    lines.push("| Scope | Setting | Value | Matches selected model |", "| --- | --- | --- | --- |");
+    lines.push("| Scope | Setting | Value | Source | Matches selected model |", "| --- | --- | --- | --- | --- |");
     const pending = [...changes.pending].sort(
       (left, right) =>
         scopeRank(left.match) - scopeRank(right.match) || scopeId(left.match).localeCompare(scopeId(right.match)),
@@ -159,7 +162,7 @@ function temporaryTable(changes: Changes, model: RequestModel | undefined): stri
       const scope = inlineCode(scopeLabel(rule.match));
       const matches = matchesScope(rule.match, model) ? "Yes" : "No";
       for (const key of patchKeys(rule)) {
-        lines.push(`| ${scope} | ${key} | ${patchValue(rule, key)} | ${matches} |`);
+        lines.push(`| ${scope} | ${key} | ${patchValue(rule, key)} | ${rule.destination} | ${matches} |`);
       }
     }
     lines.push("", `Use ${inlineCode(`/${extensionName} save`)} to save the changes.`);
@@ -187,7 +190,7 @@ export function statusMarkdown(
 
       Default command target: ${target ? inlineCode(scopeLabel(target)) : "Unavailable; use --scope all"}.
       Unset selects its own target per setting, skipping absent values and pending removals.
-      Save destination: **${destination}**. Saves pending edits at their original scopes unless --scope retargets the write.
+      Default set destination: **${destination}**. Pending edits keep their recorded sources and scopes. Save --source and --scope only filter edits.
       Saving changes files for future sessions/reloads only; active settings stay unchanged.
     `),
     "",
@@ -225,7 +228,7 @@ export function renderStatus(markdown: string, theme: Theme): Container {
         if (text === "true") {
           return theme.fg("success", text);
         }
-        if (text === "false" || text === "null") {
+        if (text === "false" || text === "null" || text === "Removed") {
           return theme.fg("error", text);
         }
         return markdownTheme.code(text);

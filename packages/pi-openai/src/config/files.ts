@@ -57,7 +57,7 @@ export async function loadConfiguration(
   };
 }
 
-export async function saveDestination(
+export async function defaultDestination(
   paths: ConfigPaths,
   { projectTrusted }: ProjectTrustOptions,
 ): Promise<Destination> {

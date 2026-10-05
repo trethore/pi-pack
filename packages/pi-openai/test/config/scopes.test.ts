@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { Verbosity, ReasoningSummary } from "#src/constants";
 import {
   automaticScope,
   commandScope,
@@ -76,9 +77,9 @@ it("targets the model rather than provider or API within the same layer", () => 
   const input = layers({
     global: {
       overrides: [
-        { match: { model: model.id }, settings: { verbosity: "low" } },
+        { match: { model: model.id }, settings: { verbosity: Verbosity.LOW } },
         { match: { provider: model.provider }, settings: { webSearch: true } },
-        { match: { api: model.api }, settings: { reasoningSummary: "auto" } },
+        { match: { api: model.api }, settings: { reasoningSummary: ReasoningSummary.AUTO } },
       ],
     },
   });
@@ -90,7 +91,7 @@ it("targets the model rather than provider or API within the same layer", () => 
 it("breaks equal field counts by runtime, project, then global before field kind", () => {
   // Arrange
   const input = layers({
-    global: { overrides: [{ match: { model: model.id }, settings: { verbosity: "low" } }] },
+    global: { overrides: [{ match: { model: model.id }, settings: { verbosity: Verbosity.LOW } }] },
     project: { overrides: [{ match: { provider: model.provider }, settings: {} }] },
   });
 
@@ -106,7 +107,7 @@ it("prefers more fields even in a lower-priority file", () => {
   const input = layers({
     global: { overrides: [{ match, settings: {} }] },
     project: { overrides: [{ match: { model: model.id }, settings: {} }] },
-    command: { overrides: [{ match: { provider: model.provider }, settings: { verbosity: "low" } }] },
+    command: { overrides: [{ match: { provider: model.provider }, settings: { verbosity: Verbosity.LOW } }] },
   });
 
   // Act / Assert
@@ -119,6 +120,6 @@ it("falls back to All models for flat config or nonmatching scopes", () => {
   const input = layers({ project: { overrides: [{ match: { provider: "other" }, settings: {} }] } });
 
   // Act / Assert
-  expect(automaticScope(layers({ global: { verbosity: "low" } }), model)).toEqual({});
+  expect(automaticScope(layers({ global: { verbosity: Verbosity.LOW } }), model)).toEqual({});
   expect(automaticScope(input, model)).toEqual({});
 });

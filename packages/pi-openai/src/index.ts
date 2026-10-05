@@ -6,7 +6,7 @@ import {
   configPaths,
   loadConfiguration,
   saveConfiguration,
-  saveDestination,
+  defaultDestination,
   type ConfigPaths,
 } from "#src/config/files";
 import {
@@ -14,11 +14,11 @@ import {
   prepareSave,
   undoCommand,
   unsetCommand,
-  unsetScope,
+  unsetTarget,
   setCommand,
   type Changes,
 } from "#src/config/changes";
-import { commandScope, explicitScope, scopeId, scopeLabel } from "#src/config/scopes";
+import { commandScope, scopeId, scopeLabel } from "#src/config/scopes";
 import { extensionName } from "#src/constants";
 import { transformPayload } from "#src/request/payload";
 import { resolveSettings, type Layers } from "#src/config/settings";
@@ -42,68 +42,80 @@ async function executeSave(
   if (state.saving) {
     throw new Error("A save is already in progress.");
   }
-  if (command.destination === Destination.PROJECT && !ctx.isProjectTrusted()) {
+  const batch = prepareSave(state.changes, command);
+  if (batch.some((patch) => patch.destination === Destination.PROJECT) && !ctx.isProjectTrusted()) {
     throw new Error("Project is not trusted; refusing to save project configuration.");
   }
-  const target = command.scope === undefined ? undefined : explicitScope(command.scope, ctx.model);
-  const batch = prepareSave(state.layers, state.changes, target);
-  if (batch.pending.length === 0) {
+  if (batch.length === 0) {
     ctx.ui.notify(`${extensionName}: No pending edits to save.`, "info");
     return;
   }
   state.saving = true;
   try {
-    const destination =
-      command.destination ?? (await saveDestination(state.paths, { projectTrusted: ctx.isProjectTrusted() }));
-    await saveConfiguration(state.paths, destination, batch.patches, { projectTrusted: ctx.isProjectTrusted() });
-    completeSave(state.changes, batch, destination);
-    const summary = batch.patches
-      .map(
-        (patch) =>
-          `${scopeLabel(patch.match)}: ${[...Object.keys(patch.settings), ...(patch.unset ?? []).map((key) => `${key} (removed)`)].join(", ")}`,
-      )
-      .join("; ");
-    ctx.ui.notify(
-      `${extensionName}: Saved to ${destination} (${summary}). Applies on next session/reload; active settings unchanged.`,
-      "info",
-    );
+    for (const destination of [Destination.GLOBAL, Destination.PROJECT]) {
+      const patches = batch.filter((patch) => patch.destination === destination);
+      if (patches.length === 0) {
+        continue;
+      }
+      await saveConfiguration(state.paths, destination, patches, { projectTrusted: ctx.isProjectTrusted() });
+      completeSave(state.changes, patches);
+      ctx.ui.notify(
+        `${extensionName}: Saved to ${destination}. Applies on next session/reload; active settings unchanged.`,
+        "info",
+      );
+    }
   } finally {
     state.saving = false;
   }
 }
 
-function executeSet(
+async function executeSet(
   command: Extract<Command, { type: "set" }>,
-  { layers, changes }: State,
+  { layers, changes, paths }: State,
   ctx: ExtensionCommandContext,
-): void {
+): Promise<void> {
   const match = commandScope(layers, ctx.model, command.scope, changes.pending);
-  setCommand(layers, changes, match, command.override);
+  if (command.source === Destination.PROJECT && !ctx.isProjectTrusted()) {
+    throw new Error("Project is not trusted; refusing to edit project configuration.");
+  }
+  const fallback =
+    command.source === Destination.GLOBAL
+      ? Destination.GLOBAL
+      : await defaultDestination(paths, { projectTrusted: ctx.isProjectTrusted() });
+  const destination = command.source ?? fallback;
+  if (destination === Destination.PROJECT && !ctx.isProjectTrusted()) {
+    throw new Error("Project is not trusted; refusing to edit project configuration.");
+  }
+  setCommand(layers, changes, match, command.override, destination);
   const effective = resolveSettings(layers, ctx.model);
   const masked = scopeId(effective.scopes[command.setting]) !== scopeId(match);
   const detail = masked
     ? ` Masked by ${scopeLabel(effective.scopes[command.setting])}; effective value = ${String(effective.values[command.setting])}.`
     : "";
+  const creation =
+    destination === Destination.PROJECT && fallback === Destination.GLOBAL
+      ? " Project configuration will be created on save."
+      : "";
   ctx.ui.notify(
-    `${extensionName}: ${command.setting} = ${String(command.override[command.setting])}. Scope: ${scopeLabel(match)}. Temporary, unsaved.${detail} ${saveReminder}`,
+    `${extensionName}: ${command.setting} = ${String(command.override[command.setting])}. Scope: ${scopeLabel(match)}. Source: ${destination}. Temporary, unsaved.${creation}${detail} ${saveReminder}`,
     "info",
   );
 }
 
-async function executeUnset(
+function executeUnset(
   command: Extract<Command, { type: "unset" }>,
-  { layers, changes, paths }: State,
+  { layers, changes }: State,
   ctx: ExtensionCommandContext,
-): Promise<void> {
-  const match = unsetScope(layers, changes, ctx.model, command.setting, command.scope);
-  if (!match) {
+): void {
+  const target = unsetTarget(layers, changes, ctx.model, command.setting, command.scope, ctx.isProjectTrusted());
+  if (!target) {
     ctx.ui.notify(`${extensionName}: Nothing to unset for ${command.setting}. No pending edit added.`, "info");
     return;
   }
-  const destination = await saveDestination(paths, { projectTrusted: ctx.isProjectTrusted() });
-  unsetCommand(layers, changes, match, command.setting);
+  const { match, destination } = target;
+  unsetCommand(layers, changes, match, command.setting, destination);
   ctx.ui.notify(
-    `${extensionName}: Unset ${command.setting}. Scope: ${scopeLabel(match)}. Pending removal from ${destination} configuration unless save selects another destination. Loaded configuration unchanged until next session/reload. ${saveReminder}`,
+    `${extensionName}: Unset ${command.setting}. Scope: ${scopeLabel(match)}. Source: ${destination}. Loaded configuration unchanged until next session/reload. ${saveReminder}`,
     "info",
   );
 }
@@ -117,7 +129,7 @@ async function executeCommand(
   const { paths, layers, changes } = state;
   switch (command.type) {
     case Command.STATUS: {
-      const destination = await saveDestination(paths, { projectTrusted: ctx.isProjectTrusted() });
+      const destination = await defaultDestination(paths, { projectTrusted: ctx.isProjectTrusted() });
       const markdown = statusMarkdown(layers, ctx.model, destination, changes);
       if (ctx.mode === "tui") {
         pi.appendEntry(statusEntry, markdown);
@@ -127,10 +139,10 @@ async function executeCommand(
       break;
     }
     case Command.SET:
-      executeSet(command, state, ctx);
+      await executeSet(command, state, ctx);
       break;
     case Command.UNSET:
-      await executeUnset(command, state, ctx);
+      executeUnset(command, state, ctx);
       break;
     case Command.UNDO: {
       const match = command.allScopes ? undefined : commandScope(layers, ctx.model, command.scope, changes.pending);

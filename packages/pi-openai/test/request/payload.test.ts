@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { RequestFormat, featureDecision, type Feature, type RequestModel } from "#src/request/compatibility";
+import { Verbosity, ReasoningSummary, ServiceTier, Feature } from "#src/constants";
+import { RequestFormat, featureDecision, type RequestModel } from "#src/request/compatibility";
 import { transformPayload } from "#src/request/payload";
 import type { Settings } from "#src/config/settings";
 import { model, settings } from "#test/support";
 
-const active = settings({ verbosity: "low", reasoningSummary: "auto", webSearch: true, serviceTier: "priority" });
+const active = settings({
+  verbosity: Verbosity.LOW,
+  reasoningSummary: ReasoningSummary.AUTO,
+  webSearch: true,
+  serviceTier: ServiceTier.PRIORITY,
+});
 
 function payloadFor(requestModel = model): Record<string, unknown> {
   return { model: requestModel.id, input: [], stream: true, store: false };
@@ -89,7 +95,7 @@ it("removes summaries without removing reasoning effort or encrypted reasoning",
   };
 
   // Act
-  const result = transformPayload(payload, settings({ reasoningSummary: "none" }), model);
+  const result = transformPayload(payload, settings({ reasoningSummary: ReasoningSummary.NONE }), model);
 
   // Assert
   expect(result).toEqual({ ...payload, reasoning: { effort: "high" } });
@@ -98,7 +104,7 @@ it("removes summaries without removing reasoning effort or encrypted reasoning",
 
 it("does not create reasoning when removing an absent summary", () => {
   // Act / Assert
-  expect(transformPayload(payloadFor(), settings({ reasoningSummary: "none" }), model)).toBeUndefined();
+  expect(transformPayload(payloadFor(), settings({ reasoningSummary: ReasoningSummary.NONE }), model)).toBeUndefined();
 });
 
 it.each(["web_search", "web_search_preview", "web_search_preview_2025_03_11", "web_search_2025_08_26"])(
@@ -152,7 +158,7 @@ it.each([
 
   // Assert
   expect(result).toEqual({ ...payloadFor(requestModel), text: { verbosity: "low" }, reasoning: { summary: "auto" } });
-  for (const feature of ["webSearch", "serviceTier"] as const) {
+  for (const feature of [Feature.WEB_SEARCH, Feature.SERVICE_TIER] as const) {
     expect(featureDecision(feature, active, requestModel)).toEqual({
       apply: false,
       description: "Skipped: Native feature support is unverified on this endpoint",
@@ -185,7 +191,7 @@ it.each([
 
   // Assert
   expect(result).toBeUndefined();
-  expect(featureDecision("verbosity", active, requestModel).apply).toBe(false);
+  expect(featureDecision(Feature.VERBOSITY, active, requestModel).apply).toBe(false);
   expect(bypassed).toEqual({
     ...payload,
     text: { verbosity: "low" },
@@ -354,11 +360,11 @@ it("leaves unrecognized nested field shapes intact", () => {
   const payload = { ...payloadFor(), text: null, reasoning: [], tools: "custom" };
 
   // Act / Assert
-  expect(transformPayload(payload, { ...active, serviceTier: "default" }, model)).toBeUndefined();
+  expect(transformPayload(payload, { ...active, serviceTier: ServiceTier.DEFAULT }, model)).toBeUndefined();
   expect(
     transformPayload(
       payload,
-      { ...active, serviceTier: "default", allowUnsupported: true },
+      { ...active, serviceTier: ServiceTier.DEFAULT, allowUnsupported: true },
       { ...model, api: "unknown-api" },
     ),
   ).toBeUndefined();
@@ -370,12 +376,17 @@ it("disabled overrides win over the unsupported bypass", () => {
 });
 
 const restrictions: Array<[Feature, Partial<Settings>, Partial<RequestModel>, string]> = [
-  ["verbosity", {}, { id: "gpt-99" }, "Model support is limited to known GPT-5.5 and newer models"],
-  ["verbosity", {}, { baseUrl: "https://api.openai.com.evil.example/v1" }, "endpoint support is unverified"],
-  ["verbosity", {}, { baseUrl: "invalid" }, "endpoint support is unverified"],
-  ["reasoningSummary", {}, { reasoning: false }, "not reasoning-capable"],
-  ["reasoningSummary", { reasoningSummary: "concise" }, {}, "Concise summary support is unverified"],
-  ["serviceTier", {}, { id: "gpt-5.5-pro" }, "Model support is limited to known GPT-5.5 and newer models"],
+  [Feature.VERBOSITY, {}, { id: "gpt-99" }, "Model support is limited to known GPT-5.5 and newer models"],
+  [Feature.VERBOSITY, {}, { baseUrl: "https://api.openai.com.evil.example/v1" }, "endpoint support is unverified"],
+  [Feature.VERBOSITY, {}, { baseUrl: "invalid" }, "endpoint support is unverified"],
+  [Feature.REASONING_SUMMARY, {}, { reasoning: false }, "not reasoning-capable"],
+  [
+    Feature.REASONING_SUMMARY,
+    { reasoningSummary: ReasoningSummary.CONCISE },
+    {},
+    "Concise summary support is unverified",
+  ],
+  [Feature.SERVICE_TIER, {}, { id: "gpt-5.5-pro" }, "Model support is limited to known GPT-5.5 and newer models"],
 ];
 
 describe("compatibility decisions", () => {
@@ -448,18 +459,22 @@ describe("compatibility decisions", () => {
 
     // Act / Assert
     expect(transformPayload(payload, active, unlisted)).toBeUndefined();
-    expect(transformPayload(payload, { ...active, reasoningSummary: "none" }, unlisted)).toBeUndefined();
+    expect(transformPayload(payload, { ...active, reasoningSummary: ReasoningSummary.NONE }, unlisted)).toBeUndefined();
     expect(transformPayload(payload, { ...active, allowUnsupported: true }, unlisted)).toHaveProperty(
       "text.verbosity",
       "low",
     );
-    expect(transformPayload(payload, settings({ reasoningSummary: "none", allowUnsupported: true }), unlisted)).toEqual(
-      {
-        ...payload,
-        reasoning: { effort: "high" },
-      },
-    );
-    expect(featureDecision("webSearch", active, unlisted).description).toContain("GPT-5.5 and newer");
+    expect(
+      transformPayload(
+        payload,
+        settings({ reasoningSummary: ReasoningSummary.NONE, allowUnsupported: true }),
+        unlisted,
+      ),
+    ).toEqual({
+      ...payload,
+      reasoning: { effort: "high" },
+    });
+    expect(featureDecision(Feature.WEB_SEARCH, active, unlisted).description).toContain("GPT-5.5 and newer");
   });
 });
 
@@ -468,7 +483,7 @@ it("supports Responses requests with a string input", () => {
   const payload = { model: model.id, input: "Hello" };
 
   // Act / Assert
-  expect(transformPayload(payload, settings({ verbosity: "low" }), model)).toEqual({
+  expect(transformPayload(payload, settings({ verbosity: Verbosity.LOW }), model)).toEqual({
     ...payload,
     text: { verbosity: "low" },
   });

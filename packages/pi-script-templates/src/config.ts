@@ -1,6 +1,7 @@
 import { configPaths, parseConfig } from "@pi-pack/shared/config";
 import { readOptionalFile } from "@pi-pack/shared/files";
 import { booleanOption, isObject } from "@pi-pack/shared/validation";
+import { Scope } from "#src/constants";
 
 export interface ScriptTemplatesConfig {
   enabled: boolean;
@@ -68,7 +69,7 @@ export async function loadConfig(
   warn: (message: string) => void,
 ): Promise<ScriptTemplatesConfig | undefined> {
   const paths = configPaths("pi-script-templates", cwd, agentDir);
-  const scopes = projectTrusted ? (["project", "global"] as const) : (["global"] as const);
+  const scopes = projectTrusted ? [Scope.PROJECT, Scope.GLOBAL] : [Scope.GLOBAL];
   for (const scope of scopes) {
     let source: string | undefined;
     try {

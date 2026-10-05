@@ -13,20 +13,13 @@ export const Command = {
 
 export type Command =
   | { type: typeof Command.STATUS }
-  | { type: typeof Command.SET; setting: Setting; override: Partial<Settings>; scope?: ScopeName }
+  | { type: typeof Command.SET; setting: Setting; override: Partial<Settings>; scope?: ScopeName; source?: Destination }
   | { type: typeof Command.UNDO; setting: Setting | undefined; scope?: ScopeName; allScopes?: true }
   | { type: typeof Command.UNSET; setting: Setting; scope?: ScopeName }
-  | { type: typeof Command.SAVE; destination: Destination | undefined; scope?: ScopeName };
+  | { type: typeof Command.SAVE; source?: Destination; scope?: ScopeName };
 
 const commandNames = [Command.STATUS, ...settingNames, Command.UNDO, Command.UNSET, Command.SAVE];
-const usage = `Use /${extensionName} [status | <setting> <value> | undo [setting] | unset <setting> | save [project|global]]. Set/undo/unset/save accept --scope <${scopeNames.join("|")}>; undo also accepts --all-scopes.`;
-
-function saveCommand(destination: string | undefined): Command {
-  if (destination !== undefined && destination !== Destination.PROJECT && destination !== Destination.GLOBAL) {
-    throw new Error(usage);
-  }
-  return { type: Command.SAVE, destination };
-}
+const usage = `Use /${extensionName} [status | <setting> <value> | undo [setting] | unset <setting> | save]. Set/undo/unset/save accept --scope <${scopeNames.join("|")}>; set/save accept --source <project|global>; undo also accepts --all-scopes. Save options filter edits, never retarget them.`;
 
 function undoCommand(setting: string | undefined): Command {
   if (setting !== undefined && !isSetting(setting)) {
@@ -47,17 +40,14 @@ function positionalCommand(parts: string[]): Command {
   if (extra.length > 0) {
     throw new Error(usage);
   }
-  if (name === Command.SAVE) {
-    return saveCommand(argument);
-  }
   if (name === Command.UNDO) {
     return undoCommand(argument);
   }
   if (name === Command.UNSET) {
     return unsetCommand(argument);
   }
-  if (name === Command.STATUS && argument === undefined) {
-    return { type: Command.STATUS };
+  if ((name === Command.STATUS || name === Command.SAVE) && argument === undefined) {
+    return { type: name };
   }
   if (isSetting(name) && argument !== undefined) {
     return { type: Command.SET, setting: name, override: parseSetting(name, argument) };
@@ -67,7 +57,22 @@ function positionalCommand(parts: string[]): Command {
 
 interface Options {
   scope?: ScopeName;
+  source?: Destination;
   allScopes?: true;
+}
+
+function valueOption(options: Options, flag: string, value: string): void {
+  if (flag === "--scope") {
+    if (options.scope !== undefined || !isScopeName(value)) {
+      throw new Error(usage);
+    }
+    options.scope = value;
+  } else {
+    if (options.source !== undefined || (value !== Destination.PROJECT && value !== Destination.GLOBAL)) {
+      throw new Error(usage);
+    }
+    options.source = value;
+  }
 }
 
 function extractOptions(parts: string[]): { positional: string[]; options: Options } {
@@ -75,12 +80,8 @@ function extractOptions(parts: string[]): { positional: string[]; options: Optio
   const options: Options = {};
   for (let index = 0; index < parts.length; index++) {
     const token = parts[index] ?? "";
-    if (token === "--scope") {
-      const scope = parts[++index] ?? "";
-      if (options.scope !== undefined || !isScopeName(scope)) {
-        throw new Error(usage);
-      }
-      options.scope = scope;
+    if (token === "--scope" || token === "--source") {
+      valueOption(options, token, parts[++index] ?? "");
     } else if (token === "--all-scopes") {
       if (options.allScopes) {
         throw new Error(usage);
@@ -108,6 +109,9 @@ export function parseCommand(args: string): Command {
   ) {
     throw new Error(usage);
   }
+  if (options.source !== undefined && command.type !== Command.SET && command.type !== Command.SAVE) {
+    throw new Error(usage);
+  }
   return { ...command, ...options };
 }
 
@@ -118,25 +122,33 @@ function argumentsFor(name: string): readonly string[] {
   if (name === Command.UNDO || name === Command.UNSET) {
     return settingNames;
   }
-  if (name === Command.SAVE) {
-    return [Destination.PROJECT, Destination.GLOBAL];
-  }
   return [];
+}
+
+const optionValues = new Map<string, readonly string[]>([
+  ["--scope", scopeNames],
+  ["--source", [Destination.PROJECT, Destination.GLOBAL]],
+]);
+
+function completionCommand(parts: string[], value: string): string {
+  const option = optionValues.get(value)?.[0];
+  const completed = [...parts, value, ...(option === undefined ? [] : [option])];
+  const { positional } = extractOptions(completed);
+  const [name = ""] = positional;
+  const completingOption = optionValues.has(parts.at(-1) ?? "");
+  if (positional.length === 1) {
+    if (isSetting(name) && completingOption) {
+      completed.push(String(choices[name][0]));
+    } else if (name === Command.UNSET) {
+      completed.push("enabled");
+    }
+  }
+  return completed.join(" ");
 }
 
 function validCompletion(parts: string[], value: string): boolean {
   try {
-    const completed = [...parts, value, ...(value === "--scope" ? ["all"] : [])];
-    const { positional } = extractOptions(completed);
-    const name = positional[0] ?? "";
-    if (positional.length === 1 && (parts.at(-1) === "--scope" || value === "--scope")) {
-      if (isSetting(name) && parts.at(-1) === "--scope") {
-        completed.push(String(choices[name][0]));
-      } else if (name === Command.UNSET) {
-        completed.push("enabled");
-      }
-    }
-    parseCommand(completed.join(" "));
+    parseCommand(completionCommand(parts, value));
     return true;
   } catch {
     return false;
@@ -149,9 +161,12 @@ export function completeArguments(prefix: string): AutocompleteItem[] | null {
   const root = parts.length === 0;
   const candidates = root
     ? commandNames
-    : parts.at(-1) === "--scope"
-      ? scopeNames
-      : [...argumentsFor(parts[0] ?? ""), "--scope", "--all-scopes"];
+    : (optionValues.get(parts.at(-1) ?? "") ?? [
+        ...argumentsFor(parts[0] ?? ""),
+        "--scope",
+        "--source",
+        "--all-scopes",
+      ]);
   const result = candidates
     .filter((value) => value.startsWith(fragment) && (root || validCompletion(parts, value)))
     .map((value) => ({ value: [...parts, value].join(" "), label: value }));

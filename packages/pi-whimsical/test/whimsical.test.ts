@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Events } from "@pi-pack/shared/events";
 import {
   DefaultResourceLoader,
   SettingsManager,
@@ -122,10 +123,10 @@ it.each(["{}", '{"messages":[]}'])("uses the supplied built-in list for %s", asy
   await configure(source);
   const extension = harness();
   vi.spyOn(Math, "random").mockReturnValue(0);
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Act
-  await extension.emit("turn_start");
+  await extension.emit(Events.TurnStart);
 
   // Assert
   expect(defaultMessages).toHaveLength(245);
@@ -137,13 +138,13 @@ it("selects a new random custom message each turn and resets after each turn", a
   await configure('{"messages":["First...", "Last..."]}');
   const extension = harness();
   vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.999);
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Act
-  await extension.emit("turn_start");
-  await extension.emit("turn_end");
-  await extension.emit("turn_start");
-  await extension.emit("turn_end");
+  await extension.emit(Events.TurnStart);
+  await extension.emit(Events.TurnEnd);
+  await extension.emit(Events.TurnStart);
+  await extension.emit(Events.TurnEnd);
 
   // Assert
   expect(extension.setWorkingMessage.mock.calls).toEqual([["First..."], [], ["Last..."], []]);
@@ -156,12 +157,12 @@ it.each([
   // Arrange
   await configure(JSON.stringify({ enabled }));
   const extension = harness(hasUI);
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
 
   // Act
-  await extension.emit("turn_start");
-  await extension.emit("turn_end");
-  await extension.emit("session_shutdown");
+  await extension.emit(Events.TurnStart);
+  await extension.emit(Events.TurnEnd);
+  await extension.emit(Events.SessionShutdown);
 
   // Assert
   expect(extension.setWorkingMessage).not.toHaveBeenCalled();
@@ -171,11 +172,11 @@ it("clears an active message on shutdown", async () => {
   // Arrange
   await configure('{"messages":["Busy..."]}');
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("turn_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.TurnStart);
 
   // Act
-  await extension.emit("session_shutdown");
+  await extension.emit(Events.SessionShutdown);
 
   // Assert
   expect(extension.setWorkingMessage.mock.calls).toEqual([["Busy..."], []]);
@@ -185,15 +186,15 @@ it("reloads configuration at session start", async () => {
   // Arrange
   await configure('{"messages":["Busy..."]}');
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("turn_start");
-  await extension.emit("turn_end");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.TurnStart);
+  await extension.emit(Events.TurnEnd);
   extension.setWorkingMessage.mockClear();
   await configure('{"enabled":false}');
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("turn_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.TurnStart);
 
   // Assert
   expect(extension.setWorkingMessage).not.toHaveBeenCalled();
@@ -227,9 +228,9 @@ it("warns on session start and reload while still applying known entries", async
   const extension = harness();
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("turn_start");
-  await extension.emit("session_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.TurnStart);
+  await extension.emit(Events.SessionStart);
 
   // Assert
   expect(extension.setWorkingMessage).toHaveBeenCalledWith("Thinking...");
@@ -250,8 +251,8 @@ it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
     extension.isProjectTrusted.mockReturnValue(false);
 
     // Act
-    await extension.emit("session_start");
-    await extension.emit("turn_start");
+    await extension.emit(Events.SessionStart);
+    await extension.emit(Events.TurnStart);
 
     // Assert
     expect(extension.setWorkingMessage).toHaveBeenCalledWith("Global...");
@@ -264,14 +265,14 @@ it("replaces project messages with global messages when reloading untrusted", as
   await configure('{"messages":["Global..."]}', true);
   await configure('{"messages":["Project..."]}');
   const extension = harness();
-  await extension.emit("session_start");
-  await extension.emit("turn_start");
-  await extension.emit("turn_end");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.TurnStart);
+  await extension.emit(Events.TurnEnd);
   extension.isProjectTrusted.mockReturnValue(false);
 
   // Act
-  await extension.emit("session_start");
-  await extension.emit("turn_start");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.TurnStart);
 
   // Assert
   expect(extension.setWorkingMessage.mock.calls).toEqual([["Project..."], [], ["Global..."]]);

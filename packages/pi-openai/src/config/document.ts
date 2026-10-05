@@ -1,6 +1,6 @@
 import { parseConfig } from "@pi-pack/shared/config";
 import { isObject } from "@pi-pack/shared/validation";
-import { applyEdits, createScanner, findNodeAtLocation, modify, parseTree, type Node } from "jsonc-parser";
+import { applyEdits, createScanner, findNodeAtLocation, modify, parseTree, type Edit, type Node } from "jsonc-parser";
 import type { ScopePatch } from "#src/config/changes";
 import { extensionName, type Destination } from "#src/constants";
 import { settingNames, validateSettings } from "#src/config/settings";
@@ -108,6 +108,27 @@ function commaAt(source: string, offset: number): number | undefined {
   return source[tokenOffset] === "," ? tokenOffset : undefined;
 }
 
+function removalEdits(source: string, node: Node, comma: number | undefined): Edit[] {
+  let start = node.offset;
+  let end = node.offset + node.length;
+  const includeComma = comma !== undefined && comma >= end && /^\s*$/.test(source.slice(end, comma));
+  if (includeComma) {
+    end = comma + 1;
+  }
+  const lineStart = source.lastIndexOf("\n", start - 1) + 1;
+  const newline = source.indexOf("\n", end);
+  const lineEnd = newline === -1 ? source.length : newline;
+  if (/^[ \t]*$/.test(source.slice(lineStart, start)) && /^[ \t\r]*$/.test(source.slice(end, lineEnd))) {
+    start = lineStart;
+    end = newline === -1 ? lineEnd : newline + 1;
+  }
+  const edits = [{ offset: start, length: end - start, content: "" }];
+  if (comma !== undefined && !includeComma) {
+    edits.push({ offset: comma, length: 1, content: "" });
+  }
+  return edits;
+}
+
 function remove(source: string, path: (string | number)[]): string {
   const root = parseTree(source);
   const value = root && findNodeAtLocation(root, path);
@@ -121,11 +142,7 @@ function remove(source: string, path: (string | number)[]): string {
     commaAt(source, node.offset + node.length) ??
     (previous ? commaAt(source, previous.offset + previous.length) : undefined);
   // jsonc-parser's property removal can also remove comments belonging to the next entry.
-  const edits = [{ offset: node.offset, length: node.length, content: "" }];
-  if (comma !== undefined) {
-    edits.push({ offset: comma, length: 1, content: "" });
-  }
-  return applyEdits(source, edits);
+  return applyEdits(source, removalEdits(source, node, comma));
 }
 
 function edit(source: string, path: (string | number)[], value: unknown): string {

@@ -1,9 +1,11 @@
 import type { Destination } from "#src/constants";
 import { settingNames, type Layers, type Setting, type Settings } from "#src/config/settings";
 import {
-  commandScopeRules,
   explicitScope,
+  matchesScope,
+  matchesScopeFilter,
   scopeId,
+  scopeRank,
   scopeRules,
   scopeSize,
   type ModelIdentity,
@@ -16,16 +18,20 @@ import {
 export interface ScopePatch extends ScopeRule {
   unset?: Setting[];
 }
-export interface SaveReceipt extends ScopePatch {
+export interface FilePatch extends ScopePatch {
   destination: Destination;
 }
 export interface Changes {
-  pending: ScopePatch[];
-  receipts: SaveReceipt[];
+  pending: FilePatch[];
+  receipts: FilePatch[];
 }
-export interface SaveBatch {
-  pending: ScopePatch[];
-  patches: ScopePatch[];
+export interface SaveFilters {
+  scope?: ScopeName;
+  source?: Destination;
+}
+export interface EditTarget {
+  match: Selector;
+  destination: Destination;
 }
 
 export function patchKeys(patch: ScopePatch): Setting[] {
@@ -57,14 +63,34 @@ function configuration(rules: ScopeRule[]): ScopedSettings {
   return overrides.length === 0 ? { ...unscoped } : { ...unscoped, overrides };
 }
 
-export function setCommand(layers: Layers, changes: Changes, match: Selector, override: Partial<Settings>): void {
-  layers.command = configuration(mergeRule(scopeRules(layers.command), match, override));
-  changes.pending = mergeRule(changes.pending, match, override);
+function stageEdit(changes: Changes, patch: FilePatch): void {
+  const keys = patchKeys(patch);
+  changes.pending = changes.pending.filter(
+    (entry) =>
+      entry.destination !== patch.destination ||
+      scopeId(entry.match) !== scopeId(patch.match) ||
+      !patchKeys(entry).some((key) => keys.includes(key)),
+  );
+  changes.pending.push(patch);
 }
 
-function removeSetting(rules: ScopePatch[], match: Selector, setting?: Setting): ScopePatch[] {
+export function setCommand(
+  layers: Layers,
+  changes: Changes,
+  match: Selector,
+  override: Partial<Settings>,
+  destination: Destination,
+): void {
+  layers.command = configuration(mergeRule(scopeRules(layers.command), match, override));
+  // Separate settings retain their identity when another edit changes during a save.
+  for (const key of settingNames.filter((setting) => Object.hasOwn(override, setting))) {
+    stageEdit(changes, { destination, match: { ...match }, settings: { [key]: override[key] } });
+  }
+}
+
+function removeSetting<T extends ScopePatch>(rules: T[], match: Selector, setting?: Setting): T[] {
   return rules.flatMap((rule) => {
-    if (scopeId(rule.match) !== scopeId(match)) {
+    if (scopeId(rule.match) !== scopeId(match) || (setting !== undefined && !patchKeys(rule).includes(setting))) {
       return [rule];
     }
     if (!setting) {
@@ -76,7 +102,9 @@ function removeSetting(rules: ScopePatch[], match: Selector, setting?: Setting):
     if (Object.keys(settings).length === 0 && unset.length === 0) {
       return [];
     }
-    return [{ match: rule.match, settings, ...(unset.length > 0 ? { unset } : {}) }];
+    const remaining = { ...rule, settings };
+    Reflect.deleteProperty(remaining, "unset");
+    return [{ ...remaining, ...(unset.length > 0 ? { unset } : {}) }];
   });
 }
 
@@ -90,88 +118,78 @@ export function undoCommand(layers: Layers, changes: Changes, match?: Selector, 
   changes.pending = removeSetting(changes.pending, match, setting);
 }
 
-function savedConfiguration(layers: Layers, changes: Changes, destination: Destination): ScopedSettings {
+function editedConfiguration(layers: Layers, changes: Changes, destination: Destination): ScopedSettings {
   let rules: ScopePatch[] = scopeRules(layers[destination]);
-  for (const receipt of changes.receipts.filter((entry) => entry.destination === destination)) {
-    rules = mergeRule(rules, receipt.match, receipt.settings, receipt.unset);
+  for (const patch of [...changes.receipts, ...changes.pending].filter((entry) => entry.destination === destination)) {
+    rules = mergeRule(rules, patch.match, patch.settings, patch.unset);
   }
   return configuration(rules);
 }
 
-export function unsetScope(
+export function unsetTarget(
   layers: Layers,
   changes: Changes,
   model: ModelIdentity | undefined,
   setting: Setting,
   scope?: ScopeName,
-): Selector | undefined {
+  projectTrusted = true,
+): EditTarget | undefined {
   const explicit = scope === undefined ? undefined : explicitScope(scope, model);
   if (!model && explicit === undefined) {
     throw new Error("No model selected; use --scope all.");
   }
-  // Saved receipts affect what can still be removed, not the active request settings.
-  const projected = {
-    ...layers,
-    global: savedConfiguration(layers, changes, "global"),
-    project: savedConfiguration(layers, changes, "project"),
-  };
-  const removed = new Set(
-    changes.pending.filter((patch) => patch.unset?.includes(setting)).map((patch) => scopeId(patch.match)),
+  const destinations: Destination[] = projectTrusted ? ["project", "global"] : ["global"];
+  // Saved and pending edits affect removal targeting, not the loaded request settings.
+  const candidates = destinations.flatMap((destination, priority) =>
+    scopeRules(editedConfiguration(layers, changes, destination))
+      .filter(
+        (rule) =>
+          matchesScope(rule.match, model) &&
+          Object.hasOwn(rule.settings, setting) &&
+          (explicit === undefined || scopeId(rule.match) === scopeId(explicit)),
+      )
+      .map((rule) => ({ match: rule.match, destination, priority })),
   );
-  const candidate = commandScopeRules(projected, model, changes.pending).find(
-    (rule) =>
-      Object.hasOwn(rule.settings, setting) &&
-      !removed.has(scopeId(rule.match)) &&
-      (explicit === undefined || scopeId(rule.match) === scopeId(explicit)),
+  candidates.sort(
+    (left, right) =>
+      scopeSize(right.match) - scopeSize(left.match) ||
+      left.priority - right.priority ||
+      scopeRank(right.match) - scopeRank(left.match),
   );
-  return candidate ? { ...candidate.match } : undefined;
+  const target = candidates[0];
+  return target ? { match: { ...target.match }, destination: target.destination } : undefined;
 }
 
-export function unsetCommand(layers: Layers, changes: Changes, match: Selector, setting: Setting): void {
+export function unsetCommand(
+  layers: Layers,
+  changes: Changes,
+  match: Selector,
+  setting: Setting,
+  destination: Destination,
+): void {
   layers.command = configuration(removeSetting(scopeRules(layers.command), match, setting));
-  changes.pending = mergeRule(changes.pending, match, {}, [setting]);
+  stageEdit(changes, { destination, match: { ...match }, settings: {}, unset: [setting] });
 }
 
-function rejectConflicts(target: ScopePatch, patch: ScopePatch): void {
-  const targetKeys = patchKeys(target);
-  for (const key of patchKeys(patch)) {
-    if (
-      targetKeys.includes(key) &&
-      (Boolean(target.unset?.includes(key)) !== Boolean(patch.unset?.includes(key)) ||
-        target.settings[key] !== patch.settings[key])
-    ) {
-      throw new Error(`Conflicting ${key} edits at the save scope; resolve them before saving.`);
-    }
-  }
+export function prepareSave(changes: Changes, filters: SaveFilters = {}): FilePatch[] {
+  return changes.pending.filter(
+    (patch) =>
+      (filters.source === undefined || patch.destination === filters.source) &&
+      (filters.scope === undefined || matchesScopeFilter(patch.match, filters.scope)),
+  );
 }
 
-export function prepareSave(layers: Layers, changes: Changes, target?: Selector): SaveBatch {
-  const pending = [...changes.pending];
-  if (target === undefined || pending.length === 0) {
-    return { pending, patches: pending };
-  }
-  let patches: ScopePatch[] = [];
-  const existing = scopeRules(layers.command).find((rule) => scopeId(rule.match) === scopeId(target));
-  for (const rule of pending) {
-    if (patches[0]) {
-      rejectConflicts(patches[0], rule);
-    }
-    if (existing) {
-      // Check live target values without copying them into the persisted patch.
-      rejectConflicts(existing, rule);
-    }
-    patches = mergeRule(patches, target, rule.settings, rule.unset);
-  }
-  return { pending, patches };
-}
-
-export function completeSave(changes: Changes, batch: SaveBatch, destination: Destination): void {
+export function completeSave(changes: Changes, batch: FilePatch[]): void {
   // Edits replaced during an asynchronous save must remain pending.
-  changes.pending = changes.pending.filter((rule) => !batch.pending.includes(rule));
-  const otherDestinations = changes.receipts.filter((receipt) => receipt.destination !== destination);
-  let saved: ScopePatch[] = changes.receipts.filter((receipt) => receipt.destination === destination);
-  for (const patch of batch.patches) {
-    saved = mergeRule(saved, patch.match, patch.settings, patch.unset);
+  changes.pending = changes.pending.filter((rule) => !batch.includes(rule));
+  for (const patch of batch) {
+    const otherDestinations = changes.receipts.filter((receipt) => receipt.destination !== patch.destination);
+    const saved = mergeRule(
+      changes.receipts.filter((receipt) => receipt.destination === patch.destination),
+      patch.match,
+      patch.settings,
+      patch.unset,
+    );
+    changes.receipts = [...otherDestinations, ...saved.map((rule) => ({ ...rule, destination: patch.destination }))];
   }
-  changes.receipts = [...otherDestinations, ...saved.map((rule) => ({ ...rule, destination }))];
 }

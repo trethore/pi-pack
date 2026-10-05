@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
+import type { Scope } from "#src/constants";
 import type { ScriptTemplatesConfig } from "#src/config";
 
 export interface Script {
   name: string;
   path: string;
-  scope: "global" | "project";
+  scope: Scope;
 }
 
 type ExecutionResult = { ok: true; output: string } | { ok: false; reason: string };
