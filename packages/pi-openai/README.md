@@ -1,85 +1,160 @@
 # pi-openai
 
-Configure OpenAI-compatible request parameters with layered settings, environment variables, and runtime commands.
+Control verbosity, reasoning summaries, native web search, and service tiers for OpenAI-compatible requests in Pi. **Default settings leave requests unchanged.**
 
 ## Installation
 
-Requires Pi `1.0.3` or a compatible later release.
-
-From the repository root, install pi-openai globally:
+Requires Pi `1.0.3` or a compatible later release. From the repository root:
 
 ```sh
 npm run install:global:pi-openai
 ```
 
-## Usage
+## Quick start
 
-Configure verbosity, reasoning summaries, native web search, and service-tier overrides for OpenAI-compatible requests. By default, the extension leaves requests unchanged.
-
-Run `/pi-openai` to see tables for **All models**, configured or runtime scopes, and **Effective settings** for the selected model. Status marks matching scopes, the default command target, value sources, and the default destination for new sets. The **Temporary** table lists each pending edit with its recorded global or project source. Removals appear as **Removed** in red.
+Try lower verbosity for the selected model, then inspect the result:
 
 ```text
-/pi-openai verbosity medium
-/pi-openai reasoningSummary auto
-/pi-openai webSearch true
-/pi-openai serviceTier priority
+/pi-openai verbosity low --scope model
+/pi-openai
+```
+
+Command overrides apply to subsequent requests without reloading, subject to precedence and compatibility checks. To keep the pending changes:
+
+```text
 /pi-openai save
 ```
 
-Value-setting commands edit the most specific existing scope matching the selected model. With only flat configuration, they affect **All models**. Command overrides apply to subsequent requests without a reload and are temporary until saved.
-
-Each pending edit owns its **source file, scope, setting, and operation**. Saving commits these recorded edits; it never chooses a different destination or moves them to another scope.
-
-### Commands
-
-| Command                                                    | Description                                                                                                |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `/pi-openai` or `/pi-openai status`                        | Show scopes, effective settings, pending edits, and compatibility decisions.                               |
-| `/pi-openai <setting> <value>`                             | Override a setting at the automatic target scope and record its default file destination.                  |
-| `/pi-openai <setting> <value> --scope <scope>`             | Override a setting at an explicit scope, creating that scope if needed.                                    |
-| `/pi-openai <setting> <value> --source global\|project`    | Choose the pending edit's destination explicitly. Can combine with `--scope`.                              |
-| `/pi-openai unset <setting>`                               | Stage removal of the next eligible explicit value at its actual source and scope.                          |
-| `/pi-openai unset <setting> --scope <scope>`               | Search only this scope, considering project then global. Do not fall through to another scope.             |
-| `/pi-openai undo [setting]`                                | Discard one or all command overrides and pending edits at the automatic target scope, across both sources. |
-| `/pi-openai undo [setting] --scope <scope>`                | Discard command overrides and pending edits at an explicit scope, across both sources.                     |
-| `/pi-openai undo --all-scopes`                             | Clear every runtime override and pending edit.                                                             |
-| `/pi-openai save`                                          | Save all pending edits to their recorded sources and scopes.                                               |
-| `/pi-openai save --source global\|project`                 | Save only pending edits recorded for that source.                                                          |
-| `/pi-openai save --scope <scope>`                          | Save only pending edits of this exact scope kind, across all model identities.                             |
-| `/pi-openai save --source global\|project --scope <scope>` | Save only edits matching both filters. Leave all other edits pending.                                      |
-
-Scope names are `all`, `model`, `provider`, `api`, `provider+model`, `model+api`, `provider+api`, and `provider+model+api`. For set, unset, and undo, selector identities come from the selected model:
+To discard the model-scoped verbosity override instead:
 
 ```text
-/pi-openai verbosity low --scope provider+model
-/pi-openai reasoningSummary auto --scope api
-/pi-openai enabled false --scope all
+/pi-openai undo verbosity --scope model
 ```
 
-Edits capture these identities when staged. Switching models does not move existing edits. With no selected model, set/undo/unset require `--scope all`; `undo --all-scopes` can still clear everything. Saving, including filtered saving, does not require a selected model.
+**Undo does not reverse saved writes.** See the command lifecycle below for save and reload behavior.
 
-Commands complete setting names, canonical values, scope options, and source options. `--source` is supported only for setting values and saving. `undo` replaces the former `reset` command; `reset` is no longer accepted.
+<details>
+<summary>Example status output</summary>
 
-Undo affects runtime state only. It discards command overrides and pending edits, including removals, without editing files. It is not a step-by-step history undo and does not restore built-in defaults when another loaded layer supplies a value. Empty runtime-only scopes disappear once their overrides and pending edits are discarded.
-
-### Choosing a source when setting
-
-Without `--source`, new sets target the **trusted project file if it exists**, otherwise the global file. The choice is recorded when staging the edit, not when saving. Creating or deleting a project file afterward does not move existing pending edits.
+Abbreviated example with `gpt-6-sol` selected and no configuration files:
 
 ```text
-/pi-openai verbosity low --source global
-/pi-openai verbosity high --scope model --source project
+Model: openai / gpt-6-sol
+API: openai-responses
+Default command target: model=gpt-6-sol
+Default set destination: global
 ```
 
-`--source global` targets global even when a project file exists. `--source project` targets project even when its file does not exist; a notice says that the file will be created **on save**. Staging never creates a file. Untrusted projects cannot be targeted. A pending project edit does not change the default destination for subsequent sets until the project file exists.
+**Temporary**
 
-Setting an existing global value without `--source` creates or changes a project override when the trusted project file exists. It does not edit the global value. Use `--source global` when that is the intended destination. A project or environment value can still mask a saved global value after reload; forcing the destination does not bypass precedence.
+| Scope             | Setting   | Value | Source | Matches selected model |
+| ----------------- | --------- | ----- | ------ | ---------------------- |
+| `model=gpt-6-sol` | verbosity | low   | global | Yes                    |
 
-Repeated edits replace only the pending operation with the same **source + scope + setting**. The same setting can have separate global and project edits. Command overrides remain a single live layer: the latest set at a scope supplies its runtime value, independently of its file destination.
+**Effective settings** (other rows omitted)
 
-### Removing saved settings
+| Setting   | Value | Source  | Request behavior   | Source scope      |
+| --------- | ----- | ------- | ------------------ | ----------------- |
+| verbosity | low   | command | Set text.verbosity | `model=gpt-6-sol` |
 
-Use `unset` to stage removal of an explicit value, then save:
+Status also shows loaded scopes, skipped-feature reasons, and saved receipts for the next session/reload. Pending deletions appear as **Removed**.
+
+</details>
+
+## Settings
+
+Use unquoted command values, for example `/pi-openai reasoningSummary auto`.
+
+| Setting            | Values                                        | Default   | Effect                                                                                            |
+| ------------------ | --------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| `enabled`          | `true`, `false`                               | `true`    | `false` disables request overrides.                                                               |
+| `allowUnsupported` | `true`, `false`                               | `false`   | Unsafe: bypass support checks, not payload safeguards.                                            |
+| `verbosity`        | `low`, `medium`, `high`, `null`               | `null`    | Set response verbosity; `null` leaves it unchanged.                                               |
+| `reasoningSummary` | `auto`, `concise`, `detailed`, `none`, `null` | `null`    | Set a summary mode; `none` removes it. `concise` is skipped unless `allowUnsupported` is enabled. |
+| `webSearch`        | `true`, `false`                               | `false`   | Make native search available, without forcing its use.                                            |
+| `serviceTier`      | `priority`, `ultrafast`, `default`            | `default` | Request a processing tier; see compatibility below.                                               |
+
+`null`, `webSearch: false`, and `serviceTier: "default"` leave existing provider fields/tools unchanged; they do not reset them. The `fast` alias is accepted wherever values are configured and normalized to `priority`.
+
+## Commands
+
+| Command                             | Purpose                                                                                  |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `/pi-openai` or `/pi-openai status` | Inspect scopes, effective settings, and pending edits.                                   |
+| `/pi-openai <setting> <value>`      | Set a runtime override and stage a file edit.                                            |
+| `/pi-openai unset <setting>`        | Stage removal of an explicit value at its actual source.                                 |
+| `/pi-openai undo [setting]`         | Discard one or all overrides and pending edits at the target scope, across both sources. |
+| `/pi-openai save`                   | Write pending edits to their recorded files.                                             |
+
+| Option                     | Available on                          | Meaning                                                |
+| -------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| `--scope <scope>`          | Set, unset, undo, save                | Choose a scope; on save, filter by exact scope kind.   |
+| `--source global\|project` | Set, save                             | Choose the file on set; filter recorded edits on save. |
+| `--all-scopes`             | `undo` without a setting or `--scope` | Clear all runtime overrides and pending edits.         |
+
+Tab completion supplies setting names, values, and options.
+
+### Scope and source
+
+```text
+Setting command
+  |
+  +-- Scope: where does the setting apply?
+  |     --scope given -> use the selected model's identities
+  |                      (all needs no model)
+  |     omitted       -> most specific existing matching scope
+  |                      (All models if none matches)
+  |
+  +-- Source: which file will save modify?
+        --source given -> global or trusted project
+        omitted        -> trusted project file exists?
+                            yes -> project
+                            no  -> global
+```
+
+For example, persist a model-specific setting globally, even when a project file exists:
+
+```text
+/pi-openai verbosity low --scope model --source global
+/pi-openai save --source global --scope model
+```
+
+**Save options filter edits; they never move them.** Scope and source are captured when an edit is staged. Switching models or creating/deleting the project file does not retarget it. `--source project` can create the file, but only on save.
+
+<details>
+<summary>Scope names and automatic targeting</summary>
+
+Scopes: `all`, `model`, `provider`, `api`, `provider+model`, `model+api`, `provider+api`, `provider+model+api`.
+
+Set and undo choose one matching scope, regardless of whether it defines the requested setting:
+
+1. More selector fields win.
+2. Ties prefer runtime overrides/pending edits, then project, then global.
+3. Remaining ties prefer `model > provider > api`; for pairs, `provider+model > model+api > provider+api`.
+4. With no scoped match, use All models.
+
+Unset considers only eligible values for its setting: more fields first, then project before global, then the field ordering above. Pending sets use their recorded file priority. An explicit scope never falls through to another scope.
+
+Targeting is not precedence: a specific global scope can be targeted while a broader project value wins after reload. A more specific runtime override can also mask a command; its confirmation reports this.
+
+Without a selected model, set/unset/undo require `--scope all`. Saving and `undo --all-scopes` need no model.
+
+</details>
+
+### What changes when?
+
+| Action                   | Current session                                                                       | Files                      |
+| ------------------------ | ------------------------------------------------------------------------------------- | -------------------------- |
+| Set                      | Updates the command override; more specific command scopes can mask it                | Unchanged; set staged      |
+| `unset`                  | Clears that setting's command override at the target scope; loaded file values remain | Unchanged; deletion staged |
+| `undo`                   | Discards targeted overrides and pending edits                                         | Unchanged                  |
+| `save`                   | Active settings stay unchanged                                                        | Writes pending edits       |
+| `/reload` or new session | Reloads configuration; clears runtime overrides and pending edits                     | No additional writes       |
+
+Save anything you want to keep **before reloading**. Undo exposes loaded/inherited values, not necessarily defaults. After a save, it exposes the session's loaded configuration, not the newly written file.
+
+<details>
+<summary>Remove saved values</summary>
 
 ```text
 /pi-openai unset verbosity --scope model
@@ -88,144 +163,105 @@ Use `unset` to stage removal of an explicit value, then save:
 /reload
 ```
 
-Unset records the value's actual source. Within the same scope, it selects project before global and skips removals already staged. If both files define verbosity at that scope, two unsets produce separate rows:
+At this scope, unset selects project before global. If both files define verbosity, repeating unset stages two independent removals:
 
-| Scope           | Setting   | Value   | Source  |
-| --------------- | --------- | ------- | ------- |
-| `model=example` | verbosity | Removed | project |
-| `model=example` | verbosity | Removed | global  |
+| Scope             | Setting   | Value   | Source  |
+| ----------------- | --------- | ------- | ------- |
+| `model=gpt-6-sol` | verbosity | Removed | project |
+| `model=gpt-6-sol` | verbosity | Removed | global  |
 
-A bare `save` applies both removals to their own files. `save --source project` saves only the project removal and leaves the global removal pending. This exposes the global fallback after reload unless it is also removed.
+- Unset tracks pending sets and this session's saved edits, skipping already removed values. Environment values and defaults are not removable.
+- With no eligible value, it reports **Nothing to unset** and changes nothing.
+- Setting the same source/scope/key replaces its removal. Undo cancels pending edits at that scope across both sources, including removals.
+- Removing a project value can expose a global fallback. External file edits require reload before unset can target them.
 
-Unset considers matching file values and pending sets for the requested key. It accounts for this session's saved values and removals, so saving between unsets does not reselect an already removed value from the loaded snapshot. Environment values and built-in defaults are never removable candidates. External file edits require a reload to update targeting.
+</details>
 
-Unset removes the runtime command override for that setting at the same scope and replaces any pending set at the selected source with a removal. Other-source pending edits remain separate. Loaded configuration is unchanged: a saved deletion affects requests only after reload or a new session. Removing an explicit value exposes inherited values, not necessarily built-in defaults.
-
-An explicit `--scope` never falls through to another scope. If neither source still has an eligible value there, unset reports **Nothing to unset** and adds no edit. Automatic unset reports the same when no eligible scope remains. Other pending edits are unchanged.
-
-Setting the same source, scope, and key again replaces its removal. `undo verbosity --scope model` cancels the pending verbosity edits at that scope in both sources without writing files. Pending removal scopes remain targets for set and undo. Undoing a removal makes its loaded value eligible for unset again.
-
-When the last setting in an override is removed, saving also removes the empty override block and an empty `overrides` array. Unknown settings or extra fields are preserved rather than deleting their block. Removing an absent setting does not create a file or an override. Removed entry lines do not leave empty placeholder lines.
-
-### Automatic target selection
-
-Set and undo use the default target shown in status, independently of whether it defines the setting being changed:
-
-1. Prefer more selector fields.
-2. On equal field counts, prefer runtime overrides or pending edits, then project configuration, then global configuration.
-3. Within the same source level, prefer model over provider over API. For two fields: provider+model > model+api > provider+api.
-4. Fall back to All models when no scoped rule matches.
-
-Unset ranks only eligible values for the requested key. It prefers more selector fields, then project over global on equal field counts, then the field ordering above. Pending sets retain their recorded file priority. It reaches All models only if that scope still defines an eligible value. In particular, a more specific global scope is visited before a broader project scope; among equally specific scopes, project values come first.
-
-Successful set and unset confirmations name the scope and source. An explicit scope bypasses automatic scope selection. Runtime scopes remain candidates for set/undo after saving. Unset can also remove values saved during the current session after their runtime override has been undone.
-
-Targeting is separate from effective-value resolution. All matching scopes contribute values, but a command edits only one scope. For example, a more specific global scope can be the command target while a broader project value masks it after a global save and reload. A broader command edit can also be masked by a more specific runtime override; the confirmation reports this.
-
-### Saving
-
-Saving writes **only pending explicit edits**. It does not copy environment values, defaults, or inherited values. Files are reread before writing, preserving intervening changes to unrelated settings, comments outside removed entries, unknown keys, and other scopes. The staged operation wins for its own source, scope, and setting.
-
-Save options are **filters**, not destinations or retargeting instructions:
+<details>
+<summary>Filtered saves and write guarantees</summary>
 
 ```text
 /pi-openai verbosity low --scope model --source global
 /pi-openai reasoningSummary auto --scope api --source project
 /pi-openai save --source global --scope model
-/pi-openai status
-/pi-openai save
 ```
 
-The filtered save writes only global model-scoped edits. The project API edit stays pending until the final save. `save --scope model` includes model-only edits for every captured model, not only the currently selected one. It excludes `provider+model` and `model+api` edits; use their exact scope names to select them. `save --scope all` selects only All models edits, not every scope. With no matching pending edits, save does nothing.
+Only the global model edit is saved; the project API edit stays pending.
 
-The old positional commands `save global` and `save project` are no longer accepted. Choose a destination on the **setting command** with `--source`. Use `save --source` only to select edits already recorded for that file. Save no longer supports moving edits to another scope; choose the correct `--scope` when setting the value.
+| Filter             | Selects                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `--source project` | Edits recorded for the project file                            |
+| `--scope model`    | Model-only edits for every captured model, not combined scopes |
+| `--scope all`      | All-models edits, not every scope                              |
+| Both flags         | Edits matching both filters                                    |
 
-Each file is replaced atomically, but a save across both files is not a single transaction. Each successful file save clears only its captured edits and produces a concise confirmation. If a later file fails, edits for failed or unattempted files remain pending; already successful saves are not repeated. Edits replaced while saving remain pending. Project trust is checked before a save that includes project edits.
+- Repeated edits replace the same source/scope/key operation. Global and project edits stay separate; the latest set at a scope supplies its runtime value regardless of destination.
+- Only pending edits are written, never inherited/environment/default values. No matching edits means no write.
+- Files are reread before writing. Unrelated values, unknown fields, and comments outside removed entries are preserved; the staged edit wins for its own key and scope.
+- Removing the last setting prunes empty override blocks unless unknown fields remain. Removing an absent setting creates nothing.
+- Each file is replaced atomically, but saving both files is not one transaction. Failed/unattempted writes and edits replaced during saving remain pending. Successful writes are not repeated.
+- Project trust is checked before a batch containing project edits. Successful saves retain runtime overrides; status records saved values/removals separately.
 
-**Saving does not change the current session's loaded configuration or runtime settings.** Successful saves keep runtime overrides active. Status shows saved values and **Removed** receipts separately at their recorded sources and scopes, marked for the next session/reload.
-
-Undo after saving cannot reverse a persisted write. It exposes the configuration loaded at session start, not the newly written file. Run `/reload` or start a new session to load saved settings and clear runtime overrides. Normal project/environment precedence still applies after reload.
+</details>
 
 ## Configuration
 
-No configuration is required. To customize it, create `.pi/pi-openai.jsonc` in your project or `~/.pi/agent/pi-openai.jsonc` globally:
+No file is required. To configure defaults and scoped overrides:
+
+| Source  | Path                                                                           |
+| ------- | ------------------------------------------------------------------------------ |
+| Project | `.pi/pi-openai.jsonc`                                                          |
+| Global  | `~/.pi/agent/pi-openai.jsonc` (follows `$PI_CODING_AGENT_DIR` when customized) |
 
 ```jsonc
 {
   "verbosity": "medium",
   "overrides": [
     {
-      "match": { "api": "openai-responses" },
-      "settings": { "reasoningSummary": "auto" },
-    },
-    {
-      "match": { "provider": "openai" },
-      "settings": { "serviceTier": "priority" },
-    },
-    {
-      "match": { "model": "gpt-6-sol" },
-      "settings": { "verbosity": "low" },
-    },
-    {
       "match": { "provider": "openai", "model": "gpt-6-sol" },
-      "settings": { "verbosity": "high" },
+      "settings": { "verbosity": "low", "reasoningSummary": "auto" },
     },
   ],
 }
 ```
 
-Top-level settings apply to All models. Existing flat configuration remains valid. Every setting can also appear in an override's `settings` object.
+Top-level settings apply to All models; every setting can also appear in `settings`. Comments and trailing commas are supported. Run `/reload` after editing files. Untrusted project files are neither loaded nor targeted for edits.
 
-A `match` selector must contain one or more of `provider`, `model`, and `api`. All supplied fields must match exactly. Model IDs are Pi's selected model IDs, not Azure deployment names. API means Pi's API identifier, such as `openai-responses`, not an endpoint or authentication method. There are no wildcards or automatic dated-model family matches.
-
-Comments and trailing commas are supported. The global path follows Pi's agent directory if customized with `$PI_CODING_AGENT_DIR`. Untrusted project files are neither loaded nor considered for targeting, and cannot be saved.
-
-| Setting            | Values                                                | Behavior                                                                                          |
-| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `enabled`          | `true`, `false`                                       | Set to `false` to leave requests unchanged.                                                       |
-| `allowUnsupported` | `true`, `false`                                       | Unsafe: bypass all support checks. Defaults to `false`.                                           |
-| `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                             |
-| `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged. |
-| `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.            |
-| `serviceTier`      | `"priority"`, `"ultrafast"`, `"default"`              | Request priority or ultrafast processing. `"default"` leaves the provider payload unchanged.      |
-
-Use unquoted values in commands, for example `/pi-openai verbosity null`.
-
-`serviceTier: "priority"` sends `service_tier: "priority"`; `"ultrafast"` sends `service_tier: "ultrafast"`. Ultrafast is enabled only for `gpt-6-astra` (including dated IDs) on the recognized OpenAI endpoint, for both API-key and subscription authentication. Other models, Azure, and GitHub Copilot skip this override unless `allowUnsupported` is true.
-The alias `"fast"` is accepted in configuration files, environment variables, and commands, and normalized to `"priority"` for status, saving, and requests. `"default"` does not force a standard tier or remove an existing service-tier override from the provider payload.
-
-### Precedence
-
-Settings merge per key, from highest to lowest layer priority:
+Settings merge **per key**, strongest layer first:
 
 ```text
-commands > environment > project configuration > global configuration > defaults
+commands > environment > project > global > defaults
 ```
 
-**Project settings always beat global settings**, even when a global selector is more specific. Environment variables remain unscoped and override both files.
+Project values beat global values **even when the global selector is more specific**. Omitted keys inherit; explicit `null` cancels an inherited verbosity/summary override without deleting provider payload fields.
 
-Within a file or the command layer, all matching scopes contribute values in this order, strongest first:
+<details>
+<summary>Selector matching and precedence within a layer</summary>
+
+A `match` requires one or more of `provider`, `model`, and `api`; all supplied fields must match exactly. `model` is Pi's selected model ID, not an Azure deployment name. `api` is an identifier such as `openai-responses`, not an endpoint or authentication method.
+
+| Matching rule                | Dated model IDs                                                              |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| Configuration selectors      | Exact only; `gpt-6-sol` does not match `gpt-6-sol-2026-09-22`. No wildcards. |
+| Request compatibility checks | Strip a `-YYYY-MM-DD` suffix before checking model-family allowlists.        |
+
+Within each file or the command layer, matching scopes contribute explicit keys in this order, strongest first:
 
 ```text
-provider + model + API
-provider + model
-model + API
-provider + API
-model
-provider
-API
-All models
+provider+model+api > provider+model > model+api > provider+api
+                  > model > provider > api > All models
 ```
 
-Only explicitly supplied keys override lower-priority values. Declaration order does not affect precedence. Duplicate identical selectors in the same file are rejected, even if their fields appear in a different order.
+Declaration order does not matter. For example, model-scoped verbosity can override provider-scoped verbosity while retaining provider-scoped service tier.
 
-For example, model-scoped verbosity can override provider-scoped verbosity while retaining provider-scoped service tier and API-scoped reasoning summary.
+</details>
 
-Omitted keys inherit. An explicit `null` cancels an inherited verbosity or reasoning-summary override; it does not remove a value already set by Pi's provider.
+<details>
+<summary>Environment variables</summary>
 
-Run `/reload` after editing configuration files. Reloading or starting another session clears runtime overrides and loads saved files. Invalid configuration or environment values report an error rather than silently falling back, even in nonmatching scopes. Unknown settings produce warnings; unknown selector fields are rejected to prevent accidentally broadening a rule.
-
-### Environment variables
+```sh
+PI_OPENAI_VERBOSITY=low PI_OPENAI_WEB_SEARCH=true pi
+```
 
 | Variable                      | Setting            |
 | ----------------------------- | ------------------ |
@@ -236,87 +272,87 @@ Run `/reload` after editing configuration files. Reloading or starting another s
 | `PI_OPENAI_WEB_SEARCH`        | `webSearch`        |
 | `PI_OPENAI_SERVICE_TIER`      | `serviceTier`      |
 
-Values use the same spelling as command arguments:
+Values use command spelling. Environment values are unscoped and override both files, but not commands.
 
-```sh
-PI_OPENAI_VERBOSITY=low PI_OPENAI_WEB_SEARCH=true pi
-```
+</details>
 
 ## Compatibility
 
-The intended scope is OpenAI models in Pi, including access through OpenAI, Azure, and GitHub Copilot. Other vendors and open-weight models are outside this support scope, even when they accept the OpenAI request format.
+Default checks require a recognized endpoint and an OpenAI model in the [built-in allowlist](src/request/compatibility.ts), including dated variants. Other vendors and open-weight models are outside the support scope.
 
-The extension supports Pi's `openai-responses` and `azure-openai-responses` API formats by default. For `openai-completions`, only verbosity is available.
+These tables describe **extension behavior, not guaranteed server acceptance**, with active settings and `allowUnsupported: false`.
 
-By default, overrides require a recognized provider endpoint and a model in the extension's [built-in allowlist](src/request/compatibility.ts). The checks cover selected GPT-5.5 and newer model IDs (except GPT-5.5 Pro), not every newer or custom model.
+| Provider / Pi API                          | Verbosity                 | Reasoning summary              | Native web search |
+| ------------------------------------------ | ------------------------- | ------------------------------ | ----------------- |
+| OpenAI / `openai-responses`                | Set `text.verbosity`      | Set/remove `reasoning.summary` | Add `web_search`  |
+| Azure / `azure-openai-responses`           | Set `text.verbosity`      | Set/remove `reasoning.summary` | Add `web_search`  |
+| GitHub Copilot / `openai-responses`        | Set `text.verbosity`      | Best-effort set/remove         | Skip: unverified  |
+| Recognized provider / `openai-completions` | Set top-level `verbosity` | Skip                           | Skip              |
 
-### Provider feature handling
+Summaries require a reasoning-capable model. Existing native search tools are preserved, not duplicated.
 
-This table describes **what the extension does**, not a guarantee of server acceptance. It assumes a recognized endpoint, an allowlisted model, `allowUnsupported: false`, and an active setting. All features leave requests unchanged with their default settings.
+| Responses provider | `serviceTier: priority`                                | `serviceTier: ultrafast` |
+| ------------------ | ------------------------------------------------------ | ------------------------ |
+| OpenAI             | Allowlisted models                                     | `gpt-6-astra` only       |
+| Azure              | `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-sol` | Skip                     |
+| GitHub Copilot     | Skip                                                   | Skip                     |
 
-| Provider                          | Pi API format            | `verbosity`               | `reasoningSummary`                           | `webSearch`          | `serviceTier: "priority"`                        |
-| --------------------------------- | ------------------------ | ------------------------- | -------------------------------------------- | -------------------- | ------------------------------------------------ |
-| OpenAI (`openai`)                 | `openai-responses`       | Set `text.verbosity`      | Set/remove `reasoning.summary`               | Add `web_search`     | Set `service_tier`                               |
-| Azure (`azure`)                   | `azure-openai-responses` | Set `text.verbosity`      | Set/remove `reasoning.summary`               | Add `web_search`     | Set `service_tier` for listed Azure models below |
-| GitHub Copilot (`github-copilot`) | `openai-responses`       | Set `text.verbosity`      | Set/remove `reasoning.summary` (best-effort) | Skip: unverified     | Skip: unverified                                 |
-| Any recognized provider           | `openai-completions`     | Set top-level `verbosity` | Skip: Responses only                         | Skip: Responses only | Skip: Responses only                             |
+Active tiers set `service_tier` to the requested value. Chat Completions skips both tiers. OpenAI API-key and ChatGPT-subscription authentication use the same recognized provider/endpoint in Pi, but server-side capabilities can differ.
 
-OpenAI and Azure share the same Responses payload transformations. Reasoning summaries require a reasoning-capable model; `auto` and `detailed` set the summary, `none` removes it, and `concise` is skipped as unverified.
-Existing native search tools are preserved rather than duplicated. Both `priority` and its `fast` alias send `service_tier: "priority"`.
+<details>
+<summary>Azure eligibility and deployment names</summary>
 
-#### Azure eligibility
+- **Priority:** Check Azure's [model/version, region, and deployment eligibility](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/priority-processing). Eligible deployment types are Global Standard and US Data Zone Standard, not Regional Standard or EU Data Zone Standard. Priority requests can fall back to standard processing. Azure also lists `gpt-6.1-sol` in its latency targets; this extension skips its priority override by default.
+- **Web search:** Azure's [Responses guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/web-search) documents `web_search`. Administrators can block it. Bing grounding sends data outside your compliance and geographic boundaries.
 
-[Azure's reasoning guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning) documents verbosity and reasoning summaries. The extension also allows:
+The extension does not check deployment eligibility or subscription policies. Status reports model-level compatibility, not individual request acceptance.
 
-- **Web search:** Azure's [dedicated Responses guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/web-search) documents `web_search`. Subscription administrators can block it. It uses Bing grounding, whose data handling differs from Azure OpenAI's usual compliance and geographic boundaries.
-- **Priority:** Within the extension's allowlist, [Azure documents priority](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/priority-processing) for `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-6-sol`. Dated IDs use the same model-family check. Other Azure models skip priority without blocking the other settings.
-
-Priority also requires an eligible model version, region, and Global Standard or US Data Zone Standard deployment. Regional Standard and EU Data Zone Standard are not supported. Pi does not expose deployment eligibility or subscription web-search policy to this extension, so these are server-side requirements, not checks performed here. Priority requests can fall back to standard processing.
-
-#### GitHub Copilot limits
-
-The extension retains best-effort reasoning-summary overrides. Copilot's [Responses client](https://github.com/microsoft/vscode/blob/main/extensions/copilot/src/platform/endpoint/node/responsesApi.ts) sends model-dependent verbosity but currently omits summary requests. This is not a guarantee that summary overrides are accepted.
-
-Native `web_search` injection and `service_tier` overrides remain unverified on the Copilot endpoint used by Pi, so the extension skips them by default. Product-level web-search availability does not establish support for this request shape. `allowUnsupported` can attempt both on Responses payloads.
-
-Provider references checked on October 4, 2026.
-
-### Subscription authentication and unsafe overrides
-
-> [!NOTE]
-> Pi's current OpenAI ChatGPT-subscription sign-in uses the same recognized `openai` provider and API endpoint as API-key authentication.
-> Subscription capabilities and restrictions can differ from the public API documentation, so documented API behavior is not a complete subscription contract. The legacy `openai-codex` provider is not supported by the default checks; `allowUnsupported` can attempt compatible payloads without guaranteeing server acceptance.
-
-Use `/pi-openai status` to see why a setting is skipped. To attempt an unverified combination:
-
-```text
-/pi-openai allowUnsupported true
-```
-
-Typical uses are a proxy serving OpenAI models or a newly released or experimental OpenAI model not yet in the allowlist. This flag does not establish support for other vendors' models.
-
-This is an unsafe override: it bypasses API, provider, endpoint, model, and feature-support checks, including for unknown API identifiers, legacy APIs, and custom providers or proxies.
-Request format is inferred from the payload rather than the API identifier: a string or array `input` selects Responses transformations; an array `messages` selects Chat Completions verbosity only.
-
-Value validation, disabled settings, and payload safeguards still apply. Requests with both `input` and `messages`, neither compatible shape, or a model different from the expected model ID or configured Azure deployment name are left unchanged.
-These identity safeguards also apply with the default compatibility checks. Incompatible nested fields are preserved.
-Status reports that overrides will be attempted on compatible payloads because their format is not known until a request is made.
-
-Request behavior describes intended overrides, not server acceptance. The server can reject unsupported combinations. Web search makes a tool available; it does not force the model to use it.
-
-### Azure deployment names
-
-For the `azure` provider and `azure-openai-responses` API, the extension uses Pi's process-environment deployment mapping to match requests:
+For `azure` with `azure-openai-responses`, map the selected model to the outgoing deployment name:
 
 ```sh
 AZURE_OPENAI_DEPLOYMENT_NAME_MAP="gpt-5.5=production-assistant" pi
 ```
 
-In this example, a selected `gpt-5.5` model can receive the Responses overrides listed above when the outgoing request names `production-assistant`. Support checks still use `gpt-5.5`; the deployment name is not changed. Azure deployment eligibility and subscription policy still apply.
-Without a mapping for the selected model, the request must contain its model ID. Unexpected deployment names are left unchanged, even with `allowUnsupported`.
+```text
+Selected model: gpt-5.5              -> support checks use gpt-5.5
+Request model: production-assistant -> identity check passes
+```
 
-Pi does not expose request-specific deployment options or scoped environment overrides to this extension. If those options select a different deployment from the one expected from the process environment, the request is left unchanged.
-Status describes model-level compatibility, not whether a particular request will pass this identity check or meet Azure's deployment and subscription requirements.
+Without a mapping, the request must name the selected model ID. Request-specific deployment options and scoped environment overrides are not exposed to the extension; a different deployment name leaves the request unchanged.
+
+</details>
+
+<details>
+<summary>Unsafe overrides and payload safeguards</summary>
+
+To attempt an unverified OpenAI model or proxy:
+
+```text
+/pi-openai allowUnsupported true
+```
+
+This bypasses API, provider, endpoint, model, and feature-support checks, including Copilot restrictions. It does not establish server support or expand the intended vendor scope.
+
+| Payload shape                           | Attempted transformations       |
+| --------------------------------------- | ------------------------------- |
+| String/array `input`, no `messages`     | Responses features              |
+| Array `messages`, no `input`            | Chat Completions verbosity only |
+| Both fields or neither compatible shape | None                            |
+
+Validation and disabled settings still apply. Request model identity must match the selected model or expected Azure deployment, even with this flag. Incompatible nested fields are preserved. Status cannot predict payload-specific safeguards before a request is made.
+
+</details>
+
+## Troubleshooting
+
+| Symptom                          | Check                                                                                                                                               |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A command has no visible effect  | Run `/pi-openai`: inspect effective scope, disabled settings, and skip reasons.                                                                     |
+| A saved value loses after reload | Project/environment precedence still applies; `--source global` does not bypass it.                                                                 |
+| Configuration is unavailable     | Invalid files/environment values stop all extension overrides. Fix the error, then reload; restart Pi to supply corrected shell environment values. |
+| A project edit is refused        | The project must be trusted.                                                                                                                        |
+
+Configuration validation includes nonmatching scopes. Duplicate known keys/selectors and unknown selector fields are errors; unknown settings produce warnings.
 
 ## License
 
