@@ -33,6 +33,7 @@ const supportedModels = new Set([
   "gpt-6.1-sol",
 ]);
 const azurePriorityModels = new Set(["gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-sol"]);
+const openaiUltrafastModels = new Set(["gpt-6-astra"]);
 
 export function requestFormat(model: RequestModel): RequestFormat | undefined {
   if (supportedResponsesApis.has(model.api)) {
@@ -83,7 +84,21 @@ function summaryRestriction(settings: Settings, model: RequestModel): string | u
   return undefined;
 }
 
-function hostedFeatureRestriction(feature: Feature, host: Endpoint, id: string): string | undefined {
+function hostedFeatureRestriction(
+  feature: Feature,
+  settings: Settings,
+  host: Endpoint,
+  id: string,
+): string | undefined {
+  if (feature === Feature.SERVICE_TIER && settings.serviceTier === ServiceTier.ULTRAFAST) {
+    if (host !== Endpoint.OPENAI) {
+      return "Ultrafast support is unverified on this endpoint";
+    }
+    if (!openaiUltrafastModels.has(id)) {
+      return "Ultrafast support is unverified for this model";
+    }
+    return undefined;
+  }
   if (host === Endpoint.COPILOT) {
     return "Native feature support is unverified on this endpoint";
   }
@@ -108,7 +123,7 @@ function safeRestriction(feature: Feature, settings: Settings, model: RequestMod
   if (feature === Feature.REASONING_SUMMARY) {
     return summaryRestriction(settings, model);
   }
-  return hostedFeatureRestriction(feature, host, id);
+  return hostedFeatureRestriction(feature, settings, host, id);
 }
 
 function inactive(feature: Feature, settings: Settings): boolean {
@@ -128,7 +143,7 @@ function actionDecision(feature: Feature, settings: Settings, format: RequestFor
     reasoningSummary:
       settings.reasoningSummary === ReasoningSummary.NONE ? "Remove reasoning.summary" : "Set reasoning.summary",
     webSearch: "Add native web search if absent",
-    serviceTier: "Set service_tier to priority",
+    serviceTier: `Set service_tier to ${settings.serviceTier}`,
   };
   const suffix = settings.allowUnsupported ? " (support checks bypassed)" : "";
   return { apply: true, description: descriptions[feature] + suffix };

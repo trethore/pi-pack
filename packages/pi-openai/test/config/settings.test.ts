@@ -106,7 +106,7 @@ it("normalizes the fast alias in JSON, environment and command values", () => {
   expect(validateSettings({ serviceTier: "fast" })).toEqual(expected);
   expect(parseSetting("serviceTier", " fast ")).toEqual(expected);
   expect(readEnvironment({ PI_OPENAI_SERVICE_TIER: " fast " })).toEqual(expected);
-  expect(choices.serviceTier).toEqual(["default", "priority"]);
+  expect(choices.serviceTier).toEqual(["default", "priority", "ultrafast"]);
   expect(() => validateSettings({ serviceTier: " fast " })).toThrow();
   expect(() => parseSetting("serviceTier", "FAST")).toThrow();
 });

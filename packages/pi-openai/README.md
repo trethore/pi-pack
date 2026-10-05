@@ -14,7 +14,7 @@ npm run install:global:pi-openai
 
 ## Usage
 
-Configure verbosity, reasoning summaries, native web search, and priority processing for OpenAI-compatible requests. By default, the extension leaves requests unchanged.
+Configure verbosity, reasoning summaries, native web search, and service-tier overrides for OpenAI-compatible requests. By default, the extension leaves requests unchanged.
 
 Run `/pi-openai` to show each setting's effective value, source, and intended request behavior for the selected model.
 
@@ -71,11 +71,12 @@ The example above uses the default values. Comments and trailing commas are supp
 | `verbosity`        | `"low"`, `"medium"`, `"high"`, `null`                 | Set response verbosity. `null` leaves the provider payload unchanged.                             |
 | `reasoningSummary` | `"auto"`, `"concise"`, `"detailed"`, `"none"`, `null` | Set the reasoning summary mode. `"none"` removes `reasoning.summary`; `null` leaves it unchanged. |
 | `webSearch`        | `true`, `false`                                       | Make native server-side web search available. `false` leaves existing tools unchanged.            |
-| `serviceTier`      | `"priority"`, `"default"`                             | Request priority processing. `"default"` leaves the provider payload unchanged.                   |
+| `serviceTier`      | `"priority"`, `"ultrafast"`, `"default"`              | Request priority or ultrafast processing. `"default"` leaves the provider payload unchanged.      |
 
 Use unquoted values in commands, for example `/pi-openai verbosity null`.
 
-`serviceTier: "priority"` sends `service_tier: "priority"`. The alias `"fast"` is accepted in configuration files, environment variables, and commands, and normalized to `"priority"` for status, saving, and requests. `"default"` does not force a standard tier or remove an existing priority processing override from the provider payload.
+`serviceTier: "priority"` sends `service_tier: "priority"`; `"ultrafast"` sends `service_tier: "ultrafast"`. Ultrafast is enabled only for `gpt-6-astra` (including dated IDs) on the recognized OpenAI endpoint, for both API-key and subscription authentication. Other models, Azure, and GitHub Copilot skip this override unless `allowUnsupported` is true.
+The alias `"fast"` is accepted in configuration files, environment variables, and commands, and normalized to `"priority"` for status, saving, and requests. `"default"` does not force a standard tier or remove an existing service-tier override from the provider payload.
 
 ### Precedence
 

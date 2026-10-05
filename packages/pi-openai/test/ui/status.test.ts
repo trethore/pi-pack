@@ -185,3 +185,34 @@ it.each([
   expect(markdown).toContain(`| webSearch | \`true\` | command | ${search} |`);
   expect(markdown).toContain(`| serviceTier | \`priority\` | command | ${tier} |`);
 });
+
+it.each([
+  { identity: { id: "gpt-6-astra" }, behavior: "Set service_tier to ultrafast" },
+  { identity: { id: "gpt-6.1-sol" }, behavior: "Skipped: Ultrafast support is unverified for this model" },
+  {
+    identity: {
+      id: "gpt-6-astra",
+      provider: "azure",
+      api: "azure-openai-responses",
+      baseUrl: "https://example.openai.azure.com",
+    },
+    behavior: "Skipped: Ultrafast support is unverified on this endpoint",
+  },
+  {
+    identity: { id: "gpt-6-astra", provider: "github-copilot", baseUrl: "https://api.githubcopilot.com" },
+    behavior: "Skipped: Ultrafast support is unverified on this endpoint",
+  },
+])("shows ultrafast eligibility and its bypass for $identity", ({ identity, behavior }) => {
+  // Arrange
+  const effective = resolveSettings(layers({ command: { serviceTier: "ultrafast" } }));
+  const bypassed = resolveSettings(layers({ command: { serviceTier: "ultrafast", allowUnsupported: true } }));
+  const requestModel = { ...model, ...identity };
+
+  // Act / Assert
+  expect(statusMarkdown(effective, requestModel, "global")).toContain(
+    `| serviceTier | \`ultrafast\` | command | ${behavior} |`,
+  );
+  expect(statusMarkdown(bypassed, requestModel, "global")).toContain(
+    "| serviceTier | `ultrafast` | command | Attempt on compatible request payload (support checks bypassed) |",
+  );
+});

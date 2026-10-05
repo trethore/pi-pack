@@ -18,6 +18,7 @@
   "webSearch": false,
 
   // "priority" requests priority processing; "fast" is accepted as an alias.
+  // "ultrafast" is restricted to OpenAI Astra unless allowUnsupported is true.
   // "default" leaves the payload unchanged, rather than forcing a standard tier.
   "serviceTier": "default"
 }

@@ -32,5 +32,6 @@ export type ReasoningSummary = (typeof ReasoningSummary)[keyof typeof ReasoningS
 export const ServiceTier = {
   DEFAULT: "default",
   PRIORITY: "priority",
+  ULTRAFAST: "ultrafast",
 } as const;
 export type ServiceTier = (typeof ServiceTier)[keyof typeof ServiceTier];

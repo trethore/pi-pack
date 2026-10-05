@@ -363,17 +363,19 @@ it.each([
   { provider: "openai", apiKey: "sk-proj-test", tier: "fast" },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "priority" },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "fast" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6-astra" },
+  { provider: "openai", apiKey: "chatgpt-access-token", tier: "ultrafast", id: "gpt-6-astra" },
   { provider: "azure", apiKey: "azure-test", tier: "priority" },
   { provider: "azure", apiKey: "azure-test", tier: "fast" },
 ])(
   "modifies real Pi $provider requests using $apiKey and $tier without restoring auth-rejected fields",
-  async ({ provider, apiKey, tier }) => {
+  async ({ provider, apiKey, tier, id = model.id }) => {
     // Arrange
     vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
     vi.stubEnv("PI_OPENAI_REASONING_SUMMARY", "none");
     vi.stubEnv("PI_OPENAI_WEB_SEARCH", "true");
     vi.stubEnv("PI_OPENAI_SERVICE_TIER", tier);
-    vi.stubEnv("AZURE_OPENAI_DEPLOYMENT_NAME_MAP", `${model.id}=production-assistant`);
+    vi.stubEnv("AZURE_OPENAI_DEPLOYMENT_NAME_MAP", `${id}=production-assistant`);
     const extension = harness("print");
     await extension.emit("session_start");
     const runtime = await ModelRuntime.create({
@@ -382,7 +384,7 @@ it.each([
       modelsStorePath: workspace.agentDir + "/models-cache.json",
       refreshOnCreate: false,
     });
-    const builtInModel = runtime.getModel("openai", model.id);
+    const builtInModel = runtime.getModel("openai", id);
     if (!builtInModel) {
       throw new Error("Missing built-in OpenAI model");
     }
@@ -430,12 +432,12 @@ it.each([
     // Assert
     expect(fetch).toHaveBeenCalledOnce();
     expect(sent).toMatchObject({
-      model: provider === "openai" ? model.id : "production-assistant",
+      model: provider === "openai" ? id : "production-assistant",
       text: { verbosity: "low" },
       reasoning: { effort: "high" },
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
-    expect(sent).toMatchObject({ service_tier: "priority", tools: [{ type: "web_search" }] });
+    expect(sent).toMatchObject({ service_tier: tier === "fast" ? "priority" : tier, tools: [{ type: "web_search" }] });
     if (provider === "azure" || apiKey.startsWith("sk-")) {
       expect(sent).toMatchObject({ max_output_tokens: 1024, temperature: 0.5 });
     } else {
@@ -465,7 +467,7 @@ it("warns about unknown entries in both config layers without disabling known se
 
 it.each(
   (["global", "project", "environment", "command"] as const).flatMap((source) =>
-    ["priority", "fast"].map((tier) => ({ source, tier })),
+    ["priority", "fast", "ultrafast"].map((tier) => ({ source, tier })),
   ),
 )("normalizes $tier from $source in status, saved configuration and requests", async ({ source, tier }) => {
   // Arrange
@@ -474,7 +476,9 @@ it.each(
   } else if (source === "environment") {
     vi.stubEnv("PI_OPENAI_SERVICE_TIER", tier);
   }
+  const expectedTier = tier === "fast" ? "priority" : tier;
   const extension = harness();
+  extension.ctx.model = { ...extension.ctx.model, id: "gpt-6-astra" } as ExtensionContext["model"];
   await extension.emit("session_start");
 
   // Act
@@ -483,15 +487,15 @@ it.each(
   }
   await extension.command("status");
   await extension.command("save project");
-  const payload = await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } });
+  const payload = await extension.emit("before_provider_request", { payload: { model: "gpt-6-astra", input: [] } });
 
   // Assert
   expect(extension.appendEntry).toHaveBeenCalledWith(
     "pi-openai-status",
-    expect.stringContaining(`| serviceTier | \`priority\` | ${source} | Set service_tier to priority |`),
+    expect.stringContaining(`| serviceTier | \`${expectedTier}\` | ${source} | Set service_tier to ${expectedTier} |`),
   );
-  expect(parseConfig(await workspace.read("project"))).toHaveProperty("serviceTier", "priority");
-  expect(payload).toHaveProperty("service_tier", "priority");
+  expect(parseConfig(await workspace.read("project"))).toHaveProperty("serviceTier", expectedTier);
+  expect(payload).toHaveProperty("service_tier", expectedTier);
 });
 
 it.each(['{"verbosity":"low","unknown":true}', "{invalid"])(

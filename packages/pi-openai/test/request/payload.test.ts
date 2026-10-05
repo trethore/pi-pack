@@ -10,7 +10,7 @@ function payloadFor(requestModel = model): Record<string, unknown> {
   return { model: requestModel.id, input: [], stream: true, store: false };
 }
 
-it.each(["fast", "priority"])("does not change an existing %s tier with default settings", (tier) => {
+it.each(["fast", "priority", "ultrafast"])("does not change an existing %s tier with default settings", (tier) => {
   // Arrange
   const payload = {
     ...payloadFor(),
