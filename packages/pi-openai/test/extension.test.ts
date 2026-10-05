@@ -8,6 +8,7 @@ import {
   type ExtensionCommandContext,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import * as files from "@pi-pack/shared/files";
 import { parseConfig } from "@pi-pack/shared/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import openai from "#src/index";
@@ -128,7 +129,7 @@ it.each([
   ["verbosity medium", "verbosity = medium."],
   ["reset verbosity", "Reset verbosity."],
   ["reset", "Reset command overrides."],
-])("reminds users to save after %s without changing config files", async (command, confirmation) => {
+])("reports %s scope without changing config files", async (command, confirmation) => {
   // Arrange
   const config = '{"verbosity":"high"}';
   await workspace.write("global", config);
@@ -142,7 +143,7 @@ it.each([
 
   // Assert
   expect(extension.notify).toHaveBeenLastCalledWith(
-    `pi-openai: ${confirmation} Use /pi-openai save to save the current settings.`,
+    expect.stringContaining(`pi-openai: ${confirmation} Scope: All models.`),
     "info",
   );
   expect(await workspace.read("global")).toBe(config);
@@ -185,7 +186,7 @@ const saveCases: Array<[string, Destination | undefined, Destination]> = [
   ["save global", "project", "global"],
   ["save project", undefined, "project"],
 ];
-it.each(saveCases)("%s with existing %s saves effective state to %s", async (command, existing, destination) => {
+it.each(saveCases)("%s with existing %s saves only pending edits to %s", async (command, existing, destination) => {
   // Arrange
   if (existing) {
     await workspace.write(existing, '{ // retain\n "futureSetting":42, "reasoningSummary":"detailed" }');
@@ -202,21 +203,20 @@ it.each(saveCases)("%s with existing %s saves effective state to %s", async (com
 
   // Assert
   expect(saved).toMatchObject({
-    verbosity: "low",
     reasoningSummary: null,
     webSearch: true,
-    enabled: true,
-    allowUnsupported: false,
-    serviceTier: "default",
   });
+  expect(saved).not.toHaveProperty("verbosity");
+  expect(saved).not.toHaveProperty("enabled");
+  expect(saved).not.toHaveProperty("serviceTier");
   expect(extension.notify).toHaveBeenLastCalledWith(
-    destination === "global" ? "pi-openai: Saved globally." : "pi-openai: Saved on this project.",
+    expect.stringContaining(`Saved to ${destination} (All models: webSearch, reasoningSummary)`),
     "info",
   );
   expect(extension.notify.mock.calls.flat().join("\n")).not.toContain(workspace.root);
 });
 
-it("updates the saved layer and destination shown by status", async () => {
+it("shows saved receipts without updating the active loaded layer", async () => {
   // Arrange
   const extension = harness();
   await extension.emit("session_start");
@@ -230,7 +230,7 @@ it("updates the saved layer and destination shown by status", async () => {
   // Assert
   expect(extension.appendEntry).toHaveBeenCalledWith(
     "pi-openai-status",
-    expect.stringContaining("| verbosity | `high` | project |"),
+    expect.stringContaining("| verbosity | `null` | default |"),
   );
   expect(extension.appendEntry).toHaveBeenCalledWith(
     "pi-openai-status",
@@ -486,6 +486,7 @@ it.each(
     await extension.command(`serviceTier ${tier}`);
   }
   await extension.command("status");
+  await extension.command(`serviceTier ${tier}`);
   await extension.command("save project");
   const payload = await extension.emit("before_provider_request", { payload: { model: "gpt-6-astra", input: [] } });
 
@@ -544,14 +545,14 @@ it.each(["save", "save global"])("%s uses global configuration and status when u
   // Assert
   expect(parseConfig(await workspace.read("global"))).toHaveProperty("verbosity", "high");
   expect(await workspace.read("project")).toBe("{invalid");
-  expect(extension.notify).toHaveBeenCalledWith("pi-openai: Saved globally.", "info");
+  expect(extension.notify).toHaveBeenCalledWith(expect.stringContaining("Saved to global"), "info");
   expect(extension.appendEntry).toHaveBeenCalledWith(
     "pi-openai-status",
     expect.stringContaining("Save destination: **global**"),
   );
   expect(extension.appendEntry).toHaveBeenCalledWith(
     "pi-openai-status",
-    expect.stringContaining("| verbosity | `high` | global |"),
+    expect.stringContaining("| verbosity | `null` | default |"),
   );
 });
 
@@ -609,4 +610,287 @@ it("drops the project layer when reloading untrusted and restores it when truste
   // Assert
   expect(untrusted).toHaveProperty("text.verbosity", "high");
   expect(trusted).toHaveProperty("text.verbosity", "low");
+});
+
+it("uses the closest scope for every setting and preserves command targets across model switches", async () => {
+  // Arrange
+  await workspace.write(
+    "project",
+    JSON.stringify({
+      overrides: [
+        { match: { provider: "openai" }, settings: { webSearch: true } },
+        { match: { model: model.id }, settings: { verbosity: "high" } },
+        { match: { api: model.api }, settings: { reasoningSummary: "auto" } },
+      ],
+    }),
+  );
+  const extension = harness();
+  await extension.emit("session_start");
+
+  // Act
+  await extension.command("serviceTier priority");
+  await extension.command("status");
+  extension.ctx.model = { ...model, id: "gpt-6.1-sol" } as ExtensionContext["model"];
+  await extension.command("verbosity low");
+  await extension.command("save");
+
+  // Assert
+  expect(extension.notify).toHaveBeenCalledWith(expect.stringContaining(`Scope: model=${model.id}`), "info");
+  expect(extension.notify).toHaveBeenCalledWith(expect.stringContaining("Scope: provider=openai"), "info");
+  expect(parseConfig(await workspace.read("project"))).toEqual({
+    overrides: [
+      { match: { provider: "openai" }, settings: { webSearch: true, verbosity: "low" } },
+      { match: { model: model.id }, settings: { verbosity: "high", serviceTier: "priority" } },
+      { match: { api: model.api }, settings: { reasoningSummary: "auto" } },
+    ],
+  });
+  const current = await extension.emit("before_provider_request", { payload: { model: "gpt-6.1-sol", input: [] } });
+  expect(current).toHaveProperty("text.verbosity", "low");
+  expect(current).not.toHaveProperty("service_tier");
+});
+
+it("isolates explicit provider+model commands and reports broader edits that are masked", async () => {
+  // Arrange
+  const extension = harness();
+  await extension.emit("session_start");
+
+  // Act
+  await extension.command("verbosity low --scope provider+model");
+  await extension.command("verbosity high --scope provider");
+
+  // Assert
+  expect(extension.notify).toHaveBeenLastCalledWith(
+    expect.stringContaining("Masked by provider=openai, model=gpt-6-sol; effective value = low"),
+    "info",
+  );
+  expect(await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } })).toHaveProperty(
+    "text.verbosity",
+    "low",
+  );
+  extension.ctx.model = { ...model, id: "gpt-6.1-sol" } as ExtensionContext["model"];
+  expect(
+    await extension.emit("before_provider_request", { payload: { model: "gpt-6.1-sol", input: [] } }),
+  ).toHaveProperty("text.verbosity", "high");
+  extension.ctx.model = {
+    ...model,
+    provider: "azure",
+    api: "azure-openai-responses",
+    baseUrl: "https://example.openai.azure.com",
+  } as ExtensionContext["model"];
+  expect(await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } })).toBeUndefined();
+});
+
+it("retargets saves on disk only, including after switching to another model", async () => {
+  // Arrange
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.command("verbosity low --scope model");
+
+  // Act
+  await extension.command("save global --scope provider");
+  await extension.command("status");
+  extension.ctx.model = { ...model, id: "gpt-6.1-sol" } as ExtensionContext["model"];
+  const beforeReload = await extension.emit("before_provider_request", {
+    payload: { model: "gpt-6.1-sol", input: [] },
+  });
+  await extension.command("status");
+  await extension.emit("session_start");
+  const afterReload = await extension.emit("before_provider_request", { payload: { model: "gpt-6.1-sol", input: [] } });
+
+  // Assert
+  expect(parseConfig(await workspace.read("global"))).toEqual({
+    overrides: [{ match: { provider: "openai" }, settings: { verbosity: "low" } }],
+  });
+  expect(beforeReload).toBeUndefined();
+  expect(afterReload).toHaveProperty("text.verbosity", "low");
+  expect(extension.appendEntry).toHaveBeenCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("Saved only; not loaded"),
+  );
+  expect(extension.appendEntry).toHaveBeenCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("Default command target: `All models`"),
+  );
+  expect(extension.appendEntry).toHaveBeenCalledWith("pi-openai-status", expect.stringContaining("command, saved"));
+});
+
+it("reset after saving exposes session-loaded config until reload", async () => {
+  // Arrange
+  await workspace.write("global", '{"verbosity":"medium"}');
+  const extension = harness();
+  const event = { payload: { model: model.id, input: [] } };
+  await extension.emit("session_start");
+  await extension.command("verbosity low");
+
+  // Act / Assert
+  await extension.command("save");
+  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
+  await extension.command("reset");
+  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "medium");
+  await extension.emit("session_start");
+  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
+});
+
+it("fails conflicting save retargets without losing pending edits or creating files", async () => {
+  // Arrange
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.command("verbosity low --scope model");
+  await extension.command("verbosity high --scope provider");
+
+  // Act / Assert
+  await extension.command("save --scope all");
+  expect(extension.notify).toHaveBeenLastCalledWith(expect.stringContaining("Conflicting verbosity"), "error");
+  await expect(workspace.read("global")).rejects.toHaveProperty("code", "ENOENT");
+  await extension.command("status");
+  expect(extension.appendEntry).toHaveBeenLastCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("Pending save groups: 2"),
+  );
+  await extension.command("save");
+  expect(parseConfig(await workspace.read("global"))).toEqual({
+    overrides: [
+      { match: { model: model.id }, settings: { verbosity: "low" } },
+      { match: { provider: "openai" }, settings: { verbosity: "high" } },
+    ],
+  });
+});
+
+it("does not save environment settings or write again without new pending edits", async () => {
+  // Arrange
+  vi.stubEnv("PI_OPENAI_VERBOSITY", "high");
+  const extension = harness();
+  await extension.emit("session_start");
+
+  // Act / Assert
+  await extension.command("save project");
+  expect(extension.notify).toHaveBeenLastCalledWith("pi-openai: No pending edits to save.", "info");
+  await expect(workspace.read("project")).rejects.toHaveProperty("code", "ENOENT");
+  await extension.command("webSearch true --scope api");
+  await extension.command("save");
+  const saved = await workspace.read("global");
+  expect(parseConfig(saved)).toEqual({ overrides: [{ match: { api: model.api }, settings: { webSearch: true } }] });
+  await extension.command("save project");
+  expect(await workspace.read("global")).toBe(saved);
+  await expect(workspace.read("project")).rejects.toHaveProperty("code", "ENOENT");
+});
+
+it("requires --scope all without a model but can save previously captured edits", async () => {
+  // Arrange
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.command("verbosity low --scope model");
+  extension.ctx.model = undefined;
+
+  // Act / Assert
+  await extension.command("verbosity high");
+  expect(extension.notify).toHaveBeenLastCalledWith(expect.stringContaining("No model selected"), "error");
+  await extension.command("reset");
+  expect(extension.notify).toHaveBeenLastCalledWith(expect.stringContaining("No model selected"), "error");
+  await extension.command("verbosity high --scope all");
+  await extension.command("save");
+  expect(parseConfig(await workspace.read("global"))).toEqual({
+    verbosity: "high",
+    overrides: [{ match: { model: model.id }, settings: { verbosity: "low" } }],
+  });
+  await extension.command("reset --all-scopes");
+  await extension.command("status");
+  expect(extension.appendEntry).toHaveBeenLastCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("| verbosity | `null` | default |"),
+  );
+});
+
+it("ignores untrusted scope candidates and displays only loaded scopes", async () => {
+  // Arrange
+  await workspace.write("global", JSON.stringify({ overrides: [{ match: { api: model.api }, settings: {} }] }));
+  await workspace.write(
+    "project",
+    JSON.stringify({
+      overrides: [{ match: { provider: "openai", model: model.id }, settings: { verbosity: "high" } }],
+    }),
+  );
+  const extension = harness();
+  extension.isProjectTrusted.mockReturnValue(false);
+  await extension.emit("session_start");
+
+  // Act
+  await extension.command("verbosity low");
+  await extension.command("status");
+
+  // Assert
+  expect(extension.notify).toHaveBeenLastCalledWith(expect.stringContaining(`Scope: api=${model.api}`), "info");
+  expect(extension.appendEntry.mock.calls[0]?.[1]).not.toContain("provider=openai, model=gpt-6-sol");
+});
+
+it("selects a specific global scope without bypassing project precedence after reload", async () => {
+  // Arrange
+  await workspace.write(
+    "global",
+    JSON.stringify({
+      overrides: [
+        {
+          match: { provider: "openai", model: model.id },
+          settings: { verbosity: "medium" },
+        },
+      ],
+    }),
+  );
+  await workspace.write("project", '{"verbosity":"high"}');
+  const extension = harness();
+  const event = { payload: { model: model.id, input: [] } };
+  await extension.emit("session_start");
+
+  // Act / Assert
+  await extension.command("verbosity low");
+  expect(extension.notify).toHaveBeenLastCalledWith(
+    expect.stringContaining("Scope: provider=openai, model=gpt-6-sol"),
+    "info",
+  );
+  await extension.command("save global");
+  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "low");
+  await extension.emit("session_start");
+  expect(await extension.emit("before_provider_request", event)).toHaveProperty("text.verbosity", "high");
+});
+
+it("retains edits made during a save and rejects overlapping saves", async () => {
+  // Arrange
+  const extension = harness();
+  await extension.emit("session_start");
+  await extension.command("verbosity low");
+  const { promise: gate, resolve: resume } = Promise.withResolvers<void>();
+  const { promise: started, resolve: entered } = Promise.withResolvers<void>();
+  const read = files.readOptionalFile;
+  const spy = vi.spyOn(files, "readOptionalFile").mockImplementation(async (path) => {
+    entered();
+    await gate;
+    return read(path);
+  });
+
+  // Act
+  const saving = extension.command("save global");
+  await started;
+  try {
+    await extension.command("verbosity high");
+    await extension.command("save project");
+  } finally {
+    resume();
+  }
+  await saving;
+  spy.mockRestore();
+
+  // Assert
+  expect(extension.notify).toHaveBeenCalledWith("pi-openai: A save is already in progress.", "error");
+  expect(parseConfig(await workspace.read("global"))).toEqual({ verbosity: "low" });
+  expect(await extension.emit("before_provider_request", { payload: { model: model.id, input: [] } })).toHaveProperty(
+    "text.verbosity",
+    "high",
+  );
+  await extension.command("status");
+  expect(extension.appendEntry).toHaveBeenLastCalledWith(
+    "pi-openai-status",
+    expect.stringContaining("Pending save groups: 1"),
+  );
+  await extension.command("save global");
+  expect(parseConfig(await workspace.read("global"))).toEqual({ verbosity: "high" });
 });

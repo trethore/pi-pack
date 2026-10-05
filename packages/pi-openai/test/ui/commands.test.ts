@@ -46,7 +46,7 @@ it.each([
   ["verbosity ", ["verbosity low", "verbosity medium", "verbosity high", "verbosity null"]],
   ["verbosity n", ["verbosity null"]],
   ["reasoningSummary n", ["reasoningSummary none", "reasoningSummary null"]],
-  ["save ", ["save project", "save global"]],
+  ["save ", ["save project", "save global", "save --scope"]],
   ["reset web", ["reset webSearch"]],
   ["allowUnsupported t", ["allowUnsupported true"]],
 ])("completes %j with full replacement arguments", (prefix, expected) => {
@@ -76,3 +76,72 @@ it("discovers all subcommands without a help command", () => {
     "save",
   ]);
 });
+
+it.each([
+  [
+    "verbosity low --scope model",
+    { type: "set", setting: "verbosity", override: { verbosity: "low" }, scope: "model" },
+  ],
+  [
+    "verbosity --scope provider low",
+    { type: "set", setting: "verbosity", override: { verbosity: "low" }, scope: "provider" },
+  ],
+  ["reset verbosity --scope all", { type: "reset", setting: "verbosity", scope: "all" }],
+  ["reset --all-scopes", { type: "reset", setting: undefined, allScopes: true }],
+  ["save project --scope provider+model", { type: "save", destination: "project", scope: "provider+model" }],
+  ["save --scope api global", { type: "save", destination: "global", scope: "api" }],
+])("parses scoped command %s", (input, expected) => {
+  // Act / Assert
+  expect(parseCommand(input)).toEqual(expected);
+});
+
+it.each([
+  "status --scope all",
+  "save --all-scopes",
+  "verbosity low --all-scopes",
+  "reset verbosity --all-scopes",
+  "reset --scope all --all-scopes",
+  "reset --all-scopes --all-scopes",
+  "save --scope model --scope api",
+  "save --scope",
+  "save --scope endpoint",
+  "save --unknown",
+])("rejects conflicting or incomplete options: %s", (input) => {
+  // Act / Assert
+  expect(() => parseCommand(input)).toThrow();
+});
+
+it.each([
+  ["verbosity low --", ["verbosity low --scope"]],
+  ["verbosity --scope model", ["verbosity --scope model", "verbosity --scope model+api"]],
+  [
+    "save project --scope provider",
+    [
+      "save project --scope provider",
+      "save project --scope provider+api",
+      "save project --scope provider+model",
+      "save project --scope provider+model+api",
+    ],
+  ],
+  ["reset --all", ["reset --all-scopes"]],
+  [
+    "verbosity --scope model ",
+    [
+      "verbosity --scope model low",
+      "verbosity --scope model medium",
+      "verbosity --scope model high",
+      "verbosity --scope model null",
+    ],
+  ],
+])("completes scoped arguments %j", (prefix, expected) => {
+  // Act / Assert
+  expect(completeArguments(prefix)?.map((item) => item.value)).toEqual(expected);
+});
+
+it.each(["save --scope model --", "reset --all-scopes ", "status --", "save --scope --scope "])(
+  "does not complete conflicting options %j",
+  (prefix) => {
+    // Act / Assert
+    expect(completeArguments(prefix)).toBeNull();
+  },
+);

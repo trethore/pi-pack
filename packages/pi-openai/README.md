@@ -16,7 +16,7 @@ npm run install:global:pi-openai
 
 Configure verbosity, reasoning summaries, native web search, and service-tier overrides for OpenAI-compatible requests. By default, the extension leaves requests unchanged.
 
-Run `/pi-openai` to show each setting's effective value, source, and intended request behavior for the selected model.
+Run `/pi-openai` to see a table for **All models**, a table for every configured or runtime scope, and a final **Effective settings** table for the selected model. Status marks matching scopes, the default command target, value sources, pending edits, and the save destination.
 
 ```text
 /pi-openai verbosity medium
@@ -25,7 +25,7 @@ Run `/pi-openai` to show each setting's effective value, source, and intended re
 /pi-openai serviceTier priority
 ```
 
-Changes apply to subsequent requests without a reload. They are temporary until you save them:
+Commands edit the most specific existing scope matching the selected model. With only flat configuration, they affect **All models**, as before. Changes apply to subsequent requests without a reload and are temporary until saved:
 
 ```text
 /pi-openai save
@@ -33,19 +33,60 @@ Changes apply to subsequent requests without a reload. They are temporary until 
 
 ### Commands
 
-| Command                             | Description                                                         |
-| ----------------------------------- | ------------------------------------------------------------------- |
-| `/pi-openai` or `/pi-openai status` | Show settings, compatibility decisions, and the save destination.   |
-| `/pi-openai <setting> <value>`      | Override a setting for the current session.                         |
-| `/pi-openai reset <setting>`        | Remove one command override and use the next configuration layer.   |
-| `/pi-openai reset`                  | Remove all command overrides.                                       |
-| `/pi-openai save`                   | Save to the project configuration if it exists, otherwise globally. |
-| `/pi-openai save project`           | Save to the project configuration, creating it if needed.           |
-| `/pi-openai save global`            | Save to the global configuration.                                   |
+| Command                                             | Description                                                                                                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `/pi-openai` or `/pi-openai status`                 | Show all scopes, effective settings, compatibility decisions, and save destination.                              |
+| `/pi-openai <setting> <value>`                      | Override a setting at the automatic target scope for this session.                                               |
+| `/pi-openai <setting> <value> --scope <scope>`      | Override a setting at an explicit scope, creating it if needed.                                                  |
+| `/pi-openai reset [setting]`                        | Remove one or all command overrides at the automatic target scope.                                               |
+| `/pi-openai reset [setting] --scope <scope>`        | Remove command overrides at an explicit scope.                                                                   |
+| `/pi-openai reset --all-scopes`                     | Clear every runtime override and pending edit.                                                                   |
+| `/pi-openai save`                                   | Save pending edits at their original scopes to the project file if it exists and is trusted, otherwise globally. |
+| `/pi-openai save project`                           | Save pending edits to the project file, creating it if needed. Requires project trust.                           |
+| `/pi-openai save global`                            | Save pending edits to the global file.                                                                           |
+| `/pi-openai save [project\|global] --scope <scope>` | Retarget all pending edits to one scope in the saved file only.                                                  |
 
-Commands complete setting names and canonical values. Reset does not edit configuration files or restore built-in defaults when another layer supplies a value.
+Scope names are `all`, `model`, `provider`, `api`, `provider+model`, `model+api`, `provider+api`, and `provider+model+api`. Identities come from the selected model and are captured when the command runs:
 
-Saving writes **all effective settings**, including environment and command overrides, not just the last change. Existing comments and unrelated keys are preserved. Saving globally does not remove higher-priority project, environment, or command overrides.
+```text
+/pi-openai verbosity low --scope provider+model
+/pi-openai reasoningSummary auto --scope api
+/pi-openai enabled false --scope all
+```
+
+Switching models does not move existing overrides. With no selected model, set/reset commands require `--scope all`; `reset --all-scopes` can still clear everything, and a bare save can persist previously captured edits.
+
+Commands complete setting names, canonical values, and scope options. Reset affects runtime state only: it never edits files or restores built-in defaults when another loaded layer supplies a value. Empty runtime-only scopes disappear after reset.
+
+### Automatic target selection
+
+Commands select one existing matching scope, independently of whether it already defines the setting being changed:
+
+1. Prefer more selector fields.
+2. On equal field counts, prefer runtime overrides, then project configuration, then global configuration.
+3. Within the same source level, prefer model over provider over API. For two fields: provider+model > model+api > provider+api.
+4. If no scoped rule matches, target All models.
+
+Every confirmation names the target. An explicit scope bypasses automatic selection. Runtime scopes remain candidates after saving; a scope created only by a retargeted save is not a candidate until reloaded.
+
+Targeting is separate from effective-value resolution. All matching scopes contribute values, but a command edits only one scope. For example, a more specific global scope can be the command target while a broader project value would mask it after a global save and reload. A broader command edit can also be masked by a more specific runtime override; the confirmation reports this.
+
+### Saving
+
+Saving writes **only pending explicit edits**, across all edited scopes. It does not copy environment values, defaults, or inherited values. Existing comments, unrelated keys, and other scopes are preserved. With no pending edits, save does nothing.
+
+An explicit save scope retargets the file write, not live overrides:
+
+```text
+/pi-openai verbosity low --scope model
+/pi-openai save global --scope provider
+```
+
+The current session keeps the model-scoped override. The global file receives a provider-scoped setting for future sessions or reloads. Retargeting merges disjoint keys or identical values, but rejects conflicting values for the same key, including conflicts with runtime values already at the target. It does not delete previously saved source rules.
+
+**Saving does not change the current session's loaded configuration or runtime settings.** Successful saves clear pending flags but keep runtime overrides active. Status shows saved values separately at their actual persisted scopes, marked for the next session/reload.
+
+Reset after saving exposes the configuration loaded at session start, not the newly written file. Run `/reload` or start a new session to load saved settings and clear runtime overrides. Normal project/environment precedence still applies after reload; saving globally cannot bypass it.
 
 ## Configuration
 
@@ -53,16 +94,33 @@ No configuration is required. To customize it, create `.pi/pi-openai.jsonc` in y
 
 ```jsonc
 {
-  "enabled": true,
-  "allowUnsupported": false,
-  "verbosity": null,
-  "reasoningSummary": null,
-  "webSearch": false,
-  "serviceTier": "default",
+  "verbosity": "medium",
+  "overrides": [
+    {
+      "match": { "api": "openai-responses" },
+      "settings": { "reasoningSummary": "auto" },
+    },
+    {
+      "match": { "provider": "openai" },
+      "settings": { "serviceTier": "priority" },
+    },
+    {
+      "match": { "model": "gpt-6-sol" },
+      "settings": { "verbosity": "low" },
+    },
+    {
+      "match": { "provider": "openai", "model": "gpt-6-sol" },
+      "settings": { "verbosity": "high" },
+    },
+  ],
 }
 ```
 
-The example above uses the default values. Comments and trailing commas are supported. The global path follows Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
+Top-level settings apply to All models. Existing flat configuration remains valid. Every setting can also appear in an override's `settings` object.
+
+A `match` selector must contain one or more of `provider`, `model`, and `api`. All supplied fields must match exactly. Model IDs are Pi's selected model IDs, not Azure deployment names. API means Pi's API identifier, such as `openai-responses`, not an endpoint or authentication method. There are no wildcards or automatic dated-model family matches.
+
+Comments and trailing commas are supported. The global path follows Pi's agent directory if customized with `$PI_CODING_AGENT_DIR`. Untrusted project files are neither loaded nor considered for targeting, and cannot be saved.
 
 | Setting            | Values                                                | Behavior                                                                                          |
 | ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -80,15 +138,34 @@ The alias `"fast"` is accepted in configuration files, environment variables, an
 
 ### Precedence
 
-Settings merge per key, from highest to lowest priority:
+Settings merge per key, from highest to lowest layer priority:
 
 ```text
 commands > environment > project configuration > global configuration > defaults
 ```
 
-Omitted keys inherit from the next lower layer. An explicit `null` cancels an inherited verbosity or reasoning-summary override; it does not remove a value already set by Pi's provider.
+**Project settings always beat global settings**, even when a global selector is more specific. Environment variables remain unscoped and override both files.
 
-Run `/reload` after editing configuration files. Reloading or starting another session clears unsaved command overrides. Invalid configuration or environment values report an error rather than silently falling back.
+Within a file or the command layer, all matching scopes contribute values in this order, strongest first:
+
+```text
+provider + model + API
+provider + model
+model + API
+provider + API
+model
+provider
+API
+All models
+```
+
+Only explicitly supplied keys override lower-priority values. Declaration order does not affect precedence. Duplicate identical selectors in the same file are rejected, even if their fields appear in a different order.
+
+For example, model-scoped verbosity can override provider-scoped verbosity while retaining provider-scoped service tier and API-scoped reasoning summary.
+
+Omitted keys inherit. An explicit `null` cancels an inherited verbosity or reasoning-summary override; it does not remove a value already set by Pi's provider.
+
+Run `/reload` after editing configuration files. Reloading or starting another session clears runtime overrides and loads saved files. Invalid configuration or environment values report an error rather than silently falling back, even in nonmatching scopes. Unknown settings produce warnings; unknown selector fields are rejected to prevent accidentally broadening a rule.
 
 ### Environment variables
 
