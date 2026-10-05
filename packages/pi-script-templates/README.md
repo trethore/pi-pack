@@ -9,6 +9,7 @@ Requires Pi `1.0.3` or a compatible later release.
 From the repository root, install pi-script-templates globally:
 
 ```sh
+npm ci
 npm run install:global:pi-script-templates
 ```
 

@@ -8,6 +8,7 @@ Control verbosity, reasoning summaries, native web search, and service tiers for
 Requires Pi `1.0.3` or a compatible later release. From the repository root:
 
 ```sh
+npm ci
 npm run install:global:pi-openai
 ```
 
@@ -280,7 +281,18 @@ Values use command spelling. Environment values are unscoped and override both f
 
 ## Compatibility
 
-Default checks require a recognized endpoint and an OpenAI model in the [built-in allowlist](src/request/compatibility.ts), including dated variants. Other vendors and open-weight models are outside the support scope.
+Default checks require a recognized endpoint and one of these OpenAI model IDs from the [built-in allowlist](src/request/compatibility.ts):
+
+- `gpt-5.5`
+- `gpt-5.6-luna`
+- `gpt-5.6-sol`
+- `gpt-5.6-terra`
+- `gpt-6-astra`
+- `gpt-6-luna`
+- `gpt-6-sol`
+- `gpt-6.1-sol`
+
+Dated variants with a `-YYYY-MM-DD` suffix are also recognized. Other vendors and open-weight models are outside the support scope.
 
 These tables describe **extension behavior, not guaranteed server acceptance**, with active settings and `allowUnsupported: false`.
 
@@ -328,10 +340,10 @@ Without a mapping, the request must name the selected model ID. Request-specific
 <details>
 <summary>Unsafe overrides and payload safeguards</summary>
 
-To attempt an unverified OpenAI model or proxy:
+To attempt an unverified OpenAI model or proxy for the selected provider and model only:
 
 ```text
-/pi-openai allowUnsupported true
+/pi-openai allowUnsupported true --scope provider+model
 ```
 
 This bypasses API, provider, endpoint, model, and feature-support checks, including Copilot restrictions. It does not establish server support or expand the intended vendor scope.

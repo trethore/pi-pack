@@ -9,6 +9,7 @@ Requires Pi `1.0.3` or a compatible later release.
 From the repository root, install pi-whimsical globally:
 
 ```sh
+npm ci
 npm run install:global:pi-whimsical
 ```
 
