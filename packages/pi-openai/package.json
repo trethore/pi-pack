@@ -1,6 +1,6 @@
 {
   "name": "pi-openai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Configure OpenAI-compatible request parameters in Pi.",
   "dependencies": {
     "@pi-pack/shared": "0.1.0",
