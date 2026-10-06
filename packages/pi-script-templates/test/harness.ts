@@ -46,6 +46,7 @@ export function createHarness(cwd: string, commands: SlashCommandInfo[] = [], tr
         contextFiles: [{ path: "AGENTS.md", content: "{{platform}}" }],
         sections: { other: "{{platform}}" },
         selectedTools: [],
+        hiddenTools: [],
         toolSnippets: {},
         toolGuidelines: {},
         promptGuidelines: [],

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Monorepo for pi extensions.",
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.3",
+    "@earendil-works/pi-coding-agent": "^1.0.4",
     "@types/node": "22.19.19",
     "jscpd": "5.3.3",
     "knip": "6.38.0",
