@@ -5,7 +5,7 @@ Control verbosity, reasoning summaries, native web search, and service tiers for
 
 ## Installation
 
-Requires Pi `1.0.4` or a compatible later release. From the repository root:
+Requires Pi `1.1.0` or a compatible later release. From the repository root:
 
 ```sh
 npm ci

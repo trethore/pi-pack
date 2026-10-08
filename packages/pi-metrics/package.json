@@ -6,7 +6,7 @@
     "@pi-pack/shared": "0.1.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-tui": "1.0.4"
+    "@earendil-works/pi-tui": "1.1.0"
   },
   "files": [
     "pi-metrics.example.jsonc",
@@ -22,8 +22,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.4",
-    "@earendil-works/pi-tui": "^1.0.4"
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "@earendil-works/pi-tui": "^1.1.0"
   },
   "pi": {
     "extensions": [

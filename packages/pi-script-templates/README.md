@@ -4,7 +4,7 @@ Replace `{{name}}` placeholders in system prompts and prompt templates with cach
 
 ## Installation
 
-Requires Pi `1.0.4` or a compatible later release.
+Requires Pi `1.1.0` or a compatible later release.
 
 From the repository root, install pi-script-templates globally:
 
