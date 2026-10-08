@@ -15,13 +15,13 @@ export function useWorkspace() {
       return scope === Scope.GLOBAL ? workspace.agentDir : join(workspace.cwd, ".pi");
     },
     async script(name: string, source: string, scope: Scope = Scope.PROJECT, extension = "mjs") {
-      const path = join(workspace.directory(scope), "script-templates", `${name}.${extension}`);
+      const path = join(workspace.directory(scope), "script-placeholders", `${name}.${extension}`);
       await writeFile(path, source);
       return path;
     },
     async configure(value: unknown, scope: Scope = Scope.PROJECT) {
       await writeFile(
-        join(workspace.directory(scope), "pi-script-templates.jsonc"),
+        join(workspace.directory(scope), "pi-script-placeholders.jsonc"),
         typeof value === "string" ? value : JSON.stringify(value),
       );
     },
@@ -48,12 +48,12 @@ export function useWorkspace() {
   };
   beforeEach(async () => {
     clearWorkspaces();
-    workspace.root = await mkdtemp(join(tmpdir(), "script-templates-"));
+    workspace.root = await mkdtemp(join(tmpdir(), "script-placeholders-"));
     workspace.cwd = join(workspace.root, "project");
     workspace.agentDir = join(workspace.root, "agent");
     await Promise.all(
       ([Scope.PROJECT, Scope.GLOBAL] as const).map((scope) =>
-        mkdir(join(workspace.directory(scope), "script-templates"), { recursive: true }),
+        mkdir(join(workspace.directory(scope), "script-placeholders"), { recursive: true }),
       ),
     );
     vi.stubEnv("PI_CODING_AGENT_DIR", workspace.agentDir);

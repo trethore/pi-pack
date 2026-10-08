@@ -1,20 +1,20 @@
-import type { ScriptTemplatesConfig } from "#src/config";
+import type { ScriptPlaceholdersConfig } from "#src/config";
 import { executeScript, type Script } from "#src/scripts/execution";
 
 const placeholder = /\{\{([a-zA-Z0-9_-]+)\}\}/g;
 
-export class ScriptTemplates {
+export class ScriptPlaceholders {
   private readonly results = new Map<string, Promise<string | undefined>>();
 
   private readonly cwd: string;
   private readonly scripts: Map<string, Script | undefined>;
-  private readonly limits: ScriptTemplatesConfig["execution"];
+  private readonly limits: ScriptPlaceholdersConfig["execution"];
   private readonly warn: (message: string) => void;
 
   constructor(
     cwd: string,
     scripts: Map<string, Script | undefined>,
-    limits: ScriptTemplatesConfig["execution"],
+    limits: ScriptPlaceholdersConfig["execution"],
     warn: (message: string) => void,
   ) {
     this.cwd = cwd;

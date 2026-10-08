@@ -17,7 +17,7 @@ import { countingScript, useWorkspace } from "#test/workspace";
 
 const files = useWorkspace();
 const sessions: AgentSession[] = [];
-const providerName = "script-templates-test";
+const providerName = "script-placeholders-test";
 const modelId = "test";
 
 afterEach(() => {

@@ -23,7 +23,7 @@ async function readScripts(directory: string, scope: Script["scope"], warn: (mes
     }
   } catch (error) {
     if (!isMissing(error)) {
-      warn(`Could not read ${scope} script-templates directory.`);
+      warn(`Could not read ${scope} script-placeholders directory.`);
     }
   }
   return scripts;
@@ -36,9 +36,9 @@ export async function discoverScripts(
   warn: (message: string) => void,
 ): Promise<Map<string, Script | undefined>> {
   const [global, project] = await Promise.all([
-    readScripts(join(agentDir, "script-templates"), Scope.GLOBAL, warn),
+    readScripts(join(agentDir, "script-placeholders"), Scope.GLOBAL, warn),
     projectTrusted
-      ? readScripts(join(cwd, ".pi", "script-templates"), Scope.PROJECT, warn)
+      ? readScripts(join(cwd, ".pi", "script-placeholders"), Scope.PROJECT, warn)
       : new Map<string, Script[]>(),
   ]);
   const scripts = new Map<string, Script | undefined>();

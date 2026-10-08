@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { once } from "node:events";
+import { createServer, type Socket } from "node:net";
 import { join } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
 import { Scope } from "#src/constants";
 import { executeScript } from "#src/scripts/execution";
@@ -70,23 +70,35 @@ it("terminates scripts that ignore SIGTERM", async () => {
 
 it.skipIf(process.platform === "win32")("terminates descendants in the same POSIX process group", async () => {
   // Arrange
-  const marker = join(files.cwd, "descendant");
-  const childSource = `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'alive'), 800);`;
+  const socketPath = join(files.root, "descendant.sock");
+  const childSource = `require('node:net').createConnection(${JSON.stringify(socketPath)});`;
+  let descendant: Socket | undefined;
+  const server = createServer((socket) => {
+    descendant = socket;
+  });
 
-  // Act
-  const result = await execute(
-    `
-    import { spawn } from 'node:child_process';
-    spawn(process.execPath, ['-e', ${JSON.stringify(childSource)}], { stdio: 'inherit' });
-    setInterval(() => {}, 10);
-  `,
-    { timeoutMs: 300, maxOutputChars: 1000 },
-  );
-  await delay(900);
+  try {
+    server.listen(socketPath);
+    await once(server, "listening");
 
-  // Assert
-  expect(result).toEqual({ ok: false, reason: "execution timed out" });
-  await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    // Act
+    const result = await execute(
+      `
+      import { spawn } from 'node:child_process';
+      spawn(process.execPath, ['-e', ${JSON.stringify(childSource)}], { stdio: 'inherit' });
+      setInterval(() => {}, 10);
+    `,
+      { timeoutMs: 300, maxOutputChars: 1000 },
+    );
+
+    // Assert
+    expect(result).toEqual({ ok: false, reason: "execution timed out" });
+    expect(descendant).toBeDefined();
+    await expect.poll(() => descendant?.destroyed, { timeout: 1000, interval: 10 }).toBe(true);
+  } finally {
+    descendant?.destroy();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });
 
 it("discards stderr without blocking or adding it to stdout", async () => {

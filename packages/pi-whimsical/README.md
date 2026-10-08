@@ -4,7 +4,7 @@ Replace Pi's working message with a random whimsical message.
 
 ## Installation
 
-Requires Pi `1.0.4` or a compatible later release.
+Requires Pi `1.1.0` or a compatible later release.
 
 From the repository root, install pi-whimsical globally:
 
@@ -27,7 +27,7 @@ No configuration is required. To customize it, create `.pi/pi-whimsical.jsonc` i
 - `enabled`: defaults to `true`. Set to `false` to leave Pi's working message unchanged.
 - `messages`: an optional array of strings. A missing or empty array uses the built-in list.
 
-Comments and trailing commas are supported. The project configuration replaces the global configuration completely.
+The project configuration replaces the global configuration completely.
 The global path follows Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
 Run `/reload` after changing the configuration. Invalid configuration reports an error rather than falling back.

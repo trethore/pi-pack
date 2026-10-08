@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { SessionStartEvent } from "@earendil-works/pi-coding-agent";
 import { expect, it, vi } from "vitest";
-import type { ScriptTemplatesConfig } from "#src/config";
+import type { ScriptPlaceholdersConfig } from "#src/config";
 import { Scope } from "#src/constants";
 import { createHarness } from "#test/harness";
 import { countingScript, useWorkspace } from "#test/workspace";
@@ -77,7 +77,7 @@ it("reload clears cached outputs, failures, prompt bodies, and configuration", a
   expect(await files.runs()).toBe("xxx");
 });
 
-it.each(["system", "appendSystem", "promptTemplates"] satisfies Array<keyof ScriptTemplatesConfig["surfaces"]>)(
+it.each(["system", "appendSystem", "promptTemplates"] satisfies Array<keyof ScriptPlaceholdersConfig["surfaces"]>)(
   "can disable the %s surface independently",
   async (surface) => {
     // Arrange
@@ -133,7 +133,7 @@ it("warns about a failure once per reload, including after session replacement",
   expect(first.notify).toHaveBeenCalledTimes(1);
   expect(replacement.notify).toHaveBeenCalledTimes(1);
   expect(first.notify).toHaveBeenCalledWith(
-    'pi-script-templates: No script found for "missing"; placeholder left unchanged.',
+    'pi-script-placeholders: No script found for "missing"; placeholder left unchanged.',
     "warning",
   );
 });
@@ -155,11 +155,11 @@ it("uses a new cache entry if trust changes without reusing privileged project o
 
 it("does not invalidate output when inherited environment values change", async () => {
   // Arrange
-  vi.stubEnv("PI_SCRIPT_TEMPLATES_TEST", "initial");
-  await files.script("platform", "process.stdout.write(process.env.PI_SCRIPT_TEMPLATES_TEST);");
+  vi.stubEnv("PI_SCRIPT_PLACEHOLDERS_TEST", "initial");
+  await files.script("platform", "process.stdout.write(process.env.PI_SCRIPT_PLACEHOLDERS_TEST);");
   const extension = createHarness(files.cwd);
   await extension.system();
-  vi.stubEnv("PI_SCRIPT_TEMPLATES_TEST", "changed");
+  vi.stubEnv("PI_SCRIPT_PLACEHOLDERS_TEST", "changed");
 
   // Act / Assert
   expect((await extension.system()).customPrompt).toBe("initial");

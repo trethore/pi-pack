@@ -1,21 +1,21 @@
-# pi-script-templates
+# pi-script-placeholders
 
-Replace `{{name}}` placeholders in system prompts and prompt templates with cached script output.
+Replace `{{name}}` placeholders with cached script output in system prompts and prompt templates.
 
 ## Installation
 
-Requires Pi `1.0.4` or a compatible later release.
+Requires Pi `1.1.0` or a compatible later release.
 
-From the repository root, install pi-script-templates globally:
+From the repository root, install pi-script-placeholders globally:
 
 ```sh
 npm ci
-npm run install:global:pi-script-templates
+npm run install:global:pi-script-placeholders
 ```
 
 ## Usage
 
-Create `~/.pi/agent/script-templates/platform.mjs`:
+Create `~/.pi/agent/script-placeholders/platform.mjs`:
 
 ```js
 import { arch, platform } from "node:os";
@@ -77,8 +77,8 @@ Ordinary messages, `AGENTS.md`, skills, and extension commands are not expanded.
 
 Place scripts in either directory:
 
-- `~/.pi/agent/script-templates/` for all workspaces.
-- `.pi/script-templates/` for the current project, after project trust is granted.
+- `~/.pi/agent/script-placeholders/` for all workspaces.
+- `.pi/script-placeholders/` for the current project, after project trust is granted.
 
 Only direct `.js` and `.mjs` files are discovered. The filename without its extension becomes the placeholder name.
 Names are case-sensitive and may contain letters, digits, underscores, and hyphens. Use `{{platform}}`, not `{{ platform }}`.
@@ -91,11 +91,11 @@ If the selected scope contains both `name.js` and `name.mjs`, `{{name}}` is left
 
 Scripts run with Node.js in the active workspace directory, including global scripts. They inherit Pi's environment plus:
 
-| Variable                   | Value                            |
-| -------------------------- | -------------------------------- |
-| `PI_WORKSPACE_CWD`         | Active workspace directory.      |
-| `PI_SCRIPT_TEMPLATE_NAME`  | Placeholder name without braces. |
-| `PI_SCRIPT_TEMPLATE_SCOPE` | `global` or `project`.           |
+| Variable                      | Value                            |
+| ----------------------------- | -------------------------------- |
+| `PI_WORKSPACE_CWD`            | Active workspace directory.      |
+| `PI_SCRIPT_PLACEHOLDER_NAME`  | Placeholder name without braces. |
+| `PI_SCRIPT_PLACEHOLDER_SCOPE` | `global` or `project`.           |
 
 Write the replacement text to stdout and exit successfully. One final newline is removed; other whitespace is preserved.
 Empty output removes the placeholder. Stdin is closed and stderr is discarded.
@@ -114,7 +114,7 @@ Changes to files or environment variables do not automatically invalidate cached
 
 ## Configuration
 
-No configuration is required. To customize it, create `.pi/pi-script-templates.jsonc` in your project or `~/.pi/agent/pi-script-templates.jsonc` globally:
+No configuration is required. To customize it, create `.pi/pi-script-placeholders.jsonc` in your project or `~/.pi/agent/pi-script-placeholders.jsonc` globally:
 
 ```jsonc
 {
@@ -139,7 +139,7 @@ The example above uses the default values.
 - `execution.maxOutputChars`: maximum stdout length, measured in JavaScript string units, not bytes. Oversized output is rejected, not truncated.
 
 Both execution limits must be positive integers no greater than `2147483647`.
-Comments and trailing commas are supported. A trusted project's configuration replaces the global configuration completely; omitted settings use defaults.
+A trusted project's configuration replaces the global configuration completely; omitted settings use defaults.
 Global configuration and script paths follow Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
 Invalid or unreadable configuration disables the extension until `/reload`, with a warning rather than a fallback.

@@ -16,7 +16,7 @@ it("does not execute unused scripts or scripts while disabled", async () => {
   const workspace = await files.load();
 
   // Assert
-  expect(workspace.templates).toBeUndefined();
+  expect(workspace.placeholders).toBeUndefined();
   expect(await files.runs()).toBe("");
 });
 
@@ -29,6 +29,6 @@ it("keeps global-script results separate for different workspaces", async () => 
   const second = await getWorkspace(otherCwd, files.agentDir, true);
 
   // Act / Assert
-  expect(await first.templates?.expand("{{cwd}}")).toBe(files.cwd);
-  expect(await second.templates?.expand("{{cwd}}")).toBe(otherCwd);
+  expect(await first.placeholders?.expand("{{cwd}}")).toBe(files.cwd);
+  expect(await second.placeholders?.expand("{{cwd}}")).toBe(otherCwd);
 });

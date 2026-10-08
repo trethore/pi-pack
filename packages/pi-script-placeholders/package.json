@@ -1,12 +1,12 @@
 {
-  "name": "pi-script-templates",
+  "name": "pi-script-placeholders",
   "version": "0.0.1",
-  "description": "Replace placeholders in system prompts and prompt templates with cached script output.",
+  "description": "Replace {{name}} placeholders with cached script output in system prompts and prompt templates.",
   "dependencies": {
     "@pi-pack/shared": "0.1.0"
   },
   "files": [
-    "pi-script-templates.example.jsonc",
+    "pi-script-placeholders.example.jsonc",
     "src"
   ],
   "imports": {
@@ -16,11 +16,11 @@
   "keywords": [
     "pi-extension",
     "pi-package",
-    "templates"
+    "placeholders"
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.0.4"
+    "@earendil-works/pi-coding-agent": "^1.1.0"
   },
   "pi": {
     "extensions": [

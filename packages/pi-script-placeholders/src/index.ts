@@ -13,7 +13,7 @@ function currentWorkspace(ctx: ExtensionContext): Promise<Workspace> {
   return getWorkspace(ctx.cwd, getAgentDir(), ctx.isProjectTrusted());
 }
 
-export default function scriptTemplates(pi: ExtensionAPI): void {
+export default function scriptPlaceholders(pi: ExtensionAPI): void {
   pi.on(Events.SessionStart, async (event, ctx) => {
     if (event.reason === "reload") {
       clearWorkspaces();
@@ -23,17 +23,17 @@ export default function scriptTemplates(pi: ExtensionAPI): void {
 
   pi.on(Events.BeforeAgentStart, async (event, ctx) => {
     const workspace = await currentWorkspace(ctx);
-    const { config, templates } = workspace;
-    if (!config?.enabled || !templates) {
+    const { config, placeholders } = workspace;
+    if (!config?.enabled || !placeholders) {
       reportWarnings(workspace, ctx);
       return;
     }
     const options = event.systemPromptOptions;
     if (config.surfaces.system && options.customPrompt !== undefined) {
-      options.customPrompt = await templates.expand(options.customPrompt);
+      options.customPrompt = await placeholders.expand(options.customPrompt);
     }
     if (config.surfaces.appendSystem) {
-      options.appendSystemPrompt = await templates.expand(options.appendSystemPrompt);
+      options.appendSystemPrompt = await placeholders.expand(options.appendSystemPrompt);
     }
     reportWarnings(workspace, ctx);
   });
