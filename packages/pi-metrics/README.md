@@ -29,7 +29,7 @@ No configuration is required. To customize it, create `.pi/pi-metrics.jsonc` in 
 - `mode`: defaults to `"notify"`. Use `"live"` to show metrics above the editor instead.
 - `format`: controls the displayed text. The example above uses the default format.
 
-Comments and trailing commas are supported. The project configuration replaces the global configuration completely.
+The project configuration replaces the global configuration completely.
 The global path follows Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
 Run `/reload` after changing the configuration. Invalid configuration reports an error rather than falling back.

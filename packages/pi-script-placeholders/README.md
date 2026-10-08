@@ -139,7 +139,7 @@ The example above uses the default values.
 - `execution.maxOutputChars`: maximum stdout length, measured in JavaScript string units, not bytes. Oversized output is rejected, not truncated.
 
 Both execution limits must be positive integers no greater than `2147483647`.
-Comments and trailing commas are supported. A trusted project's configuration replaces the global configuration completely; omitted settings use defaults.
+A trusted project's configuration replaces the global configuration completely; omitted settings use defaults.
 Global configuration and script paths follow Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
 Invalid or unreadable configuration disables the extension until `/reload`, with a warning rather than a fallback.
