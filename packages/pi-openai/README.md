@@ -1,6 +1,6 @@
 # pi-openai
 
-Control verbosity, reasoning summaries, native web search, and service tiers for OpenAI-compatible requests in Pi. \
+Configure OpenAI-compatible request parameters. \
 **Default settings leave requests unchanged.**
 
 ## Installation

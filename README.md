@@ -10,7 +10,7 @@ Show per-turn token usage, speed, duration, and estimated cost through notificat
 
 ### [pi-openai](packages/pi-openai/README.md)
 
-Configure OpenAI-compatible request parameters with layered settings, environment variables, and runtime commands.
+Configure OpenAI-compatible request parameters via layered settings, environment variables, and commands.
 
 ### [pi-script-placeholders](packages/pi-script-placeholders/README.md)
 
