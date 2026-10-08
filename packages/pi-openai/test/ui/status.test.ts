@@ -208,7 +208,8 @@ it.each([
 
 it.each([
   { identity: { id: "gpt-6-astra" }, behavior: "Set service_tier to ultrafast" },
-  { identity: { id: "gpt-6.1-sol" }, behavior: "Skipped: Ultrafast support is unverified for this model" },
+  { identity: { id: "gpt-6.1-sol" }, behavior: "Set service_tier to ultrafast" },
+  { identity: { id: "gpt-6-sol" }, behavior: "Skipped: Ultrafast support is unverified for this model" },
   {
     identity: {
       id: "gpt-6-astra",

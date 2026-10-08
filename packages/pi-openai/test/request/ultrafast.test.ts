@@ -7,61 +7,58 @@ import { model, settings } from "#test/support";
 const astra = { ...model, id: "gpt-6-astra" };
 const ultrafast = settings({ serviceTier: ServiceTier.ULTRAFAST });
 
-it.each(["gpt-6-astra", "gpt-6-astra-2026-10-01"])("requests ultrafast for OpenAI %s", (id) => {
-  // Arrange
-  const requestModel = { ...astra, id };
-  const payload = Object.freeze({ model: id, input: [], service_tier: "priority" });
+it.each(["gpt-6-astra", "gpt-6-astra-2026-10-01", "gpt-6.1-sol", "gpt-6.1-sol-2026-10-01"])(
+  "requests ultrafast for OpenAI %s",
+  (id) => {
+    // Arrange
+    const requestModel = { ...astra, id };
+    const payload = Object.freeze({ model: id, input: [], service_tier: "priority" });
 
-  // Act
-  const result = transformPayload(payload, ultrafast, requestModel);
+    // Act
+    const result = transformPayload(payload, ultrafast, requestModel);
 
-  // Assert
-  expect(result).toEqual({ ...payload, service_tier: "ultrafast" });
-  expect(payload.service_tier).toBe("priority");
-  expect(featureDecision(Feature.SERVICE_TIER, ultrafast, requestModel)).toEqual({
-    apply: true,
-    description: "Set service_tier to ultrafast",
-  });
-  expect(transformPayload(result, ultrafast, requestModel)).toBeUndefined();
-});
+    // Assert
+    expect(result).toEqual({ ...payload, service_tier: "ultrafast" });
+    expect(payload.service_tier).toBe("priority");
+    expect(featureDecision(Feature.SERVICE_TIER, ultrafast, requestModel)).toEqual({
+      apply: true,
+      description: "Set service_tier to ultrafast",
+    });
+    expect(transformPayload(result, ultrafast, requestModel)).toBeUndefined();
+  },
+);
 
-it.each([
-  "gpt-5.5",
-  "gpt-5.6-luna",
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "gpt-6-luna",
-  "gpt-6-sol",
-  "gpt-6.1-sol",
-  "gpt-6.1-sol-2026-10-01",
-])("skips ultrafast for %s without changing its existing tier or blocking other settings", (id) => {
-  // Arrange
-  const requestModel = { ...model, id };
-  const payload = { model: id, input: [], service_tier: "auto" };
-  const active = {
-    ...ultrafast,
-    verbosity: Verbosity.LOW,
-    reasoningSummary: ReasoningSummary.AUTO,
-    webSearch: true,
-  } as const;
+it.each(["gpt-5.5", "gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-luna", "gpt-6-sol"])(
+  "skips ultrafast for %s without changing its existing tier or blocking other settings",
+  (id) => {
+    // Arrange
+    const requestModel = { ...model, id };
+    const payload = { model: id, input: [], service_tier: "auto" };
+    const active = {
+      ...ultrafast,
+      verbosity: Verbosity.LOW,
+      reasoningSummary: ReasoningSummary.AUTO,
+      webSearch: true,
+    } as const;
 
-  // Act
-  const result = transformPayload(payload, active, requestModel);
-  const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel);
+    // Act
+    const result = transformPayload(payload, active, requestModel);
+    const bypassed = transformPayload(payload, { ...active, allowUnsupported: true }, requestModel);
 
-  // Assert
-  expect(result).toEqual({
-    ...payload,
-    text: { verbosity: "low" },
-    reasoning: { summary: "auto" },
-    tools: [{ type: "web_search" }],
-  });
-  expect(featureDecision(Feature.SERVICE_TIER, active, requestModel)).toEqual({
-    apply: false,
-    description: "Skipped: Ultrafast support is unverified for this model",
-  });
-  expect(bypassed).toHaveProperty("service_tier", "ultrafast");
-});
+    // Assert
+    expect(result).toEqual({
+      ...payload,
+      text: { verbosity: "low" },
+      reasoning: { summary: "auto" },
+      tools: [{ type: "web_search" }],
+    });
+    expect(featureDecision(Feature.SERVICE_TIER, active, requestModel)).toEqual({
+      apply: false,
+      description: "Skipped: Ultrafast support is unverified for this model",
+    });
+    expect(bypassed).toHaveProperty("service_tier", "ultrafast");
+  },
+);
 
 it.each([
   { provider: "azure", api: "azure-openai-responses", baseUrl: "https://example.openai.azure.com" },
@@ -90,6 +87,8 @@ it.each([
 it.each([
   { id: "gpt-6-astra-preview" },
   { id: "gpt-6-astra-2026-10-01-extra" },
+  { id: "gpt-6.1-sol-preview" },
+  { id: "gpt-6.1-sol-2026-10-01-extra" },
   { id: "gpt-99" },
   { baseUrl: "https://gateway.example/v1" },
   { baseUrl: "https://api.openai.com.evil.example/v1" },

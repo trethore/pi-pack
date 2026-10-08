@@ -305,11 +305,11 @@ These tables describe **extension behavior, not guaranteed server acceptance**, 
 
 Summaries require a reasoning-capable model. Existing native search tools are preserved, not duplicated.
 
-| Responses provider | `serviceTier: priority`                                | `serviceTier: ultrafast` |
-| ------------------ | ------------------------------------------------------ | ------------------------ |
-| OpenAI             | Allowlisted models                                     | `gpt-6-astra` only       |
-| Azure              | `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-sol` | Skip                     |
-| GitHub Copilot     | Skip                                                   | Skip                     |
+| Responses provider | `serviceTier: priority`                                | `serviceTier: ultrafast`     |
+| ------------------ | ------------------------------------------------------ | ---------------------------- |
+| OpenAI             | Allowlisted models                                     | `gpt-6-astra`, `gpt-6.1-sol` |
+| Azure              | `gpt-5.5`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-sol` | Skip                         |
+| GitHub Copilot     | Skip                                                   | Skip                         |
 
 Active tiers set `service_tier` to the requested value. Chat Completions skips both tiers. OpenAI API-key and ChatGPT-subscription authentication use the same recognized provider/endpoint in Pi, but server-side capabilities can differ.
 

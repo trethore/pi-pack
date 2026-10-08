@@ -373,6 +373,8 @@ it.each([
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "fast" },
   { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6-astra" },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "ultrafast", id: "gpt-6-astra" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6.1-sol" },
+  { provider: "openai", apiKey: "chatgpt-access-token", tier: "ultrafast", id: "gpt-6.1-sol" },
   { provider: "azure", apiKey: "azure-test", tier: "priority" },
   { provider: "azure", apiKey: "azure-test", tier: "fast" },
 ])(
