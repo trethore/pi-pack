@@ -9,7 +9,7 @@ import type {
   SlashCommandInfo,
 } from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
-import scriptTemplates from "#src/index";
+import scriptPlaceholders from "#src/index";
 
 export function createHarness(cwd: string, commands: SlashCommandInfo[] = [], trusted = true) {
   const handlers = new Map<ExtensionEvent["type"], (event: never, ctx: ExtensionContext) => unknown>();
@@ -21,7 +21,7 @@ export function createHarness(cwd: string, commands: SlashCommandInfo[] = [], tr
     },
     getCommands: () => commands,
   } as unknown as ExtensionAPI;
-  scriptTemplates(pi);
+  scriptPlaceholders(pi);
   const emit = async (name: ExtensionEvent["type"], event: unknown = {}) => {
     const handler = handlers.get(name);
     if (!handler) {

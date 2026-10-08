@@ -1,16 +1,16 @@
 import { resolve } from "node:path";
-import { loadConfig, type ScriptTemplatesConfig } from "#src/config";
+import { loadConfig, type ScriptPlaceholdersConfig } from "#src/config";
 import { discoverScripts } from "#src/scripts/discovery";
-import { ScriptTemplates } from "#src/scripts/templates";
+import { ScriptPlaceholders } from "#src/scripts/placeholders";
 
 export interface Workspace {
-  config: ScriptTemplatesConfig | undefined;
-  templates: ScriptTemplates | undefined;
+  config: ScriptPlaceholdersConfig | undefined;
+  placeholders: ScriptPlaceholders | undefined;
   prompts: Map<string, Promise<string | undefined>>;
   warnings: string[];
 }
 
-const cacheKey = Symbol.for("pi-pack.pi-script-templates.workspaces.v1");
+const cacheKey = Symbol.for("pi-pack.pi-script-placeholders.workspaces.v1");
 const host: typeof globalThis & { [cacheKey]?: Map<string, Promise<Workspace>> } = globalThis;
 // Pi recreates extension modules when replacing workspace runtimes, not only on /reload.
 const workspaces = (host[cacheKey] ??= new Map<string, Promise<Workspace>>());
@@ -21,12 +21,12 @@ export function clearWorkspaces(): void {
 
 async function loadWorkspace(cwd: string, agentDir: string, projectTrusted: boolean): Promise<Workspace> {
   const warnings: string[] = [];
-  const warn = (message: string) => warnings.push(`pi-script-templates: ${message}`);
+  const warn = (message: string) => warnings.push(`pi-script-placeholders: ${message}`);
   const config = await loadConfig(cwd, agentDir, projectTrusted, warn);
   const scripts = config?.enabled ? await discoverScripts(cwd, agentDir, projectTrusted, warn) : undefined;
   return {
     config,
-    templates: scripts && config ? new ScriptTemplates(cwd, scripts, config.execution, warn) : undefined,
+    placeholders: scripts && config ? new ScriptPlaceholders(cwd, scripts, config.execution, warn) : undefined,
     prompts: new Map(),
     warnings,
   };

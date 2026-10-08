@@ -70,22 +70,22 @@ it.each([
 
   // Assert
   expect(workspace.config).toBeUndefined();
-  expect(workspace.templates).toBeUndefined();
+  expect(workspace.placeholders).toBeUndefined();
   expect(workspace.warnings).toEqual([
-    "pi-script-templates: Invalid project configuration; extension disabled until /reload.",
+    "pi-script-placeholders: Invalid project configuration; extension disabled until /reload.",
   ]);
 });
 
 it("reports an unreadable config without a filesystem error or full path", async () => {
   // Arrange
-  await mkdir(join(files.directory(Scope.PROJECT), "pi-script-templates.jsonc"));
+  await mkdir(join(files.directory(Scope.PROJECT), "pi-script-placeholders.jsonc"));
 
   // Act
   const { warnings } = await files.load();
 
   // Assert
   expect(warnings).toEqual([
-    "pi-script-templates: Could not read project configuration; extension disabled until /reload.",
+    "pi-script-placeholders: Could not read project configuration; extension disabled until /reload.",
   ]);
 });
 

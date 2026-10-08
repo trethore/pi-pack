@@ -13,12 +13,12 @@ it("prefers project scripts across extensions and warns without absolute paths",
   const workspace = await files.load();
 
   // Act
-  const output = await workspace.templates?.expand("{{platform}} {{platform}}");
+  const output = await workspace.placeholders?.expand("{{platform}} {{platform}}");
 
   // Assert
   expect(output).toBe("project project");
   expect(workspace.warnings).toEqual([
-    'pi-script-templates: "platform" exists globally and in the project; using the project script.',
+    'pi-script-placeholders: "platform" exists globally and in the project; using the project script.',
   ]);
   expect(await files.runs()).toBe("x");
 });
@@ -31,7 +31,7 @@ it("rejects ambiguous scripts in the winning scope without global fallback", asy
   const workspace = await files.load();
 
   // Act
-  const output = await workspace.templates?.expand("{{platform}} {{platform}}");
+  const output = await workspace.placeholders?.expand("{{platform}} {{platform}}");
 
   // Assert
   expect(output).toBe("{{platform}} {{platform}}");
@@ -48,7 +48,7 @@ it("does not let ambiguity in the overridden global scope block a project script
   const workspace = await files.load();
 
   // Act / Assert
-  expect(await workspace.templates?.expand("{{platform}}")).toBe("project");
+  expect(await workspace.placeholders?.expand("{{platform}}")).toBe("project");
   expect(workspace.warnings).toHaveLength(1);
 });
 
@@ -59,7 +59,7 @@ it("uses global scripts in untrusted projects without probing project scripts", 
   const workspace = await files.load(false);
 
   // Act / Assert
-  expect(await workspace.templates?.expand("{{platform}}")).toBe("global");
+  expect(await workspace.placeholders?.expand("{{platform}}")).toBe("global");
   expect(workspace.warnings).toEqual([]);
 });
 
@@ -67,19 +67,19 @@ it("supports script symlinks and ignores directories with script-like names", as
   // Arrange
   const target = join(files.root, "target.mjs");
   await writeFile(target, countingScript("linked"));
-  await symlink(target, join(files.directory(Scope.GLOBAL), "script-templates", "linked.mjs"));
-  await mkdir(join(files.directory(Scope.PROJECT), "script-templates", "linked.js"));
+  await symlink(target, join(files.directory(Scope.GLOBAL), "script-placeholders", "linked.mjs"));
+  await mkdir(join(files.directory(Scope.PROJECT), "script-placeholders", "linked.js"));
   const workspace = await files.load();
 
   // Act / Assert
-  expect(await workspace.templates?.expand("{{linked}}")).toBe("linked");
+  expect(await workspace.placeholders?.expand("{{linked}}")).toBe("linked");
   expect(workspace.warnings).toEqual([]);
 });
 
 it("treats absent script directories as empty and warns on unreadable ones", async () => {
   // Arrange
-  await rm(join(files.directory(Scope.PROJECT), "script-templates"), { recursive: true });
-  const globalDirectory = join(files.agentDir, "script-templates");
+  await rm(join(files.directory(Scope.PROJECT), "script-placeholders"), { recursive: true });
+  const globalDirectory = join(files.agentDir, "script-placeholders");
   await rm(globalDirectory, { recursive: true });
   await writeFile(globalDirectory, "not a directory");
 
@@ -87,5 +87,5 @@ it("treats absent script directories as empty and warns on unreadable ones", asy
   const workspace = await files.load();
 
   // Assert
-  expect(workspace.warnings).toEqual(["pi-script-templates: Could not read global script-templates directory."]);
+  expect(workspace.warnings).toEqual(["pi-script-placeholders: Could not read global script-placeholders directory."]);
 });

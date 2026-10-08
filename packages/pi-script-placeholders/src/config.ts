@@ -3,7 +3,7 @@ import { readOptionalFile } from "@pi-pack/shared/files";
 import { booleanOption, isObject } from "@pi-pack/shared/validation";
 import { Scope } from "#src/constants";
 
-export interface ScriptTemplatesConfig {
+export interface ScriptPlaceholdersConfig {
   enabled: boolean;
   surfaces: {
     system: boolean;
@@ -42,7 +42,7 @@ function warnUnknown(value: Record<string, unknown>, keys: string[], section: st
   }
 }
 
-function validate(value: Record<string, unknown>, warn: (message: string) => void): ScriptTemplatesConfig {
+function validate(value: Record<string, unknown>, warn: (message: string) => void): ScriptPlaceholdersConfig {
   const surfaces = objectOption(value.surfaces, "surfaces");
   const execution = objectOption(value.execution, "execution");
   warnUnknown(value, ["enabled", "surfaces", "execution"], "configuration", warn);
@@ -67,8 +67,8 @@ export async function loadConfig(
   agentDir: string,
   projectTrusted: boolean,
   warn: (message: string) => void,
-): Promise<ScriptTemplatesConfig | undefined> {
-  const paths = configPaths("pi-script-templates", cwd, agentDir);
+): Promise<ScriptPlaceholdersConfig | undefined> {
+  const paths = configPaths("pi-script-placeholders", cwd, agentDir);
   const scopes = projectTrusted ? [Scope.PROJECT, Scope.GLOBAL] : [Scope.GLOBAL];
   for (const scope of scopes) {
     let source: string | undefined;

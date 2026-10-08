@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import type { Scope } from "#src/constants";
-import type { ScriptTemplatesConfig } from "#src/config";
+import type { ScriptPlaceholdersConfig } from "#src/config";
 
 export interface Script {
   name: string;
@@ -13,7 +13,7 @@ type ExecutionResult = { ok: true; output: string } | { ok: false; reason: strin
 export function executeScript(
   script: Script,
   cwd: string,
-  limits: ScriptTemplatesConfig["execution"],
+  limits: ScriptPlaceholdersConfig["execution"],
 ): Promise<ExecutionResult> {
   return new Promise((resolve) => {
     const detached = process.platform !== "win32";
@@ -25,8 +25,8 @@ export function executeScript(
       env: {
         ...process.env,
         PI_WORKSPACE_CWD: cwd,
-        PI_SCRIPT_TEMPLATE_NAME: script.name,
-        PI_SCRIPT_TEMPLATE_SCOPE: script.scope,
+        PI_SCRIPT_PLACEHOLDER_NAME: script.name,
+        PI_SCRIPT_PLACEHOLDER_SCOPE: script.scope,
       },
     });
     let output = "";

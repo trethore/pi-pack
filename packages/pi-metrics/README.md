@@ -1,6 +1,6 @@
 # pi-metrics
 
-Show per-turn token usage, speed, duration, and estimated cost in Pi.
+Show per-turn token usage, speed, duration, and estimated cost.
 
 ## Installation
 

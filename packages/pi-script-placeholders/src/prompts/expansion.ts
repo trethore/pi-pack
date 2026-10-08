@@ -12,7 +12,9 @@ async function readPrompt(command: SlashCommandInfo, workspace: Workspace): Prom
     const source = await readFile(command.sourceInfo.path, "utf8");
     return parseFrontmatter(source).body;
   } catch {
-    workspace.warnings.push("pi-script-templates: Could not read a prompt template; leaving its invocation unchanged.");
+    workspace.warnings.push(
+      "pi-script-placeholders: Could not read a prompt template; leaving its invocation unchanged.",
+    );
     return undefined;
   }
 }
@@ -24,7 +26,7 @@ export async function expandPrompt(
   projectTrusted: boolean,
 ): Promise<string | undefined> {
   const invocation = /^\/([^\s]+)(?:\s+([\s\S]*))?$/.exec(text);
-  if (!invocation || !workspace.templates) {
+  if (!invocation || !workspace.placeholders) {
     return undefined;
   }
 
@@ -46,6 +48,6 @@ export async function expandPrompt(
   }
 
   const args = parseArguments(invocation[2] ?? "");
-  const templates = workspace.templates;
-  return expandArguments(body, args, (part) => templates.expand(part));
+  const placeholders = workspace.placeholders;
+  return expandArguments(body, args, (part) => placeholders.expand(part));
 }

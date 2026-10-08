@@ -12,9 +12,9 @@ Show per-turn token usage, speed, duration, and estimated cost through notificat
 
 Configure OpenAI-compatible request parameters with layered settings, environment variables, and runtime commands.
 
-### [pi-script-templates](packages/pi-script-templates/README.md)
+### [pi-script-placeholders](packages/pi-script-placeholders/README.md)
 
-Replace placeholders in system prompts and prompt templates with cached script output.
+Replace `{{name}}` placeholders with cached script output in system prompts and prompt templates.
 
 ### [pi-whimsical](packages/pi-whimsical/README.md)
 
