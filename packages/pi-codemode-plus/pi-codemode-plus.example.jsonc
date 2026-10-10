@@ -1,4 +1,5 @@
 {
   "enabled": true,
-  "prettyBash": true
+  "prettyBash": true,
+  "prettyRead": true
 }

@@ -8,6 +8,25 @@ interface BashOutput {
   full_output_path?: string;
 }
 
+interface FormatOptions {
+  prettyBash: boolean;
+  prettyRead: boolean;
+}
+
+interface ReadOutput {
+  path: string;
+  content: string;
+}
+
+function isReadOutput(value: unknown): value is ReadOutput {
+  return (
+    isObject(value) &&
+    Object.keys(value).every((key) => key === "path" || key === "content") &&
+    typeof value.path === "string" &&
+    typeof value.content === "string"
+  );
+}
+
 const bashKeys = new Set(["output", "truncated", "exit_code", "wall_time_seconds", "full_output_path"]);
 
 function hasValidStatus(value: Record<string, unknown>): boolean {
@@ -34,7 +53,14 @@ function isBashOutput(value: unknown): value is BashOutput {
   );
 }
 
-function formatSection(source: string): string {
+function formatBashOutput(value: BashOutput): string {
+  const separator = value.output === "" ? "" : value.output.endsWith("\n") ? "\n" : "\n\n";
+  const metadata = `Exit: ${value.exit_code} | Time: ${value.wall_time_seconds}s | Truncated: ${value.truncated ? "yes" : "no"}`;
+  const path = value.full_output_path === undefined ? "" : `\nFull output: ${value.full_output_path}`;
+  return `${value.output}${separator}${metadata}${path}`;
+}
+
+function formatSection(source: string, options: FormatOptions): string {
   const json = source.trim();
   if (!json.startsWith("{") || !json.endsWith("}")) {
     return source;
@@ -45,22 +71,27 @@ function formatSection(source: string): string {
   } catch {
     return source;
   }
-  if (!isBashOutput(value)) {
+  let formatted: string;
+  if (options.prettyBash && isBashOutput(value)) {
+    formatted = formatBashOutput(value);
+  } else if (options.prettyRead && isReadOutput(value)) {
+    formatted = `PATH:${value.path}\n\n${value.content}`;
+  } else {
     return source;
   }
 
-  const separator = value.output === "" ? "" : value.output.endsWith("\n") ? "\n" : "\n\n";
-  const metadata = `Exit: ${value.exit_code} | Time: ${value.wall_time_seconds}s | Truncated: ${value.truncated ? "yes" : "no"}`;
-  const path = value.full_output_path === undefined ? "" : `\nFull output: ${value.full_output_path}`;
   const start = source.indexOf(json);
-  return `${source.slice(0, start)}${value.output}${separator}${metadata}${path}${source.slice(start + json.length)}`;
+  return `${source.slice(0, start)}${formatted}${source.slice(start + json.length)}`;
 }
 
-export function formatBashOutput(source: string): string {
+export function formatCodemodeOutput(
+  source: string,
+  options: FormatOptions = { prettyBash: true, prettyRead: true },
+): string {
   // Console output and script errors are not text() results, even when they contain matching JSON.
   const boundary = source.search(/^(?:<console_output>|Script error:)\r?$/m);
   const output = boundary < 0 ? source : source.slice(0, boundary);
   const suffix = boundary < 0 ? "" : source.slice(boundary);
   const sections = output.split(/(^==> text [1-9]\d*\/[1-9]\d* <==\r?\n)/m);
-  return sections.map(formatSection).join("") + suffix;
+  return sections.map((section) => formatSection(section, options)).join("") + suffix;
 }

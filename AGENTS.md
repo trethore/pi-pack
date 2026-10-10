@@ -8,6 +8,7 @@ Here is an overview of the project:
 
 ```text
 packages/
+  pi-codemode-plus/
   pi-metrics/
   pi-openai/
   pi-script-placeholders/

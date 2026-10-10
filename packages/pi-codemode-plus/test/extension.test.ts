@@ -18,6 +18,8 @@ import codemodePlus from "#src/index";
 
 type ResultRenderer = NonNullable<ToolRenderers["renderResult"]>;
 const raw = '{"output":"hello\\nworld\\n","truncated":false,"exit_code":0,"wall_time_seconds":0.1}';
+const rawRead = JSON.stringify({ path: "src/example.ts", content: "file contents\n" });
+const prettyRead = "PATH:src/example.ts\n\nfile contents\n";
 const pretty = "hello\nworld\n\nExit: 0 | Time: 0.1s | Truncated: no";
 let directory: string;
 let project: string;
@@ -98,7 +100,7 @@ function resultFixture(): Parameters<ResultRenderer>[0] {
   return {
     content: [
       { type: "text", text: "Script completed\nWall time 0.1 seconds\nOutput:\n" },
-      { type: "text", text: `==> text 1/2 <==\nfile contents\n==> text 2/2 <==\n${raw}` },
+      { type: "text", text: `==> text 1/2 <==\n${rawRead}\n==> text 2/2 <==\n${raw}` },
       { type: "image", data: "image-data", mimeType: "image/png" },
     ],
     details: { calls: [], fullOutputPath: "/tmp/codemode-output.txt" },
@@ -127,7 +129,7 @@ describe("renderer integration", () => {
       ...original,
       content: [
         original.content[0],
-        { type: "text", text: `==> text 1/2 <==\nfile contents\n==> text 2/2 <==\n${pretty}` },
+        { type: "text", text: `==> text 1/2 <==\n${prettyRead}\n==> text 2/2 <==\n${pretty}` },
         original.content[2],
       ],
     });
@@ -160,9 +162,29 @@ describe("renderer integration", () => {
     expect(extension.resolve("codemode", callOnly)).toBe(callOnly);
   });
 
-  it.each(['{"enabled":false}', '{"prettyBash":false}'])("passes results through for %s", async (config) => {
+  it.each(['{"enabled":false}', '{"prettyBash":false,"prettyRead":false}'])(
+    "passes results through for %s",
+    async (config) => {
+      // Arrange
+      await configure(config);
+      const extension = harness();
+      await extension.start();
+      const result = resultFixture();
+
+      // Act
+      extension.render(result);
+
+      // Assert
+      expect(extension.renderResult.mock.calls[0]?.[0]).toBe(result);
+    },
+  );
+
+  it.each([
+    { prettyBash: false, prettyRead: true },
+    { prettyBash: true, prettyRead: false },
+  ])("applies independent formatter settings: %j", async (settings) => {
     // Arrange
-    await configure(config);
+    await configure(JSON.stringify(settings));
     const extension = harness();
     await extension.start();
     const result = resultFixture();
@@ -171,7 +193,10 @@ describe("renderer integration", () => {
     extension.render(result);
 
     // Assert
-    expect(extension.renderResult.mock.calls[0]?.[0]).toBe(result);
+    expect(extension.renderResult.mock.calls[0]?.[0].content[1]).toEqual({
+      type: "text",
+      text: `==> text 1/2 <==\n${settings.prettyRead ? prettyRead : rawRead}\n==> text 2/2 <==\n${settings.prettyBash ? pretty : raw}`,
+    });
   });
 
   it("passes results through before config loads and during partial rendering", async () => {
@@ -224,29 +249,33 @@ describe("renderer integration", () => {
     expect(inputs[2]).not.toBe(result);
   });
 
-  it("disables formatting if a configuration reload fails", async () => {
+  it.each(["prettyBash", "prettyRead"])("disables formatting if %s fails validation on reload", async (option) => {
     // Arrange
     const extension = harness();
     await extension.start();
-    await configure('{"prettyBash":null}');
+    await configure(JSON.stringify({ [option]: null }));
     const result = resultFixture();
 
     // Act / Assert
-    await expect(extension.start()).rejects.toThrow("prettyBash must be a boolean");
+    await expect(extension.start()).rejects.toThrow(`${option} must be a boolean`);
     extension.render(result);
     expect(extension.renderResult.mock.calls[0]?.[0]).toBe(result);
   });
 });
 
 describe("JSONC configuration", () => {
-  it("defaults both options to true", async () => {
+  it("defaults all options to true", async () => {
     // Act / Assert
-    await expect(loadConfig(project, { projectTrusted: true })).resolves.toEqual({ enabled: true, prettyBash: true });
+    await expect(loadConfig(project, { projectTrusted: true })).resolves.toEqual({
+      enabled: true,
+      prettyBash: true,
+      prettyRead: true,
+    });
   });
 
   it("reads global JSONC and uses project configuration without merging", async () => {
     // Arrange
-    await configure('{ // global\n "enabled": false, "prettyBash": false, }', true);
+    await configure('{ // global\n "enabled": false, "prettyBash": false, "prettyRead": false, }', true);
 
     // Act
     const global = await loadConfig(project, { projectTrusted: true });
@@ -254,13 +283,14 @@ describe("JSONC configuration", () => {
     const local = await loadConfig(project, { projectTrusted: true });
 
     // Assert
-    expect(global).toEqual({ enabled: false, prettyBash: false });
-    expect(local).toEqual({ enabled: true, prettyBash: false });
+    expect(global).toEqual({ enabled: false, prettyBash: false, prettyRead: false });
+    expect(local).toEqual({ enabled: true, prettyBash: false, prettyRead: true });
   });
 
   it.each([
     ['{"enabled":"yes"}', "enabled must be a boolean"],
     ['{"prettyBash":1}', "prettyBash must be a boolean"],
+    ['{"prettyRead":null}', "prettyRead must be a boolean"],
     ["{", "invalid configuration"],
   ])("rejects invalid configuration %s", async (source, message) => {
     // Arrange
@@ -272,7 +302,7 @@ describe("JSONC configuration", () => {
 
   it("warns about unknown keys while applying known settings", async () => {
     // Arrange
-    await configure('{"prettyBash":false,"prettybash":true}');
+    await configure('{"prettyBash":false,"prettyRead":false,"prettybash":true}');
     const extension = harness();
 
     // Act
@@ -328,7 +358,12 @@ it("loads through Pi's TypeScript extension loader", async () => {
   expect(extensions.extensions.some((extension) => extension.toolRenderers?.length === 1)).toBe(true);
 });
 
-it.each([false, true])("works with Pi's actual codemode renderer when expanded=%s", async (expanded) => {
+it.each([
+  { expanded: false, raw, pretty },
+  { expanded: true, raw, pretty },
+  { expanded: false, raw: rawRead, pretty: prettyRead },
+  { expanded: true, raw: rawRead, pretty: prettyRead },
+])("works with Pi's actual codemode renderer: %j", async ({ expanded, raw: source, pretty: expected }) => {
   // Arrange
   let baseline: ToolRenderers | undefined;
   await createCodemodeExtension()({
@@ -348,7 +383,7 @@ it.each([false, true])("works with Pi's actual codemode renderer when expanded=%
   const result = {
     content: [
       { type: "text" as const, text: "Script completed\nWall time 0.1 seconds\nOutput:\n" },
-      { type: "text" as const, text: raw },
+      { type: "text" as const, text: source },
     ],
     details: { calls: [] },
   };
@@ -360,8 +395,8 @@ it.each([false, true])("works with Pi's actual codemode renderer when expanded=%
   const lines = component.render(120).map((line) => line.trimEnd());
 
   // Assert
-  expect(lines.join("\n")).toContain(pretty);
+  expect(lines.join("\n")).toContain(expected.trimEnd());
   expect(lines.join("\n")).not.toContain("Script completed");
   expect(lines.join("\n")).not.toContain('"output":');
-  expect(result.content[1]?.text).toBe(raw);
+  expect(result.content[1]?.text).toBe(source);
 });

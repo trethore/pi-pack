@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBashOutput } from "#src/format";
+import { formatCodemodeOutput } from "#src/format";
 
 const bash = { output: "hello\nworld\n", truncated: false, exit_code: 0, wall_time_seconds: 0.1 };
 const formatted = "hello\nworld\n\nExit: 0 | Time: 0.1s | Truncated: no";
@@ -7,7 +7,7 @@ const formatted = "hello\nworld\n\nExit: 0 | Time: 0.1s | Truncated: no";
 describe("Bash-shaped output", () => {
   it("renders output followed by metadata", () => {
     // Act
-    const result = formatBashOutput(JSON.stringify(bash));
+    const result = formatCodemodeOutput(JSON.stringify(bash));
 
     // Assert
     expect(result).toBe(formatted);
@@ -28,7 +28,7 @@ describe("Bash-shaped output", () => {
     );
 
     // Act
-    const result = formatBashOutput(source);
+    const result = formatCodemodeOutput(source);
 
     // Assert
     expect(result).toBe("failed\n\nExit: 2 | Time: 1s | Truncated: yes\nFull output: /tmp/full-output.txt");
@@ -44,7 +44,7 @@ describe("Bash-shaped output", () => {
     const source = JSON.stringify({ ...bash, output, wall_time_seconds: 0 });
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(expected);
+    expect(formatCodemodeOutput(source)).toBe(expected);
   });
 
   it("preserves whitespace around the serialized result", () => {
@@ -52,7 +52,7 @@ describe("Bash-shaped output", () => {
     const source = ` \n${JSON.stringify(bash)}\n\n`;
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(` \n${formatted}\n\n`);
+    expect(formatCodemodeOutput(source)).toBe(` \n${formatted}\n\n`);
   });
 
   it("shows a supplied full output path even when truncated is false", () => {
@@ -60,7 +60,7 @@ describe("Bash-shaped output", () => {
     const source = JSON.stringify({ ...bash, full_output_path: "/tmp/output" });
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(`${formatted}\nFull output: /tmp/output`);
+    expect(formatCodemodeOutput(source)).toBe(`${formatted}\nFull output: /tmp/output`);
   });
 });
 
@@ -86,7 +86,7 @@ describe("conservative recognition", () => {
     const source = JSON.stringify({ ...bash, ...overrides });
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(source);
+    expect(formatCodemodeOutput(source)).toBe(source);
   });
 
   it.each([
@@ -106,7 +106,7 @@ describe("conservative recognition", () => {
     JSON.stringify(bash).replace('"exit_code":0', '"exit_code":1e400'),
   ])("preserves other text or incomplete JSON: %s", (source) => {
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(source);
+    expect(formatCodemodeOutput(source)).toBe(source);
   });
 });
 
@@ -116,7 +116,7 @@ describe("codemode output sections", () => {
     const source = `==> text 1/3 <==\nfile contents\n==> text 2/3 <==\n${JSON.stringify(bash)}\n==> text 3/3 <==\n{"written":true}`;
 
     // Act
-    const result = formatBashOutput(source);
+    const result = formatCodemodeOutput(source);
 
     // Assert
     expect(result).toBe(
@@ -129,7 +129,7 @@ describe("codemode output sections", () => {
     const source = `==> text 1/2 <==\n${JSON.stringify(bash)}\n==> text 2/2 <==\n${JSON.stringify(bash)}`;
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(`==> text 1/2 <==\n${formatted}\n==> text 2/2 <==\n${formatted}`);
+    expect(formatCodemodeOutput(source)).toBe(`==> text 1/2 <==\n${formatted}\n==> text 2/2 <==\n${formatted}`);
   });
 
   it.each([`<console_output>\n${JSON.stringify(bash)}\n</console_output>`, "Script error:\nError: command failed"])(
@@ -139,8 +139,8 @@ describe("codemode output sections", () => {
       const source = `==> text 1/2 <==\nfirst\n==> text 2/2 <==\n${JSON.stringify(bash)}\n${suffix}`;
 
       // Act / Assert
-      expect(formatBashOutput(source)).toBe(`==> text 1/2 <==\nfirst\n==> text 2/2 <==\n${formatted}\n${suffix}`);
-      expect(formatBashOutput(suffix)).toBe(suffix);
+      expect(formatCodemodeOutput(source)).toBe(`==> text 1/2 <==\nfirst\n==> text 2/2 <==\n${formatted}\n${suffix}`);
+      expect(formatCodemodeOutput(suffix)).toBe(suffix);
     },
   );
 
@@ -150,7 +150,7 @@ describe("codemode output sections", () => {
     const source = JSON.stringify({ ...bash, output });
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(`${output}\n\nExit: 0 | Time: 0.1s | Truncated: no`);
+    expect(formatCodemodeOutput(source)).toBe(`${output}\n\nExit: 0 | Time: 0.1s | Truncated: no`);
   });
 
   it("keeps a truncated JSON section and its notice unchanged", () => {
@@ -158,7 +158,7 @@ describe("codemode output sections", () => {
     const source = `==> text 1/2 <==\n${JSON.stringify(bash)}\n==> text 2/2 <==\n{"output":"cut\n[Full output: /tmp/codemode-output.txt]`;
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(
+    expect(formatCodemodeOutput(source)).toBe(
       `==> text 1/2 <==\n${formatted}\n==> text 2/2 <==\n{"output":"cut\n[Full output: /tmp/codemode-output.txt]`,
     );
   });
@@ -168,6 +168,75 @@ describe("codemode output sections", () => {
     const source = `==> text 1/2 <==\r\nfirst\r\n==> text 2/2 <==\r\n${JSON.stringify(bash)}\r\n`;
 
     // Act / Assert
-    expect(formatBashOutput(source)).toBe(`==> text 1/2 <==\r\nfirst\r\n==> text 2/2 <==\r\n${formatted}\r\n`);
+    expect(formatCodemodeOutput(source)).toBe(`==> text 1/2 <==\r\nfirst\r\n==> text 2/2 <==\r\n${formatted}\r\n`);
+  });
+});
+
+describe("Read-shaped output", () => {
+  it.each(["", "hello", "  hello\tworld\r\n\n"])("preserves file contents %j", (content) => {
+    // Arrange
+    const source = JSON.stringify({ path: "src/example.ts", content });
+
+    // Act / Assert
+    expect(formatCodemodeOutput(source)).toBe(`PATH:src/example.ts\n\n${content}`);
+  });
+
+  it("accepts reordered, indented JSON and preserves surrounding whitespace", () => {
+    // Arrange
+    const source = ` \n${JSON.stringify({ content: "hello", path: "file name.txt" }, null, 2)}\r\n`;
+
+    // Act / Assert
+    expect(formatCodemodeOutput(source)).toBe(" \nPATH:file name.txt\n\nhello\r\n");
+  });
+
+  it.each([
+    { path: undefined },
+    { path: null },
+    { path: 42 },
+    { content: undefined },
+    { content: null },
+    { content: 42 },
+    { content: { type: "image", data: "data", mimeType: "image/png", note: "" } },
+    { unexpected: true },
+  ])("leaves mismatched wrappers unchanged: %j", (overrides) => {
+    // Arrange
+    const source = JSON.stringify({ path: "file.txt", content: "hello", ...overrides });
+
+    // Act / Assert
+    expect(formatCodemodeOutput(source)).toBe(source);
+  });
+
+  it.each([
+    '{"path":"file.txt","content":"cut',
+    'prefix {"path":"file.txt","content":"hello"}',
+    '[{"path":"file.txt","content":"hello"}]',
+  ])("preserves incomplete or embedded wrappers: %s", (source) => {
+    // Act / Assert
+    expect(formatCodemodeOutput(source)).toBe(source);
+  });
+
+  it.each(["<console_output>", "Script error:"])("preserves the trailing %s section", (marker) => {
+    // Arrange
+    const raw = JSON.stringify({ path: "file.txt", content: "hello" });
+    const suffix = `${marker}\n${raw}`;
+    const source = `==> text 1/2 <==\r\n${raw}\r\n==> text 2/2 <==\r\n${raw}\r\n${suffix}`;
+
+    // Act / Assert
+    expect(formatCodemodeOutput(source)).toBe(
+      `==> text 1/2 <==\r\nPATH:file.txt\n\nhello\r\n==> text 2/2 <==\r\nPATH:file.txt\n\nhello\r\n${suffix}`,
+    );
+    expect(formatCodemodeOutput(suffix)).toBe(suffix);
+  });
+
+  it("does not reinterpret JSON or output markers inside file contents or Bash output", () => {
+    // Arrange
+    const content = `==> text 1/2 <==\n${JSON.stringify(bash)}\n<console_output>\nScript error:`;
+    const read = JSON.stringify({ path: "file.txt", content });
+    const source = `==> text 1/2 <==\n${read}\n==> text 2/2 <==\n${JSON.stringify({ ...bash, output: read })}`;
+
+    // Act / Assert
+    expect(formatCodemodeOutput(source)).toBe(
+      `==> text 1/2 <==\nPATH:file.txt\n\n${content}\n==> text 2/2 <==\n${read}\n\nExit: 0 | Time: 0.1s | Truncated: no`,
+    );
   });
 });
