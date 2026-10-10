@@ -3,16 +3,33 @@ import { readOptionalFile } from "@pi-pack/shared/files";
 import { booleanOption, isObject } from "@pi-pack/shared/validation";
 import { Scope } from "#src/constants";
 
+const ConfigKey = {
+  Enabled: "enabled",
+  Surfaces: "surfaces",
+  Execution: "execution",
+} as const;
+
+const SurfaceKey = {
+  System: "system",
+  AppendSystem: "appendSystem",
+  PromptTemplates: "promptTemplates",
+} as const;
+
+const ExecutionKey = {
+  TimeoutMs: "timeoutMs",
+  MaxOutputChars: "maxOutputChars",
+} as const;
+
 export interface ScriptPlaceholdersConfig {
-  enabled: boolean;
-  surfaces: {
-    system: boolean;
-    appendSystem: boolean;
-    promptTemplates: boolean;
+  [ConfigKey.Enabled]: boolean;
+  [ConfigKey.Surfaces]: {
+    [SurfaceKey.System]: boolean;
+    [SurfaceKey.AppendSystem]: boolean;
+    [SurfaceKey.PromptTemplates]: boolean;
   };
-  execution: {
-    timeoutMs: number;
-    maxOutputChars: number;
+  [ConfigKey.Execution]: {
+    [ExecutionKey.TimeoutMs]: number;
+    [ExecutionKey.MaxOutputChars]: number;
   };
 }
 
@@ -43,21 +60,41 @@ function warnUnknown(value: Record<string, unknown>, keys: string[], section: st
 }
 
 function validate(value: Record<string, unknown>, warn: (message: string) => void): ScriptPlaceholdersConfig {
-  const surfaces = objectOption(value.surfaces, "surfaces");
-  const execution = objectOption(value.execution, "execution");
-  warnUnknown(value, ["enabled", "surfaces", "execution"], "configuration", warn);
-  warnUnknown(surfaces, ["system", "appendSystem", "promptTemplates"], "surfaces", warn);
-  warnUnknown(execution, ["timeoutMs", "maxOutputChars"], "execution", warn);
+  const surfaces = objectOption(value[ConfigKey.Surfaces], ConfigKey.Surfaces);
+  const execution = objectOption(value[ConfigKey.Execution], ConfigKey.Execution);
+  warnUnknown(value, Object.values(ConfigKey), "configuration", warn);
+  warnUnknown(surfaces, Object.values(SurfaceKey), ConfigKey.Surfaces, warn);
+  warnUnknown(execution, Object.values(ExecutionKey), ConfigKey.Execution, warn);
   return {
-    enabled: booleanOption(value.enabled, "enabled", true),
-    surfaces: {
-      system: booleanOption(surfaces.system, "surfaces.system", true),
-      appendSystem: booleanOption(surfaces.appendSystem, "surfaces.appendSystem", true),
-      promptTemplates: booleanOption(surfaces.promptTemplates, "surfaces.promptTemplates", true),
+    [ConfigKey.Enabled]: booleanOption(value[ConfigKey.Enabled], ConfigKey.Enabled, true),
+    [ConfigKey.Surfaces]: {
+      [SurfaceKey.System]: booleanOption(
+        surfaces[SurfaceKey.System],
+        `${ConfigKey.Surfaces}.${SurfaceKey.System}`,
+        true,
+      ),
+      [SurfaceKey.AppendSystem]: booleanOption(
+        surfaces[SurfaceKey.AppendSystem],
+        `${ConfigKey.Surfaces}.${SurfaceKey.AppendSystem}`,
+        true,
+      ),
+      [SurfaceKey.PromptTemplates]: booleanOption(
+        surfaces[SurfaceKey.PromptTemplates],
+        `${ConfigKey.Surfaces}.${SurfaceKey.PromptTemplates}`,
+        true,
+      ),
     },
-    execution: {
-      timeoutMs: positiveInteger(execution.timeoutMs, "execution.timeoutMs", 3000),
-      maxOutputChars: positiveInteger(execution.maxOutputChars, "execution.maxOutputChars", 1000),
+    [ConfigKey.Execution]: {
+      [ExecutionKey.TimeoutMs]: positiveInteger(
+        execution[ExecutionKey.TimeoutMs],
+        `${ConfigKey.Execution}.${ExecutionKey.TimeoutMs}`,
+        3000,
+      ),
+      [ExecutionKey.MaxOutputChars]: positiveInteger(
+        execution[ExecutionKey.MaxOutputChars],
+        `${ConfigKey.Execution}.${ExecutionKey.MaxOutputChars}`,
+        1000,
+      ),
     },
   };
 }

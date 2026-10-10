@@ -31,6 +31,23 @@ it("reads global JSONC and applies defaults within partial sections", async () =
   expect(config?.execution).toEqual({ timeoutMs: 500, maxOutputChars: 1000 });
 });
 
+it("accepts every known key without warnings", async () => {
+  // Arrange
+  const expected = {
+    enabled: false,
+    surfaces: { system: false, appendSystem: false, promptTemplates: false },
+    execution: { timeoutMs: 500, maxOutputChars: 200 },
+  };
+  await files.configure(expected);
+
+  // Act
+  const { config, warnings } = await files.load();
+
+  // Assert
+  expect(config).toEqual(expected);
+  expect(warnings).toEqual([]);
+});
+
 it("uses the project configuration rather than merging global values", async () => {
   // Arrange
   await files.configure({ enabled: false, execution: { timeoutMs: 12 } }, Scope.GLOBAL);
@@ -98,7 +115,11 @@ it("warns about unknown keys without echoing arbitrary configuration contents", 
 
   // Assert
   expect(workspace.config?.enabled).toBe(true);
-  expect(workspace.warnings).toHaveLength(3);
+  expect(workspace.warnings).toEqual([
+    "pi-script-placeholders: project configuration: Unknown entries in configuration.",
+    "pi-script-placeholders: project configuration: Unknown entries in surfaces.",
+    "pi-script-placeholders: project configuration: Unknown entries in execution.",
+  ]);
   expect(workspace.warnings.join("\n")).not.toContain(files.root);
 });
 
