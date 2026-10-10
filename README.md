@@ -4,6 +4,10 @@ Monorepo for the pi extensions I develop.
 
 ## Extensions
 
+### [pi-codemode-plus](packages/pi-codemode-plus/README.md)
+
+Opinionated enhancements to Pi's built-in codemode.
+
 ### [pi-metrics](packages/pi-metrics/README.md)
 
 Show per-turn token usage, speed, duration, and estimated cost through notifications or live updates.
