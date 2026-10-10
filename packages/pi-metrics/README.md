@@ -21,12 +21,15 @@ No configuration is required. To customize it, create `.pi/pi-metrics.jsonc` in 
 {
   "enabled": true,
   "mode": "notify",
+  "liveColor": "accent",
   "format": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
 }
 ```
 
 - `enabled`: defaults to `true`. Set to `false` to disable metrics.
 - `mode`: defaults to `"notify"`. Use `"live"` to show metrics above the editor instead.
+- `liveColor`: defaults to `"accent"`, which follows the current theme's accent color.
+  Override it with a six-digit hex color such as `"#aabbcc"` or `"#AABBCC"`. Applies only to `"live"` mode; notifications are unchanged because their colors are already managed by the theme.
 - `format`: controls the displayed text. The example above uses the default format.
 
 The project configuration replaces the global configuration completely.

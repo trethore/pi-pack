@@ -36,7 +36,9 @@ export default function metrics(pi: ExtensionAPI): void {
         return;
       }
       const text = turn.render();
-      context.ui.setWidget(EXTENSION_NAME, () => createMetricsWidget(text), { placement: "aboveEditor" });
+      context.ui.setWidget(EXTENSION_NAME, (_tui, theme) => createMetricsWidget(text, theme, config.liveColor), {
+        placement: "aboveEditor",
+      });
       widgetVisible = true;
     }
 

@@ -12,7 +12,9 @@ import {
   type ExtensionContext,
   type ExtensionUIContext,
   type MessageEndEvent,
+  type Theme,
 } from "@earendil-works/pi-coding-agent";
+import { parseColor } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { loadConfig } from "#src/config";
 import metrics from "#src/index";
@@ -70,11 +72,15 @@ function assistant(input = 100, output = 20): { type: typeof Events.MessageEnd; 
 
 type WidgetFactory = Exclude<Parameters<ExtensionUIContext["setWidget"]>[1], undefined>;
 
-function renderWidget(factory: WidgetFactory | undefined, width = 80): string[] {
+function renderWidget(
+  factory: WidgetFactory | undefined,
+  width = 80,
+  theme: Pick<Theme, "style"> = { style: (text) => text },
+): string[] {
   if (!factory) {
     throw new Error("Missing metrics widget");
   }
-  const component = factory({} as Parameters<WidgetFactory>[0], {} as Parameters<WidgetFactory>[1]);
+  const component = factory({} as Parameters<WidgetFactory>[0], theme as Theme);
   return component.render(width);
 }
 
@@ -129,6 +135,7 @@ it("provides all defaults without a config file", async () => {
   expect(config).toEqual({
     enabled: true,
     mode: "notify",
+    liveColor: "accent",
     format: "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
   });
 });
@@ -143,9 +150,10 @@ it("accepts global JSONC and lets project configuration replace it", async () =>
   const project = await loadConfig(cwd, { projectTrusted: true, agentDir });
 
   // Assert
-  expect(global).toEqual({ enabled: true, mode: "live", format: "<cost>" });
+  expect(global).toEqual({ enabled: true, mode: "live", format: "<cost>", liveColor: "accent" });
   expect(project).toMatchObject({ enabled: false, mode: "notify" });
   expect(project.format).toContain("<tokps>");
+  expect(project.liveColor).toBe("accent");
 });
 
 it.each([
@@ -160,6 +168,69 @@ it.each([
 
   // Act / Assert
   await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(reason);
+});
+
+it.each(["accent", "#abcdef", "#ABCDEF", "#aBcDeF", "#000000", "#FFFFFF"])(
+  "accepts liveColor %s without warnings",
+  async (liveColor) => {
+    // Arrange
+    await configure({ liveColor });
+    const onWarning = vi.fn();
+
+    // Act
+    const config = await loadConfig(cwd, { projectTrusted: true, agentDir, onWarning });
+
+    // Assert
+    expect(config.liveColor).toBe(liveColor);
+    expect(onWarning).not.toHaveBeenCalled();
+  },
+);
+
+it.each([null, false, 123456, "", "red", "#abc", "#12345678", "123456", "#gggggg", " #abcdef", "#abcdef\n"])(
+  "rejects invalid liveColor %j",
+  async (liveColor) => {
+    // Arrange
+    await configure({ liveColor });
+
+    // Act / Assert
+    await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
+      'liveColor must be "accent" or a hex color in #rrggbb format',
+    );
+  },
+);
+
+it.each([undefined, "accent", "#abcdef", "#ABCDEF"])("applies liveColor %s to the live widget", async (liveColor) => {
+  // Arrange
+  await configure({ mode: "live", format: "metrics", liveColor });
+  const extension = harness();
+  const style = vi.fn<Theme["style"]>((text) => `\u001b[36m${text}\u001b[39m`);
+  await extension.emit(Events.SessionStart);
+
+  // Act
+  await extension.emit(Events.AgentStart);
+  const lines = renderWidget(extension.setWidget.mock.lastCall?.[1], 10, { style });
+
+  // Assert
+  expect(style).toHaveBeenCalledWith("metrics", {
+    fg: !liveColor || liveColor === "accent" ? "accent" : parseColor(liveColor),
+  });
+  expect(lines).toEqual(["   \u001b[36mmetrics\u001b[39m"]);
+  expect(extension.notify).not.toHaveBeenCalled();
+});
+
+it("does not apply liveColor to notifications", async () => {
+  // Arrange
+  await configure({ liveColor: "#abcdef", format: "metrics" });
+  const extension = harness();
+  await extension.emit(Events.SessionStart);
+
+  // Act
+  await extension.emit(Events.AgentStart);
+  await extension.emit(Events.AgentSettled);
+
+  // Assert
+  expect(extension.notify).toHaveBeenCalledExactlyOnceWith("metrics", "info");
+  expect(extension.setWidget).not.toHaveBeenCalled();
 });
 
 it("notifies only when control returns to the user, with uncached tokens and full cost", async () => {
