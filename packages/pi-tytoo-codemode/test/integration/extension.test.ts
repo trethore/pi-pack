@@ -8,7 +8,7 @@ import { expect, it } from "vitest";
 
 const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
 
-it("loads TypeScript directly and replaces builtin codemode through Pi's public loader", async () => {
+it.each([true, false])("loads the package with builtin codemode enabled: %s", async (builtinEnabled) => {
   // Arrange
   const root = await mkdtemp(join(tmpdir(), "tytoo-loader-"));
   const agentDir = join(root, "agent");
@@ -16,13 +16,15 @@ it("loads TypeScript directly and replaces builtin codemode through Pi's public 
   const loader = new DefaultResourceLoader({
     cwd: root,
     agentDir,
-    settingsManager: SettingsManager.inMemory(),
+    settingsManager: SettingsManager.inMemory({
+      packages: [packageRoot],
+      extensions: builtinEnabled ? [] : ["-builtin:codemode"],
+    }),
     noSkills: true,
     noThemes: true,
     noPromptTemplates: true,
     noContextFiles: true,
     extensionFactories: [{ name: "codemode", factory: createCodemodeExtension(), builtin: true, replaceable: true }],
-    additionalExtensionPaths: [join(packageRoot, "src/index.ts")],
   });
   try {
     // Act
@@ -33,6 +35,9 @@ it("loads TypeScript directly and replaces builtin codemode through Pi's public 
 
     // Assert
     expect(loaded.errors).toEqual([]);
+    expect(loaded.warnings ?? []).toEqual(
+      builtinEnabled ? [{ path: "builtin:codemode", warning: expect.stringContaining("was not loaded") }] : [],
+    );
     expect(owners).toHaveLength(1);
     const definition = owners[0]?.tools.get("codemode")?.definition;
     if (!definition) {
