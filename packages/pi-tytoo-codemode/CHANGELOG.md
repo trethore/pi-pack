@@ -6,6 +6,8 @@
 
 ### Added
 
+- Add `upstream/CHANGES.md` to track intentional local changes from upstream.
+
 - Regression coverage for sandbox protocol validation, worker lifecycle failures, memory limits, WASI output accounting, prelude diagnostics, image parsing, output limits, and tool-name suggestions.
 - Regression coverage for declaration ordering, schema rendering, and tool guideline formatting.
 - Regression tests for the sandbox prelude bundle, external worker dependencies, and source map.

@@ -61,14 +61,9 @@ export function createRenderers(): Pick<
 }
 
 function renderCall(args: CodemodeToolInput, theme: Theme, context: { expanded: boolean }): Component {
-  const component = new Container();
-  component.addChild(new Text(theme.fg("toolTitle", theme.bold("codemode")), 0, 0));
-
   const source = typeof args.code === "string" ? args.code : "[invalid code]";
   const code = highlightCode(source.replace(/\t/g, "    "), "javascript").join("\n");
-  component.addChild(context.expanded ? new Text(code, 0, 0) : preview(code, CODE_PREVIEW_LINES, theme));
-
-  return component;
+  return context.expanded ? new Text(code, 0, 0) : preview(code, CODE_PREVIEW_LINES, theme);
 }
 
 function renderResult(

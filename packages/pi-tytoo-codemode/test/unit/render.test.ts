@@ -62,6 +62,8 @@ describe("renderer display limits", () => {
     const rendered = stripVTControlCharacters(component.render(120).join("\n"));
 
     // Assert
+    expect(rendered.split("\n")[0]?.trimEnd()).toBe(lines[0]);
+    expect(rendered).not.toContain("codemode");
     expect(rendered).toContain("line-09");
     expect(rendered.includes("line-10")).toBe(expanded);
     expect(rendered.includes("line-11")).toBe(expanded);
