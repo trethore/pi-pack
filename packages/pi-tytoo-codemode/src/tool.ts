@@ -323,7 +323,7 @@ export function createCodemodeToolDefinition(
     // The sandbox (worker, QuickJS wasm) loads on the first call, not at startup.
     execute: async (toolCallId, params, signal, onUpdate, ctx) =>
       executeCodemode(toolCallId, params, signal, onUpdate, ctx, options),
-    ...createRenderers(),
+    ...createRenderers(options.getPrettyResults),
   };
 }
 

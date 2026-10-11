@@ -15,6 +15,7 @@ export type CodemodeModelRuntime = Pick<
 >;
 
 export interface CodemodeToolOptions {
+  getPrettyResults?: () => boolean;
   /** Namespace of a tool, for `searchTools()` ranking and its `namespace` filter. */
   getToolNamespace?: (toolName: string) => ToolNamespace | undefined;
   /** Prompt guidelines of every tool, by tool name, shown with declarations by `describeTool()` and `ALL_TOOLS`. */

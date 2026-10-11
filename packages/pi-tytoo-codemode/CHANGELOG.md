@@ -6,6 +6,7 @@
 
 ### Added
 
+- Add `prettyResults` (default `true`) in `pi-tytoo-codemode.jsonc` to display JSON results in a YAML-like format with triple-quoted multiline strings. Trusted project configuration overrides global configuration; model-facing output stays unchanged.
 - Add `upstream/CHANGES.md` to track intentional local changes from upstream.
 
 - Regression coverage for sandbox protocol validation, worker lifecycle failures, memory limits, WASI output accounting, prelude diagnostics, image parsing, output limits, and tool-name suggestions.

@@ -9,21 +9,25 @@ const outputs = [
   { name: "bash", value: { output: "hello", truncated: false, exit_code: 0, wall_time_seconds: 0.1 } },
 ];
 
+function scriptResult(text: string) {
+  return {
+    content: [
+      { type: "text" as const, text: "Script completed\nWall time 0.1 seconds\nOutput:\n" },
+      { type: "text" as const, text },
+    ],
+    details: { calls: [] },
+  };
+}
+
 describe.each(outputs)("rendering $name output", ({ value }) => {
   it.each([true, false])("preserves raw JSON without changing model content (expanded=%s)", (expanded) => {
     // Arrange
-    const render = createRenderers().renderResult;
+    const render = createRenderers(() => false).renderResult;
     if (!render) {
       throw new Error("Missing renderer");
     }
     const raw = JSON.stringify(value);
-    const result = {
-      content: [
-        { type: "text" as const, text: "Script completed\nWall time 0.1 seconds\nOutput:\n" },
-        { type: "text" as const, text: raw },
-      ],
-      details: { calls: [] },
-    };
+    const result = scriptResult(raw);
     const original = structuredClone(result);
     const theme = { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2];
     const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
@@ -34,6 +38,40 @@ describe.each(outputs)("rendering $name output", ({ value }) => {
 
     // Assert
     expect(rendered).toContain(raw);
+    expect(rendered).not.toContain("Script completed");
+    expect(result).toEqual(original);
+  });
+});
+
+describe("pretty results", () => {
+  beforeAll(() => {
+    initTheme("dark", false);
+  });
+
+  it.each([true, false])("formats only the display before applying preview limits (expanded=%s)", (expanded) => {
+    // Arrange
+    const render = createRenderers().renderResult;
+    if (!render) {
+      throw new Error("Missing result renderer");
+    }
+    const raw = JSON.stringify({ name: "Alice", age: 25, active: true, message: "Hello!\nGoodbye!" });
+    const result = scriptResult(raw);
+    const original = structuredClone(result);
+    const theme = { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2];
+    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+
+    // Act
+    const rendered = stripVTControlCharacters(
+      render(result, { expanded, isPartial: false }, theme, context).render(120).join("\n"),
+    );
+
+    // Assert
+    expect(rendered).toContain("name: Alice");
+    expect(rendered).toContain("age: 25");
+    expect(rendered).toContain("active: true");
+    expect(rendered).toContain('message: """');
+    expect(rendered.includes("Goodbye!")).toBe(expanded);
+    expect(rendered.includes("2 more lines")).toBe(!expanded);
     expect(rendered).not.toContain("Script completed");
     expect(result).toEqual(original);
   });

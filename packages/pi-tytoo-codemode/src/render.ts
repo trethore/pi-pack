@@ -9,6 +9,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { Container, Spacer, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
+import { formatPrettyResult } from "#src/pretty-results";
 import type { codemodeSchema } from "#src/tool";
 import type { CodemodeNestedCall, CodemodeToolDetails, CodemodeToolInput } from "#src/types";
 
@@ -53,11 +54,14 @@ function formatCall(call: CodemodeNestedCall, theme: Theme, expanded: boolean): 
   return `${theme.fg(color, `[${call.status}]`)} ${theme.fg("toolTitle", call.name)} ${theme.fg("muted", args + duration + cost)}${error}`;
 }
 
-export function createRenderers(): Pick<
-  ToolDefinition<typeof codemodeSchema, CodemodeToolDetails | undefined>,
-  "renderCall" | "renderResult"
-> {
-  return { renderCall, renderResult };
+export function createRenderers(
+  getPrettyResults: () => boolean = () => true,
+): Pick<ToolDefinition<typeof codemodeSchema, CodemodeToolDetails | undefined>, "renderCall" | "renderResult"> {
+  return {
+    renderCall,
+    renderResult: (result, options, theme, context) =>
+      renderResult(result, options, theme, context, getPrettyResults()),
+  };
 }
 
 function renderCall(args: CodemodeToolInput, theme: Theme, context: { expanded: boolean }): Component {
@@ -71,6 +75,7 @@ function renderResult(
   options: ToolRenderResultOptions,
   theme: Theme,
   context: { showImages: boolean; isError: boolean },
+  prettyResults: boolean,
 ): Component {
   const component = new Container();
   addCalls(component, result.details?.calls ?? [], theme, options.expanded);
@@ -87,7 +92,12 @@ function renderResult(
       ),
   );
   const text = content
-    .map((block) => (block.type === "text" ? block.text : context.showImages ? "" : `[Image: ${block.mimeType}]`))
+    .map((block) => {
+      if (block.type === "text") {
+        return prettyResults ? formatPrettyResult(block.text) : block.text;
+      }
+      return context.showImages ? "" : `[Image: ${block.mimeType}]`;
+    })
     .join("\n");
   const formatted = text.replace(/\t/g, "    ");
 
