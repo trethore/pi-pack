@@ -82,7 +82,7 @@ describe("renderer display limits", () => {
     initTheme("dark", false);
   });
 
-  it.each([true, false])("limits code previews only when collapsed (expanded=%s)", (expanded) => {
+  it.each([true, false])("shows all code in both display states (expanded=%s)", (expanded) => {
     // Arrange
     const render = createRenderers().renderCall;
     if (!render) {
@@ -100,12 +100,9 @@ describe("renderer display limits", () => {
     const rendered = stripVTControlCharacters(component.render(120).join("\n"));
 
     // Assert
-    expect(rendered.split("\n")[0]?.trimEnd()).toBe(lines[0]);
+    expect(rendered.split("\n").map((line) => line.trimEnd())).toEqual(lines);
     expect(rendered).not.toContain("codemode");
-    expect(rendered).toContain("line-09");
-    expect(rendered.includes("line-10")).toBe(expanded);
-    expect(rendered.includes("line-11")).toBe(expanded);
-    expect(rendered.includes("2 more lines")).toBe(!expanded);
+    expect(rendered).not.toContain("more lines");
   });
 
   it.each([true, false])("limits output previews only when collapsed (expanded=%s)", (expanded) => {

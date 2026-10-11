@@ -14,7 +14,6 @@ import type { codemodeSchema } from "#src/tool";
 import type { CodemodeNestedCall, CodemodeToolDetails, CodemodeToolInput } from "#src/types";
 
 const ARGS_PREVIEW_CHARS = 80;
-const CODE_PREVIEW_LINES = 10;
 const OUTPUT_PREVIEW_LINES = 5;
 const RECENT_CALL_LIMIT = 8;
 
@@ -64,10 +63,10 @@ export function createRenderers(
   };
 }
 
-function renderCall(args: CodemodeToolInput, theme: Theme, context: { expanded: boolean }): Component {
+function renderCall(args: CodemodeToolInput): Component {
   const source = typeof args.code === "string" ? args.code : "[invalid code]";
   const code = highlightCode(source.replace(/\t/g, "    "), "javascript").join("\n");
-  return context.expanded ? new Text(code, 0, 0) : preview(code, CODE_PREVIEW_LINES, theme);
+  return new Text(code, 0, 0);
 }
 
 function renderResult(
