@@ -5,17 +5,21 @@ exports[`codemode descriptions > renders model-facing text (on, models=false, bu
   "changes": {
     "descriptions": {
       "codemode": "Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level \`await\` and \`return\` work.
+If the script fails, its stored-state writes are discarded. Completed tool actions are not undone.
 Scripts have no direct access to Node.js APIs, files, networks, or timers.
-\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw errors. Structured error results can return normally. Check fields such as \`isError\`.
+\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw exceptions or return error results.
+Check the tool's documented failure fields, such as a nonzero \`exit_code\` or \`isError: true\`.
+A returned error does not automatically fail the script. To fail the script, throw an uncaught Error.
 Optional first line: \`// @options: {"max_output_tokens": 10000}\`
 \`max_output_tokens\` sets an estimated text budget. Optional \`timeout_ms\` sets a deadline for the whole script. By default, no deadline is set.
 
 Globals:
 - \`text(value)\`, \`console.log(...)\`, and \`return value\` print output. \`exit()\` ends the script.
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
-- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls. Writes persist only when the script succeeds.
+- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
-- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`.
+- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
+- \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
 
 Nested tools:
@@ -39,22 +43,29 @@ Codemode: \`tools.read(args)\` resolves to a string.",
     "hiddenDeclarations": [],
   },
   "description": "Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level \`await\` and \`return\` work.
+If the script fails, its stored-state writes are discarded. Completed tool actions are not undone.
 Scripts have no direct access to Node.js APIs, files, networks, or timers.
-\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw errors. Structured error results can return normally. Check fields such as \`isError\`.
+\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw exceptions or return error results.
+Check the tool's documented failure fields, such as a nonzero \`exit_code\` or \`isError: true\`.
+A returned error does not automatically fail the script. To fail the script, throw an uncaught Error.
 Optional first line: \`// @options: {"max_output_tokens": 10000}\`
 \`max_output_tokens\` sets an estimated text budget. Optional \`timeout_ms\` sets a deadline for the whole script. By default, no deadline is set.
 
 Globals:
 - \`text(value)\`, \`console.log(...)\`, and \`return value\` print output. \`exit()\` ends the script.
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
-- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls. Writes persist only when the script succeeds.
+- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
-- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`.
+- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
+- \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.",
+  "executionMode": "sequential",
   "guidelines": [
-    "Use Promise.allSettled() for independent tool calls. Run dependent calls in order.",
-    "Filter large results before you print them.",
-    "Await every call you need. When the script ends, pending calls receive an abort signal. Earlier tool actions are not undone.",
+    "Do not run separate codemode invocations concurrently. Independent nested tool calls may run in parallel.",
+    "Use Promise.allSettled() to wait for every outcome. Use Promise.all() when the first rejection should stop the wait. Inspect each result.",
+    "Run dependent calls in order. Filter large results before you print them.",
+    "Await every call you need. When the script ends, pending calls receive an abort signal.",
+    "Use tool declarations already in context. Use discovery only for unlisted tools or missing details.",
   ],
   "parameters": {
     "properties": {
@@ -77,17 +88,21 @@ exports[`codemode descriptions > renders model-facing text (only, models=true, b
   "changes": {
     "descriptions": {
       "codemode": "Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level \`await\` and \`return\` work.
+If the script fails, its stored-state writes are discarded. Completed tool actions are not undone.
 Scripts have no direct access to Node.js APIs, files, networks, or timers.
-\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw errors. Structured error results can return normally. Check fields such as \`isError\`.
+\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw exceptions or return error results.
+Check the tool's documented failure fields, such as a nonzero \`exit_code\` or \`isError: true\`.
+A returned error does not automatically fail the script. To fail the script, throw an uncaught Error.
 Optional first line: \`// @options: {"max_output_tokens": 10000}\`
 \`max_output_tokens\` sets an estimated text budget. Optional \`timeout_ms\` sets a deadline for the whole script. By default, no deadline is set.
 
 Globals:
 - \`text(value)\`, \`console.log(...)\`, and \`return value\` print output. \`exit()\` ends the script.
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
-- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls. Writes persist only when the script succeeds.
+- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
-- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`.
+- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
+- \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
 - \`models\`: classifiers and image generation. Before you use \`models\`, read <codemode-docs>.
 
@@ -101,23 +116,30 @@ Server tools.",
     ],
   },
   "description": "Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level \`await\` and \`return\` work.
+If the script fails, its stored-state writes are discarded. Completed tool actions are not undone.
 Scripts have no direct access to Node.js APIs, files, networks, or timers.
-\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw errors. Structured error results can return normally. Check fields such as \`isError\`.
+\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw exceptions or return error results.
+Check the tool's documented failure fields, such as a nonzero \`exit_code\` or \`isError: true\`.
+A returned error does not automatically fail the script. To fail the script, throw an uncaught Error.
 Optional first line: \`// @options: {"max_output_tokens": 10000}\`
 \`max_output_tokens\` sets an estimated text budget. Optional \`timeout_ms\` sets a deadline for the whole script. By default, no deadline is set.
 
 Globals:
 - \`text(value)\`, \`console.log(...)\`, and \`return value\` print output. \`exit()\` ends the script.
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
-- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls. Writes persist only when the script succeeds.
+- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
-- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`.
+- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
+- \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
 - \`models\`: classifiers and image generation. Before you use \`models\`, read <codemode-docs>.",
+  "executionMode": "sequential",
   "guidelines": [
-    "Use Promise.allSettled() for independent tool calls. Run dependent calls in order.",
-    "Filter large results before you print them.",
-    "Await every call you need. When the script ends, pending calls receive an abort signal. Earlier tool actions are not undone.",
+    "Do not run separate codemode invocations concurrently. Independent nested tool calls may run in parallel.",
+    "Use Promise.allSettled() to wait for every outcome. Use Promise.all() when the first rejection should stop the wait. Inspect each result.",
+    "Run dependent calls in order. Filter large results before you print them.",
+    "Await every call you need. When the script ends, pending calls receive an abort signal.",
+    "Use tool declarations already in context. Use discovery only for unlisted tools or missing details.",
   ],
   "parameters": {
     "properties": {
@@ -140,17 +162,21 @@ exports[`codemode descriptions > renders model-facing text (only, models=true, b
   "changes": {
     "descriptions": {
       "codemode": "Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level \`await\` and \`return\` work.
+If the script fails, its stored-state writes are discarded. Completed tool actions are not undone.
 Scripts have no direct access to Node.js APIs, files, networks, or timers.
-\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw errors. Structured error results can return normally. Check fields such as \`isError\`.
+\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw exceptions or return error results.
+Check the tool's documented failure fields, such as a nonzero \`exit_code\` or \`isError: true\`.
+A returned error does not automatically fail the script. To fail the script, throw an uncaught Error.
 Optional first line: \`// @options: {"max_output_tokens": 10000}\`
 \`max_output_tokens\` sets an estimated text budget. Optional \`timeout_ms\` sets a deadline for the whole script. By default, no deadline is set.
 
 Globals:
 - \`text(value)\`, \`console.log(...)\`, and \`return value\` print output. \`exit()\` ends the script.
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
-- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls. Writes persist only when the script succeeds.
+- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
-- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`.
+- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
+- \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
 - \`models\`: classifiers and image generation. Before you use \`models\`, read <codemode-docs>.
 
@@ -184,23 +210,30 @@ declare const tools: { server_search(args: { [key: string]: unknown; }): Promise
     ],
   },
   "description": "Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level \`await\` and \`return\` work.
+If the script fails, its stored-state writes are discarded. Completed tool actions are not undone.
 Scripts have no direct access to Node.js APIs, files, networks, or timers.
-\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw errors. Structured error results can return normally. Check fields such as \`isError\`.
+\`await tools.<name>(args)\` returns text or declared structured output. Calls can throw exceptions or return error results.
+Check the tool's documented failure fields, such as a nonzero \`exit_code\` or \`isError: true\`.
+A returned error does not automatically fail the script. To fail the script, throw an uncaught Error.
 Optional first line: \`// @options: {"max_output_tokens": 10000}\`
 \`max_output_tokens\` sets an estimated text budget. Optional \`timeout_ms\` sets a deadline for the whole script. By default, no deadline is set.
 
 Globals:
 - \`text(value)\`, \`console.log(...)\`, and \`return value\` print output. \`exit()\` ends the script.
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
-- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls. Writes persist only when the script succeeds.
+- \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
-- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`.
+- Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
+- \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
 - \`models\`: classifiers and image generation. Before you use \`models\`, read <codemode-docs>.",
+  "executionMode": "sequential",
   "guidelines": [
-    "Use Promise.allSettled() for independent tool calls. Run dependent calls in order.",
-    "Filter large results before you print them.",
-    "Await every call you need. When the script ends, pending calls receive an abort signal. Earlier tool actions are not undone.",
+    "Do not run separate codemode invocations concurrently. Independent nested tool calls may run in parallel.",
+    "Use Promise.allSettled() to wait for every outcome. Use Promise.all() when the first rejection should stop the wait. Inspect each result.",
+    "Run dependent calls in order. Filter large results before you print them.",
+    "Await every call you need. When the script ends, pending calls receive an abort signal.",
+    "Use tool declarations already in context. Use discovery only for unlisted tools or missing details.",
   ],
   "parameters": {
     "properties": {

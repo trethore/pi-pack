@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readFile, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
 import * as modelHelpers from "#src/models";
 import { Type } from "typebox";
@@ -91,6 +92,69 @@ describe("Pi execution", () => {
     // Assert
     expect(nestedSignal?.aborted).toBe(true);
     expect(result.details.calls[0]?.status).toBe("cancelled");
+  });
+
+  it("discards failed state writes without undoing a completed file write", async () => {
+    // Arrange
+    const directory = await mkdtemp(join(tmpdir(), "codemode-rollback-"));
+    directories.push(directory);
+    const path = join(directory, "written.txt");
+    const test = harness([sampleTool("write")]);
+    await test.run('store("key", "before")');
+    test.appendEntry.mockClear();
+    test.executeTool.mockImplementation(async () => {
+      await writeFile(path, "completed action");
+      return outcome("write", { content: [{ type: "text", text: "Written" }], details: undefined });
+    });
+
+    // Act
+    const failed = await test.run('store("key", "after"); await tools.write({}); throw new Error("failed");');
+    const stored = await test.run('return load("key")');
+
+    // Assert
+    expect(failed.isError).toBe(true);
+    expect(failed.details.calls).toMatchObject([{ name: "write", status: "ok" }]);
+    expect(test.appendEntry).not.toHaveBeenCalled();
+    expect(stored.content.slice(1)).toEqual([{ type: "text", text: "before" }]);
+    expect(await readFile(path, "utf8")).toBe("completed action");
+  });
+
+  it.each([false, true])("checks returned shell failures explicitly (throw=%s)", async (throwOnFailure) => {
+    // Arrange
+    const tool = {
+      ...sampleTool("bash"),
+      outputSchema: Type.Object({ exit_code: Type.Number(), output: Type.String() }),
+    };
+    const test = harness([tool]);
+    test.executeTool.mockResolvedValue(
+      outcome(
+        "bash",
+        {
+          content: [{ type: "text", text: "Command exited with code 7" }],
+          structuredContent: { exit_code: 7, output: "failed" },
+          isError: true,
+          details: undefined,
+        },
+        true,
+      ),
+    );
+    const check = throwOnFailure ? 'if (result.exit_code !== 0) throw new Error("Command failed");' : "";
+
+    // Act
+    const result = await test.run(`
+      store("key", "pending");
+      const result = await tools.bash({});
+      text({ exit_code: result.exit_code, hasIsError: "isError" in result });
+      ${check}
+    `);
+    const stored = await test.run('return load("key") ?? null');
+
+    // Assert
+    expect(resultText(result)).toContain('{"exit_code":7,"hasIsError":false}');
+    expect(result.details.calls).toMatchObject([{ name: "bash", status: "error" }]);
+    expect(result.isError).toBe(throwOnFailure ? true : undefined);
+    expect(test.appendEntry).toHaveBeenCalledTimes(throwOnFailure ? 0 : 1);
+    expect(stored.content.slice(1)).toEqual([{ type: "text", text: throwOnFailure ? "null" : "pending" }]);
   });
 
   it("collects usage and image counts from model globals", async () => {

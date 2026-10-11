@@ -295,6 +295,7 @@ export function createCodemodeToolDefinition(
     parameters: codemodeSchema,
     // Scripts must not start other scripts.
     exposure: "model-only",
+    executionMode: "sequential",
     prepareLoadout: (loadout) => prepareCodemodeLoadout(loadout, options),
     // Capable models write the script as raw text instead of a JSON-escaped string.
     constrainedSampling: { type: "grammar", variants: { openai_lark: CODEMODE_SOURCE_GRAMMAR } },

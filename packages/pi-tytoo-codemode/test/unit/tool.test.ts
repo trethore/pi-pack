@@ -44,6 +44,7 @@ describe("codemode descriptions", () => {
       snippet: definition.promptSnippet,
       guidelines: definition.promptGuidelines,
       parameters: definition.parameters,
+      executionMode: definition.executionMode,
       changes,
     }).replaceAll(CODEMODE_DOCS_PATH, "<codemode-docs>");
 
@@ -74,8 +75,16 @@ describe("codemode descriptions", () => {
     const guidelines = tool.promptGuidelines?.join("\n");
 
     // Assert
-    expect(tool.description).toContain("Structured error results can return normally. Check fields such as `isError`.");
-    expect(tool.description).toContain("Writes persist only when the script succeeds.");
+    expect(tool.executionMode).toBe("sequential");
+    expect(tool.description).toContain("Calls can throw exceptions or return error results.");
+    expect(tool.description).toContain("a nonzero `exit_code` or `isError: true`");
+    expect(tool.description).toContain("A returned error does not automatically fail the script.");
+    expect(tool.description).toContain("If the script fails, its stored-state writes are discarded.");
+    expect(tool.description).toContain("Completed tool actions are not undone.");
+    expect(tool.description).toContain("`load()`, `describeTool()`, and `describeNamespace()` return `undefined`");
+    expect(tool.description).toContain("JSON output omits object properties with this value.");
+    expect(tool.description).toContain("`value ?? null`");
+    expect(tool.description).toContain("`tools` is not automatically a registered namespace.");
     expect(tool.description).toContain("By default, no deadline is set.");
     expect(tool.description).toContain('text(await searchTools("query"))');
     expect(tool.description).not.toContain("{ limit?, namespace? }");
@@ -83,7 +92,11 @@ describe("codemode descriptions", () => {
     expect(tool.description).toContain("`await describeNamespace(name)`");
     expect(tool.description).toContain("`return value` print output");
     expect(guidelines).toContain("pending calls receive an abort signal");
-    expect(guidelines).toContain("Earlier tool actions are not undone.");
+    expect(guidelines).toContain("Do not run separate codemode invocations concurrently.");
+    expect(guidelines).toContain("Independent nested tool calls may run in parallel.");
+    expect(guidelines).toContain("Use Promise.allSettled() to wait for every outcome.");
+    expect(guidelines).toContain("Use Promise.all() when the first rejection should stop the wait.");
+    expect(guidelines).toContain("Use discovery only for unlisted tools or missing details.");
   });
 
   it.each([0, 3000])("includes shared MCP types only for listed tools (budget=%s)", (budget) => {

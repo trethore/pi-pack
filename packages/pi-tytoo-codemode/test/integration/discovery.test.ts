@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { harness, sampleTool } from "#test/support/harness";
+import { harness, resultText, sampleTool } from "#test/support/harness";
 import { createCodemodeToolDefinition } from "#src/tool";
 import type { ToolLoadout } from "@earendil-works/pi-coding-agent";
 
@@ -34,6 +34,39 @@ describe("discovery", () => {
     });
     expect(discovered).toHaveProperty("matches.0.description", expect.stringContaining("Use narrow queries"));
     expect(discovered).toHaveProperty("tool", expect.stringContaining("Use narrow queries"));
+  });
+
+  it.each(['load("missing")', 'await describeTool("missing")', 'await describeNamespace("tools")'])(
+    "preserves missing lookup semantics for %s",
+    async (lookup) => {
+      // Arrange
+      const test = harness();
+
+      // Act
+      const result = await test.run(`
+        const value = ${lookup};
+        text(value);
+        return { omitted: { value }, explicit: { value: value ?? null, missing: value === undefined } };
+      `);
+
+      // Assert
+      expect(result.isError).toBeUndefined();
+      expect(resultText(result)).toContain("==> text 1/2 <==\nundefined");
+      expect(resultText(result)).toContain('{"omitted":{},"explicit":{"value":null,"missing":true}}');
+      expect(test.executeTool).not.toHaveBeenCalled();
+    },
+  );
+
+  it("resolves tools as a namespace only when that name is registered", async () => {
+    // Arrange
+    const test = harness([sampleTool("echo")], { getToolNamespace: () => ({ name: "tools" }) });
+
+    // Act
+    const result = await test.run('return await describeNamespace("tools")');
+
+    // Assert
+    expect(result.isError).toBeUndefined();
+    expect(result.content.slice(1)).toEqual([{ type: "text", text: '{"name":"tools","tools":["echo"]}' }]);
   });
 
   it("hides deferred declarations and supports codemode-only loadouts", () => {

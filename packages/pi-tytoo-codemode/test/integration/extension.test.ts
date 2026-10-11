@@ -55,6 +55,7 @@ it.each([true, false])("loads the package with builtin codemode enabled: %s", as
     expect(owners[0]?.path).toContain("pi-tytoo-codemode");
     expect(owners[0]?.tools.get("codemode")?.definition).toMatchObject({
       exposure: "model-only",
+      executionMode: "sequential",
       defaultActive: false,
     });
   } finally {
