@@ -4,7 +4,7 @@ Configure OpenAI-compatible request parameters: verbosity, reasoning summaries, 
 
 > [!NOTE]
 > Default settings leave requests unchanged.
-> Feature support depends on the selected model, provider, and API.** 
+> Feature support depends on the selected model, provider, and API.
 
 
 ## Installation
