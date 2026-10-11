@@ -14,8 +14,10 @@ describe("Pi execution", () => {
     // Arrange
     const tool = sampleTool();
     const test = harness([tool]);
+
     // Act
     const result = await test.run("return await tools.echo({ value: 42 })");
+
     // Assert
     expect(test.executeTool.mock.calls[0]?.slice(0, 2)).toEqual(["echo", { value: 42 }]);
     expect(test.executeTool.mock.calls[0]?.[2]?.signal).toBeInstanceOf(AbortSignal);
@@ -32,8 +34,10 @@ describe("Pi execution", () => {
     test.executeTool.mockResolvedValue(
       outcome("echo", { content: [{ type: "text", text: "Permission denied" }], details: undefined }, true),
     );
+
     // Act
     const result = await test.run("await tools.echo({})");
+
     // Assert
     expect(result.isError).toBe(true);
     expect(resultText(result)).toContain("Permission denied");
@@ -48,8 +52,10 @@ describe("Pi execution", () => {
     test.executeTool.mockResolvedValue(
       outcome("echo", { content: [], details: undefined, structuredContent: { content: [], isError: true } }, true),
     );
+
     // Act
     const result = await test.run("return (await tools.echo({})).isError");
+
     // Assert
     expect(result.isError).toBeUndefined();
     expect(resultText(result)).toContain("true");
@@ -58,8 +64,10 @@ describe("Pi execution", () => {
   it("does not expose codemode or tools outside the callable snapshot", async () => {
     // Arrange
     const test = harness([sampleTool("codemode"), sampleTool("echo")]);
+
     // Act
     const result = await test.run("return [Object.keys(tools), ALL_TOOLS.map(x => x.name)]");
+
     // Assert
     expect(resultText(result)).toContain('[["echo"],["echo"]]');
     expect(test.executeTool).not.toHaveBeenCalled();
@@ -73,8 +81,10 @@ describe("Pi execution", () => {
       nestedSignal = options?.signal;
       return new Promise(() => {});
     });
+
     // Act
     const result = await test.run("tools.echo({}); return 'finished'");
+
     // Assert
     expect(nestedSignal?.aborted).toBe(true);
     expect(result.details.calls[0]?.status).toBe("cancelled");
@@ -83,6 +93,7 @@ describe("Pi execution", () => {
   it("spills full text without losing the bounded response", async () => {
     // Arrange
     const test = harness();
+
     // Act
     const result = await test.run('// @options: {"max_output_tokens": 4}\ntext("x".repeat(1000))');
     const path = result.details.fullOutputPath;
@@ -90,8 +101,14 @@ describe("Pi execution", () => {
       throw new Error("Expected output file");
     }
     directories.push(dirname(path));
+
     // Assert
-    expect(await readFile(path, "utf8")).toBe("x".repeat(1000));
-    expect(resultText(result)).toContain("truncated output");
+    const fullText = await readFile(path, "utf8");
+    const response = resultText(result);
+    expect(fullText).toBe("x".repeat(1000));
+    expect(response).toContain("truncated output");
+    expect(response.length).toBeLessThan(fullText.length);
+    expect(response).toContain("xxxxxxxx...246 tokens truncated...xxxxxxxx");
+    expect(response).not.toContain("x".repeat(9));
   });
 });

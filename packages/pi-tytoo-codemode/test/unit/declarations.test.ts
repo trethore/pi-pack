@@ -36,8 +36,10 @@ it("compiles the shared MCP asset and generated tool declarations together", asy
         files: ["test.ts"],
       }),
     );
+
     // Act
     const result = spawnSync(process.execPath, [compiler, "-p", directory], { encoding: "utf8" });
+
     // Assert
     expect(result.status, result.stdout + result.stderr).toBe(0);
   } finally {

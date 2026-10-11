@@ -1,9 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 let root: string;
 let upstream: string;
@@ -40,7 +42,7 @@ beforeEach(async () => {
   script = join(output, "scripts/import-upstream-tests.mjs");
   await mkdir(join(upstream, "packages/codemode/test"), { recursive: true });
   await mkdir(join(output, "scripts"), { recursive: true });
-  await copyFile(fileURLToPath(new URL("../../scripts/import-upstream-tests.mjs", import.meta.url)), script);
+  await copyFile(join(packageRoot, "scripts/import-upstream-tests.mjs"), script);
   git("init", "-q");
   await writeFile(sourcePath(), source);
   commit();
@@ -55,6 +57,7 @@ describe("upstream test imports", () => {
     const first = run();
     const baseline = await readFile(join(output, "upstream/baseline.json"), "utf8");
     const second = run();
+
     // Assert
     expect(first.status, first.stderr).toBe(0);
     expect(second.status, second.stderr).toBe(0);
@@ -65,11 +68,92 @@ describe("upstream test imports", () => {
     expect(baseline).toContain(git("rev-parse", "HEAD").trim());
   });
 
+  it("resolves nested upstream imports and worker URLs from their source file", async () => {
+    // Arrange
+    const fixture = [
+      'import { CodemodeSandbox } from "../../src/index.ts";',
+      "const worker = new URL( '../../src/runtime/worker.ts' , import.meta.url );",
+      'const missing = new URL("./does-not-exist.js", import.meta.url);',
+    ].join("\n");
+    await mkdir(join(upstream, "packages/codemode/test/fixtures"));
+    await writeFile(join(upstream, "packages/codemode/test/fixtures/nested.ts"), fixture);
+    commit();
+
+    // Act
+    const result = run();
+
+    // Assert
+    expect(result.status, result.stderr).toBe(0);
+    expect(await readFile(join(output, "test/upstream/fixtures/nested.ts"), "utf8")).toBe(
+      fixture
+        .replace("../../src/index.ts", "#test/support/upstream-adapter")
+        .replace("../../src/runtime/worker.ts", "../../../dist/sandbox/worker.js"),
+    );
+  });
+
+  it("preserves the previous suite and baseline when backup fails", async () => {
+    // Arrange
+    expect(run().status).toBe(0);
+    const target = join(output, "test/upstream/sample.test.ts");
+    const manifest = join(output, "upstream/baseline.json");
+    const previousTest = await readFile(target, "utf8");
+    const previousBaseline = await readFile(manifest, "utf8");
+    await mkdir(join(output, "test/upstream.previous"));
+    await writeFile(join(output, "test/upstream.previous/keep.txt"), "existing backup");
+    await writeFile(sourcePath(), source + "\n");
+    commit();
+
+    // Act
+    const result = run();
+
+    // Assert
+    expect(result.status).not.toBe(0);
+    expect(await readFile(target, "utf8")).toBe(previousTest);
+    expect(await readFile(manifest, "utf8")).toBe(previousBaseline);
+    expect(await readFile(join(output, "test/upstream.previous/keep.txt"), "utf8")).toBe("existing backup");
+    await expect(readFile(join(output, "test/upstream.staging/sample.test.ts"))).rejects.toThrow();
+    await expect(readFile(`${manifest}.staging`)).rejects.toThrow();
+  });
+
+  it("restores the previous suite when manifest replacement fails after installing new tests", async () => {
+    // Arrange
+    expect(run().status).toBe(0);
+    const target = join(output, "test/upstream/sample.test.ts");
+    const manifest = join(output, "upstream/baseline.json");
+    const previousTest = await readFile(target, "utf8");
+    const previousBaseline = await readFile(manifest, "utf8");
+    await writeFile(sourcePath(), source + "\n");
+    await writeFile(join(upstream, "packages/codemode/test/added.test.ts"), source);
+    commit();
+
+    const preload = pathToFileURL(join(packageRoot, "test/support/fail-manifest-replacement.mjs")).href;
+
+    // Act
+    const result = spawnSync(process.execPath, ["--import", preload, script, upstream], { encoding: "utf8" });
+
+    // Assert
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Injected manifest replacement failure");
+    expect(await readFile(target, "utf8")).toBe(previousTest);
+    expect(await readFile(manifest, "utf8")).toBe(previousBaseline);
+    await expect(stat(join(output, "test/upstream/added.test.ts"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(join(output, "test/upstream.previous"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(join(output, "test/upstream.staging"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(`${manifest}.staging`)).rejects.toMatchObject({ code: "ENOENT" });
+
+    const retry = run();
+    expect(retry.status, retry.stderr).toBe(0);
+    expect(retry.stdout).toContain("changed sample.test.ts");
+    expect(retry.stdout).toContain("added added.test.ts");
+  });
+
   it("rejects dirty upstream source", async () => {
     // Arrange
     await writeFile(sourcePath(), source + "\n");
+
     // Act
     const result = run();
+
     // Assert
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("use a clean checkout");
@@ -80,8 +164,10 @@ describe("upstream test imports", () => {
     const description = 'it("rejects dynamic import", async () => { await import("node:fs"); });\n';
     await writeFile(sourcePath(), source + description);
     commit();
+
     // Act
     const result = run();
+
     // Assert
     expect(result.status, result.stderr).toBe(0);
     expect(await readFile(join(output, "test/upstream/sample.test.ts"), "utf8")).toContain(description);
@@ -91,8 +177,10 @@ describe("upstream test imports", () => {
     // Arrange
     await writeFile(sourcePath(), 'import "unexpected-package";\n' + source);
     commit();
+
     // Act
     const result = run();
+
     // Assert
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Unexpected upstream dependency");
@@ -103,8 +191,10 @@ describe("upstream test imports", () => {
     expect(run().status).toBe(0);
     const target = join(output, "test/upstream/sample.test.ts");
     await writeFile(target, "local changes");
+
     // Act
     const result = run();
+
     // Assert
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Refusing to overwrite");
@@ -118,8 +208,10 @@ describe("upstream test imports", () => {
     const previous = await readFile(target, "utf8");
     await writeFile(sourcePath(), source.replace("../src/index.ts", "../src/new-runtime.ts"));
     commit();
+
     // Act
     const result = run();
+
     // Assert
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Unmapped upstream import");
@@ -134,8 +226,10 @@ describe("upstream test imports", () => {
     await rm(sourcePath());
     await writeFile(join(upstream, "packages/codemode/test/new.test.ts"), source);
     commit();
+
     // Act
     const result = run();
+
     // Assert
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain("removed sample.test.ts");

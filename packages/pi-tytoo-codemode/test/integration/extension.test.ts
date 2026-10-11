@@ -1,10 +1,12 @@
-import { harness, resultText } from "#test/support/harness";
+import { harness } from "#test/support/harness";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createCodemodeExtension, DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { expect, it } from "vitest";
+
+const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 it("loads TypeScript directly and replaces builtin codemode through Pi's public loader", async () => {
   // Arrange
@@ -20,7 +22,7 @@ it("loads TypeScript directly and replaces builtin codemode through Pi's public 
     noPromptTemplates: true,
     noContextFiles: true,
     extensionFactories: [{ name: "codemode", factory: createCodemodeExtension(), builtin: true, replaceable: true }],
-    additionalExtensionPaths: [fileURLToPath(new URL("../../src/index.ts", import.meta.url))],
+    additionalExtensionPaths: [join(packageRoot, "src/index.ts")],
   });
   try {
     // Act
@@ -28,6 +30,7 @@ it("loads TypeScript directly and replaces builtin codemode through Pi's public 
     const loaded = loader.getExtensions();
     loaded.runtime.getAllTools = () => [];
     const owners = loaded.extensions.filter((extension) => extension.tools.has("codemode"));
+
     // Assert
     expect(loaded.errors).toEqual([]);
     expect(owners).toHaveLength(1);
@@ -42,7 +45,8 @@ it("loads TypeScript directly and replaces builtin codemode through Pi's public 
       undefined,
       harness().context,
     );
-    expect(resultText(result)).toContain("2");
+    expect(result.isError).not.toBe(true);
+    expect(result.content.slice(1)).toEqual([{ type: "text", text: "2" }]);
     expect(owners[0]?.path).toContain("pi-tytoo-codemode");
     expect(owners[0]?.tools.get("codemode")?.definition).toMatchObject({
       exposure: "model-only",

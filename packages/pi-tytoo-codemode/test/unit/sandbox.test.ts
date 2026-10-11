@@ -22,11 +22,13 @@ describe("sandbox boundaries", () => {
     const sandbox = new CodemodeSandbox();
     sandboxes.push(sandbox);
     const store = Object.fromEntries([["__proto__", "before"]]);
+
     // Act
     const result = await sandbox.execute(
       'const previous = load("__proto__"); store("__proto__", { safe: true }); return previous;',
       { store },
     );
+
     // Assert
     expect(result).toMatchObject({ ok: true, value: "before" });
     if (!result.ok) {

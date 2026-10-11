@@ -1,11 +1,15 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { describe, expect, it } from "vitest";
+
+const root = fileURLToPath(new URL("../../", import.meta.url));
 
 describe("sandbox build artifacts", () => {
   it("returns the prelude initializer without host imports or leaked globals", () => {
     // Arrange
-    const source = readFileSync(new URL("../../dist/sandbox/prelude.js", import.meta.url), "utf8");
+    const source = readFileSync(join(root, "dist/sandbox/prelude.js"), "utf8");
     const context = vm.createContext({});
 
     // Act
@@ -18,8 +22,8 @@ describe("sandbox build artifacts", () => {
 
   it("keeps worker dependencies external and emits a source map", () => {
     // Arrange
-    const source = readFileSync(new URL("../../dist/sandbox/worker.js", import.meta.url), "utf8");
-    const sourceMap = readFileSync(new URL("../../dist/sandbox/worker.js.map", import.meta.url), "utf8");
+    const source = readFileSync(join(root, "dist/sandbox/worker.js"), "utf8");
+    const sourceMap = readFileSync(join(root, "dist/sandbox/worker.js.map"), "utf8");
 
     // Act
     const map: unknown = JSON.parse(sourceMap);

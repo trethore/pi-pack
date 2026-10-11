@@ -13,7 +13,13 @@
       "project": ["**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"]
     },
     "packages/pi-tytoo-codemode": {
-      "entry": ["src/index.ts", "src/sandbox/worker.ts", "src/sandbox/prelude/index.ts", "test/**/*.test.ts"],
+      "entry": [
+        "src/index.ts",
+        "src/sandbox/worker.ts",
+        "src/sandbox/prelude/index.ts",
+        "test/**/*.test.ts",
+        "test/support/fail-manifest-replacement.mjs"
+      ],
       "project": ["**/*.{ts,mjs}"]
     }
   }
