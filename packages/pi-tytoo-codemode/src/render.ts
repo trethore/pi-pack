@@ -13,7 +13,8 @@ import { formatPrettyResult } from "#src/pretty-results";
 import type { codemodeSchema } from "#src/tool";
 import type { CodemodeNestedCall, CodemodeToolDetails, CodemodeToolInput } from "#src/types";
 
-const ARGS_PREVIEW_CHARS = 80;
+const COLLAPSED_ARGS_PREVIEW_CHARS = 60;
+const EXPANDED_ARGS_PREVIEW_CHARS = 120;
 const OUTPUT_PREVIEW_LINES = 5;
 const RECENT_CALL_LIMIT = 8;
 
@@ -37,8 +38,6 @@ function preview(text: string, lines: number, theme: Theme): Component {
 }
 
 function formatCall(call: CodemodeNestedCall, theme: Theme, expanded: boolean): string {
-  const args = expanded ? call.args : call.args.slice(0, ARGS_PREVIEW_CHARS);
-
   let color: ThemeColor = "muted";
   if (call.status === "error") {
     color = "error";
@@ -48,9 +47,13 @@ function formatCall(call: CodemodeNestedCall, theme: Theme, expanded: boolean): 
 
   const duration = call.durationMs === undefined ? "" : ` ${(call.durationMs / 1000).toFixed(1)}s`;
   const cost = call.cost === undefined ? "" : ` $${call.cost.toPrecision(3)}`;
-  const error = expanded && call.error ? `\n${theme.fg("error", call.error)}` : "";
 
-  return `${theme.fg(color, `[${call.status}]`)} ${theme.fg("toolTitle", call.name)} ${theme.fg("muted", args + duration + cost)}${error}`;
+  const maxChars = expanded ? EXPANDED_ARGS_PREVIEW_CHARS : COLLAPSED_ARGS_PREVIEW_CHARS;
+  const argsPreview = call.args.slice(0, maxChars);
+  const newline = argsPreview.search(/[\r\n]/);
+  const args = newline < 0 ? argsPreview : argsPreview.slice(0, newline);
+
+  return `${theme.fg(color, `[${call.status}]`)} ${theme.fg("toolTitle", call.name)} ${theme.fg("muted", args + duration + cost)}`;
 }
 
 export function createRenderers(

@@ -127,7 +127,7 @@ describe("renderer display limits", () => {
     expect(rendered.includes("2 more lines")).toBe(!expanded);
   });
 
-  it.each([true, false])("limits recent calls and arguments only when collapsed (expanded=%s)", (expanded) => {
+  it.each([true, false])("limits recent calls only when collapsed (expanded=%s)", (expanded) => {
     // Arrange
     const render = createRenderers().renderResult;
     if (!render) {
@@ -136,7 +136,7 @@ describe("renderer display limits", () => {
     const calls: CodemodeNestedCall[] = Array.from({ length: 9 }, (_, index) => ({
       id: String(index),
       name: `call-${index}`,
-      args: "x".repeat(100),
+      args: "{}",
       status: "ok",
     }));
     const result = { content: [], details: { calls } };
@@ -152,7 +152,94 @@ describe("renderer display limits", () => {
     expect(rendered.includes("1 earlier calls")).toBe(!expanded);
     expect(rendered).toContain("call-1");
     expect(rendered).toContain("call-8");
-    expect(rendered).toContain("x".repeat(80));
-    expect(rendered.includes("x".repeat(81))).toBe(expanded);
+  });
+});
+
+describe.each([
+  { expanded: false, limit: 60 },
+  { expanded: true, limit: 120 },
+])("call summaries (expanded=$expanded)", ({ expanded, limit }) => {
+  function renderCall(args: string, overrides: Partial<CodemodeNestedCall> = {}) {
+    const render = createRenderers().renderResult;
+    if (!render) {
+      throw new Error("Missing result renderer");
+    }
+    const call: CodemodeNestedCall = { id: "1", name: "bash", args, status: "ok", ...overrides };
+    const result = { content: [], details: { calls: [call] } };
+    const original = structuredClone(result);
+    const theme = {
+      fg: (_color: unknown, text: string) => {
+        expect(text).not.toContain("\x1b");
+        return `\x1b[32m${text}\x1b[39m`;
+      },
+    } as Parameters<typeof render>[2];
+    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+    const rendered = render(result, { expanded, isPartial: false }, theme, context).render(200);
+    expect(result).toEqual(original);
+    expect(rendered.join("\n")).not.toContain("\x1b[0m");
+    return rendered.map((line) => stripVTControlCharacters(line).trimEnd());
+  }
+
+  it.each([-1, 0, 1])("truncates only arguments exceeding the limit (offset=%s)", (offset) => {
+    // Arrange
+    const prefix = "[ok] bash ";
+    const args = "x".repeat(limit + offset);
+    const expectedArgs = "x".repeat(Math.min(limit + offset, limit));
+
+    // Act
+    const lines = renderCall(args, { durationMs: 1200, cost: 0.0123 });
+
+    // Assert
+    expect(lines).toEqual([prefix + expectedArgs + " 1.2s $0.0123"]);
+  });
+
+  it.each(["\n", "\r\n", "\r"])("stops at the first line break (%j)", (newline) => {
+    // Arrange
+    const args = `echo first${newline}echo second`;
+
+    // Act
+    const lines = renderCall(args, { durationMs: 1200, cost: 0.0123 });
+
+    // Assert
+    expect(lines).toEqual(["[ok] bash echo first 1.2s $0.0123"]);
+  });
+
+  it.each([-1, 0, 1])("handles newlines around the character limit (offset=%s)", (offset) => {
+    // Arrange
+    const prefix = "[ok] bash ";
+    const args = `${"x".repeat(limit + offset)}\nsecond`;
+    const expectedArgs = "x".repeat(Math.min(limit + offset, limit));
+
+    // Act
+    const lines = renderCall(args);
+
+    // Assert
+    expect(lines).toEqual([prefix + expectedArgs]);
+  });
+
+  it("preserves duration and cost when the summary fits", () => {
+    // Arrange
+    const metadata = { durationMs: 1200, cost: 0.0123 };
+
+    // Act
+    const lines = renderCall("echo hello", metadata);
+
+    // Assert
+    expect(lines).toEqual(["[ok] bash echo hello 1.2s $0.0123"]);
+  });
+
+  it.each(["error", "cancelled"] as const)("does not repeat error details below the %s summary", (status) => {
+    // Arrange
+    const expected = [`[${status}] bash ${"x".repeat(limit)} 1.2s`];
+
+    // Act
+    const lines = renderCall("x".repeat(200), {
+      status,
+      durationMs: 1200,
+      error: "first error line\nsecond error line",
+    });
+
+    // Assert
+    expect(lines).toEqual(expected);
   });
 });
