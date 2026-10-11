@@ -30,6 +30,7 @@
   },
   "private": true,
   "scripts": {
+    "build:sandbox": "npm run build:sandbox --workspace=pi-tytoo-codemode",
     "check": "npm run format && npm run lint && npm run typecheck && npm run test && npm run check:unused && npm run check:duplicates",
     "check:duplicates": "node scripts/check-duplicates.mjs",
     "check:unused": "knip",
@@ -49,12 +50,11 @@
     "install:global:pi-whimsical": "pi install ./packages/pi-whimsical",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
+    "predev": "npm run build:sandbox",
+    "pretest": "npm run build:sandbox --workspace=pi-tytoo-codemode",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "pretest": "npm run build:sandbox --workspace=pi-tytoo-codemode",
-    "build:sandbox": "npm run build:sandbox --workspace=pi-tytoo-codemode",
-    "predev": "npm run build:sandbox"
+    "typecheck": "tsc --noEmit"
   },
   "type": "module",
   "workspaces": [

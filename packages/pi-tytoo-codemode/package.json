@@ -33,11 +33,11 @@
   },
   "scripts": {
     "build:sandbox": "node scripts/build-sandbox.mjs",
-    "upstream:import": "node scripts/import-upstream-tests.mjs",
-    "test:upstream": "npm run build:sandbox && vitest run test/upstream",
-    "test": "npm run build:sandbox && vitest run",
     "dev": "npm run build:sandbox && pi -e .",
-    "prepack": "npm run build:sandbox"
+    "prepack": "npm run build:sandbox",
+    "test": "npm run build:sandbox && vitest run",
+    "test:upstream": "npm run build:sandbox && vitest run test/upstream",
+    "upstream:import": "node scripts/import-upstream-tests.mjs"
   },
   "engines": {
     "node": ">=22.19.0"
