@@ -1,3 +1,4 @@
+import { dedent } from "@pi-pack/shared/dedent";
 import { CODEMODE_TOOL_NAME, CODEMODE_DOCS_PATH } from "#src/constants";
 import { getCodemodeCallableTools, toCodemodeDeclaration } from "#src/declarations/tools";
 import type { CodemodeToolOptions, CodemodeToolDetails } from "#src/types";
@@ -13,9 +14,13 @@ import {
 import { CODEMODE_SOURCE_GRAMMAR } from "#src/source/grammar";
 import { Type } from "typebox";
 import type { ToolDefinition, ToolLoadout, ToolLoadoutChanges, ToolNamespace } from "@earendil-works/pi-coding-agent";
-
 import { executeCodemode } from "#src/execute";
 import { createRenderers } from "#src/render";
+
+/** Default for {@link CodemodeDescriptionOptions.inlineBudget}, in estimated tokens. */
+const DEFAULT_CODEMODE_INLINE_BUDGET = 3000;
+/** Characters per token when estimating the cost of a tool section. */
+const CHARS_PER_TOKEN = 4;
 
 export const codemodeSchema = Type.Object({
   code: Type.String({
@@ -31,29 +36,27 @@ const codemodeToolSystemPromptContribution = {
 } as const;
 
 /** The reference for scripts: globals, tool results, `store()`, the `models` API, and limits. */
-
-const DESCRIPTION_INTRO = `Run JavaScript that calls other tools. The input is raw JavaScript (not JSON, no code fence), run as an async function body in a QuickJS sandbox: top-level \`await\` and \`return\` work. No Node, file system, network, or timers.
-- \`await tools.<name>({ ...args })\` resolves to a string, or an object if the tool's declaration says so, and rejects with an Error on failure. Calls still running when the script ends are cancelled.
-- Optional first line: \`// @options: {"max_output_tokens": 10000, "timeout_ms": 60000}\``;
+const DESCRIPTION_INTRO = dedent(`
+  Run JavaScript that calls other tools. The input is raw JavaScript (not JSON, no code fence), run as an async function body in a QuickJS sandbox: top-level \`await\` and \`return\` work. No Node, file system, network, or timers.
+  - \`await tools.<name>({ ...args })\` resolves to a string, or an object if the tool's declaration says so, and rejects with an Error on failure. Calls still running when the script ends are cancelled.
+  - Optional first line: \`// @options: {"max_output_tokens": 10000, "timeout_ms": 60000}\`
+`);
 
 /** One line per global. The details live in {@link CODEMODE_DOCS_PATH}. */
 function describeGlobals(models: boolean): string {
-  const lines = [
-    "Globals:",
-    "- `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and top-level `return` add output; `exit()` ends the script. With several text items, each starts with a `==> text N/M <==` line, and `console` lines follow the other output in one `<console_output>` block. `image()` also saves the image to a temp file and the result names its path.",
-    "- `store(key, value)` and `load(key)` keep JSON values across codemode calls.",
-    "- `ALL_TOOLS`, `await searchTools(query, { limit?, namespace? })`, `await describeTool(name)`, `await describeNamespace(name)`: find unlisted tools, such as MCP tools.",
-  ];
-  if (models) {
-    lines.push(`- \`models\`: classifiers and image generation. Read ${CODEMODE_DOCS_PATH} first.`);
-  }
-  return lines.join("\n");
-}
+  const description = dedent(`
+    Globals:
+    - \`text(value)\`, \`image(dataUrlOrImageBlock)\`, \`console.log(...)\`, and top-level \`return\` add output; \`exit()\` ends the script. With several text items, each starts with a \`==> text N/M <==\` line, and \`console\` lines follow the other output in one \`<console_output>\` block. \`image()\` also saves the image to a temp file and the result names its path.
+    - \`store(key, value)\` and \`load(key)\` keep JSON values across codemode calls.
+    - \`ALL_TOOLS\`, \`await searchTools(query, { limit?, namespace? })\`, \`await describeTool(name)\`, \`await describeNamespace(name)\`: find unlisted tools, such as MCP tools.
+  `);
 
-/** Default for {@link CodemodeDescriptionOptions.inlineBudget}, in estimated tokens. */
-const DEFAULT_CODEMODE_INLINE_BUDGET = 3000;
-/** Characters per token when estimating the cost of a tool section. */
-const CHARS_PER_TOKEN = 4;
+  if (models) {
+    return `${description}\n- \`models\`: classifiers and image generation. Read ${CODEMODE_DOCS_PATH} first.`;
+  }
+
+  return description;
+}
 
 interface CodemodeDescriptionOptions {
   /** Declare the `models` namespace; only for tools created with model access. */
@@ -75,6 +78,7 @@ interface CodemodeDescriptionOptions {
 function renderToolSection(declaration: Omit<CodemodeTool, "execute">): string {
   const id = toCodemodeIdentifier(declaration.name);
   const heading = id === declaration.name ? `### \`${id}\`` : `### \`${id}\` (\`${declaration.name}\`)`;
+
   return `${heading}\n${renderToolSample(declaration).trim()}`;
 }
 
@@ -89,6 +93,36 @@ interface CatalogGroup {
   entries: CatalogEntry[];
 }
 
+function createCatalogGroups(
+  declarations: readonly Omit<CodemodeTool, "execute">[],
+  namespaces: ReadonlyMap<string, ToolNamespace> | undefined,
+): CatalogGroup[] {
+  const groups = new Map<string, CatalogGroup>([["", { namespace: undefined, entries: [] }]]);
+
+  for (const declaration of declarations) {
+    const namespace = namespaces?.get(declaration.name);
+    const key = namespace ? `ns:${namespace.name}` : "";
+    const group = groups.get(key) ?? { namespace, entries: [] };
+    groups.set(key, group);
+
+    const section = renderToolSection(declaration);
+    group.entries.push({ name: declaration.name, section, cost: Math.ceil(section.length / CHARS_PER_TOKEN) });
+  }
+
+  return [...groups.values()].sort(compareCatalogGroups);
+}
+
+function compareCatalogGroups(first: CatalogGroup, second: CatalogGroup): number {
+  if (first.namespace === undefined) {
+    return second.namespace === undefined ? 0 : -1;
+  }
+  if (second.namespace === undefined) {
+    return 1;
+  }
+
+  return first.namespace.name.localeCompare(second.namespace.name);
+}
+
 /**
  * Pick the tool sections that fit the budget, like OpenCode's catalog: in each round every group
  * (tools without a namespace first, then namespaces by name) places its cheapest remaining tool; a
@@ -99,22 +133,29 @@ function selectCatalog(groups: readonly CatalogGroup[], budget: number | undefin
   if (budget === undefined) {
     return new Set(groups.flatMap((group) => group.entries.map((entry) => entry.name)));
   }
+
   const queues = groups.map((group) => [...group.entries].sort((a, b) => a.cost - b.cost));
   const shown = new Set<string>();
   let remaining = budget;
+
+  function selectNextEntry(queue: CatalogEntry[]): boolean {
+    const next = queue[0];
+    if (!next || next.cost > remaining) {
+      return false;
+    }
+
+    remaining -= next.cost;
+    shown.add(next.name);
+    queue.shift();
+
+    return queue.length > 0;
+  }
+
   let active = queues.filter((queue) => queue.length > 0);
   while (active.length > 0) {
-    active = active.filter((queue) => {
-      const next = queue[0];
-      if (!next || next.cost > remaining) {
-        return false;
-      }
-      remaining -= next.cost;
-      shown.add(next.name);
-      queue.shift();
-      return queue.length > 0;
-    });
+    active = active.filter(selectNextEntry);
   }
+
   return shown;
 }
 
@@ -129,35 +170,29 @@ function createCodemodeDescription(tools: readonly AgentTool[], options: Codemod
   const declarations = getCodemodeCallableTools(tools)
     .filter((tool) => !options.deferred?.has(tool.name))
     .map((tool) => toCodemodeDeclaration(tool, options.guidelines?.get(tool.name)));
-  const groups = new Map<string, CatalogGroup>([["", { namespace: undefined, entries: [] }]]);
-  for (const declaration of declarations) {
-    const namespace = options.namespaces?.get(declaration.name);
-    const key = namespace ? `ns:${namespace.name}` : "";
-    const group = groups.get(key) ?? { namespace, entries: [] };
-    groups.set(key, group);
-    const section = renderToolSection(declaration);
-    group.entries.push({ name: declaration.name, section, cost: Math.ceil(section.length / CHARS_PER_TOKEN) });
-  }
-  const ordered = [...groups.values()].sort((a, b) =>
-    a.namespace === undefined ? -1 : b.namespace === undefined ? 1 : a.namespace.name.localeCompare(b.namespace.name),
-  );
+
+  const ordered = createCatalogGroups(declarations, options.namespaces);
   const shown = selectCatalog(ordered, options.inlineBudget);
 
   const sections = [DESCRIPTION_INTRO, describeGlobals(options.models === true)];
-  if (
-    declarations.some(
-      (declaration) =>
-        shown.has(declaration.name) && mcpStructuredContentSchema(declaration.outputSchema) !== undefined,
-    )
-  ) {
-    sections.push(`Shared MCP Types:\n\`\`\`ts\n${MCP_TYPESCRIPT_PREAMBLE}\n\`\`\``);
+  const needsMcpTypes = declarations.some(
+    (declaration) => shown.has(declaration.name) && mcpStructuredContentSchema(declaration.outputSchema) !== undefined,
+  );
+  if (needsMcpTypes) {
+    const heading = dedent(`
+      Shared MCP Types:
+      \`\`\`ts
+    `);
+    sections.push([heading, MCP_TYPESCRIPT_PREAMBLE, "```"].join("\n"));
   }
+
   if (declarations.length === 0) {
     return sections.join("\n\n");
   }
 
   const toolSections = catalogSections(ordered, shown);
   sections.push(toolSections.join("\n\n"));
+
   return sections.join("\n\n");
 }
 
@@ -170,6 +205,7 @@ function describeOutput(schema: CodemodeJsonSchema | undefined): string {
   if (type === "string") {
     return "a string";
   }
+
   const object = typeof schema === "object" ? schema : undefined;
   const properties = object?.properties;
   if (
@@ -182,6 +218,7 @@ function describeOutput(schema: CodemodeJsonSchema | undefined): string {
     const fields = Object.keys(properties).map((name) => (required.has(name) ? name : `${name}?`));
     return `\`{ ${fields.join(", ")} }\``;
   }
+
   return `\`${type.replace(/\s+/g, " ")}\``;
 }
 
@@ -190,7 +227,10 @@ function describeOutput(schema: CodemodeJsonSchema | undefined): string {
  * arguments are the tool's declared parameters, so they are not repeated.
  */
 function describeScriptCall(tool: AgentTool): string {
-  return `${tool.description.trim()}\n\nCodemode: \`tools.${toCodemodeIdentifier(tool.name)}(args)\` resolves to ${describeOutput(toCodemodeDeclaration(tool).outputSchema)}.`;
+  const output = describeOutput(toCodemodeDeclaration(tool).outputSchema);
+  const call = `Codemode: \`tools.${toCodemodeIdentifier(tool.name)}(args)\` resolves to ${output}.`;
+
+  return [tool.description.trim(), call].join("\n\n");
 }
 
 /**
@@ -210,6 +250,7 @@ function prepareCodemodeLoadout(loadout: ToolLoadout, options: CodemodeToolOptio
   const isDirect = (tool: AgentTool) => loadout.getExposure(tool.name) === "direct";
   const callable = getCodemodeCallableTools(loadout.callable);
   const callableNames = new Set(callable.map((tool) => tool.name));
+
   const descriptions: Record<string, string> = {};
   if (mode === "on") {
     for (const tool of loadout.declared) {
@@ -218,21 +259,11 @@ function prepareCodemodeLoadout(loadout: ToolLoadout, options: CodemodeToolOptio
       }
     }
   }
+
   const listed = mode === "only" ? callable : callable.filter((tool) => !isDirect(tool));
-  const namespaces = new Map(
-    listed.flatMap((tool) => {
-      const namespace = loadout.getNamespace(tool.name);
-      return namespace ? [[tool.name, namespace] as const] : [];
-    }),
-  );
-  const guidelines = new Map(listed.map((tool) => [tool.name, loadout.getPromptGuidelines(tool.name)] as const));
-  descriptions[CODEMODE_TOOL_NAME] = createCodemodeDescription(listed, {
-    models: options.models === true,
-    namespaces,
-    guidelines,
-    deferred: new Set(listed.filter((tool) => loadout.getExposure(tool.name) === "deferred").map((tool) => tool.name)),
-    inlineBudget: options.getInlineBudget?.() ?? DEFAULT_CODEMODE_INLINE_BUDGET,
-  });
+  const descriptionOptions = createLoadoutDescriptionOptions(listed, loadout, options);
+  descriptions[CODEMODE_TOOL_NAME] = createCodemodeDescription(listed, descriptionOptions);
+
   const declaredNames = new Set(loadout.declared.map((tool) => tool.name));
   return {
     descriptions,
@@ -240,6 +271,36 @@ function prepareCodemodeLoadout(loadout: ToolLoadout, options: CodemodeToolOptio
       mode === "only"
         ? callable.filter((tool) => isDirect(tool) && declaredNames.has(tool.name)).map((tool) => tool.name)
         : [],
+  };
+}
+
+function createLoadoutDescriptionOptions(
+  tools: readonly AgentTool[],
+  loadout: ToolLoadout,
+  options: CodemodeToolOptions,
+): CodemodeDescriptionOptions {
+  const namespaces = new Map<string, ToolNamespace>();
+  const guidelines = new Map<string, readonly string[]>();
+  const deferred = new Set<string>();
+
+  for (const tool of tools) {
+    const namespace = loadout.getNamespace(tool.name);
+    if (namespace) {
+      namespaces.set(tool.name, namespace);
+    }
+
+    guidelines.set(tool.name, loadout.getPromptGuidelines(tool.name));
+    if (loadout.getExposure(tool.name) === "deferred") {
+      deferred.add(tool.name);
+    }
+  }
+
+  return {
+    models: options.models === true,
+    namespaces,
+    guidelines,
+    deferred,
+    inlineBudget: options.getInlineBudget?.() ?? DEFAULT_CODEMODE_INLINE_BUDGET,
   };
 }
 
@@ -268,22 +329,24 @@ export function createCodemodeToolDefinition(
 
 function catalogSections(ordered: CatalogGroup[], shown: Set<string>): string[] {
   const toolSections = ["Nested tools:"];
+
   for (const { namespace, entries } of ordered) {
     const visible = entries.filter((entry) => shown.has(entry.name));
     if (namespace) {
       // Only tools that did not fit the budget are counted as not listed here.
-      const listing =
-        visible.length === entries.length
-          ? ""
-          : visible.length === 0
-            ? " (tools not listed)"
-            : " (some tools not listed)";
+      let listing = "";
+      if (visible.length < entries.length) {
+        listing = visible.length === 0 ? " (tools not listed)" : " (some tools not listed)";
+      }
+
       const description = namespace.description?.trim();
       toolSections.push(`## ${namespace.name}${listing}${description ? `\n${description}` : ""}`);
     }
+
     for (const entry of visible) {
       toolSections.push(entry.section);
     }
   }
+
   return toolSections;
 }

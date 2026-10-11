@@ -19,6 +19,7 @@
     ]
   },
   "dependencies": {
+    "@pi-pack/shared": "0.1.0",
     "quickjs-wasi": "3.6.2",
     "typebox": "1.3.27"
   },

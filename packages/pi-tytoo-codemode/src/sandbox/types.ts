@@ -55,15 +55,18 @@ export interface CodemodeCall {
   durationMs: number;
 }
 
-type CodemodeErrorKind =
+export const CodemodeErrorKind = {
   /** The script threw or failed to parse. `name` and `stack` come from the script's error. */
-  | "script"
+  Script: "script",
   /** The overall deadline expired. The worker was terminated. */
-  | "timeout"
+  Timeout: "timeout",
   /** The caller's signal fired or the sandbox was closed. The worker was terminated. */
-  | "aborted"
+  Aborted: "aborted",
   /** The worker or VM failed outside the script's control (for example a wasm trap or a missing worker file). */
-  | "sandbox";
+  Sandbox: "sandbox",
+} as const;
+
+export type CodemodeErrorKind = (typeof CodemodeErrorKind)[keyof typeof CodemodeErrorKind];
 
 export interface CodemodeError {
   kind: CodemodeErrorKind;

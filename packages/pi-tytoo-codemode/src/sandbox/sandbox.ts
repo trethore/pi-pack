@@ -2,16 +2,17 @@ import { isRecord, isArray } from "#src/sandbox/values";
 import { encodeJson } from "#src/sandbox/values";
 import { Worker } from "node:worker_threads";
 import { toCodemodeIdentifier } from "#src/declarations/identifier";
-import type {
-  CodemodeCall,
-  CodemodeCallStatus,
-  CodemodeError,
-  CodemodeExecuteOptions,
-  CodemodeOutputItem,
-  CodemodeResult,
-  CodemodeSandboxOptions,
-  CodemodeStoreWrites,
-  CodemodeTool,
+import {
+  CodemodeErrorKind,
+  type CodemodeCall,
+  type CodemodeCallStatus,
+  type CodemodeError,
+  type CodemodeExecuteOptions,
+  type CodemodeOutputItem,
+  type CodemodeResult,
+  type CodemodeSandboxOptions,
+  type CodemodeStoreWrites,
+  type CodemodeTool,
 } from "#src/sandbox/types";
 import { type CodemodeWasmModule, loadQuickJSWasm } from "#src/sandbox/wasm";
 import {
@@ -104,7 +105,7 @@ function parseScriptError(json: string): CodemodeError {
     throw new BridgeError("script error is malformed");
   }
   return {
-    kind: "script",
+    kind: CodemodeErrorKind.Script,
     message,
     ...(name === undefined ? {} : { name }),
     ...(stack === undefined ? {} : { stack }),
@@ -163,7 +164,7 @@ class Execution {
 
     if (Number.isFinite(options.timeoutMs)) {
       this.timer = setTimeout(() => {
-        this.finish({ kind: "timeout", message: `Execution timed out after ${options.timeoutMs} ms` });
+        this.finish({ kind: CodemodeErrorKind.Timeout, message: `Execution timed out after ${options.timeoutMs} ms` });
       }, options.timeoutMs);
     }
 
@@ -178,13 +179,13 @@ class Execution {
     options.wasm.then(
       (wasm) => this.start(options, wasm),
       (error: unknown) => {
-        this.finish({ kind: "sandbox", message: `Failed to load QuickJS: ${errorMessage(error)}` });
+        this.finish({ kind: CodemodeErrorKind.Sandbox, message: `Failed to load QuickJS: ${errorMessage(error)}` });
       },
     );
   }
 
   abort(message: string): Promise<CodemodeResult> {
-    this.finish({ kind: "aborted", message });
+    this.finish({ kind: CodemodeErrorKind.Aborted, message });
     return this.promise;
   }
 
@@ -212,7 +213,7 @@ class Execution {
     try {
       worker = new Worker(options.workerUrl, { workerData });
     } catch (error) {
-      this.finish({ kind: "sandbox", message: `Failed to start worker: ${errorMessage(error)}` });
+      this.finish({ kind: CodemodeErrorKind.Sandbox, message: `Failed to start worker: ${errorMessage(error)}` });
       return;
     }
     this.worker = worker;
@@ -222,7 +223,7 @@ class Execution {
         this.handleMessage(message);
       } catch (error) {
         this.finish({
-          kind: "sandbox",
+          kind: CodemodeErrorKind.Sandbox,
           message:
             error instanceof BridgeError
               ? `Sandbox bridge broken: ${error.message}. The script may have modified built-ins such as a prototype's toJSON.`
@@ -232,19 +233,25 @@ class Execution {
     });
     worker.on("error", (error: unknown) => {
       this.finish({
-        kind: "sandbox",
+        kind: CodemodeErrorKind.Sandbox,
         ...(error instanceof Error ? { name: error.name } : {}),
         message: errorMessage(error),
       });
     });
     worker.on("exit", (code) => {
-      this.finish({ kind: "sandbox", message: `Worker exited with code ${code} before the script settled` });
+      this.finish({
+        kind: CodemodeErrorKind.Sandbox,
+        message: `Worker exited with code ${code} before the script settled`,
+      });
     });
   }
 
   private readonly onAbort = (): void => {
     const reason: unknown = this.signal?.reason;
-    this.finish({ kind: "aborted", message: reason instanceof Error ? reason.message : "Execution aborted" });
+    this.finish({
+      kind: CodemodeErrorKind.Aborted,
+      message: reason instanceof Error ? reason.message : "Execution aborted",
+    });
   };
 
   private post(message: HostToWorkerMessage): void {
@@ -272,7 +279,7 @@ class Execution {
         this.handleDone(message);
         break;
       case "crash":
-        this.finish({ kind: "sandbox", message: message.message });
+        this.finish({ kind: CodemodeErrorKind.Sandbox, message: message.message });
         break;
     }
   }

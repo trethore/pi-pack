@@ -1,11 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
+import type { Usage } from "@earendil-works/pi-ai";
+import * as modelHelpers from "#src/models";
 import { Type } from "typebox";
 import { harness, outcome, resultText, sampleTool } from "#test/support/harness";
 
 const directories: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
@@ -88,6 +91,50 @@ describe("Pi execution", () => {
     // Assert
     expect(nestedSignal?.aborted).toBe(true);
     expect(result.details.calls[0]?.status).toBe("cancelled");
+  });
+
+  it("collects usage and image counts from model globals", async () => {
+    // Arrange
+    const test = harness([], { models: true });
+    const usage: Usage = {
+      input: 10,
+      output: 20,
+      cacheRead: 3,
+      cacheWrite: 4,
+      cacheWrite1h: 2,
+      reasoning: 5,
+      totalTokens: 37,
+      cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, total: 10 },
+    };
+    vi.spyOn(modelHelpers, "createModelGlobals").mockImplementation(
+      (_models, _toolCallId, _calls, _publish, addUsage, addGeneratedImages) => [
+        {
+          name: "models.generateImages",
+          execute: () => {
+            addUsage(usage);
+            addGeneratedImages(1);
+          },
+        },
+      ],
+    );
+
+    // Act
+    const result = await test.run("await models.generateImages(); await models.generateImages();");
+
+    // Assert
+    expect(result.isError).toBeUndefined();
+    expect(result.usage).toEqual({
+      input: 20,
+      output: 40,
+      cacheRead: 6,
+      cacheWrite: 8,
+      cacheWrite1h: 4,
+      reasoning: 10,
+      totalTokens: 74,
+      cost: { input: 2, output: 4, cacheRead: 6, cacheWrite: 8, total: 20 },
+    });
+    expect(resultText(result)).toContain("returned 2 images that the script did not show");
+    expect(result.content.some((item) => item.type === "image")).toBe(false);
   });
 
   it("spills full text without losing the bounded response", async () => {

@@ -3,11 +3,19 @@ import {
   keyHint,
   truncateToVisualLines,
   type Theme,
+  type ThemeColor,
+  type ToolRenderResultOptions,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
+import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { Container, Spacer, Text, truncateToWidth, type Component } from "@earendil-works/pi-tui";
 import type { codemodeSchema } from "#src/tool";
-import type { CodemodeNestedCall, CodemodeToolDetails } from "#src/types";
+import type { CodemodeNestedCall, CodemodeToolDetails, CodemodeToolInput } from "#src/types";
+
+const ARGS_PREVIEW_CHARS = 80;
+const CODE_PREVIEW_LINES = 10;
+const OUTPUT_PREVIEW_LINES = 5;
+const RECENT_CALL_LIMIT = 8;
 
 function preview(text: string, lines: number, theme: Theme): Component {
   return {
@@ -21,6 +29,7 @@ function preview(text: string, lines: number, theme: Theme): Component {
           ),
         );
       }
+
       return result.visualLines;
     },
     invalidate() {},
@@ -28,11 +37,19 @@ function preview(text: string, lines: number, theme: Theme): Component {
 }
 
 function formatCall(call: CodemodeNestedCall, theme: Theme, expanded: boolean): string {
-  const args = expanded ? call.args : call.args.slice(0, 80);
-  const color = call.status === "error" ? "error" : call.status === "ok" ? "success" : "muted";
+  const args = expanded ? call.args : call.args.slice(0, ARGS_PREVIEW_CHARS);
+
+  let color: ThemeColor = "muted";
+  if (call.status === "error") {
+    color = "error";
+  } else if (call.status === "ok") {
+    color = "success";
+  }
+
   const duration = call.durationMs === undefined ? "" : ` ${(call.durationMs / 1000).toFixed(1)}s`;
   const cost = call.cost === undefined ? "" : ` $${call.cost.toPrecision(3)}`;
   const error = expanded && call.error ? `\n${theme.fg("error", call.error)}` : "";
+
   return `${theme.fg(color, `[${call.status}]`)} ${theme.fg("toolTitle", call.name)} ${theme.fg("muted", args + duration + cost)}${error}`;
 }
 
@@ -40,51 +57,64 @@ export function createRenderers(): Pick<
   ToolDefinition<typeof codemodeSchema, CodemodeToolDetails | undefined>,
   "renderCall" | "renderResult"
 > {
-  return {
-    renderCall(args, theme, context) {
-      const component = new Container();
-      component.addChild(new Text(theme.fg("toolTitle", theme.bold("codemode")), 0, 0));
-      const source = typeof args.code === "string" ? args.code : "[invalid code]";
-      const code = highlightCode(source.replace(/\t/g, "    "), "javascript").join("\n");
-      component.addChild(context.expanded ? new Text(code, 0, 0) : preview(code, 10, theme));
-      return component;
-    },
-    renderResult(result, options, theme, context) {
-      const component = new Container();
-      addCalls(component, result.details?.calls ?? [], theme, options.expanded);
-      if (options.isPartial) {
-        return component;
-      }
-      const content = result.content.filter(
-        (block, index) =>
-          !(
-            index === 0 &&
-            block.type === "text" &&
-            /^Script (completed|failed)\nWall time [\d.]+ seconds\nOutput:\n$/.test(block.text)
-          ),
-      );
-      const text = content
-        .map((block) => (block.type === "text" ? block.text : context.showImages ? "" : `[Image: ${block.mimeType}]`))
-        .join("\n");
-      const formatted = text.replace(/\t/g, "    ");
-      if (formatted) {
-        component.addChild(new Spacer(1));
-        const styled = theme.fg(context.isError ? "error" : "toolOutput", formatted);
-        component.addChild(options.expanded ? new Text(styled, 0, 0) : preview(styled, 5, theme));
-      }
-      if (!options.expanded && result.details?.fullOutputPath) {
-        component.addChild(new Text(theme.fg("muted", `Full output: ${result.details.fullOutputPath}`), 0, 0));
-      }
-      return component;
-    },
-  };
+  return { renderCall, renderResult };
+}
+
+function renderCall(args: CodemodeToolInput, theme: Theme, context: { expanded: boolean }): Component {
+  const component = new Container();
+  component.addChild(new Text(theme.fg("toolTitle", theme.bold("codemode")), 0, 0));
+
+  const source = typeof args.code === "string" ? args.code : "[invalid code]";
+  const code = highlightCode(source.replace(/\t/g, "    "), "javascript").join("\n");
+  component.addChild(context.expanded ? new Text(code, 0, 0) : preview(code, CODE_PREVIEW_LINES, theme));
+
+  return component;
+}
+
+function renderResult(
+  result: AgentToolResult<CodemodeToolDetails | undefined>,
+  options: ToolRenderResultOptions,
+  theme: Theme,
+  context: { showImages: boolean; isError: boolean },
+): Component {
+  const component = new Container();
+  addCalls(component, result.details?.calls ?? [], theme, options.expanded);
+  if (options.isPartial) {
+    return component;
+  }
+
+  const content = result.content.filter(
+    (block, index) =>
+      !(
+        index === 0 &&
+        block.type === "text" &&
+        /^Script (completed|failed)\nWall time [\d.]+ seconds\nOutput:\n$/.test(block.text)
+      ),
+  );
+  const text = content
+    .map((block) => (block.type === "text" ? block.text : context.showImages ? "" : `[Image: ${block.mimeType}]`))
+    .join("\n");
+  const formatted = text.replace(/\t/g, "    ");
+
+  if (formatted) {
+    component.addChild(new Spacer(1));
+    const styled = theme.fg(context.isError ? "error" : "toolOutput", formatted);
+    component.addChild(options.expanded ? new Text(styled, 0, 0) : preview(styled, OUTPUT_PREVIEW_LINES, theme));
+  }
+
+  if (!options.expanded && result.details?.fullOutputPath) {
+    component.addChild(new Text(theme.fg("muted", `Full output: ${result.details.fullOutputPath}`), 0, 0));
+  }
+
+  return component;
 }
 
 function addCalls(component: Container, calls: CodemodeNestedCall[], theme: Theme, expanded: boolean): void {
-  const shown = expanded ? calls : calls.slice(-8);
+  const shown = expanded ? calls : calls.slice(-RECENT_CALL_LIMIT);
   if (shown.length < calls.length) {
     component.addChild(new Text(theme.fg("muted", `${calls.length - shown.length} earlier calls`), 0, 0));
   }
+
   if (shown.length > 0) {
     component.addChild(new Text(shown.map((call) => formatCall(call, theme, expanded)).join("\n"), 0, 0));
   }

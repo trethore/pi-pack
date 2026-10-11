@@ -1,14 +1,12 @@
-import { encodeJson, isArray } from "#src/sandbox/values";
+import { encodeJson, isArray, isRecord } from "#src/sandbox/values";
 import type { CodemodeJsonSchema } from "#src/sandbox/types";
+
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const INDENT = "  ";
 const MAX_REF_EXPANSIONS = 32;
+
 function propertyKey(name: string): string {
   return IDENTIFIER.test(name) ? name : JSON.stringify(name);
-}
-
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !isArray(value);
 }
 
 function union(types: string[]): string {
@@ -45,12 +43,12 @@ function resolveRef(ref: string, root: CodemodeJsonSchema): CodemodeJsonSchema |
   let current: unknown = root;
   for (const segment of ref.slice(2).split("/").filter(Boolean)) {
     const key = decodeURIComponent(segment).replaceAll("~1", "/").replaceAll("~0", "~");
-    if (!isObject(current) || !(key in current)) {
+    if (!isRecord(current) || !(key in current)) {
       return undefined;
     }
     current = current[key];
   }
-  return typeof current === "boolean" || isObject(current) ? current : undefined;
+  return typeof current === "boolean" || isRecord(current) ? current : undefined;
 }
 
 function toType(schema: unknown, context: SchemaContext): string {
@@ -60,7 +58,7 @@ function toType(schema: unknown, context: SchemaContext): string {
   if (schema === false) {
     return "never";
   }
-  if (!isObject(schema)) {
+  if (!isRecord(schema)) {
     return "unknown";
   }
   if (typeof schema.$ref === "string") {
@@ -130,11 +128,11 @@ function arrayType(schema: Record<string, unknown>, context: SchemaContext): str
 }
 
 function descriptionOf(property: unknown): string {
-  return isObject(property) && typeof property.description === "string" ? property.description.trim() : "";
+  return isRecord(property) && typeof property.description === "string" ? property.description.trim() : "";
 }
 
 function objectType(schema: Record<string, unknown>, context: SchemaContext): string {
-  const properties = isObject(schema.properties) ? schema.properties : {};
+  const properties = isRecord(schema.properties) ? schema.properties : {};
   const required = new Set(isArray(schema.required) ? schema.required : []);
   const names = Object.keys(properties).sort();
   const members = names.map((name) => {

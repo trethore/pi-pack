@@ -1,17 +1,12 @@
 import type { Usage } from "@earendil-works/pi-ai";
+
 /** Sum of two usages, keeping the optional token splits when either side reports them. */
 export function combineUsage(first: Usage, second: Usage): Usage {
-  return {
+  const combined: Usage = {
     input: first.input + second.input,
     output: first.output + second.output,
     cacheRead: first.cacheRead + second.cacheRead,
     cacheWrite: first.cacheWrite + second.cacheWrite,
-    ...(first.cacheWrite1h !== undefined || second.cacheWrite1h !== undefined
-      ? { cacheWrite1h: (first.cacheWrite1h ?? 0) + (second.cacheWrite1h ?? 0) }
-      : {}),
-    ...(first.reasoning !== undefined || second.reasoning !== undefined
-      ? { reasoning: (first.reasoning ?? 0) + (second.reasoning ?? 0) }
-      : {}),
     totalTokens: first.totalTokens + second.totalTokens,
     cost: {
       input: first.cost.input + second.cost.input,
@@ -21,4 +16,14 @@ export function combineUsage(first: Usage, second: Usage): Usage {
       total: first.cost.total + second.cost.total,
     },
   };
+
+  if (first.cacheWrite1h !== undefined || second.cacheWrite1h !== undefined) {
+    combined.cacheWrite1h = (first.cacheWrite1h ?? 0) + (second.cacheWrite1h ?? 0);
+  }
+
+  if (first.reasoning !== undefined || second.reasoning !== undefined) {
+    combined.reasoning = (first.reasoning ?? 0) + (second.reasoning ?? 0);
+  }
+
+  return combined;
 }

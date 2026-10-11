@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { isObject, schemaToType } from "#src/declarations/schema";
+import { isRecord } from "#src/sandbox/values";
+import { schemaToType } from "#src/declarations/schema";
 import { toCodemodeIdentifier } from "#src/declarations/identifier";
 
 export { toCodemodeIdentifier };
@@ -33,6 +34,7 @@ export function renderDeclarations(options: RenderDeclarationsOptions): string {
     const members = tools.map((tool) => `${docComment(tool.description, INDENT)}${INDENT}${renderToolSignature(tool)}`);
     sections.push(`declare const tools: {\n${members.join("\n")}\n};`);
   }
+
   const namespaces = new Map<string, string[]>();
   for (const global of options.globals ?? []) {
     const dot = global.name.indexOf(".");
@@ -47,9 +49,11 @@ export function renderDeclarations(options: RenderDeclarationsOptions): string {
     }
     members.push(renderGlobal(global.name.slice(dot + 1), global, INDENT));
   }
+
   for (const [namespace, members] of namespaces) {
     sections.push(`declare const ${namespace}: {\n${members.join("\n")}\n};`);
   }
+
   return sections.join("\n\n");
 }
 
@@ -88,17 +92,19 @@ export function renderToolSample(
  * `undefined` when the schema is not a `CallToolResult`.
  */
 export function mcpStructuredContentSchema(schema: CodemodeJsonSchema | undefined): CodemodeJsonSchema | undefined {
-  if (!isObject(schema) || !isObject(schema.properties)) {
+  if (!isRecord(schema) || !isRecord(schema.properties)) {
     return undefined;
   }
+
   const { content, isError, _meta, structuredContent } = schema.properties;
   if (!isContentArray(content)) {
     return undefined;
   }
-  if (!isObject(isError) || isError.type !== "boolean" || !isObject(_meta) || _meta.type !== "object") {
+  if (!isRecord(isError) || isError.type !== "boolean" || !isRecord(_meta) || _meta.type !== "object") {
     return undefined;
   }
-  return isObject(structuredContent) || typeof structuredContent === "boolean" ? structuredContent : true;
+
+  return isRecord(structuredContent) || typeof structuredContent === "boolean" ? structuredContent : true;
 }
 
 /**
@@ -118,8 +124,10 @@ function renderGlobal(head: string, global: CodemodeTool, indent: string): strin
   if (global.signature !== undefined) {
     return `${docComment(global.description, indent)}${indent}${head}${global.signature};`;
   }
+
   const input = global.inputSchema === undefined ? "unknown" : schemaToType(global.inputSchema);
   const output = global.outputSchema === undefined ? "unknown" : schemaToType(global.outputSchema);
+
   return `${docComment(global.description, indent)}${indent}${head}(args: ${input}): Promise<${output}>;`;
 }
 
@@ -128,13 +136,15 @@ function docComment(description: string | undefined, indent: string): string {
   if (!text) {
     return "";
   }
+
   const lines = text.replaceAll("*/", "*\\/").split(/\r?\n/);
   if (lines.length === 1) {
     return `${indent}/** ${lines[0] ?? ""} */\n`;
   }
+
   return `${indent}/**\n${lines.map((line) => `${indent} *${line ? ` ${line}` : ""}`).join("\n")}\n${indent} */\n`;
 }
 
 function isContentArray(content: unknown): boolean {
-  return isObject(content) && content.type === "array" && isObject(content.items) && content.items.type === "object";
+  return isRecord(content) && content.type === "array" && isRecord(content.items) && content.items.type === "object";
 }

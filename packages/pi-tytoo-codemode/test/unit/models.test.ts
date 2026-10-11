@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ClassifierContext, ModelType, ModelTypeMap } from "@earendil-works/pi-ai";
+import type { ClassifierContext, ImageContent, ModelType, ModelTypeMap } from "@earendil-works/pi-ai";
 import { createModelGlobals } from "#src/models";
 import type { CodemodeModelRuntime, CodemodeNestedCall } from "#src/types";
 
@@ -7,6 +7,16 @@ const context: ClassifierContext = {
   state: {},
   questions: { valid: { type: "bool", instructions: "Check validity", criteria: { true: "valid", false: "invalid" } } },
 };
+
+const invalidImages = [
+  { name: "null", value: null },
+  { name: "an array", value: [] },
+  { name: "the wrong block type", value: { type: "text", data: "aGVsbG8=", mimeType: "image/png" } },
+  { name: "missing data", value: { type: "image", mimeType: "image/png" } },
+  { name: "non-string data", value: { type: "image", data: 42, mimeType: "image/png" } },
+  { name: "missing MIME type", value: { type: "image", data: "aGVsbG8=" } },
+  { name: "non-string MIME type", value: { type: "image", data: "aGVsbG8=", mimeType: 42 } },
+];
 
 function setup() {
   const model: ModelTypeMap["classifier"] = {
@@ -22,6 +32,15 @@ function setup() {
     headers: { Authorization: "secret" },
   };
 
+  const imageModel: ModelTypeMap["image"] = {
+    ...model,
+    id: "image",
+    name: "Test image model",
+    type: "image",
+    api: "openrouter-images",
+    output: ["image"],
+  };
+
   const classify = vi.fn<CodemodeModelRuntime["classify"]>().mockResolvedValue({
     api: model.api,
     provider: model.provider,
@@ -30,9 +49,17 @@ function setup() {
     stopReason: "stop",
     timestamp: 0,
   });
+  const generateImages = vi.fn<CodemodeModelRuntime["generateImages"]>().mockResolvedValue({
+    api: imageModel.api,
+    provider: imageModel.provider,
+    model: imageModel.id,
+    output: [],
+    stopReason: "stop",
+    timestamp: 0,
+  });
   const catalog: { [Type in ModelType]: readonly ModelTypeMap[Type][] } = {
     chat: [],
-    image: [],
+    image: [imageModel],
     classifier: [model],
   };
   const registry = {
@@ -42,7 +69,7 @@ function setup() {
     getModelOfType: (type, provider, id) =>
       catalog[type].find((entry) => entry.provider === provider && entry.id === id),
     classify,
-    generateImages: vi.fn<CodemodeModelRuntime["generateImages"]>(),
+    generateImages,
   } satisfies CodemodeModelRuntime;
 
   const calls: CodemodeNestedCall[] = [];
@@ -63,7 +90,7 @@ function setup() {
     return await tool.execute(args, { signal });
   };
 
-  return { model, classify, calls, invoke };
+  return { model, imageModel, classify, generateImages, calls, invoke };
 }
 
 describe("model helpers", () => {
@@ -107,6 +134,46 @@ describe("model helpers", () => {
     // Act / Assert
     await expect(test.invoke("classify", [test.model, { state: {}, questions: {} }])).rejects.toThrow("questions");
     expect(test.classify).not.toHaveBeenCalled();
+  });
+
+  it("accepts image blocks for classification and image generation", async () => {
+    // Arrange
+    const test = setup();
+    const image: ImageContent = { type: "image", data: "aGVsbG8=", mimeType: "image/png" };
+    const classifierContext = { ...context, images: [image] };
+    const imagesContext = { input: [{ type: "text", text: "Describe this image" }, image] };
+
+    // Act
+    await test.invoke("classify", [test.model, classifierContext]);
+    await test.invoke("generateImages", [test.imageModel, imagesContext]);
+
+    // Assert
+    expect(test.classify).toHaveBeenCalledTimes(1);
+    expect(test.classify.mock.calls[0]?.[1]).toEqual(classifierContext);
+    expect(test.generateImages).toHaveBeenCalledTimes(1);
+    expect(test.generateImages.mock.calls[0]?.[1]).toEqual(imagesContext);
+  });
+
+  it.each(invalidImages)("rejects $name in classifier images", async ({ value }) => {
+    // Arrange
+    const test = setup();
+
+    // Act / Assert
+    await expect(test.invoke("classify", [test.model, { ...context, images: [value] }])).rejects.toThrow(
+      "context.images[0] must be an image block",
+    );
+    expect(test.classify).not.toHaveBeenCalled();
+  });
+
+  it.each(invalidImages)("rejects $name in image generation input", async ({ value }) => {
+    // Arrange
+    const test = setup();
+
+    // Act / Assert
+    await expect(test.invoke("generateImages", [test.imageModel, { input: [value] }])).rejects.toThrow(
+      "context.input[0] must be a text or image block",
+    );
+    expect(test.generateImages).not.toHaveBeenCalled();
   });
 
   it("records thrown provider failures as errors", async () => {

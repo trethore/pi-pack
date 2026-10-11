@@ -2,6 +2,7 @@ import { isRecord } from "#src/sandbox/values";
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import { CODEMODE_STORE_ENTRY_TYPE } from "#src/constants";
 import { type CodemodeStoreEntryData } from "#src/types";
+
 function isStoreEntryData(data: unknown): data is CodemodeStoreEntryData {
   if (!isRecord(data)) {
     return false;

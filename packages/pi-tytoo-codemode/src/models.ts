@@ -1,16 +1,35 @@
-import { argumentsArray } from "#src/sandbox/values";
-import type { AnyModel, ClassifierContext, ImagesContext, ModelType, ModelTypeMap, Usage } from "@earendil-works/pi-ai";
+import { argumentsArray, isRecord } from "#src/sandbox/values";
+import type {
+  AnyModel,
+  ClassifierContext,
+  ImageContent,
+  ImagesContext,
+  ModelType,
+  ModelTypeMap,
+  Usage,
+} from "@earendil-works/pi-ai";
 import type { CodemodeTool } from "#src/sandbox/types";
 import { CODEMODE_DOCS_PATH } from "#src/constants";
 import { type CodemodeModelRuntime, type CodemodeNestedCall } from "#src/types";
 import { truncateText } from "#src/values";
+
+const ModelGlobalName = {
+  GetModelsOfType: "models.getModelsOfType",
+  GetAvailableOfType: "models.getAvailableOfType",
+  GetModelOfType: "models.getModelOfType",
+  Classify: "models.classify",
+  GenerateImages: "models.generateImages",
+} as const;
+
 const MAX_CONCURRENT_MODEL_CALLS = 4;
 const ERROR_PREVIEW_CHARS = 500;
 const MODEL_TYPES: ReadonlySet<ModelType> = new Set<ModelType>(["chat", "image", "classifier"]);
+
 function toModelType(value: unknown): ModelType {
   if (value === "chat" || value === "image" || value === "classifier") {
     return value;
   }
+
   throw new Error(`Unknown model type ${JSON.stringify(value)}. Use "chat", "image", or "classifier".`);
 }
 
@@ -18,9 +37,11 @@ function toProvider(value: unknown): string | undefined {
   if (value === undefined || value === null) {
     return undefined;
   }
+
   if (typeof value !== "string") {
     throw new Error("provider must be a string");
   }
+
   return value;
 }
 
@@ -28,6 +49,7 @@ function toProvider(value: unknown): string | undefined {
 function toModelInfo(model: AnyModel): Record<string, unknown> {
   const info: Record<string, unknown> = { ...model };
   delete info.headers;
+
   return info;
 }
 
@@ -36,8 +58,10 @@ function withArticle(word: string): string {
   return `${/^[aeiou]/.test(word) ? "an" : "a"} ${word}`;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isImageContent(value: unknown): value is ImageContent {
+  return (
+    isRecord(value) && value.type === "image" && typeof value.data === "string" && typeof value.mimeType === "string"
+  );
 }
 
 /** A script value in an error message: `undefined`, `a string`, `an array`, or its keys (`{ prompt }`). */
@@ -45,9 +69,11 @@ function describeValue(value: unknown): string {
   if (value === undefined || value === null) {
     return String(value);
   }
+
   if (Array.isArray(value)) {
     return value.length === 0 ? "an empty array" : "an array";
   }
+
   if (typeof value === "object") {
     const keys = Object.keys(value);
     if (keys.length === 0) {
@@ -55,6 +81,7 @@ function describeValue(value: unknown): string {
     }
     return `{ ${keys.slice(0, 6).join(", ")}${keys.length > 6 ? ", ..." : ""} }`;
   }
+
   return typeof value === "string" ? "a string" : `a ${typeof value}`;
 }
 
@@ -66,25 +93,24 @@ function assertClassifierContext(context: unknown): asserts context is Classifie
   if (!isRecord(context)) {
     throw classifierError(`expects a context object as its second argument, got ${describeValue(context)}`);
   }
+
   if (!isRecord(context.state)) {
     throw classifierError(`context.state must be an object, got ${describeValue(context.state)}`);
   }
+
   const { images } = context;
   if (images !== undefined) {
     if (!Array.isArray(images)) {
       throw classifierError(`context.images must be an array, got ${describeValue(images)}`);
     }
+
     images.forEach((image: unknown, index) => {
-      if (
-        !isRecord(image) ||
-        image.type !== "image" ||
-        typeof image.data !== "string" ||
-        typeof image.mimeType !== "string"
-      ) {
+      if (!isImageContent(image)) {
         throw classifierError(`context.images[${index}] must be an image block, got ${describeValue(image)}`);
       }
     });
   }
+
   const { questions } = context;
   if (!isRecord(questions) || Object.keys(questions).length === 0) {
     throw classifierError(`context.questions must map question IDs to questions, got ${describeValue(questions)}`);
@@ -100,22 +126,21 @@ function assertImagesContext(context: unknown): asserts context is ImagesContext
   if (!isRecord(context)) {
     throw imagesError(`expects a context object as its second argument, got ${describeValue(context)}`);
   }
+
   const { input } = context;
   if (!Array.isArray(input) || input.length === 0) {
     throw imagesError(`context.input must be a non-empty array of blocks, got ${describeValue(input)}`);
   }
+
   input.forEach((block: unknown, index) => {
     if (isRecord(block) && block.type === "text" && typeof block.text === "string") {
       return;
     }
-    if (
-      isRecord(block) &&
-      block.type === "image" &&
-      typeof block.data === "string" &&
-      typeof block.mimeType === "string"
-    ) {
+
+    if (isImageContent(block)) {
       return;
     }
+
     throw imagesError(`context.input[${index}] must be a text or image block, got ${describeValue(block)}`);
   });
 }
@@ -131,10 +156,12 @@ interface ModelCallResult {
 function createLimiter(limit: number): <T>(run: () => Promise<T>) => Promise<T> {
   let active = 0;
   const waiting: (() => void)[] = [];
+
   return async (run) => {
     if (active >= limit) {
       await new Promise<void>((resolve) => waiting.push(resolve));
     }
+
     active++;
     try {
       return await run();
@@ -160,14 +187,14 @@ export function createModelGlobals(
    * Resolve the script's model by provider and id only, check the context, then run the call as a
    * nested call row. A script-supplied baseUrl or headers must never receive the credentials.
    */
-  const runModelCall = async <TType extends "classifier" | "image", TContext, TResult extends ModelCallResult>(
+  async function runModelCall<TType extends "classifier" | "image", TContext, TResult extends ModelCallResult>(
     name: string,
     type: TType,
     [model, context]: unknown[],
     signal: AbortSignal,
     checkContext: (context: unknown) => TContext,
     run: (resolved: ModelTypeMap[TType], context: TContext) => Promise<TResult>,
-  ): Promise<TResult> => {
+  ): Promise<TResult> {
     const resolved = resolveModel(models, name, type, model);
     const checked = checkContext(context);
 
@@ -179,6 +206,7 @@ export function createModelGlobals(
     };
     calls.push(record);
     publish();
+
     const startedAt = performance.now();
     let result: TResult;
     try {
@@ -193,68 +221,88 @@ export function createModelGlobals(
       publish();
       throw error;
     }
+
     record.durationMs = performance.now() - startedAt;
     record.status = result.stopReason === "stop" ? "ok" : result.stopReason === "aborted" ? "cancelled" : "error";
     if (result.errorMessage) {
       record.error = truncateText(result.errorMessage, ERROR_PREVIEW_CHARS);
     }
+
     if (result.usage) {
       record.cost = result.usage.cost.total;
       addUsage(result.usage);
     }
+
     publish();
     return result;
-  };
-  const implementations: Record<string, CodemodeTool["execute"]> = {
-    "models.getModelsOfType": (args) => {
-      const [type, provider] = argumentsArray(args);
-      return models.getModelsOfType(toModelType(type), toProvider(provider)).map(toModelInfo);
-    },
-    "models.getAvailableOfType": async (args, { signal }) => {
-      const [type, provider] = argumentsArray(args);
-      const available = await models.getAvailableOfType(toModelType(type), toProvider(provider), { signal });
-      return available.map(toModelInfo);
-    },
-    "models.getModelOfType": (args) => {
-      const [type, provider, id] = argumentsArray(args);
-      if (typeof provider !== "string" || typeof id !== "string") {
-        throw new Error(
-          `models.getModelOfType(type, provider, id) expects three strings, got (${argumentsArray(args).map(describeValue).join(", ")}). The provider and the id are separate arguments, for example models.getModelOfType("classifier", "typesafe", "jev-latest").`,
-        );
-      }
-      const model = models.getModelOfType(toModelType(type), provider, id);
-      return model === undefined ? undefined : toModelInfo(model);
-    },
-    "models.classify": (args, { signal }) =>
-      runModelCall(
-        "models.classify",
-        "classifier",
-        argumentsArray(args),
-        signal,
-        checkClassifierContext,
-        (resolved, context) => models.classify(resolved, context, { signal }),
-      ),
-    "models.generateImages": (args, { signal }) =>
-      runModelCall(
-        "models.generateImages",
-        "image",
-        argumentsArray(args),
-        signal,
-        checkImagesContext,
-        async (resolved, context) => {
-          const result = await models.generateImages(resolved, context, { signal });
-          addGeneratedImages(result.output.filter((block) => block.type === "image").length);
-          return result;
-        },
-      ),
-  };
-  return Object.entries(implementations).map(([name, execute]) => ({ name, spread: true, execute }));
+  }
+
+  function getModelsOfType(args: unknown) {
+    const [type, provider] = argumentsArray(args);
+    return models.getModelsOfType(toModelType(type), toProvider(provider)).map(toModelInfo);
+  }
+
+  async function getAvailableOfType(args: unknown, { signal }: { signal: AbortSignal }) {
+    const [type, provider] = argumentsArray(args);
+    const available = await models.getAvailableOfType(toModelType(type), toProvider(provider), { signal });
+
+    return available.map(toModelInfo);
+  }
+
+  function getModelOfType(args: unknown) {
+    const values = argumentsArray(args);
+    const [type, provider, id] = values;
+    if (typeof provider !== "string" || typeof id !== "string") {
+      throw new Error(
+        `${ModelGlobalName.GetModelOfType}(type, provider, id) expects three strings, got (${values.map(describeValue).join(", ")}). The provider and the id are separate arguments, for example ${ModelGlobalName.GetModelOfType}("classifier", "typesafe", "jev-latest").`,
+      );
+    }
+
+    const model = models.getModelOfType(toModelType(type), provider, id);
+    return model === undefined ? undefined : toModelInfo(model);
+  }
+
+  function classify(args: unknown, { signal }: { signal: AbortSignal }) {
+    return runModelCall(
+      ModelGlobalName.Classify,
+      "classifier",
+      argumentsArray(args),
+      signal,
+      checkClassifierContext,
+      (resolved, context) => models.classify(resolved, context, { signal }),
+    );
+  }
+
+  function generateImages(args: unknown, { signal }: { signal: AbortSignal }) {
+    return runModelCall(
+      ModelGlobalName.GenerateImages,
+      "image",
+      argumentsArray(args),
+      signal,
+      checkImagesContext,
+      async (resolved, context) => {
+        const result = await models.generateImages(resolved, context, { signal });
+        addGeneratedImages(result.output.filter((block) => block.type === "image").length);
+
+        return result;
+      },
+    );
+  }
+
+  return [
+    { name: ModelGlobalName.GetModelsOfType, spread: true, execute: getModelsOfType },
+    { name: ModelGlobalName.GetAvailableOfType, spread: true, execute: getAvailableOfType },
+    { name: ModelGlobalName.GetModelOfType, spread: true, execute: getModelOfType },
+    { name: ModelGlobalName.Classify, spread: true, execute: classify },
+    { name: ModelGlobalName.GenerateImages, spread: true, execute: generateImages },
+  ];
 }
 
 function checkClassifierContext(context: unknown): ClassifierContext {
   assertClassifierContext(context);
   return context;
 }
+
 function checkImagesContext(context: unknown): ImagesContext {
   assertImagesContext(context);
   return context;
@@ -262,12 +310,12 @@ function checkImagesContext(context: unknown): ImagesContext {
 
 const classifierError = (problem: string) =>
   new Error(
-    `models.classify() ${problem}. Expected context: ${CLASSIFIER_CONTEXT_SHAPE}. See "Classify" in ${CODEMODE_DOCS_PATH}.`,
+    `${ModelGlobalName.Classify}() ${problem}. Expected context: ${CLASSIFIER_CONTEXT_SHAPE}. See "Classify" in ${CODEMODE_DOCS_PATH}.`,
   );
 
 const imagesError = (problem: string) =>
   new Error(
-    `models.generateImages() ${problem}. Expected context: { input: [{ type: "text", text: <prompt> }, ...optional { type: "image", data: <base64>, mimeType } references] }. See "Generate images" in ${CODEMODE_DOCS_PATH}.`,
+    `${ModelGlobalName.GenerateImages}() ${problem}. Expected context: { input: [{ type: "text", text: <prompt> }, ...optional { type: "image", data: <base64>, mimeType } references] }. See "Generate images" in ${CODEMODE_DOCS_PATH}.`,
   );
 
 const isStrings = (values: unknown[]) => values.length > 0 && values.every((value) => typeof value === "string");
@@ -277,9 +325,11 @@ function checkQuestion(id: string, question: unknown): void {
   if (!isRecord(question)) {
     throw classifierError(`${at} must be a question object, got ${describeValue(question)}`);
   }
+
   if (typeof question.instructions !== "string") {
     throw classifierError(`${at}.instructions must be a string`);
   }
+
   const { criteria } = question;
   if (question.type === "choice") {
     if (!isRecord(criteria) || !isStrings(Object.values(criteria))) {
@@ -304,17 +354,18 @@ function resolveModel<TType extends "classifier" | "image">(
   type: TType,
   model: unknown,
 ): ModelTypeMap[TType] {
-  const listHint = `List the ${type} models you can use with models.getAvailableOfType("${type}").`;
+  const listHint = `List the ${type} models you can use with ${ModelGlobalName.GetAvailableOfType}("${type}").`;
   if (!isRecord(model) || typeof model.provider !== "string" || typeof model.id !== "string") {
     // undefined arrives as null: spread arguments cross the sandbox as a JSON array.
     const undefinedHint =
       model === undefined || model === null
-        ? " models.getModelOfType() returns undefined for an unknown provider or id."
+        ? ` ${ModelGlobalName.GetModelOfType}() returns undefined for an unknown provider or id.`
         : "";
     throw new Error(
       `${name}() expects ${withArticle(type)} model as its first argument, got ${describeValue(model)}.${undefinedHint} ${listHint}`,
     );
   }
+
   const { provider, id } = model;
   const ref = `${provider}/${id}`;
   const resolved = models.getModelOfType(type, provider, id);
@@ -328,6 +379,7 @@ function resolveModel<TType extends "classifier" | "image">(
         : `Unknown ${type} model "${ref}". ${listHint}`,
     );
   }
+
   return resolved;
 }
 

@@ -27,8 +27,10 @@ import {
   saveImages,
   DEFAULT_MAX_OUTPUT_TOKENS,
 } from "#src/output";
+
 const ERROR_PREVIEW_CHARS = 500;
 const CODEMODE_MEMORY_LIMIT_BYTES = 256 * 1024 * 1024;
+
 /**
  * The value a script receives for a nested call: a tool that declares
  * `outputSchema` resolves to its `structuredContent`, also for error results that carry one (such
@@ -40,10 +42,12 @@ function toScriptValue(tool: AgentTool, outcome: AgentToolCallOutcome): unknown 
   if (tool.outputSchema && result.structuredContent !== undefined) {
     return result.structuredContent;
   }
+
   const text = textOf(result);
   if (outcome.isError) {
     throw new Error(text || `Tool "${tool.name}" failed`);
   }
+
   return text;
 }
 
@@ -57,40 +61,9 @@ export async function executeCodemode(
 ): Promise<AgentToolResult<CodemodeToolDetails>> {
   const startedAt = performance.now();
   const { code, options: sourceOptions } = parseCodemodeSource(input.code);
-  const calls: CodemodeNestedCall[] = [];
-  // Usage of the script's `models.*` calls. Nested tool calls report theirs through the session.
-  let modelUsage: Usage | undefined;
-  // Images returned by `models.generateImages()`, to notice a script that never shows them.
-  let generatedImages = 0;
-  const addGeneratedImages = (count: number) => {
-    generatedImages += count;
-  };
-  const addModelUsage = (usage: Usage) => {
-    modelUsage = modelUsage ? combineUsage(modelUsage, usage) : usage;
-  };
 
-  const snapshot = (): CodemodeToolDetails => ({ calls: calls.map((call) => ({ ...call })) });
-  const publish = () => onUpdate?.({ content: [], details: snapshot() });
-
-  const callable = getCodemodeCallableTools(ctx.tools);
-  // ALL_TOOLS entries carry the declaration.
-  const guidelines = options.getToolGuidelines?.();
-  const samples = new Map(
-    callable.map((tool) => [tool.name, renderToolSample(toCodemodeDeclaration(tool, guidelines?.get(tool.name)))]),
-  );
-  const sandboxTools = createSandboxTools(callable, samples, toolCallId, ctx, calls, publish);
-
-  const sandbox = new CodemodeSandbox({
-    tools: sandboxTools,
-    globals: [
-      ...createDiscoveryGlobals(callable, samples, options),
-      ...(options.models
-        ? createModelGlobals(ctx.modelRegistry, toolCallId, calls, publish, addModelUsage, addGeneratedImages)
-        : []),
-    ],
-    timeoutMs: sourceOptions.timeoutMs ?? Number.POSITIVE_INFINITY,
-    memoryLimitBytes: CODEMODE_MEMORY_LIMIT_BYTES,
-  });
+  const tracking = createExecutionTracking(onUpdate);
+  const sandbox = createExecutionSandbox(toolCallId, ctx, options, tracking, sourceOptions.timeoutMs);
 
   let result: CodemodeResult;
   try {
@@ -99,16 +72,92 @@ export async function executeCodemode(
   } finally {
     await sandbox.close();
   }
-  const items = collectOutput(result, calls, generatedImages, options);
 
+  // Calls still marked running were cut off by the script ending, a timeout, or an abort.
+  for (const call of tracking.calls) {
+    if (call.status === "running") {
+      call.status = "cancelled";
+    }
+  }
+
+  if (result.ok) {
+    persistWrites(result, options);
+  }
+
+  const items = collectOutput(result, tracking.calls, tracking.generatedImages);
   return finishOutput(
     result,
     items,
-    calls,
-    modelUsage,
+    tracking.calls,
+    tracking.modelUsage,
     sourceOptions.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
     startedAt,
   );
+}
+
+function createExecutionTracking(onUpdate: ((result: AgentToolResult<CodemodeToolDetails>) => void) | undefined) {
+  const calls: CodemodeNestedCall[] = [];
+  // Usage of the script's `models.*` calls. Nested tool calls report theirs through the session.
+  let modelUsage: Usage | undefined;
+  // Images returned by `models.generateImages()`, to notice a script that never shows them.
+  let generatedImages = 0;
+
+  return {
+    calls,
+    get modelUsage() {
+      return modelUsage;
+    },
+    get generatedImages() {
+      return generatedImages;
+    },
+    addModelUsage(this: void, usage: Usage): void {
+      modelUsage = modelUsage ? combineUsage(modelUsage, usage) : usage;
+    },
+    addGeneratedImages(this: void, count: number): void {
+      generatedImages += count;
+    },
+    publish(this: void): void {
+      const details = { calls: calls.map((call) => ({ ...call })) };
+      onUpdate?.({ content: [], details });
+    },
+  };
+}
+
+function createExecutionSandbox(
+  toolCallId: string,
+  ctx: ExtensionToolContext,
+  options: CodemodeToolOptions,
+  tracking: ReturnType<typeof createExecutionTracking>,
+  timeoutMs: number | undefined,
+): CodemodeSandbox {
+  const callable = getCodemodeCallableTools(ctx.tools);
+  // ALL_TOOLS entries carry the declaration.
+  const guidelines = options.getToolGuidelines?.();
+  const samples = new Map(
+    callable.map((tool) => [tool.name, renderToolSample(toCodemodeDeclaration(tool, guidelines?.get(tool.name)))]),
+  );
+
+  const tools = createSandboxTools(callable, samples, toolCallId, ctx, tracking.calls, tracking.publish);
+  const globals = createDiscoveryGlobals(callable, samples, options);
+  if (options.models) {
+    globals.push(
+      ...createModelGlobals(
+        ctx.modelRegistry,
+        toolCallId,
+        tracking.calls,
+        tracking.publish,
+        tracking.addModelUsage,
+        tracking.addGeneratedImages,
+      ),
+    );
+  }
+
+  return new CodemodeSandbox({
+    tools,
+    globals,
+    timeoutMs: timeoutMs ?? Number.POSITIVE_INFINITY,
+    memoryLimitBytes: CODEMODE_MEMORY_LIMIT_BYTES,
+  });
 }
 
 function createSandboxTools(
@@ -131,8 +180,10 @@ function createSandboxTools(
       };
       calls.push(record);
       publish();
+
       const callStartedAt = performance.now();
       const outcome = await ctx.executeTool(tool.name, args, { signal: callSignal });
+
       record.id = outcome.toolCall.id;
       record.durationMs = performance.now() - callStartedAt;
       if (outcome.isError) {
@@ -141,37 +192,26 @@ function createSandboxTools(
       } else {
         record.status = "ok";
       }
+
       publish();
       return toScriptValue(tool, outcome);
     },
   }));
 }
 
-function collectOutput(
-  result: CodemodeResult,
-  calls: CodemodeNestedCall[],
-  generatedImages: number,
-  options: CodemodeToolOptions,
-) {
-  // Calls still marked running were cut off by the script ending, a timeout, or an abort.
-  for (const call of calls) {
-    if (call.status === "running") {
-      call.status = "cancelled";
-    }
+function collectOutput(result: CodemodeResult, calls: CodemodeNestedCall[], generatedImages: number) {
+  const scriptOutput = [...result.output];
+
+  // pi extension: a returned value is appended like text().
+  if (result.ok && result.value !== undefined) {
+    scriptOutput.push({ type: "text", text: valueText(result.value) });
   }
 
-  const scriptOutput = [...result.output];
-  if (result.ok) {
-    persistWrites(result, options);
-    // pi extension: a returned value is appended like text().
-    if (result.value !== undefined) {
-      scriptOutput.push({ type: "text", text: valueText(result.value) });
-    }
-  }
   const items = formatOutput(scriptOutput);
   if (!result.ok) {
     items.push({ type: "text", text: `Script error:\n${formatError(result, calls)}` });
   }
+
   if (generatedImages > 0 && !items.some((item) => item.type === "image")) {
     items.push({
       type: "text",
@@ -184,6 +224,7 @@ function collectOutput(
 
 function persistWrites(result: Extract<CodemodeResult, { ok: true }>, options: CodemodeToolOptions): void {
   const { set, delete: deleted } = result.storeWrites;
+
   if (Object.keys(set).length > 0 || deleted.length > 0) {
     options.appendEntry?.(CODEMODE_STORE_ENTRY_TYPE, { set, delete: deleted });
   }
@@ -198,15 +239,20 @@ async function finishOutput(
   startedAt: number,
 ): Promise<AgentToolResult<CodemodeToolDetails>> {
   const truncated = await truncateOutput(joinAdjacentText(items), maxTokens);
+
   // After truncation, which joins the text items and moves images after them, so each path stays
   // next to its image and is never cut.
   const output = joinAdjacentText(await saveImages(truncated.items));
+
   const wallTime = ((performance.now() - startedAt) / 1000).toFixed(1);
   const header = `${result.ok ? "Script completed" : "Script failed"}\nWall time ${wallTime} seconds\nOutput:\n`;
+
   const details: CodemodeToolDetails = { calls: calls.map((call) => ({ ...call })) };
+
   if (truncated.fullOutputPath) {
     details.fullOutputPath = truncated.fullOutputPath;
   }
+
   return {
     content: [{ type: "text", text: header }, ...output],
     details,
