@@ -1,0 +1,27 @@
+{
+  "repository": "https://github.com/earendil-works/pi.git",
+  "commit": "abe508e1b89912adde45528136c3221eb69acdd7",
+  "source": "packages/codemode/test",
+  "files": [
+    {
+      "path": "declarations.test.ts",
+      "upstreamSha256": "23da43998b380ba584fe2b128ed867926f111eef13634e5da8728b87595cc458",
+      "importedSha256": "d4fdfc7e7da60cf648d87f94cfa18faf903994d4041b3d046fe747b401a76094"
+    },
+    {
+      "path": "fixtures/raw-worker.ts",
+      "upstreamSha256": "5f1055e3be3fd7d726137d7bb741a462ad71bf0b89e9aa5a17db1f7259a8d798",
+      "importedSha256": "5f1055e3be3fd7d726137d7bb741a462ad71bf0b89e9aa5a17db1f7259a8d798"
+    },
+    {
+      "path": "sandbox.test.ts",
+      "upstreamSha256": "3e036df065b6ba6f52413029d85bf962308a154d95799b6f337f93b8ecafc754",
+      "importedSha256": "777297955c599ab7406a534026d1d4df7e752974621239435cdb4979e7769ad0"
+    },
+    {
+      "path": "source.test.ts",
+      "upstreamSha256": "8c6889750c0837abff3dd1ca7b822cbbcbd610a3e5d099d4bcaa2632b0ebdba3",
+      "importedSha256": "1043cdae53d9211a0f87c8b98be434960ed241764c1b12b1cdbc91ad318a7a38"
+    }
+  ]
+}

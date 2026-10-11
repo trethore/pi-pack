@@ -1,2 +1,4 @@
 package-lock.json
 flake.lock
+
+packages/pi-tytoo-codemode/test/upstream/

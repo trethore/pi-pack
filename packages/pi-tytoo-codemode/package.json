@@ -1,0 +1,45 @@
+{
+  "name": "pi-tytoo-codemode",
+  "version": "0.1.0",
+  "description": "A replaceable Pi codemode extension with a typed sandbox runtime.",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "src",
+    "dist",
+    "LICENSES"
+  ],
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "dependencies": {
+    "quickjs-wasi": "3.6.2",
+    "typebox": "1.3.27"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.1.0",
+    "@earendil-works/pi-agent-core": "^1.1.0",
+    "@earendil-works/pi-ai": "^1.1.0",
+    "@earendil-works/pi-tui": "^1.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "scripts": {
+    "build:sandbox": "node scripts/build-sandbox.mjs",
+    "upstream:import": "node scripts/import-upstream-tests.mjs",
+    "test:upstream": "npm run build:sandbox && vitest run test/upstream",
+    "test": "npm run build:sandbox && vitest run",
+    "dev": "npm run build:sandbox && pi -e .",
+    "prepack": "npm run build:sandbox"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}
