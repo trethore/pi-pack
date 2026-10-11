@@ -1,26 +1,41 @@
-import { stringValue } from "#src/sandbox/values";
-import { encodeJson } from "#src/sandbox/values";
+import { encodeJson, stringValue } from "#src/sandbox/values";
+import { PRELUDE_FILENAME } from "#src/sandbox/constants";
+
+const UNFORMATTABLE_VALUE = "[Unformattable value]";
+
 function errorText(error: Error): string {
-  const name = stringValue(error.name);
-  const head = error.message ? `${name}: ${stringValue(error.message)}` : name;
+  const { name, message, stack } = error;
+  const errorName = stringValue(name);
+  const head = message ? `${errorName}: ${stringValue(message)}` : errorName;
   const frames =
-    typeof error.stack === "string"
-      ? error.stack.split("\n").filter((line) => line.trim() && !line.includes("codemode-prelude.js"))
+    typeof stack === "string"
+      ? stack.split("\n").filter((line) => line.trim() && !line.includes(PRELUDE_FILENAME))
       : [];
+
   return [head, ...frames].join("\n");
 }
 
-export function format(value: unknown): string {
+function safeStringValue(value: unknown): string {
+  try {
+    return stringValue(value);
+  } catch {
+    return UNFORMATTABLE_VALUE;
+  }
+}
+
+export function formatValue(value: unknown): string {
   if (typeof value === "string") {
     return value;
   }
-  if (value instanceof Error) {
-    return errorText(value);
-  }
+
   try {
-    return encodeJson(value) ?? String(value);
+    if (value instanceof Error) {
+      return errorText(value);
+    }
+
+    return encodeJson(value) ?? safeStringValue(value);
   } catch {
-    return String(value);
+    return safeStringValue(value);
   }
 }
 
@@ -33,7 +48,8 @@ export function describeError(error: unknown): string {
         stack: errorText(error),
       });
     }
-    return JSON.stringify({ message: format(error) });
+
+    return JSON.stringify({ message: formatValue(error) });
   } catch {
     return JSON.stringify({ message: "The script threw a value that cannot be described" });
   }

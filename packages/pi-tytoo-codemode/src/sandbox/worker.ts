@@ -25,6 +25,7 @@ import {
 import type { CodemodeOutputItem } from "#src/sandbox/types";
 import { discardOutput } from "#src/sandbox/wasi";
 import { WorkerEvents } from "#src/sandbox/worker-events";
+import { PRELUDE_FILENAME } from "#src/sandbox/constants";
 
 const PRELUDE_SOURCE = readFileSync(new URL("./prelude.js", import.meta.url), "utf8");
 
@@ -146,7 +147,7 @@ function createPrelude(vm: QuickJS, data: WorkerData): PreludeApi {
   const receiver = vm.withScope((scope) =>
     scope.escape(
       vm.callFunction(
-        vm.evalCode(PRELUDE_SOURCE, "codemode-prelude.js"),
+        vm.evalCode(PRELUDE_SOURCE, PRELUDE_FILENAME),
         vm.undefined,
         bridge,
         vm.newString(JSON.stringify(data.tools)),

@@ -26,6 +26,7 @@ export default defineConfig({
   ],
   rules: {
     curly: "error",
+    "no-duplicate-imports": "error",
     "unicorn/no-array-sort": "off",
     "no-restricted-imports": [
       "error",

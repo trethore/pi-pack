@@ -1,7 +1,7 @@
 // oxlint-disable typescript/unbound-method -- Traversal inspects function identities; it never calls them.
 /// <reference lib="esnext.iterator" />
 
-const OVERRIDABLE = new Set<PropertyKey>([
+const OVERRIDABLE_PROPERTIES = new Set<PropertyKey>([
   "constructor",
   "name",
   "message",
@@ -10,6 +10,10 @@ const OVERRIDABLE = new Set<PropertyKey>([
   "valueOf",
   "toJSON",
 ]);
+
+function isObjectLike(value: unknown): value is object {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
+}
 
 // Accessors preserve assignment to instances of frozen prototypes (the override mistake).
 function allowOverride(object: object, key: PropertyKey, value: unknown, enumerable: boolean) {
@@ -22,88 +26,119 @@ function allowOverride(object: object, key: PropertyKey, value: unknown, enumera
         if (this === object) {
           throw new TypeError(`Cannot assign to read only property '${String(key)}' of a built-in`);
         }
-        if ((typeof this !== "object" || this === null) && typeof this !== "function") {
+
+        if (!isObjectLike(this)) {
           return;
         }
+
         Object.defineProperty(this, key, { value: next, writable: true, enumerable: true, configurable: true });
       },
     },
     "accessor",
   );
+
   if (!accessor) {
     throw new Error("Missing override accessor");
   }
+
   Object.defineProperty(object, key, { ...accessor, enumerable, configurable: false });
+
   return accessor;
 }
 
-function addIntrinsics(add: (value: unknown) => void): void {
-  add(Object.getPrototypeOf(function* () {}));
-  add(Object.getPrototypeOf(async function () {}));
-  add(Object.getPrototypeOf(async function* () {}));
-  add(Object.getPrototypeOf(Int8Array));
-  add(Object.getPrototypeOf([][Symbol.iterator]()));
-  add(Object.getPrototypeOf(new Map()[Symbol.iterator]()));
-  add(Object.getPrototypeOf(new Set()[Symbol.iterator]()));
-  add(Object.getPrototypeOf(""[Symbol.iterator]()));
-  add(Object.getPrototypeOf(/a/[Symbol.matchAll]("")));
+function addIntrinsics(enqueueObject: (value: unknown) => void): void {
+  enqueueObject(Object.getPrototypeOf(function* () {}));
+  enqueueObject(Object.getPrototypeOf(async function () {}));
+  enqueueObject(Object.getPrototypeOf(async function* () {}));
+  enqueueObject(Object.getPrototypeOf(Int8Array));
+  enqueueObject(Object.getPrototypeOf([][Symbol.iterator]()));
+  enqueueObject(Object.getPrototypeOf(new Map()[Symbol.iterator]()));
+  enqueueObject(Object.getPrototypeOf(new Set()[Symbol.iterator]()));
+  enqueueObject(Object.getPrototypeOf(""[Symbol.iterator]()));
+  enqueueObject(Object.getPrototypeOf(/a/[Symbol.matchAll]("")));
+
   if (typeof Iterator === "function") {
     if (typeof Iterator.prototype.map === "function") {
-      add(Object.getPrototypeOf([].values().map((x) => x)));
+      enqueueObject(Object.getPrototypeOf([].values().map((x) => x)));
     }
+
     if (typeof Iterator.from === "function") {
-      add(Object.getPrototypeOf(Iterator.from({ next: () => ({ done: true, value: undefined }) })));
+      enqueueObject(Object.getPrototypeOf(Iterator.from({ next: () => ({ done: true, value: undefined }) })));
     }
   }
 }
 
 export function lockdown(): void {
   const seen = new Set<object>([globalThis]);
-  const queue: object[] = [];
-  function add(value: unknown): void {
-    if ((typeof value !== "object" || value === null) && typeof value !== "function") {
+  const pendingObjects: object[] = [];
+
+  function enqueueObject(value: unknown): void {
+    if (!isObjectLike(value)) {
       return;
     }
+
     if (seen.has(value)) {
       return;
     }
+
     seen.add(value);
-    queue.push(value);
+    pendingObjects.push(value);
   }
-  function visit(object: object, key: PropertyKey, descriptor: PropertyDescriptor): void {
+
+  function visitProperty(object: object, key: PropertyKey, descriptor: PropertyDescriptor): void {
     if (!("value" in descriptor)) {
-      add(descriptor.get);
-      add(descriptor.set);
+      enqueueObject(descriptor.get);
+      enqueueObject(descriptor.set);
       return;
     }
-    add(descriptor.value);
-    if (descriptor.writable && descriptor.configurable && (object === Object.prototype || OVERRIDABLE.has(key))) {
+
+    enqueueObject(descriptor.value);
+
+    if (
+      descriptor.writable &&
+      descriptor.configurable &&
+      (object === Object.prototype || OVERRIDABLE_PROPERTIES.has(key))
+    ) {
       const accessor = allowOverride(object, key, descriptor.value, descriptor.enumerable === true);
-      add(accessor.get);
-      add(accessor.set);
+      enqueueObject(accessor.get);
+      enqueueObject(accessor.set);
     }
   }
-  for (const key of Reflect.ownKeys(globalThis)) {
-    const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
-    if (!descriptor) {
-      continue;
-    }
-    add(descriptor.value);
-    add(descriptor.get);
-    add(descriptor.set);
-    if ("value" in descriptor && descriptor.configurable) {
-      Object.defineProperty(globalThis, key, { writable: false, configurable: false });
+
+  function lockGlobalProperties(): void {
+    for (const key of Reflect.ownKeys(globalThis)) {
+      const descriptor = Object.getOwnPropertyDescriptor(globalThis, key);
+      if (!descriptor) {
+        continue;
+      }
+
+      enqueueObject(descriptor.value);
+      enqueueObject(descriptor.get);
+      enqueueObject(descriptor.set);
+
+      if ("value" in descriptor && descriptor.configurable) {
+        Object.defineProperty(globalThis, key, { writable: false, configurable: false });
+      }
     }
   }
-  addIntrinsics(add);
-  for (let object = queue.pop(); object !== undefined; object = queue.pop()) {
-    add(Object.getPrototypeOf(object));
+
+  function freezeObject(object: object): void {
+    enqueueObject(Object.getPrototypeOf(object));
+
     for (const key of Reflect.ownKeys(object)) {
       const descriptor = Object.getOwnPropertyDescriptor(object, key);
       if (descriptor) {
-        visit(object, key, descriptor);
+        visitProperty(object, key, descriptor);
       }
     }
+
     Object.freeze(object);
+  }
+
+  lockGlobalProperties();
+  addIntrinsics(enqueueObject);
+
+  for (let object = pendingObjects.pop(); object !== undefined; object = pendingObjects.pop()) {
+    freezeObject(object);
   }
 }
