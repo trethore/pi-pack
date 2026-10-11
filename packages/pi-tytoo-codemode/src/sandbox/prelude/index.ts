@@ -1,4 +1,5 @@
-import { createBridge, type HostBridge } from "#src/sandbox/prelude/bridge";
+import { createBridge } from "#src/sandbox/prelude/bridge";
+import type { HostBridge } from "#src/sandbox/bridge-protocol";
 import { createLifecycle } from "#src/sandbox/prelude/lifecycle";
 import { lockdown } from "#src/sandbox/prelude/lockdown";
 import { createOutput } from "#src/sandbox/prelude/output";

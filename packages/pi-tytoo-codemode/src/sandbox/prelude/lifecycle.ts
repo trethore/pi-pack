@@ -1,4 +1,4 @@
-import type { HostBridge } from "#src/sandbox/prelude/bridge";
+import { BridgeMessageType, type HostBridge } from "#src/sandbox/bridge-protocol";
 import { describeError } from "#src/sandbox/prelude/errors";
 
 export function createLifecycle(bridge: HostBridge, serializeWrites: () => string) {
@@ -9,7 +9,7 @@ export function createLifecycle(bridge: HostBridge, serializeWrites: () => strin
       return;
     }
     finished = true;
-    bridge("done", ok, payload, writes);
+    bridge(BridgeMessageType.Done, ok, payload, writes);
   }
   function fail(error: unknown): void {
     done(false, describeError(error));

@@ -1,7 +1,7 @@
 import { isRecord, stringValue } from "#src/sandbox/values";
 import { encodeJson } from "#src/sandbox/values";
 import { MAX_OUTPUT_CHARS, MAX_OUTPUT_ITEMS } from "#src/sandbox/limits";
-import type { HostBridge } from "#src/sandbox/prelude/bridge";
+import { BridgeMessageType, BridgeOutputType, type HostBridge } from "#src/sandbox/bridge-protocol";
 import { describeError, format } from "#src/sandbox/prelude/errors";
 import type { createLifecycle } from "#src/sandbox/prelude/lifecycle";
 
@@ -79,7 +79,7 @@ function outputText(value: unknown): string {
 export function createOutput(bridge: HostBridge, lifecycle: ReturnType<typeof createLifecycle>) {
   let outputChars = 0;
   let outputItems = 0;
-  function output(kind: "text" | "console" | "image", data: string, mimeType?: string): void {
+  function output(kind: BridgeOutputType, data: string, mimeType?: string): void {
     if (lifecycle.isFinished()) {
       return;
     }
@@ -92,13 +92,13 @@ export function createOutput(bridge: HostBridge, lifecycle: ReturnType<typeof cr
       lifecycle.done(false, describeError(error));
       throw error;
     }
-    bridge("output", kind, data, mimeType);
+    bridge(BridgeMessageType.Output, kind, data, mimeType);
   }
   const console = Object.fromEntries(
     ["log", "info", "warn", "error", "debug"].map((level) => [
       level,
       (...args: unknown[]) => {
-        output("console", args.map(format).join(" "));
+        output(BridgeOutputType.Console, args.map(format).join(" "));
       },
     ]),
   );
@@ -112,11 +112,11 @@ export function createOutput(bridge: HostBridge, lifecycle: ReturnType<typeof cr
       } catch (error) {
         throw new TypeError(error instanceof Error ? error.message : String(error), { cause: error });
       }
-      output("text", rendered);
+      output(BridgeOutputType.Text, rendered);
     },
     image(this: void, value: unknown): void {
       const { data, mimeType } = decodeImage(value);
-      output("image", data, mimeType);
+      output(BridgeOutputType.Image, data, mimeType);
     },
   };
 }

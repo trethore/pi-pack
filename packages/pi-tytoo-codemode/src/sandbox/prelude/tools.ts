@@ -1,3 +1,4 @@
+import { BridgeMessageType } from "#src/sandbox/bridge-protocol";
 import type { createBridge, ScriptFunction } from "#src/sandbox/prelude/bridge";
 import type { WorkerData } from "#src/sandbox/protocol";
 
@@ -54,7 +55,7 @@ export function installTools(
   Object.setPrototypeOf(tools, null);
   const allTools: { name: string; description: string }[] = [];
   for (const { name, jsName, description } of definitions) {
-    const fn = rpc.caller("call", name);
+    const fn = rpc.caller(BridgeMessageType.Call, name);
     if (!(jsName in tools)) {
       tools[jsName] = fn;
       allTools.push(Object.freeze({ name: jsName, description }));
@@ -80,7 +81,7 @@ export function installTools(
 function installNamespaces(globals: WorkerData["globals"], rpc: ReturnType<typeof createBridge>): void {
   const namespaces = new Map<string, Record<string, ScriptFunction>>();
   for (const { name, spread } of globals) {
-    const fn = rpc.caller("global", name, spread);
+    const fn = rpc.caller(BridgeMessageType.Global, name, spread);
     const dot = name.indexOf(".");
     if (dot === -1) {
       installGlobal(name, fn);

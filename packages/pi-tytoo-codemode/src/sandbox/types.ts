@@ -47,7 +47,7 @@ export interface CodemodeTool {
 export type CodemodeOutputItem =
   { type: "text"; text: string; console?: true } | { type: "image"; data: string; mimeType: string };
 
-export type CodemodeCallStatus = "ok" | "error" | "cancelled";
+type CodemodeCallStatus = "ok" | "error" | "cancelled";
 
 export interface CodemodeCall {
   name: string;
@@ -109,8 +109,9 @@ export interface CodemodeSandboxOptions {
    */
   timeoutMs?: number;
   /**
-   * Maximum memory the QuickJS VM may allocate. Allocations beyond it fail inside the script as
-   * `InternalError: out of memory`. Default: no limit beyond wasm32's 4 GiB address space.
+   * Maximum memory the QuickJS runtime may allocate, not total host or tool memory.
+   * Must be a positive integer up to 1 GiB. Default: 256 MiB.
+   * Allocations beyond it fail inside the script as `InternalError: out of memory`.
    */
   memoryLimitBytes?: number;
   /**

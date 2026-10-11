@@ -29,7 +29,6 @@ import {
 } from "#src/output";
 
 const ERROR_PREVIEW_CHARS = 500;
-const CODEMODE_MEMORY_LIMIT_BYTES = 256 * 1024 * 1024;
 
 /**
  * The value a script receives for a nested call: a tool that declares
@@ -156,7 +155,6 @@ function createExecutionSandbox(
     tools,
     globals,
     timeoutMs: timeoutMs ?? Number.POSITIVE_INFINITY,
-    memoryLimitBytes: CODEMODE_MEMORY_LIMIT_BYTES,
   });
 }
 

@@ -1,9 +1,4 @@
-export type HostBridge = (
-  ...args:
-    | [kind: "call" | "global", id: number, name: string, args: string | undefined]
-    | [kind: "output", type: "text" | "console" | "image", data: string, mimeType?: string | undefined]
-    | [kind: "done", ok: boolean, payload: string | undefined, writes?: string | undefined]
-) => void;
+import type { BridgeCallType, HostBridge } from "#src/sandbox/bridge-protocol";
 
 export type ScriptFunction = (...args: unknown[]) => Promise<unknown>;
 
@@ -12,7 +7,7 @@ export function createBridge(bridge: HostBridge) {
   let nextId = 1;
   return {
     hasPending: () => pending.size > 0,
-    caller(kind: "call" | "global", name: string, spread = false): ScriptFunction {
+    caller(kind: BridgeCallType, name: string, spread = false): ScriptFunction {
       return (...args) =>
         new Promise((resolve, reject) => {
           let json: string | undefined;

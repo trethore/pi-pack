@@ -1,6 +1,7 @@
 import { isRecord, isArray } from "#src/sandbox/values";
 import type { CodemodeOutputItem } from "#src/sandbox/types";
-import type { CodemodeWasmModule } from "#src/sandbox/wasm";
+import { isWasmModule, type CodemodeWasmModule } from "#src/sandbox/wasm";
+import { isMemoryLimitBytes } from "#src/sandbox/limits";
 
 /**
  * Messages between the host (main thread) and the worker. Tool arguments,
@@ -8,14 +9,25 @@ import type { CodemodeWasmModule } from "#src/sandbox/wasm";
  * out of the QuickJS VM as strings and never builds structured values itself.
  */
 
+interface ToolDefinition {
+  name: string;
+  jsName: string;
+  description: string;
+}
+
+interface GlobalDefinition {
+  name: string;
+  spread: boolean;
+}
+
 export interface WorkerData {
   code: string;
   /** `jsName` is the identifier the script uses; `description` is listed in `ALL_TOOLS`. */
-  tools: { name: string; jsName: string; description: string }[];
-  globals: { name: string; spread: boolean }[];
+  tools: ToolDefinition[];
+  globals: GlobalDefinition[];
   /** Compiled `quickjs-wasi` module. Structured clone shares the compiled code with the worker. */
   wasm: CodemodeWasmModule;
-  memoryLimitBytes: number | undefined;
+  memoryLimitBytes: number;
   /** Snapshot for `load()`: key to JSON text. */
   store: Record<string, string>;
   /**
@@ -28,102 +40,151 @@ export interface WorkerData {
 /** JSON-encoded `{ name?, message, stack? }` of an error thrown by the script. */
 type ScriptErrorJson = string;
 
+export const WorkerToHostMessageType = {
+  Call: "call",
+  Output: "output",
+  Done: "done",
+  Crash: "crash",
+} as const;
+
+export const HostToWorkerMessageType = {
+  Result: "result",
+} as const;
+
 export type WorkerToHostMessage =
-  | { type: "call"; id: number; target: "tool" | "global"; name: string; args: string | undefined }
-  | { type: "output"; item: CodemodeOutputItem }
+  | {
+      type: typeof WorkerToHostMessageType.Call;
+      id: number;
+      target: "tool" | "global";
+      name: string;
+      args: string | undefined;
+    }
+  | { type: typeof WorkerToHostMessageType.Output; item: CodemodeOutputItem }
   /** `writes` is a JSON array of `[key, json]` for `store()` and `[key]` for deletions. */
-  | { type: "done"; ok: true; value: string | undefined; writes: string }
-  | { type: "done"; ok: false; error: ScriptErrorJson }
+  | { type: typeof WorkerToHostMessageType.Done; ok: true; value: string | undefined; writes: string }
+  | { type: typeof WorkerToHostMessageType.Done; ok: false; error: ScriptErrorJson }
   /** The VM failed outside the script's control, for example a wasm trap. */
-  | { type: "crash"; message: string };
+  | { type: typeof WorkerToHostMessageType.Crash; message: string };
 
 export type HostToWorkerMessage =
   /** `payload` is the JSON result when `ok`, otherwise the error message. */
-  { type: "result"; id: number; ok: boolean; payload: string | undefined };
+  { type: typeof HostToWorkerMessageType.Result; id: number; ok: boolean; payload: string | undefined };
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
 
 function isOptionalString(value: unknown): value is string | undefined {
-  return value === undefined || typeof value === "string";
+  return value === undefined || isString(value);
 }
+
 function isOutputItem(value: unknown): value is CodemodeOutputItem {
   if (!isRecord(value)) {
     return false;
   }
+
   if (value.type === "text") {
-    return typeof value.text === "string" && (value.console === undefined || value.console === true);
+    return isString(value.text) && (value.console === undefined || value.console === true);
   }
-  return value.type === "image" && typeof value.data === "string" && typeof value.mimeType === "string";
+
+  return value.type === "image" && isString(value.data) && isString(value.mimeType);
 }
+
 export function isWorkerToHostMessage(value: unknown): value is WorkerToHostMessage {
   if (!isRecord(value)) {
     return false;
   }
+
   switch (value.type) {
-    case "output":
+    case WorkerToHostMessageType.Output:
       return isOutputItem(value.item);
-    case "call":
+
+    case WorkerToHostMessageType.Call:
       return isCallMessage(value);
-    case "done":
+
+    case WorkerToHostMessageType.Done:
       return isDoneMessage(value);
-    case "crash":
-      return typeof value.message === "string";
+
+    case WorkerToHostMessageType.Crash:
+      return isString(value.message);
+
     default:
       return false;
   }
 }
+
 function isCallMessage(value: Record<string, unknown>): boolean {
   return (
     Number.isSafeInteger(value.id) &&
     (value.target === "tool" || value.target === "global") &&
-    typeof value.name === "string" &&
+    isString(value.name) &&
     isOptionalString(value.args)
   );
 }
+
 function isDoneMessage(value: Record<string, unknown>): boolean {
   if (value.ok === false) {
-    return typeof value.error === "string";
+    return isString(value.error);
   }
-  return value.ok === true && isOptionalString(value.value) && typeof value.writes === "string";
+
+  return value.ok === true && isOptionalString(value.value) && isString(value.writes);
 }
+
 export function isHostToWorkerMessage(value: unknown): value is HostToWorkerMessage {
   return (
     isRecord(value) &&
-    value.type === "result" &&
+    value.type === HostToWorkerMessageType.Result &&
     Number.isSafeInteger(value.id) &&
     typeof value.ok === "boolean" &&
     isOptionalString(value.payload)
   );
 }
-export function isToolDefinitions(value: unknown): value is WorkerData["tools"] {
-  return (
-    isArray(value) &&
-    value.every(
-      (tool) =>
-        isRecord(tool) &&
-        typeof tool.name === "string" &&
-        typeof tool.jsName === "string" &&
-        typeof tool.description === "string",
-    )
-  );
-}
-export function isGlobalDefinitions(value: unknown): value is WorkerData["globals"] {
-  return (
-    isArray(value) &&
-    value.every((entry) => isRecord(entry) && typeof entry.name === "string" && typeof entry.spread === "boolean")
-  );
-}
-export function isStoreSnapshot(value: unknown): value is WorkerData["store"] {
-  return isRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
-}
-export function isWorkerData(value: unknown): value is WorkerData {
-  if (!isRecord(value) || typeof value.code !== "string" || !isRecord(value.wasm)) {
+
+function isArrayOf<T>(value: unknown, isItem: (item: unknown) => item is T): value is T[] {
+  if (!isArray(value)) {
     return false;
   }
+
+  for (let index = 0; index < value.length; index++) {
+    if (!Object.hasOwn(value, index) || !isItem(value[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isToolDefinition(value: unknown): value is ToolDefinition {
+  return isRecord(value) && isString(value.name) && isString(value.jsName) && isString(value.description);
+}
+
+export function isToolDefinitions(value: unknown): value is ToolDefinition[] {
+  return isArrayOf(value, isToolDefinition);
+}
+
+function isGlobalDefinition(value: unknown): value is GlobalDefinition {
+  return isRecord(value) && isString(value.name) && typeof value.spread === "boolean";
+}
+
+export function isGlobalDefinitions(value: unknown): value is GlobalDefinition[] {
+  return isArrayOf(value, isGlobalDefinition);
+}
+
+export function isStoreSnapshot(value: unknown): value is WorkerData["store"] {
+  return isRecord(value) && Object.values(value).every(isString);
+}
+
+export function isWorkerData(value: unknown): value is WorkerData {
+  if (!isRecord(value) || !isString(value.code) || !isWasmModule(value.wasm)) {
+    return false;
+  }
+
   return (
     isToolDefinitions(value.tools) &&
     isGlobalDefinitions(value.globals) &&
     isStoreSnapshot(value.store) &&
     value.interrupt instanceof SharedArrayBuffer &&
-    value.interrupt.byteLength === 4 &&
-    (value.memoryLimitBytes === undefined || typeof value.memoryLimitBytes === "number")
+    value.interrupt.byteLength === Int32Array.BYTES_PER_ELEMENT &&
+    isMemoryLimitBytes(value.memoryLimitBytes)
   );
 }

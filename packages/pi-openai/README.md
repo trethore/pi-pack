@@ -6,7 +6,6 @@ Configure OpenAI-compatible request parameters: verbosity, reasoning summaries, 
 > Default settings leave requests unchanged.
 > Feature support depends on the selected model, provider, and API.
 
-
 ## Installation
 
 Requires Pi `1.1.0` or a compatible later release. From the repository root:
