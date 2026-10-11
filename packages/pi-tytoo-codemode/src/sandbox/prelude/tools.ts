@@ -58,7 +58,7 @@ function missingMemberMessage(label: string, property: string, names: string[], 
     message += ` ${hint}`;
   }
 
-  return prompts.discovery.checkMember({ message, property, label });
+  return message;
 }
 
 function guardMembers(target: ToolMembers, label: string, names: string[], hint?: string) {

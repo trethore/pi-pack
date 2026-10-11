@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { runInNewContext } from "node:vm";
+import { prompts } from "#src/prompts/generated";
 import type { ClassifierContext, ImageContent, ModelType, ModelTypeMap } from "@earendil-works/pi-ai";
 import { createModelGlobals } from "#src/models";
 import type { CodemodeModelRuntime, CodemodeNestedCall } from "#src/types";
@@ -134,6 +136,43 @@ describe("model helpers", () => {
     // Act / Assert
     await expect(test.invoke("classify", [test.model, { state: {}, questions: {} }])).rejects.toThrow("questions");
     expect(test.classify).not.toHaveBeenCalled();
+  });
+
+  it("accepts the classifier example from the recovery guidance", async () => {
+    // Arrange
+    const test = setup();
+    const example = prompts.models.classifierContext.split('\nFor "choice",')[0];
+    if (!example) {
+      throw new Error("Missing classifier context example");
+    }
+    const exampleContext: unknown = runInNewContext(`(${example})`);
+
+    // Act
+    await test.invoke("classify", [test.model, exampleContext]);
+
+    // Assert
+    expect(test.classify).toHaveBeenCalledExactlyOnceWith(test.model, exampleContext, expect.any(Object));
+  });
+
+  it("accepts the image example from the recovery guidance", async () => {
+    // Arrange
+    const test = setup();
+    const message = prompts.models.imagesError({
+      name: "models.generateImages",
+      problem: "invalid input",
+      docsPath: "/docs",
+    });
+    const example = message.match(/^Example context: (.+)$/m)?.[1];
+    if (!example) {
+      throw new Error("Missing image context example");
+    }
+    const exampleContext: unknown = runInNewContext(`(${example})`);
+
+    // Act
+    await test.invoke("generateImages", [test.imageModel, exampleContext]);
+
+    // Assert
+    expect(test.generateImages).toHaveBeenCalledExactlyOnceWith(test.imageModel, exampleContext, expect.any(Object));
   });
 
   it("accepts image blocks for classification and image generation", async () => {

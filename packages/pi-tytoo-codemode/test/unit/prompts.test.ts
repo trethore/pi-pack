@@ -87,7 +87,7 @@ describe("prompt catalog", () => {
     const result = prompts.tool.models({ docsPath });
 
     // Assert
-    expect(result).toBe(`- \`models\`: classifiers and image generation. Read ${docsPath} first.`);
+    expect(result).toBe(`- \`models\`: classifiers and image generation. Before you use \`models\`, read ${docsPath}.`);
   });
 
   it.each([

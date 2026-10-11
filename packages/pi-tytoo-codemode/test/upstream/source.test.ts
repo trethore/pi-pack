@@ -32,14 +32,14 @@ describe("parseCodemodeSource", () => {
 
 	it("rejects empty input and invalid options", () => {
 		const cases: [string, string | RegExp][] = [
-			["", /Expected JavaScript source text \(non-empty\)/],
-			["  \n", /Expected JavaScript source text \(non-empty\)/],
-			["// @options:\ntext(1)", /@options must be a JSON object with supported fields/],
-			["// @options: {timeout_ms: 1}\ntext(1)", /@options must be valid JSON with supported fields/],
-			["// @options: [1]\ntext(1)", /@options must be a JSON object with supported fields/],
+			["", /Provide JavaScript source/],
+			["  \n", /Provide JavaScript source/],
+			["// @options:\ntext(1)", /@options must be a JSON object\. Supported fields:/],
+			["// @options: {timeout_ms: 1}\ntext(1)", /Invalid @options JSON:/],
+			["// @options: [1]\ntext(1)", /@options must be a JSON object\. Supported fields:/],
 			[
 				'// @options: {"yield": 1}\ntext(1)',
-				"@options only supports `max_output_tokens` and `timeout_ms`; got `yield`",
+				"Unsupported @options field `yield`. Use `max_output_tokens` and `timeout_ms`.",
 			],
 			[
 				'// @options: {"max_output_tokens": 1.5}\ntext(1)',
@@ -48,11 +48,11 @@ describe("parseCodemodeSource", () => {
 			['// @options: {"timeout_ms": 0}\ntext(1)', /@options field `timeout_ms` must be a positive integer/],
 			[
 				'// @options: {"timeout_ms": 1}',
-				"The @options line must be followed by JavaScript source on subsequent lines",
+				"Put JavaScript source after the @options line.",
 			],
 			[
 				'// @options: {"timeout_ms": 1}\n  \n',
-				"The @options line must be followed by JavaScript source on subsequent lines",
+				"Put JavaScript source after the @options line.",
 			],
 		];
 		for (const [input, message] of cases) {

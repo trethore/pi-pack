@@ -24,7 +24,7 @@ describe("codemode descriptions", () => {
     { mode: "on", models: false, budget: 3000 },
     { mode: "only", models: true, budget: 3000 },
     { mode: "only", models: true, budget: 0 },
-  ] as const)("preserves model-facing text ($mode, models=$models, budget=$budget)", ({ mode, models, budget }) => {
+  ] as const)("renders model-facing text ($mode, models=$models, budget=$budget)", ({ mode, models, budget }) => {
     // Arrange
     const direct = sampleTool("read");
     const nested = { ...sampleTool("server-search"), description: "Search the server." };
@@ -51,21 +51,39 @@ describe("codemode descriptions", () => {
     expect(JSON.parse(text)).toMatchSnapshot();
   });
 
-  it.each([false, true])("dedents the prompt and conditionally describes models (models=%s)", (models) => {
+  it.each([false, true])("formats the prompt and conditionally describes models (models=%s)", (models) => {
     // Act
     const description = createCodemodeToolDefinition({ models }).description;
 
     // Assert
     expect(description.startsWith("Run JavaScript")).toBe(true);
-    expect(description).toContain(
-      '\n- Optional first line: `// @options: {"max_output_tokens": 10000, "timeout_ms": 60000}`',
-    );
+    expect(description).toContain('\nOptional first line: `// @options: {"max_output_tokens": 10000}`');
     expect(description).toContain("\n\nGlobals:\n- `text(value)`");
     expect(description.split("\n").some((line) => /^\s+\S/.test(line))).toBe(false);
     expect(description.endsWith("\n")).toBe(false);
     expect(
-      description.includes(`- \`models\`: classifiers and image generation. Read ${CODEMODE_DOCS_PATH} first.`),
+      description.includes(
+        `- \`models\`: classifiers and image generation. Before you use \`models\`, read ${CODEMODE_DOCS_PATH}.`,
+      ),
     ).toBe(models);
+  });
+
+  it("explains failure handling, persistence, cancellation, and discovery", () => {
+    // Act
+    const tool = createCodemodeToolDefinition({});
+    const guidelines = tool.promptGuidelines?.join("\n");
+
+    // Assert
+    expect(tool.description).toContain("Structured error results can return normally. Check fields such as `isError`.");
+    expect(tool.description).toContain("Writes persist only when the script succeeds.");
+    expect(tool.description).toContain("By default, no deadline is set.");
+    expect(tool.description).toContain('text(await searchTools("query"))');
+    expect(tool.description).not.toContain("{ limit?, namespace? }");
+    expect(tool.description).toContain("`await describeTool(name)`");
+    expect(tool.description).toContain("`await describeNamespace(name)`");
+    expect(tool.description).toContain("`return value` print output");
+    expect(guidelines).toContain("pending calls receive an abort signal");
+    expect(guidelines).toContain("Earlier tool actions are not undone.");
   });
 
   it.each([0, 3000])("includes shared MCP types only for listed tools (budget=%s)", (budget) => {

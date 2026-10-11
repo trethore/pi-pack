@@ -47,8 +47,8 @@ describe("output formatting", () => {
   });
 
   it.each([
-    { budget: 0, body: "...3 tokens truncated..." },
-    { budget: 1, body: "ab...2 tokens truncated...ij" },
+    { budget: 0, body: "...about 3 tokens removed..." },
+    { budget: 1, body: "ab...about 2 tokens removed...ij" },
   ])("preserves truncation formatting with a $budget-token budget", async ({ budget, body }) => {
     // Arrange
     const writeOutputFile = vi.spyOn(outputFiles, "writeOutputFile").mockResolvedValue("/tmp/output.txt");
@@ -68,7 +68,7 @@ describe("output formatting", () => {
       items: [
         {
           type: "text",
-          text: `Warning: truncated output (original token count: 3)\nTotal output lines: 2\n\n${body}\n\n[Full output: /tmp/output.txt (read with offset/limit)]`,
+          text: `Warning: truncated output (estimated original tokens: 3)\nTotal output lines: 2\n\n${body}\n\n[Full output: /tmp/output.txt (read with offset/limit)]`,
         },
         image,
       ],

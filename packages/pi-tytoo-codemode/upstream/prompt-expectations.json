@@ -1,0 +1,71 @@
+{
+  "sandbox.test.ts": [
+    {
+      "before": "TypeError: image expects a non-empty image URL string, an object with image_url, or a raw MCP image block",
+      "after": "TypeError: image() accepts a base64 data URL, an { image_url } object, or an image block. HTTP and HTTPS URLs are not supported.",
+      "count": 2
+    },
+    {
+      "before": "TypeError: remote image URLs are not supported in tool outputs. Pass a base64 data URI instead",
+      "after": "TypeError: HTTP and HTTPS image URLs are not supported. Use a base64 data URL.",
+      "count": 1
+    },
+    {
+      "before": "TypeError: invalid image output. Pass a base64 data URI instead",
+      "after": "TypeError: Invalid image data URL. Use data:<mimeType>;base64,<data>.",
+      "count": 1
+    },
+    {
+      "before": "ALL_TOOLS lists every tool; searchTools(query) finds tools by topic.",
+      "after": "ALL_TOOLS lists tools available to this script. Use searchTools(query) to find a tool.",
+      "count": 1
+    },
+    {
+      "before": " Check for a member with \"Echo\" in tools.",
+      "after": "",
+      "count": 1
+    },
+    {
+      "before": " Check for a member with \"generateImage\" in models.",
+      "after": "",
+      "count": 1
+    },
+    {
+      "before": "expect.stringContaining(\"can never settle\")",
+      "after": "expect.stringContaining(\"cannot settle\")",
+      "count": 1
+    },
+    {
+      "before": "expect.stringContaining(\"script output exceeded\")",
+      "after": "expect.stringContaining(\"Script output exceeded\")",
+      "count": 1
+    }
+  ],
+  "source.test.ts": [
+    {
+      "before": "Expected JavaScript source text \\(non-empty\\)",
+      "after": "Provide JavaScript source",
+      "count": 2
+    },
+    {
+      "before": "@options must be a JSON object with supported fields",
+      "after": "@options must be a JSON object\\. Supported fields:",
+      "count": 2
+    },
+    {
+      "before": "@options must be valid JSON with supported fields",
+      "after": "Invalid @options JSON:",
+      "count": 1
+    },
+    {
+      "before": "@options only supports `max_output_tokens` and `timeout_ms`; got `yield`",
+      "after": "Unsupported @options field `yield`. Use `max_output_tokens` and `timeout_ms`.",
+      "count": 1
+    },
+    {
+      "before": "The @options line must be followed by JavaScript source on subsequent lines",
+      "after": "Put JavaScript source after the @options line.",
+      "count": 2
+    }
+  ]
+}

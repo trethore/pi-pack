@@ -42,7 +42,7 @@ async function listFiles(directory, prefix = "") {
   return result.sort((a, b) => a.localeCompare(b));
 }
 
-function adapt(text, file) {
+function adapt(text, file, expectations) {
   const directory = dirname(join(sourceDirectory, file));
 
   let result = text.replace(
@@ -68,7 +68,7 @@ function adapt(text, file) {
     throw new Error(`Unmapped upstream source reference in ${file}`);
   }
 
-  return result;
+  return adaptPromptExpectations(result, file, expectations[file] ?? []);
 }
 
 function adaptWorkerUrls(text, file) {
@@ -88,12 +88,31 @@ function adaptWorkerUrls(text, file) {
   );
 }
 
-async function previousBaseline() {
+function adaptPromptExpectations(text, file, overrides) {
+  for (const { before, after, count } of overrides) {
+    if (
+      typeof before !== "string" ||
+      before === "" ||
+      typeof after !== "string" ||
+      !Number.isInteger(count) ||
+      count < 1
+    ) {
+      throw new Error(`Invalid prompt expectation override in ${file}`);
+    }
+    if (text.split(before).length - 1 !== count) {
+      throw new Error(`Upstream prompt expectation changed in ${file}: ${before}`);
+    }
+    text = text.replaceAll(before, () => after);
+  }
+  return text;
+}
+
+async function readOptionalJson(path, fallback) {
   try {
-    return JSON.parse(await readFile(manifestPath, "utf8"));
+    return JSON.parse(await readFile(path, "utf8"));
   } catch (error) {
     if (error.code === "ENOENT") {
-      return undefined;
+      return fallback;
     }
     throw error;
   }
@@ -136,7 +155,7 @@ async function main() {
     throw new Error("Upstream codemode sources or tests are modified; use a clean checkout");
   }
 
-  const previous = await previousBaseline();
+  const previous = await readOptionalJson(manifestPath, undefined);
   await checkDestination(previous);
 
   const files = await listFiles(sourceDirectory);
@@ -145,10 +164,17 @@ async function main() {
     throw new Error("No upstream tests found; refusing to replace the existing suite");
   }
 
+  const expectations = await readOptionalJson(join(root, "upstream/prompt-expectations.json"), {});
+  for (const file of Object.keys(expectations)) {
+    if (!selected.includes(file)) {
+      throw new Error(`Missing upstream test for prompt expectations: ${file}`);
+    }
+  }
+
   const entries = await Promise.all(
     selected.map(async (path) => {
       const original = await readFile(join(sourceDirectory, path), "utf8");
-      const content = adapt(original, path);
+      const content = adapt(original, path, expectations);
       return { path, content, upstreamSha256: hash(original), importedSha256: hash(content) };
     }),
   );

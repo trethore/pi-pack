@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CodemodeSandbox } from "#src/sandbox/sandbox";
 import type { CodemodeTool } from "#src/sandbox/types";
 
-const TOOL_HINT = "ALL_TOOLS lists every tool; searchTools(query) finds tools by topic.";
+const TOOL_HINT = "ALL_TOOLS lists tools available to this script. Use searchTools(query) to find a tool.";
 const sandboxes: CodemodeSandbox[] = [];
 
 function createSandbox(names: string[]): CodemodeSandbox {
@@ -29,7 +29,7 @@ describe("guarded tool names", () => {
       ok: false,
       error: {
         name: "TypeError",
-        message: `tools.READFILE does not exist. Did you mean tools.read_file, tools.ReadFile? ${TOOL_HINT} Check for a member with "READFILE" in tools.`,
+        message: `tools.READFILE does not exist. Did you mean tools.read_file, tools.ReadFile? ${TOOL_HINT}`,
       },
     });
   });
@@ -45,7 +45,7 @@ describe("guarded tool names", () => {
     expect(result).toMatchObject({
       ok: false,
       error: {
-        message: `tools.look does not exist. Did you mean tools.lookup0, tools.lookup1, tools.lookup2, tools.lookup3, tools.lookup4? ${TOOL_HINT} Check for a member with "look" in tools.`,
+        message: `tools.look does not exist. Did you mean tools.lookup0, tools.lookup1, tools.lookup2, tools.lookup3, tools.lookup4? ${TOOL_HINT}`,
       },
     });
   });
@@ -63,7 +63,7 @@ describe("guarded tool names", () => {
     expect(result).toMatchObject({
       ok: false,
       error: {
-        message: `tools.missing does not exist.${available} ${TOOL_HINT} Check for a member with "missing" in tools.`,
+        message: `tools.missing does not exist.${available} ${TOOL_HINT}`,
       },
     });
   });
@@ -79,7 +79,7 @@ describe("guarded tool names", () => {
     expect(result).toMatchObject({
       ok: false,
       error: {
-        message: `tools.!!! does not exist. Did you mean tools.___? ${TOOL_HINT} Check for a member with "!!!" in tools.`,
+        message: `tools.!!! does not exist. Did you mean tools.___? ${TOOL_HINT}`,
       },
     });
   });

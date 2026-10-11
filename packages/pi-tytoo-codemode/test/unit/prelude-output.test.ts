@@ -68,7 +68,7 @@ describe("prelude output", () => {
   it("allows the exact character limit and makes overflow terminal", () => {
     // Arrange
     const { bridge, lifecycle, output } = createHarness();
-    const message = `script output exceeded the limit of ${MAX_OUTPUT_CHARS} characters or ${MAX_OUTPUT_ITEMS} text(), image(), and console calls. Print a summary instead, or write large data to a file with a tool.`;
+    const message = `Script output exceeded ${MAX_OUTPUT_CHARS} characters or ${MAX_OUTPUT_ITEMS} output calls. Print a summary. Use a tool to save large data to a file.`;
 
     // Act
     output.text("123456");

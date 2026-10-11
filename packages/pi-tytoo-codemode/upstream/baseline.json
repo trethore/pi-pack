@@ -16,12 +16,12 @@
     {
       "path": "sandbox.test.ts",
       "upstreamSha256": "3e036df065b6ba6f52413029d85bf962308a154d95799b6f337f93b8ecafc754",
-      "importedSha256": "777297955c599ab7406a534026d1d4df7e752974621239435cdb4979e7769ad0"
+      "importedSha256": "09098254b4b745e75680215ed2625d00e2bbb5f6096c593362fbe04806b109d0"
     },
     {
       "path": "source.test.ts",
       "upstreamSha256": "8c6889750c0837abff3dd1ca7b822cbbcbd610a3e5d099d4bcaa2632b0ebdba3",
-      "importedSha256": "1043cdae53d9211a0f87c8b98be434960ed241764c1b12b1cdbc91ad318a7a38"
+      "importedSha256": "ec3279d54f5bef7f3b41a7421c6cf0b972417f5b982fb295b53e7011ddfc40ba"
     }
   ]
 }

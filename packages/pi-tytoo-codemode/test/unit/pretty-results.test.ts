@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatPrettyResult } from "#src/pretty-results";
+import { prompts } from "#src/prompts/generated";
 
 it("formats objects with triple-quoted multiline strings", () => {
   // Arrange
@@ -104,9 +105,11 @@ it("normalizes CRLF multiline strings for display", () => {
 describe("output boundaries", () => {
   it("formats joined JSON items without changing console output or script errors", () => {
     // Arrange
-    const consoleOutput = '<console_output>\n{"log":true}\n</console_output>';
-    const error = 'Script error:\nError: failed\n{"error":true}';
-    const source = `==> text 1/2 <==\n{"name":"Alice"}\n==> text 2/2 <==\n{\n"age":25\n}\n${consoleOutput}\n${error}`;
+    const consoleOutput = prompts.results.console({ lines: '{"log":true}' });
+    const error = prompts.results.scriptError({ error: 'Error: failed\n{"error":true}' });
+    const first = prompts.results.textItem({ index: 1, total: 2, text: '{"name":"Alice"}' });
+    const second = prompts.results.textItem({ index: 2, total: 2, text: '{\n"age":25\n}' });
+    const source = `${first}\n${second}\n${consoleOutput}\n${error}`;
 
     // Act / Assert
     expect(formatPrettyResult(source)).toBe(
@@ -126,9 +129,10 @@ describe("output boundaries", () => {
   });
 
   it.each([
-    "[Image saved to /tmp/image.png (image/png, 1 KB)]",
-    "[Image (image/png, 1 KB) could not be saved: failed]",
-    "Note: models.generateImages() returned 1 image that the script did not show.",
+    prompts.results.imageSaved({ path: "/tmp/image.png", kind: "image/png, 1 KB" }),
+    prompts.results.imageSaveFailed({ kind: "image/png, 1 KB", error: "failed" }),
+    prompts.results.unshownImages({ count: 1, suffix: "" }),
+    prompts.results.unshownImages({ count: 2, suffix: "s" }),
   ])("preserves appended image notices: %s", (notice) => {
     // Arrange
     const source = `{"name":"Alice"}\n${notice}`;

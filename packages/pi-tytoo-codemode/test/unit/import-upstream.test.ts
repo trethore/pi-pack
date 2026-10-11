@@ -52,7 +52,7 @@ afterEach(async () => {
 });
 
 describe("upstream test imports", () => {
-  it("records provenance and imports reproducibly without changing assertions", async () => {
+  it("records provenance and imports reproducibly without expectation overrides", async () => {
     // Act
     const first = run();
     const baseline = await readFile(join(output, "upstream/baseline.json"), "utf8");
@@ -66,6 +66,81 @@ describe("upstream test imports", () => {
     );
     expect(await readFile(join(output, "upstream/baseline.json"), "utf8")).toBe(baseline);
     expect(baseline).toContain(git("rev-parse", "HEAD").trim());
+  });
+
+  it.each(["CodemodeSandbox", "$&"])("applies prompt expectations literally and reproducibly: %s", async (name) => {
+    // Arrange
+    const original = source.replace("toBeDefined()", 'toHaveProperty("name", "UpstreamSandbox")');
+    await writeFile(sourcePath(), original);
+    commit();
+    await mkdir(join(output, "upstream"));
+    await writeFile(
+      join(output, "upstream/prompt-expectations.json"),
+      JSON.stringify({
+        "sample.test.ts": [{ before: '"UpstreamSandbox"', after: JSON.stringify(name), count: 1 }],
+      }),
+    );
+
+    // Act
+    const first = run();
+    const baseline = await readFile(join(output, "upstream/baseline.json"), "utf8");
+    const second = run();
+
+    // Assert
+    expect(first.status, first.stderr).toBe(0);
+    expect(second.status, second.stderr).toBe(0);
+    expect(await readFile(join(output, "test/upstream/sample.test.ts"), "utf8")).toBe(
+      original
+        .replace("../src/index.ts", "#test/support/upstream-adapter")
+        .replace('"UpstreamSandbox"', () => JSON.stringify(name)),
+    );
+    expect(await readFile(join(output, "upstream/baseline.json"), "utf8")).toBe(baseline);
+  });
+
+  it.each([
+    { before: "missing wording", count: 1, error: "Upstream prompt expectation changed" },
+    { before: "sample", count: 2, error: "Upstream prompt expectation changed" },
+    { before: "sample", count: 0, error: "Invalid prompt expectation override" },
+  ])(
+    "preserves imported tests when an expectation override fails: $before, $count",
+    async ({ before, count, error }) => {
+      // Arrange
+      expect(run().status).toBe(0);
+      const target = join(output, "test/upstream/sample.test.ts");
+      const manifest = join(output, "upstream/baseline.json");
+      const previousTest = await readFile(target, "utf8");
+      const previousBaseline = await readFile(manifest, "utf8");
+      await writeFile(
+        join(output, "upstream/prompt-expectations.json"),
+        JSON.stringify({ "sample.test.ts": [{ before, after: "replacement", count }] }),
+      );
+
+      // Act
+      const result = run();
+
+      // Assert
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(error);
+      expect(await readFile(target, "utf8")).toBe(previousTest);
+      expect(await readFile(manifest, "utf8")).toBe(previousBaseline);
+    },
+  );
+
+  it("rejects prompt expectations for missing upstream tests", async () => {
+    // Arrange
+    await mkdir(join(output, "upstream"));
+    await writeFile(
+      join(output, "upstream/prompt-expectations.json"),
+      JSON.stringify({ "missing.test.ts": [{ before: "old", after: "new", count: 1 }] }),
+    );
+
+    // Act
+    const result = run();
+
+    // Assert
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Missing upstream test for prompt expectations: missing.test.ts");
+    await expect(stat(join(output, "test/upstream"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("resolves nested upstream imports and worker URLs from their source file", async () => {

@@ -118,12 +118,12 @@ describe("script execution", () => {
 		const errors = result.value as string[];
 		expect(errors[0]).toMatch(/^TypeError: .*circular/);
 		expect(errors.slice(1)).toEqual([
-			"TypeError: image expects a non-empty image URL string, an object with image_url, or a raw MCP image block",
-			"TypeError: remote image URLs are not supported in tool outputs. Pass a base64 data URI instead",
-			"TypeError: invalid image output. Pass a base64 data URI instead",
+			"TypeError: image() accepts a base64 data URL, an { image_url } object, or an image block. HTTP and HTTPS URLs are not supported.",
+			"TypeError: HTTP and HTTPS image URLs are not supported. Use a base64 data URL.",
+			"TypeError: Invalid image data URL. Use data:<mimeType>;base64,<data>.",
 			'TypeError: image only accepts MCP image blocks, got "text"',
 			"TypeError: image expected MCP image data",
-			"TypeError: image expects a non-empty image URL string, an object with image_url, or a raw MCP image block",
+			"TypeError: image() accepts a base64 data URL, an { image_url } object, or an image block. HTTP and HTTPS URLs are not supported.",
 			...Array(6).fill(
 				"TypeError: invalid image output. The image data is not valid base64 (truncated or corrupted?)",
 			),
@@ -343,7 +343,7 @@ describe("tools", () => {
 			return result.ok ? result.value : result.error.message;
 		};
 		expect(await attempt("tools.Echo")).toBe(
-			'tools.Echo does not exist. Did you mean tools.echo? ALL_TOOLS lists every tool; searchTools(query) finds tools by topic. Check for a member with "Echo" in tools.',
+			'tools.Echo does not exist. Did you mean tools.echo? ALL_TOOLS lists tools available to this script. Use searchTools(query) to find a tool.',
 		);
 		expect(await attempt("tools.websearch")).toContain("Did you mean tools.web_search?");
 		expect(await attempt("tools.nothing")).toContain("Available: echo, web_search.");
@@ -480,7 +480,7 @@ describe("globals", () => {
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.message).toBe(
-			'models.generateImage does not exist. Did you mean models.generateImages? Check for a member with "generateImage" in models.',
+			'models.generateImage does not exist. Did you mean models.generateImages?',
 		);
 	});
 
@@ -528,7 +528,7 @@ describe("limits and lifetime", () => {
 		});
 		expect(result).toMatchObject({
 			ok: false,
-			error: { kind: "script", message: expect.stringContaining("can never settle") },
+			error: { kind: "script", message: expect.stringContaining("cannot settle") },
 		});
 		// Returning while a call is still pending is not a stall.
 		const returned = await sandbox.execute("tools.echo(2); return 'early'", { timeoutMs: Number.POSITIVE_INFINITY });
@@ -593,7 +593,7 @@ describe("limits and lifetime", () => {
 			`);
 			expect(result).toMatchObject({
 				ok: false,
-				error: { kind: "script", name: "RangeError", message: expect.stringContaining("script output exceeded") },
+				error: { kind: "script", name: "RangeError", message: expect.stringContaining("Script output exceeded") },
 			});
 			const chars = result.output.reduce(
 				(sum, item) => sum + (item.type === "text" ? item.text.length : item.data.length),

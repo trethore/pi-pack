@@ -6,11 +6,12 @@ const JPEG = "/9j/4A==";
 const GIF = "R0lGODlh";
 const WEBP = "UklGRgAAAABXRUJQ";
 
-const EXPECTED_INPUT = "image expects a non-empty image URL string, an object with image_url, or a raw MCP image block";
-const INVALID_URI = "invalid image output. Pass a base64 data URI instead";
+const EXPECTED_INPUT =
+  "image() accepts a base64 data URL, an { image_url } object, or an image block. HTTP and HTTPS URLs are not supported.";
+const INVALID_URI = "Invalid image data URL. Use data:<mimeType>;base64,<data>.";
 const INVALID_BASE64 = "invalid image output. The image data is not valid base64 (truncated or corrupted?)";
 const UNSUPPORTED_IMAGE = "invalid image output. The image data is not a PNG, JPEG, GIF, or WebP image";
-const REMOTE_IMAGE = "remote image URLs are not supported in tool outputs. Pass a base64 data URI instead";
+const REMOTE_IMAGE = "HTTP and HTTPS image URLs are not supported. Use a base64 data URL.";
 
 describe("image parsing", () => {
   it.each([
@@ -107,7 +108,7 @@ describe("image parsing", () => {
     { label: "invalid base64 padding", input: "data:image/png;base64,AA=A", message: INVALID_BASE64 },
     { label: "unknown image signature", input: "data:image/png;base64,AAAA", message: UNSUPPORTED_IMAGE },
     { label: "rejected JPEG prefix", input: "data:image/jpeg;base64,/9j/9w==", message: UNSUPPORTED_IMAGE },
-  ])("rejects $label with the existing error", ({ input, message }) => {
+  ])("rejects $label with a corrective error", ({ input, message }) => {
     // Act / Assert
     expect(() => parseImage(input)).toThrow(new TypeError(message));
   });

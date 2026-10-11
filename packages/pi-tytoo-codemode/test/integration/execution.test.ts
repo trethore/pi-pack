@@ -133,7 +133,7 @@ describe("Pi execution", () => {
       totalTokens: 74,
       cost: { input: 2, output: 4, cacheRead: 6, cacheWrite: 8, total: 20 },
     });
-    expect(resultText(result)).toContain("returned 2 images that the script did not show");
+    expect(resultText(result)).toContain("returned 2 images, but the script showed none.");
     expect(result.content.some((item) => item.type === "image")).toBe(false);
   });
 
@@ -155,7 +155,7 @@ describe("Pi execution", () => {
     expect(fullText).toBe("x".repeat(1000));
     expect(response).toContain("truncated output");
     expect(response.length).toBeLessThan(fullText.length);
-    expect(response).toContain("xxxxxxxx...246 tokens truncated...xxxxxxxx");
+    expect(response).toContain("xxxxxxxx...about 246 tokens removed...xxxxxxxx");
     expect(response).not.toContain("x".repeat(9));
   });
 });
