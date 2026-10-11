@@ -18,7 +18,7 @@ Replace `{{name}}` placeholders with cached script output in system prompts and 
 
 ### [pi-tytoo-codemode](packages/pi-tytoo-codemode/README.md)
 
-A replacement for Pi's built-in codemode, with a typed sandbox runtime.
+Opinionated implementation of Pi's built-in codemode.
 
 ### [pi-whimsical](packages/pi-whimsical/README.md)
 

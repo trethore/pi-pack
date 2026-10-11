@@ -1,7 +1,7 @@
 {
   "name": "pi-tytoo-codemode",
   "version": "0.1.0",
-  "description": "A replaceable Pi codemode extension with a typed sandbox runtime.",
+  "description": "Opinionated implementation of Pi's built-in codemode.",
   "type": "module",
   "license": "MIT",
   "files": [

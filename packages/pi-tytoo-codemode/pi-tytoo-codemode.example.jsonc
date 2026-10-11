@@ -1,0 +1,4 @@
+{
+  // Format user-facing JSON results as indented objects and lists with triple-quoted multiline strings (YAML like).
+  "prettyResults": true
+}
