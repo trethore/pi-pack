@@ -2,7 +2,10 @@
 
 Configure OpenAI-compatible request parameters: verbosity, reasoning summaries, native web search, and service tiers.
 
-**Default settings leave requests unchanged.** Feature support depends on the selected model, provider, and API.
+> [!NOTE]
+> Default settings leave requests unchanged.
+> Feature support depends on the selected model, provider, and API.** 
+
 
 ## Installation
 
@@ -49,7 +52,7 @@ No file is required. To configure defaults, create `.pi/pi-openai.jsonc` in a tr
 }
 ```
 
-Settings merge per key: commands > environment > project > global > defaults.
+Settings merge per key: `commands > environment > project > global > defaults`.
 The global path follows `$PI_CODING_AGENT_DIR` when customized. Run `/reload` after editing files.
 
 See the [configuration reference](docs/configuration.md) and [example configuration](pi-openai.example.jsonc) for scoped overrides.
