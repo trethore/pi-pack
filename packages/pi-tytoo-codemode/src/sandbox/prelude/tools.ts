@@ -1,6 +1,6 @@
 import { BridgeMessageType } from "#src/sandbox/bridge-protocol";
 import type { createBridge, ScriptFunction } from "#src/sandbox/prelude/bridge";
-import type { WorkerData } from "#src/sandbox/protocol";
+import type { ToolDefinition, GlobalDefinition } from "#src/sandbox/bootstrap";
 
 const MAX_NAME_SUGGESTIONS = 5;
 const MAX_LISTED_NAMES = 20;
@@ -79,7 +79,7 @@ function guardMembers(target: ToolMembers, label: string, names: string[], hint?
   return new Proxy(target, { get: getProperty });
 }
 
-function createToolTable(definitions: WorkerData["tools"], rpc: RpcBridge) {
+function createToolTable(definitions: ToolDefinition[], rpc: RpcBridge) {
   const tools: ToolMembers = {};
   Object.setPrototypeOf(tools, null);
 
@@ -105,7 +105,7 @@ function createToolTable(definitions: WorkerData["tools"], rpc: RpcBridge) {
   return { tools, allTools, names };
 }
 
-export function installTools(definitions: WorkerData["tools"], globals: WorkerData["globals"], rpc: RpcBridge) {
+export function installTools(definitions: ToolDefinition[], globals: GlobalDefinition[], rpc: RpcBridge) {
   const { tools, allTools, names } = createToolTable(definitions, rpc);
   const proxy = guardMembers(tools, TOOLS_GLOBAL_NAME, names, TOOL_DISCOVERY_HINT);
 
@@ -116,7 +116,7 @@ export function installTools(definitions: WorkerData["tools"], globals: WorkerDa
   return proxy;
 }
 
-function installNamespaces(globals: WorkerData["globals"], rpc: RpcBridge): void {
+function installNamespaces(globals: GlobalDefinition[], rpc: RpcBridge): void {
   const namespaces = new Map<string, ToolMembers>();
 
   function registerGlobal(name: string, spread: boolean): void {

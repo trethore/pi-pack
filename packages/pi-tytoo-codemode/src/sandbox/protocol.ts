@@ -1,4 +1,5 @@
-import { isRecord, isArray } from "#src/sandbox/values";
+import { isToolDefinitions, isGlobalDefinitions, isStoreSnapshot, type BootstrapData } from "#src/sandbox/bootstrap";
+import { isRecord, isString } from "#src/sandbox/values";
 import type { CodemodeOutputItem } from "#src/sandbox/types";
 import { isWasmModule, type CodemodeWasmModule } from "#src/sandbox/wasm";
 import { isMemoryLimitBytes } from "#src/sandbox/limits";
@@ -9,27 +10,11 @@ import { isMemoryLimitBytes } from "#src/sandbox/limits";
  * out of the QuickJS VM as strings and never builds structured values itself.
  */
 
-interface ToolDefinition {
-  name: string;
-  jsName: string;
-  description: string;
-}
-
-interface GlobalDefinition {
-  name: string;
-  spread: boolean;
-}
-
-export interface WorkerData {
+export interface WorkerData extends BootstrapData {
   code: string;
-  /** `jsName` is the identifier the script uses; `description` is listed in `ALL_TOOLS`. */
-  tools: ToolDefinition[];
-  globals: GlobalDefinition[];
   /** Compiled `quickjs-wasi` module. Structured clone shares the compiled code with the worker. */
   wasm: CodemodeWasmModule;
   memoryLimitBytes: number;
-  /** Snapshot for `load()`: key to JSON text. */
-  store: Record<string, string>;
   /**
    * One Int32 the host sets to non-zero before terminating the worker. The VM's interrupt handler
    * polls it, because Bun's `worker.terminate()` cannot stop a thread that is spinning in wasm.
@@ -69,10 +54,6 @@ export type WorkerToHostMessage =
 export type HostToWorkerMessage =
   /** `payload` is the JSON result when `ok`, otherwise the error message. */
   { type: typeof HostToWorkerMessageType.Result; id: number; ok: boolean; payload: string | undefined };
-
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
 
 function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || isString(value);
@@ -138,40 +119,6 @@ export function isHostToWorkerMessage(value: unknown): value is HostToWorkerMess
     typeof value.ok === "boolean" &&
     isOptionalString(value.payload)
   );
-}
-
-function isArrayOf<T>(value: unknown, isItem: (item: unknown) => item is T): value is T[] {
-  if (!isArray(value)) {
-    return false;
-  }
-
-  for (let index = 0; index < value.length; index++) {
-    if (!Object.hasOwn(value, index) || !isItem(value[index])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function isToolDefinition(value: unknown): value is ToolDefinition {
-  return isRecord(value) && isString(value.name) && isString(value.jsName) && isString(value.description);
-}
-
-export function isToolDefinitions(value: unknown): value is ToolDefinition[] {
-  return isArrayOf(value, isToolDefinition);
-}
-
-function isGlobalDefinition(value: unknown): value is GlobalDefinition {
-  return isRecord(value) && isString(value.name) && typeof value.spread === "boolean";
-}
-
-export function isGlobalDefinitions(value: unknown): value is GlobalDefinition[] {
-  return isArrayOf(value, isGlobalDefinition);
-}
-
-export function isStoreSnapshot(value: unknown): value is WorkerData["store"] {
-  return isRecord(value) && Object.values(value).every(isString);
 }
 
 export function isWorkerData(value: unknown): value is WorkerData {

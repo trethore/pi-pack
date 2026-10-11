@@ -5,7 +5,7 @@ import { lockdown } from "#src/sandbox/prelude/lockdown";
 import { createOutput } from "#src/sandbox/prelude/output";
 import { createStore } from "#src/sandbox/prelude/store";
 import { installGlobal, installTools } from "#src/sandbox/prelude/tools";
-import { isToolDefinitions, isGlobalDefinitions, isStoreSnapshot } from "#src/sandbox/protocol";
+import { isToolDefinitions, isGlobalDefinitions, isStoreSnapshot } from "#src/sandbox/bootstrap";
 import { parseJson } from "#src/sandbox/values";
 
 function parseBootstrapData(toolsJson: string, globalsJson: string, storeJson: string) {

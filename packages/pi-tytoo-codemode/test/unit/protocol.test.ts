@@ -1,13 +1,6 @@
+import { isGlobalDefinitions, isStoreSnapshot, isToolDefinitions } from "#src/sandbox/bootstrap";
 import { describe, expect, it } from "vitest";
-import {
-  isGlobalDefinitions,
-  isHostToWorkerMessage,
-  isStoreSnapshot,
-  isToolDefinitions,
-  isWorkerToHostMessage,
-  isWorkerData,
-  type WorkerData,
-} from "#src/sandbox/protocol";
+import { isHostToWorkerMessage, isWorkerToHostMessage, isWorkerData, type WorkerData } from "#src/sandbox/protocol";
 import { DEFAULT_MEMORY_LIMIT_BYTES, MAX_MEMORY_LIMIT_BYTES } from "#src/sandbox/limits";
 import { loadQuickJSWasm } from "#src/sandbox/wasm-loader";
 
