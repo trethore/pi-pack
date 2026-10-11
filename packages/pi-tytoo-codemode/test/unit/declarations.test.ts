@@ -4,7 +4,10 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, it } from "vitest";
-import { MCP_TYPESCRIPT_PREAMBLE, renderDeclarations } from "#src/declarations/render";
+import { dedent } from "@pi-pack/shared/dedent";
+import { MCP_TYPESCRIPT_PREAMBLE, renderDeclarations, type RenderDeclarationsOptions } from "#src/declarations/render";
+
+const execute = () => undefined;
 
 it("compiles the shared MCP asset and generated tool declarations together", async () => {
   // Arrange
@@ -45,4 +48,54 @@ it("compiles the shared MCP asset and generated tool declarations together", asy
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+it.each<RenderDeclarationsOptions>([{}, { tools: [], globals: [] }])(
+  "renders no declarations for empty options %j",
+  (options) => {
+    // Act
+    const result = renderDeclarations(options);
+
+    // Assert
+    expect(result).toBe("");
+  },
+);
+
+it("renders tools before plain globals and groups namespaces in encounter order", () => {
+  // Arrange
+  const options: RenderDeclarationsOptions = {
+    tools: [{ name: "read", execute }],
+    globals: [
+      { name: "models.list", signature: "(): void", execute },
+      { name: "first", signature: "(): void", execute },
+      { name: "files.read", signature: "(): void", execute },
+      { name: "models.get", signature: "(): void", execute },
+      { name: "second", signature: "(): void", execute },
+    ],
+  };
+
+  // Act
+  const result = renderDeclarations(options);
+
+  // Assert
+  expect(result).toBe(
+    dedent(`
+      declare const tools: {
+        read(args: unknown): Promise<unknown>;
+      };
+
+      declare function first(): void;
+
+      declare function second(): void;
+
+      declare const models: {
+        list(): void;
+        get(): void;
+      };
+
+      declare const files: {
+        read(): void;
+      };
+    `),
+  );
 });

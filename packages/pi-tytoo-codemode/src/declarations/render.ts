@@ -30,23 +30,39 @@ export interface RenderDeclarationsOptions {
 export function renderDeclarations(options: RenderDeclarationsOptions): string {
   const sections: string[] = [];
   const tools = options.tools ?? [];
+
   if (tools.length > 0) {
-    const members = tools.map((tool) => `${docComment(tool.description, INDENT)}${INDENT}${renderToolSignature(tool)}`);
-    sections.push(`declare const tools: {\n${members.join("\n")}\n};`);
+    sections.push(renderToolsDeclaration(tools));
   }
 
+  sections.push(...renderGlobalDeclarations(options.globals ?? []));
+
+  return sections.join("\n\n");
+}
+
+function renderToolsDeclaration(tools: readonly CodemodeTool[]): string {
+  const members = tools.map((tool) => `${docComment(tool.description, INDENT)}${INDENT}${renderToolSignature(tool)}`);
+
+  return `declare const tools: {\n${members.join("\n")}\n};`;
+}
+
+function renderGlobalDeclarations(globals: readonly CodemodeTool[]): string[] {
+  const sections: string[] = [];
   const namespaces = new Map<string, string[]>();
-  for (const global of options.globals ?? []) {
+
+  for (const global of globals) {
     const dot = global.name.indexOf(".");
     if (dot === -1) {
       sections.push(renderGlobal(`declare function ${global.name}`, global, ""));
       continue;
     }
+
     const namespace = global.name.slice(0, dot);
     const members = namespaces.get(namespace) ?? [];
     if (members.length === 0) {
       namespaces.set(namespace, members);
     }
+
     members.push(renderGlobal(global.name.slice(dot + 1), global, INDENT));
   }
 
@@ -54,7 +70,7 @@ export function renderDeclarations(options: RenderDeclarationsOptions): string {
     sections.push(`declare const ${namespace}: {\n${members.join("\n")}\n};`);
   }
 
-  return sections.join("\n\n");
+  return sections;
 }
 
 /**
@@ -67,10 +83,11 @@ export function renderToolSignature(
   tool: Pick<CodemodeTool, "name" | "inputSchema" | "outputSchema">,
   options: { inputMaxChars?: number } = {},
 ): string {
-  const input =
-    tool.inputSchema === undefined
-      ? "unknown"
-      : schemaToType(tool.inputSchema, { maxChars: options.inputMaxChars ?? DEFAULT_INPUT_SCHEMA_MAX_CHARS });
+  let input = "unknown";
+  if (tool.inputSchema !== undefined) {
+    input = schemaToType(tool.inputSchema, { maxChars: options.inputMaxChars ?? DEFAULT_INPUT_SCHEMA_MAX_CHARS });
+  }
+
   return `${toCodemodeIdentifier(tool.name)}(args: ${input}): Promise<${renderToolOutputType(tool.outputSchema)}>;`;
 }
 
@@ -83,6 +100,7 @@ export function renderToolSample(
   options: { inputMaxChars?: number } = {},
 ): string {
   const declaration = `declare const tools: { ${renderToolSignature(tool, options)} };`;
+
   return `${tool.description?.trim() ?? ""}\n\ncodemode tool declaration:\n\`\`\`ts\n${declaration}\n\`\`\``;
 }
 
@@ -100,6 +118,7 @@ export function mcpStructuredContentSchema(schema: CodemodeJsonSchema | undefine
   if (!isContentArray(content)) {
     return undefined;
   }
+
   if (!isRecord(isError) || isError.type !== "boolean" || !isRecord(_meta) || _meta.type !== "object") {
     return undefined;
   }
@@ -117,6 +136,7 @@ export function renderToolOutputType(schema: CodemodeJsonSchema | undefined): st
     const type = schemaToType(structured);
     return type === "unknown" ? "CallToolResult" : `CallToolResult<${type}>`;
   }
+
   return schema === undefined ? "unknown" : schemaToType(schema);
 }
 

@@ -157,3 +157,18 @@ describe("codemode descriptions", () => {
     }
   });
 });
+
+it.each([
+  { guidelines: [], expected: "  Read a file.  " },
+  { guidelines: [" ", "\n"], expected: "  Read a file.  " },
+  { guidelines: [" First. ", " ", "\nSecond.\n"], expected: "Read a file.\n\n- First.\n- Second." },
+])("formats declaration guidelines $guidelines", ({ guidelines, expected }) => {
+  // Arrange
+  const tool = { ...sampleTool("read"), description: "  Read a file.  " };
+
+  // Act
+  const declaration = toCodemodeDeclaration(tool, guidelines);
+
+  // Assert
+  expect(declaration.description).toBe(expected);
+});

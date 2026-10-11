@@ -1,4 +1,5 @@
 import { isRecord } from "#src/sandbox/values";
+
 /**
  * Codemode source format: JavaScript, optionally preceded by one options line.
  *
@@ -11,8 +12,9 @@ import { isRecord } from "#src/sandbox/values";
 
 const CODEMODE_OPTIONS_PREFIX = "// @options:";
 
-const SUPPORTED_FIELDS = ["max_output_tokens", "timeout_ms"] as const;
-const SUPPORTED_FIELDS_TEXT = "`max_output_tokens` and `timeout_ms`";
+const SUPPORTED_FIELDS: readonly string[] = ["max_output_tokens", "timeout_ms"];
+const SUPPORTED_FIELDS_TEXT = SUPPORTED_FIELDS.map((field) => `\`${field}\``).join(" and ");
+
 /** Largest delay `setTimeout` supports, which bounds `timeout_ms`. */
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
@@ -36,7 +38,7 @@ export class CodemodeSourceError extends Error {
   }
 }
 
-function isSafeInteger(value: unknown): value is number {
+function isNonNegativeSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
@@ -44,6 +46,7 @@ function parseOptions(directive: string): CodemodeSourceOptions {
   if (directive === "") {
     throw new CodemodeSourceError(`@options must be a JSON object with supported fields ${SUPPORTED_FIELDS_TEXT}`);
   }
+
   let value: unknown;
   try {
     value = JSON.parse(directive);
@@ -52,33 +55,40 @@ function parseOptions(directive: string): CodemodeSourceOptions {
       `@options must be valid JSON with supported fields ${SUPPORTED_FIELDS_TEXT}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+
   if (!isRecord(value)) {
     throw new CodemodeSourceError(`@options must be a JSON object with supported fields ${SUPPORTED_FIELDS_TEXT}`);
   }
-  const fields = value;
-  for (const key of Object.keys(fields)) {
-    if (!(SUPPORTED_FIELDS as readonly string[]).includes(key)) {
+
+  for (const key of Object.keys(value)) {
+    if (!SUPPORTED_FIELDS.includes(key)) {
       throw new CodemodeSourceError(`@options only supports ${SUPPORTED_FIELDS_TEXT}; got \`${key}\``);
     }
   }
-  return readOptions(fields);
+
+  return readOptions(value);
 }
 
 function readOptions(fields: Record<string, unknown>): CodemodeSourceOptions {
   const options: CodemodeSourceOptions = {};
   const { max_output_tokens, timeout_ms } = fields;
+
   if (max_output_tokens !== undefined) {
-    if (!isSafeInteger(max_output_tokens)) {
+    if (!isNonNegativeSafeInteger(max_output_tokens)) {
       throw new CodemodeSourceError("@options field `max_output_tokens` must be a non-negative safe integer");
     }
+
     options.maxOutputTokens = max_output_tokens;
   }
+
   if (timeout_ms !== undefined) {
-    if (!isSafeInteger(timeout_ms) || timeout_ms === 0 || timeout_ms > MAX_TIMEOUT_MS) {
+    if (!isNonNegativeSafeInteger(timeout_ms) || timeout_ms === 0 || timeout_ms > MAX_TIMEOUT_MS) {
       throw new CodemodeSourceError(`@options field \`timeout_ms\` must be a positive integer up to ${MAX_TIMEOUT_MS}`);
     }
+
     options.timeoutMs = timeout_ms;
   }
+
   return options;
 }
 
@@ -92,15 +102,21 @@ export function parseCodemodeSource(input: string): ParsedCodemodeSource {
       'Expected JavaScript source text (non-empty). Provide JS only, optionally with a first line `// @options: {"max_output_tokens": 1000}`.',
     );
   }
+
   const newline = input.indexOf("\n");
   const firstLine = (newline === -1 ? input : input.slice(0, newline)).replace(/\r$/, "");
   const trimmed = firstLine.trimStart();
   if (!trimmed.startsWith(CODEMODE_OPTIONS_PREFIX)) {
     return { code: input, options: {} };
   }
+
   const code = newline === -1 ? "" : input.slice(newline);
   if (code.trim() === "") {
     throw new CodemodeSourceError("The @options line must be followed by JavaScript source on subsequent lines");
   }
-  return { code, options: parseOptions(trimmed.slice(CODEMODE_OPTIONS_PREFIX.length).trim()) };
+
+  const directive = trimmed.slice(CODEMODE_OPTIONS_PREFIX.length).trim();
+  const options = parseOptions(directive);
+
+  return { code, options };
 }
