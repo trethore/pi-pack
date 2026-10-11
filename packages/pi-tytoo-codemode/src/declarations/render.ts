@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { readFileSync } from "node:fs";
 import { isRecord } from "#src/sandbox/values";
 import { schemaToType } from "#src/declarations/schema";
@@ -101,7 +102,7 @@ export function renderToolSample(
 ): string {
   const declaration = `declare const tools: { ${renderToolSignature(tool, options)} };`;
 
-  return `${tool.description?.trim() ?? ""}\n\ncodemode tool declaration:\n\`\`\`ts\n${declaration}\n\`\`\``;
+  return prompts.tool.declaration({ description: tool.description?.trim() ?? "", declaration });
 }
 
 /**

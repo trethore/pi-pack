@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { stringValue, encodeJson } from "#src/sandbox/values";
 import { MAX_OUTPUT_CHARS, MAX_OUTPUT_ITEMS } from "#src/sandbox/limits";
 import { BridgeMessageType, BridgeOutputType, type HostBridge } from "#src/sandbox/bridge-protocol";
@@ -35,7 +36,7 @@ export function createOutput(bridge: HostBridge, lifecycle: ReturnType<typeof cr
 
     if (outputChars > MAX_OUTPUT_CHARS || outputItems > MAX_OUTPUT_ITEMS) {
       const error = new RangeError(
-        `script output exceeded the limit of ${MAX_OUTPUT_CHARS} characters or ${MAX_OUTPUT_ITEMS} text(), image(), and console calls. Print a summary instead, or write large data to a file with a tool.`,
+        prompts.results.outputLimit({ characters: MAX_OUTPUT_CHARS, items: MAX_OUTPUT_ITEMS }),
       );
       lifecycle.done(false, describeError(error));
       throw error;

@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { BridgeMessageType } from "#src/sandbox/bridge-protocol";
 import type { createBridge, ScriptFunction } from "#src/sandbox/prelude/bridge";
 import type { ToolDefinition, GlobalDefinition } from "#src/sandbox/bootstrap";
@@ -6,7 +7,6 @@ const MAX_NAME_SUGGESTIONS = 5;
 const MAX_LISTED_NAMES = 20;
 const TOOLS_GLOBAL_NAME = "tools";
 const ALL_TOOLS_GLOBAL_NAME = "ALL_TOOLS";
-const TOOL_DISCOVERY_HINT = "ALL_TOOLS lists every tool; searchTools(query) finds tools by topic.";
 
 type ToolMembers = Record<string, ScriptFunction>;
 type RpcBridge = ReturnType<typeof createBridge>;
@@ -46,19 +46,19 @@ function formatSuggestions(label: string, names: string[]): string {
 
 function missingMemberMessage(label: string, property: string, names: string[], hint?: string): string {
   const close = findCloseNames(property, names);
-  let message = `${label}.${property} does not exist.`;
+  let message = prompts.discovery.missingMember({ label, property });
 
   if (close.length > 0) {
-    message += ` Did you mean ${formatSuggestions(label, close)}?`;
+    message += prompts.discovery.suggestions({ names: formatSuggestions(label, close) });
   } else if (names.length <= MAX_LISTED_NAMES) {
-    message += ` Available: ${names.join(", ")}.`;
+    message += prompts.discovery.available({ names: names.join(", ") });
   }
 
   if (hint) {
     message += ` ${hint}`;
   }
 
-  return `${message} Check for a member with "${property}" in ${label}.`;
+  return prompts.discovery.checkMember({ message, property, label });
 }
 
 function guardMembers(target: ToolMembers, label: string, names: string[], hint?: string) {
@@ -107,7 +107,7 @@ function createToolTable(definitions: ToolDefinition[], rpc: RpcBridge) {
 
 export function installTools(definitions: ToolDefinition[], globals: GlobalDefinition[], rpc: RpcBridge) {
   const { tools, allTools, names } = createToolTable(definitions, rpc);
-  const proxy = guardMembers(tools, TOOLS_GLOBAL_NAME, names, TOOL_DISCOVERY_HINT);
+  const proxy = guardMembers(tools, TOOLS_GLOBAL_NAME, names, prompts.discovery.toolHint);
 
   installGlobal(TOOLS_GLOBAL_NAME, proxy);
   installGlobal(ALL_TOOLS_GLOBAL_NAME, allTools);

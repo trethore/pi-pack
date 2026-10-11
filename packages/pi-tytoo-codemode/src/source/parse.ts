@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { isRecord } from "#src/sandbox/values";
 
 /**
@@ -44,7 +45,7 @@ function isNonNegativeSafeInteger(value: unknown): value is number {
 
 function parseOptions(directive: string): CodemodeSourceOptions {
   if (directive === "") {
-    throw new CodemodeSourceError(`@options must be a JSON object with supported fields ${SUPPORTED_FIELDS_TEXT}`);
+    throw new CodemodeSourceError(prompts.source.optionsObject({ fields: SUPPORTED_FIELDS_TEXT }));
   }
 
   let value: unknown;
@@ -52,17 +53,20 @@ function parseOptions(directive: string): CodemodeSourceOptions {
     value = JSON.parse(directive);
   } catch (error) {
     throw new CodemodeSourceError(
-      `@options must be valid JSON with supported fields ${SUPPORTED_FIELDS_TEXT}: ${error instanceof Error ? error.message : String(error)}`,
+      prompts.source.optionsJson({
+        fields: SUPPORTED_FIELDS_TEXT,
+        error: error instanceof Error ? error.message : String(error),
+      }),
     );
   }
 
   if (!isRecord(value)) {
-    throw new CodemodeSourceError(`@options must be a JSON object with supported fields ${SUPPORTED_FIELDS_TEXT}`);
+    throw new CodemodeSourceError(prompts.source.optionsObject({ fields: SUPPORTED_FIELDS_TEXT }));
   }
 
   for (const key of Object.keys(value)) {
     if (!SUPPORTED_FIELDS.includes(key)) {
-      throw new CodemodeSourceError(`@options only supports ${SUPPORTED_FIELDS_TEXT}; got \`${key}\``);
+      throw new CodemodeSourceError(prompts.source.unsupportedOption({ fields: SUPPORTED_FIELDS_TEXT, key }));
     }
   }
 
@@ -75,7 +79,7 @@ function readOptions(fields: Record<string, unknown>): CodemodeSourceOptions {
 
   if (max_output_tokens !== undefined) {
     if (!isNonNegativeSafeInteger(max_output_tokens)) {
-      throw new CodemodeSourceError("@options field `max_output_tokens` must be a non-negative safe integer");
+      throw new CodemodeSourceError(prompts.source.outputTokens);
     }
 
     options.maxOutputTokens = max_output_tokens;
@@ -83,7 +87,7 @@ function readOptions(fields: Record<string, unknown>): CodemodeSourceOptions {
 
   if (timeout_ms !== undefined) {
     if (!isNonNegativeSafeInteger(timeout_ms) || timeout_ms === 0 || timeout_ms > MAX_TIMEOUT_MS) {
-      throw new CodemodeSourceError(`@options field \`timeout_ms\` must be a positive integer up to ${MAX_TIMEOUT_MS}`);
+      throw new CodemodeSourceError(prompts.source.timeout({ limit: MAX_TIMEOUT_MS }));
     }
 
     options.timeoutMs = timeout_ms;
@@ -98,9 +102,7 @@ function readOptions(fields: Record<string, unknown>): CodemodeSourceOptions {
  */
 export function parseCodemodeSource(input: string): ParsedCodemodeSource {
   if (input.trim() === "") {
-    throw new CodemodeSourceError(
-      'Expected JavaScript source text (non-empty). Provide JS only, optionally with a first line `// @options: {"max_output_tokens": 1000}`.',
-    );
+    throw new CodemodeSourceError(prompts.source.empty);
   }
 
   const newline = input.indexOf("\n");
@@ -112,7 +114,7 @@ export function parseCodemodeSource(input: string): ParsedCodemodeSource {
 
   const code = newline === -1 ? "" : input.slice(newline);
   if (code.trim() === "") {
-    throw new CodemodeSourceError("The @options line must be followed by JavaScript source on subsequent lines");
+    throw new CodemodeSourceError(prompts.source.missingCode);
   }
 
   const directive = trimmed.slice(CODEMODE_OPTIONS_PREFIX.length).trim();

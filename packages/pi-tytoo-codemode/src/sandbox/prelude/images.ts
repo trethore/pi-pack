@@ -1,9 +1,7 @@
+import { prompts } from "#src/prompts/generated";
 import { isRecord } from "#src/sandbox/values";
 import { BridgeOutputType } from "#src/sandbox/bridge-protocol";
 
-const IMAGE_HELPER_EXPECTS =
-  "image expects a non-empty image URL string, an object with image_url, or a raw MCP image block";
-const INVALID_IMAGE_DATA_URI = "invalid image output. Pass a base64 data URI instead";
 const DATA_URI_SCHEME = "data";
 const DATA_URI_PREFIX = `${DATA_URI_SCHEME}:`;
 const BASE64_ENCODING = "base64";
@@ -21,32 +19,32 @@ const IMAGE_SIGNATURES = [
 
 function readDataUriPayload(uri: string): string {
   if (uri === "") {
-    throw new TypeError(IMAGE_HELPER_EXPECTS);
+    throw new TypeError(prompts.images.expected);
   }
 
   const colon = uri.indexOf(":");
   if (colon === -1) {
-    throw new TypeError(INVALID_IMAGE_DATA_URI);
+    throw new TypeError(prompts.images.invalidDataUri);
   }
 
   const scheme = uri.slice(0, colon).toLowerCase();
   if (scheme === "http" || scheme === "https") {
-    throw new TypeError("remote image URLs are not supported in tool outputs. Pass a base64 data URI instead");
+    throw new TypeError(prompts.images.remoteUrl);
   }
 
   if (scheme !== DATA_URI_SCHEME) {
-    throw new TypeError(INVALID_IMAGE_DATA_URI);
+    throw new TypeError(prompts.images.invalidDataUri);
   }
 
   const comma = uri.indexOf(",");
   if (comma === -1) {
-    throw new TypeError(INVALID_IMAGE_DATA_URI);
+    throw new TypeError(prompts.images.invalidDataUri);
   }
 
   const header = uri.slice(colon + 1, comma).split(";");
   const hasBase64Encoding = header.slice(1).some((part) => part.toLowerCase() === BASE64_ENCODING);
   if (!hasBase64Encoding) {
-    throw new TypeError(INVALID_IMAGE_DATA_URI);
+    throw new TypeError(prompts.images.invalidDataUri);
   }
 
   return uri.slice(comma + 1);
@@ -54,7 +52,7 @@ function readDataUriPayload(uri: string): string {
 
 function readImageBlockData(value: Record<string, unknown>): string {
   if (typeof value.type !== "string") {
-    throw new TypeError(IMAGE_HELPER_EXPECTS);
+    throw new TypeError(prompts.images.expected);
   }
 
   if (value.type !== BridgeOutputType.Image) {
@@ -78,12 +76,12 @@ function readImageData(value: unknown): string {
   }
 
   if (!isRecord(value)) {
-    throw new TypeError(IMAGE_HELPER_EXPECTS);
+    throw new TypeError(prompts.images.expected);
   }
 
   if (value.image_url !== undefined) {
     if (typeof value.image_url !== "string") {
-      throw new TypeError(IMAGE_HELPER_EXPECTS);
+      throw new TypeError(prompts.images.expected);
     }
 
     return readDataUriPayload(value.image_url);

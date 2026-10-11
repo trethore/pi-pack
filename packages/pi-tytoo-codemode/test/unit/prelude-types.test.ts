@@ -14,6 +14,7 @@ const compiler = join(dirname(createRequire(import.meta.url).resolve("typescript
 it("typechecks the prelude with only ECMAScript libraries and approved sandbox dependencies", () => {
   // Arrange
   const sharedFiles = new Set([
+    "src/prompts/generated.ts",
     "src/sandbox/bootstrap.ts",
     "src/sandbox/bridge-protocol.ts",
     "src/sandbox/constants.ts",

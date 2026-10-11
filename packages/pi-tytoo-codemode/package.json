@@ -11,7 +11,8 @@
   ],
   "imports": {
     "#src/*": "./src/*.ts",
-    "#test/*": "./test/*.ts"
+    "#test/*": "./test/*.ts",
+    "#scripts/*": "./scripts/*.ts"
   },
   "pi": {
     "extensions": [
@@ -31,10 +32,12 @@
   },
   "devDependencies": {
     "typebox": "1.3.27",
-    "vite": "8.3.4"
+    "vite": "8.3.4",
+    "yaml": "2.9.0"
   },
   "scripts": {
-    "build:sandbox": "npm run typecheck:prelude && node scripts/build-sandbox.mjs",
+    "build:prompts": "node scripts/build-prompts.ts",
+    "build:sandbox": "npm run build:prompts && npm run typecheck:prelude && node scripts/build-sandbox.mjs",
     "typecheck:prelude": "tsc -p src/sandbox/prelude/tsconfig.json",
     "dev": "npm run build:sandbox && pi -e .",
     "prepack": "npm run build:sandbox",

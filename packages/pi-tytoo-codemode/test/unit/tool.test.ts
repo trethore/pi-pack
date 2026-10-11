@@ -20,6 +20,37 @@ function createLoadout(tools: AgentTool[]): ToolLoadout {
 }
 
 describe("codemode descriptions", () => {
+  it.each([
+    { mode: "on", models: false, budget: 3000 },
+    { mode: "only", models: true, budget: 3000 },
+    { mode: "only", models: true, budget: 0 },
+  ] as const)("preserves model-facing text ($mode, models=$models, budget=$budget)", ({ mode, models, budget }) => {
+    // Arrange
+    const direct = sampleTool("read");
+    const nested = { ...sampleTool("server-search"), description: "Search the server." };
+    const definition = createCodemodeToolDefinition({ models, getMode: () => mode, getInlineBudget: () => budget });
+    const loadout: ToolLoadout = {
+      ...createLoadout([direct, nested]),
+      declared: [direct],
+      getExposure: (name) => (name === direct.name ? "direct" : "codemode"),
+      getNamespace: (name) => (name === nested.name ? { name: "server", description: "Server tools." } : undefined),
+      getPromptGuidelines: () => ["Use narrow queries"],
+    };
+
+    // Act
+    const changes = definition.prepareLoadout?.(loadout);
+    const text = JSON.stringify({
+      description: definition.description,
+      snippet: definition.promptSnippet,
+      guidelines: definition.promptGuidelines,
+      parameters: definition.parameters,
+      changes,
+    }).replaceAll(CODEMODE_DOCS_PATH, "<codemode-docs>");
+
+    // Assert
+    expect(JSON.parse(text)).toMatchSnapshot();
+  });
+
   it.each([false, true])("dedents the prompt and conditionally describes models (models=%s)", (models) => {
     // Act
     const description = createCodemodeToolDefinition({ models }).description;

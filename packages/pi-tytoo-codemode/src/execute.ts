@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import type { AgentTool, AgentToolCallOutcome, AgentToolResult } from "@earendil-works/pi-agent-core";
 import type { Usage } from "@earendil-works/pi-ai";
 import type { ExtensionToolContext } from "@earendil-works/pi-coding-agent";
@@ -44,7 +45,7 @@ function toScriptValue(tool: AgentTool, outcome: AgentToolCallOutcome): unknown 
 
   const text = textOf(result);
   if (outcome.isError) {
-    throw new Error(text || `Tool "${tool.name}" failed`);
+    throw new Error(text || prompts.results.toolFailed({ name: tool.name }));
   }
 
   return text;
@@ -186,7 +187,10 @@ function createSandboxTools(
       record.durationMs = performance.now() - callStartedAt;
       if (outcome.isError) {
         record.status = callSignal.aborted ? "cancelled" : "error";
-        record.error = truncateText(textOf(outcome.result) || `Tool "${tool.name}" failed`, ERROR_PREVIEW_CHARS);
+        record.error = truncateText(
+          textOf(outcome.result) || prompts.results.toolFailed({ name: tool.name }),
+          ERROR_PREVIEW_CHARS,
+        );
       } else {
         record.status = "ok";
       }
@@ -207,13 +211,13 @@ function collectOutput(result: CodemodeResult, calls: CodemodeNestedCall[], gene
 
   const items = formatOutput(scriptOutput);
   if (!result.ok) {
-    items.push({ type: "text", text: `Script error:\n${formatError(result, calls)}` });
+    items.push({ type: "text", text: prompts.results.scriptError({ error: formatError(result, calls) }) });
   }
 
   if (generatedImages > 0 && !items.some((item) => item.type === "image")) {
     items.push({
       type: "text",
-      text: `Note: models.generateImages() returned ${generatedImages} image${generatedImages === 1 ? "" : "s"} that the script did not show. Show each image block of result.output with image(block).`,
+      text: prompts.results.unshownImages({ count: generatedImages, suffix: generatedImages === 1 ? "" : "s" }),
     });
   }
 
@@ -243,7 +247,10 @@ async function finishOutput(
   const output = joinAdjacentText(await saveImages(truncated.items));
 
   const wallTime = ((performance.now() - startedAt) / 1000).toFixed(1);
-  const header = `${result.ok ? "Script completed" : "Script failed"}\nWall time ${wallTime} seconds\nOutput:\n`;
+  const header = prompts.results.header({
+    status: result.ok ? prompts.results.completed : prompts.results.failed,
+    wallTime,
+  });
 
   const details: CodemodeToolDetails = { calls: calls.map((call) => ({ ...call })) };
 

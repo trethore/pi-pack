@@ -1,4 +1,4 @@
-import { dedent } from "@pi-pack/shared/dedent";
+import { prompts } from "#src/prompts/generated";
 import { CODEMODE_TOOL_NAME, CODEMODE_DOCS_PATH } from "#src/constants";
 import { getCodemodeCallableTools, toCodemodeDeclaration } from "#src/declarations/tools";
 import type { CodemodeToolOptions, CodemodeToolDetails } from "#src/types";
@@ -24,35 +24,16 @@ const CHARS_PER_TOKEN = 4;
 
 export const codemodeSchema = Type.Object({
   code: Type.String({
-    description: "Raw JavaScript source.",
+    description: prompts.tool.code,
   }),
 });
 
-const codemodeToolSystemPromptContribution = {
-  snippet: "Run JavaScript that calls other tools",
-  guidelines: [
-    "Use codemode to batch independent tool calls (Promise.allSettled), chain them, or filter large output, instead of many separate calls.",
-  ],
-} as const;
-
-/** The reference for scripts: globals, tool results, `store()`, the `models` API, and limits. */
-const DESCRIPTION_INTRO = dedent(`
-  Run JavaScript that calls other tools. The input is raw JavaScript (not JSON, no code fence), run as an async function body in a QuickJS sandbox: top-level \`await\` and \`return\` work. No Node, file system, network, or timers.
-  - \`await tools.<name>({ ...args })\` resolves to a string, or an object if the tool's declaration says so, and rejects with an Error on failure. Calls still running when the script ends are cancelled.
-  - Optional first line: \`// @options: {"max_output_tokens": 10000, "timeout_ms": 60000}\`
-`);
-
 /** One line per global. The details live in {@link CODEMODE_DOCS_PATH}. */
 function describeGlobals(models: boolean): string {
-  const description = dedent(`
-    Globals:
-    - \`text(value)\`, \`image(dataUrlOrImageBlock)\`, \`console.log(...)\`, and top-level \`return\` add output; \`exit()\` ends the script. With several text items, each starts with a \`==> text N/M <==\` line, and \`console\` lines follow the other output in one \`<console_output>\` block. \`image()\` also saves the image to a temp file and the result names its path.
-    - \`store(key, value)\` and \`load(key)\` keep JSON values across codemode calls.
-    - \`ALL_TOOLS\`, \`await searchTools(query, { limit?, namespace? })\`, \`await describeTool(name)\`, \`await describeNamespace(name)\`: find unlisted tools, such as MCP tools.
-  `);
+  const description = prompts.tool.globals;
 
   if (models) {
-    return `${description}\n- \`models\`: classifiers and image generation. Read ${CODEMODE_DOCS_PATH} first.`;
+    return `${description}\n${prompts.tool.models({ docsPath: CODEMODE_DOCS_PATH })}`;
   }
 
   return description;
@@ -174,15 +155,12 @@ function createCodemodeDescription(tools: readonly AgentTool[], options: Codemod
   const ordered = createCatalogGroups(declarations, options.namespaces);
   const shown = selectCatalog(ordered, options.inlineBudget);
 
-  const sections = [DESCRIPTION_INTRO, describeGlobals(options.models === true)];
+  const sections = [prompts.tool.description, describeGlobals(options.models === true)];
   const needsMcpTypes = declarations.some(
     (declaration) => shown.has(declaration.name) && mcpStructuredContentSchema(declaration.outputSchema) !== undefined,
   );
   if (needsMcpTypes) {
-    const heading = dedent(`
-      Shared MCP Types:
-      \`\`\`ts
-    `);
+    const heading = prompts.tool.sharedMcpTypes;
     sections.push([heading, MCP_TYPESCRIPT_PREAMBLE, "```"].join("\n"));
   }
 
@@ -203,7 +181,7 @@ function createCodemodeDescription(tools: readonly AgentTool[], options: Codemod
 function describeOutput(schema: CodemodeJsonSchema | undefined): string {
   const type = renderToolOutputType(schema);
   if (type === "string") {
-    return "a string";
+    return prompts.tool.stringOutput;
   }
 
   const object = typeof schema === "object" ? schema : undefined;
@@ -228,7 +206,7 @@ function describeOutput(schema: CodemodeJsonSchema | undefined): string {
  */
 function describeScriptCall(tool: AgentTool): string {
   const output = describeOutput(toCodemodeDeclaration(tool).outputSchema);
-  const call = `Codemode: \`tools.${toCodemodeIdentifier(tool.name)}(args)\` resolves to ${output}.`;
+  const call = prompts.tool.scriptCall({ name: toCodemodeIdentifier(tool.name), output });
 
   return [tool.description.trim(), call].join("\n\n");
 }
@@ -312,8 +290,8 @@ export function createCodemodeToolDefinition(
     label: CODEMODE_TOOL_NAME,
     // Replaced with the declarations of the callable tools when the tool is activated.
     description: createCodemodeDescription([], { models: options.models === true }),
-    promptSnippet: codemodeToolSystemPromptContribution.snippet,
-    promptGuidelines: [...codemodeToolSystemPromptContribution.guidelines],
+    promptSnippet: prompts.tool.snippet,
+    promptGuidelines: [...prompts.tool.guidelines],
     parameters: codemodeSchema,
     // Scripts must not start other scripts.
     exposure: "model-only",
@@ -328,7 +306,7 @@ export function createCodemodeToolDefinition(
 }
 
 function catalogSections(ordered: CatalogGroup[], shown: Set<string>): string[] {
-  const toolSections = ["Nested tools:"];
+  const toolSections: string[] = [prompts.tool.nestedTools];
 
   for (const { namespace, entries } of ordered) {
     const visible = entries.filter((entry) => shown.has(entry.name));
@@ -336,7 +314,7 @@ function catalogSections(ordered: CatalogGroup[], shown: Set<string>): string[] 
       // Only tools that did not fit the budget are counted as not listed here.
       let listing = "";
       if (visible.length < entries.length) {
-        listing = visible.length === 0 ? " (tools not listed)" : " (some tools not listed)";
+        listing = visible.length === 0 ? prompts.tool.toolsNotListed : prompts.tool.someToolsNotListed;
       }
 
       const description = namespace.description?.trim();

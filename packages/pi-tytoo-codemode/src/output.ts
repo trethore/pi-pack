@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { encodeJson } from "#src/sandbox/values";
 import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
 import { formatSize } from "@earendil-works/pi-coding-agent";
@@ -46,12 +47,15 @@ export function formatOutput(output: readonly CodemodeOutputItem[]): (TextConten
       consoleLines.push(item.text);
     } else {
       index++;
-      items.push({ type: "text", text: total > 1 ? `==> text ${index}/${total} <==\n${item.text}` : item.text });
+      items.push({
+        type: "text",
+        text: total > 1 ? prompts.results.textItem({ index, total, text: item.text }) : item.text,
+      });
     }
   }
 
   if (consoleLines.length > 0) {
-    items.push({ type: "text", text: `<console_output>\n${consoleLines.join("\n")}\n</console_output>` });
+    items.push({ type: "text", text: prompts.results.console({ lines: consoleLines.join("\n") }) });
   }
 
   return items;
@@ -76,10 +80,10 @@ export function joinAdjacentText(items: (TextContent | ImageContent)[]): (TextCo
 
 function formatCallSummary(calls: readonly CodemodeNestedCall[]): string {
   if (calls.length === 0) {
-    return "No tool calls were made.";
+    return prompts.results.noCalls;
   }
 
-  return `Tool calls made before the failure (they are not undone): ${calls.map((call) => `${call.name} (${call.status})`).join(", ")}`;
+  return prompts.results.partialFailure({ calls: calls.map((call) => `${call.name} (${call.status})`).join(", ") });
 }
 
 export function formatError(
@@ -94,13 +98,13 @@ export function formatError(
       head = error.stack ?? `${error.name ?? "Error"}: ${error.message}`;
       break;
     case CodemodeErrorKind.Timeout:
-      head = `Script timed out: ${error.message}`;
+      head = prompts.results.timedOut({ message: error.message });
       break;
     case CodemodeErrorKind.Aborted:
-      head = `Script aborted: ${error.message}`;
+      head = prompts.results.aborted({ message: error.message });
       break;
     case CodemodeErrorKind.Sandbox:
-      head = `Script sandbox failed: ${error.message}`;
+      head = prompts.results.sandboxFailed({ message: error.message });
       break;
   }
 
@@ -165,17 +169,17 @@ export async function truncateOutput(
   const tail = tailChars > 0 ? combined.slice(-tailChars) : "";
 
   let text = [
-    `Warning: truncated output (original token count: ${Math.ceil(combined.length / CHARS_PER_TOKEN)})`,
-    `Total output lines: ${combined.split("\n").length}`,
+    prompts.results.truncatedWarning({ tokens: Math.ceil(combined.length / CHARS_PER_TOKEN) }),
+    prompts.results.lineCount({ count: combined.split("\n").length }),
     "",
-    `${head}...${Math.ceil(removed / CHARS_PER_TOKEN)} tokens truncated...${tail}`,
+    prompts.results.truncatedBody({ head, tokens: Math.ceil(removed / CHARS_PER_TOKEN), tail }),
   ].join("\n");
 
   const spilled = await spillOutput(combined);
   text +=
     "path" in spilled
-      ? `\n\n[Full output: ${spilled.path} (read with offset/limit)]`
-      : `\n\n[Could not save the full output: ${spilled.error}]`;
+      ? prompts.results.fullOutput({ path: spilled.path })
+      : prompts.results.fullOutputFailed({ error: spilled.error });
 
   return {
     items: [{ type: "text", text }, ...items.filter((item) => item.type === "image")],
@@ -195,8 +199,8 @@ async function saveImageAndDescribe({ data, mimeType }: ImageContent): Promise<s
   // tool calls already ran, so it becomes part of the label.
   try {
     const path = await writeOutputFile("pi-codemode", extension, bytes);
-    return `[Image saved to ${path} (${kind})]`;
+    return prompts.results.imageSaved({ path, kind });
   } catch (error) {
-    return `[Image (${kind}) could not be saved: ${error instanceof Error ? error.message : String(error)}]`;
+    return prompts.results.imageSaveFailed({ kind, error: error instanceof Error ? error.message : String(error) });
   }
 }

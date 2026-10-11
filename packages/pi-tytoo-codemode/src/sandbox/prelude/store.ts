@@ -1,9 +1,7 @@
+import { prompts } from "#src/prompts/generated";
 import { encodeJson } from "#src/sandbox/values";
 import { MAX_STORE_TOTAL_CHARS, MAX_STORE_VALUE_CHARS } from "#src/sandbox/limits";
 import { formatValue } from "#src/sandbox/prelude/errors";
-
-const STORE_HINT =
-  "store() is for small state such as IDs or summaries. Show images with image(), keep large data in variables, or write it to a file with a tool.";
 
 function checkKey(name: string, key: unknown): asserts key is string {
   if (typeof key !== "string") {
@@ -27,7 +25,12 @@ function serializeValue(key: string, value: unknown): string {
 
   if (json.length > MAX_STORE_VALUE_CHARS) {
     throw new RangeError(
-      `store(${JSON.stringify(key)}) value has ${json.length} characters of JSON, more than the limit of ${MAX_STORE_VALUE_CHARS}. ${STORE_HINT}`,
+      prompts.store.valueTooLarge({
+        key: JSON.stringify(key),
+        size: json.length,
+        limit: MAX_STORE_VALUE_CHARS,
+        hint: prompts.store.hint,
+      }),
     );
   }
 
@@ -63,9 +66,7 @@ export function createStore(snapshot: Record<string, string>) {
     const json = serializeValue(key, value);
     const next = storedChars - previousSize + key.length + json.length;
     if (next > MAX_STORE_TOTAL_CHARS) {
-      throw new RangeError(
-        `store is full: stored values would exceed ${MAX_STORE_TOTAL_CHARS} characters of JSON. Delete keys with store(key, undefined). ${STORE_HINT}`,
-      );
+      throw new RangeError(prompts.store.full({ limit: MAX_STORE_TOTAL_CHARS, hint: prompts.store.hint }));
     }
 
     stored.set(key, json);

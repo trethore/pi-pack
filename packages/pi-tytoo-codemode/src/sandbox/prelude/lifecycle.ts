@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { BridgeMessageType, type HostBridge } from "#src/sandbox/bridge-protocol";
 import { describeError } from "#src/sandbox/prelude/errors";
 
@@ -57,11 +58,7 @@ export function createLifecycle(bridge: HostBridge, serializeWrites: () => strin
       return false;
     }
 
-    fail(
-      new Error(
-        "The script is waiting on a promise that can never settle: no tool call is pending, and timers do not exist here.",
-      ),
-    );
+    fail(new Error(prompts.results.stalled));
 
     return true;
   }

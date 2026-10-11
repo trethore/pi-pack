@@ -1,3 +1,4 @@
+import { prompts } from "#src/prompts/generated";
 import { argumentsArray, isRecord } from "#src/sandbox/values";
 import type {
   AnyModel,
@@ -30,7 +31,7 @@ function toModelType(value: unknown): ModelType {
     return value;
   }
 
-  throw new Error(`Unknown model type ${JSON.stringify(value)}. Use "chat", "image", or "classifier".`);
+  throw new Error(prompts.models.unknownType({ value: JSON.stringify(value) }));
 }
 
 function toProvider(value: unknown): string | undefined {
@@ -84,9 +85,6 @@ function describeValue(value: unknown): string {
 
   return typeof value === "string" ? "a string" : `a ${typeof value}`;
 }
-
-const CLASSIFIER_CONTEXT_SHAPE =
-  '{ state: { ... }, images?: [{ type: "image", data: <base64>, mimeType }], questions: { <id>: { type: "choice", instructions, criteria: { <label>: <meaning> } } | { type: "score", instructions, criteria: [<lowest level>, ..., <highest level>] } | { type: "bool", instructions, criteria: { true: <meaning>, false: <meaning> } } } }';
 
 /** Check a script's classifier context, so mistakes fail with the expected shape instead of a provider error. */
 function assertClassifierContext(context: unknown): asserts context is ClassifierContext {
@@ -254,7 +252,10 @@ export function createModelGlobals(
     const [type, provider, id] = values;
     if (typeof provider !== "string" || typeof id !== "string") {
       throw new Error(
-        `${ModelGlobalName.GetModelOfType}(type, provider, id) expects three strings, got (${values.map(describeValue).join(", ")}). The provider and the id are separate arguments, for example ${ModelGlobalName.GetModelOfType}("classifier", "typesafe", "jev-latest").`,
+        prompts.models.lookupArguments({
+          name: ModelGlobalName.GetModelOfType,
+          values: values.map(describeValue).join(", "),
+        }),
       );
     }
 
@@ -310,12 +311,17 @@ function checkImagesContext(context: unknown): ImagesContext {
 
 const classifierError = (problem: string) =>
   new Error(
-    `${ModelGlobalName.Classify}() ${problem}. Expected context: ${CLASSIFIER_CONTEXT_SHAPE}. See "Classify" in ${CODEMODE_DOCS_PATH}.`,
+    prompts.models.classifierError({
+      name: ModelGlobalName.Classify,
+      problem,
+      shape: prompts.models.classifierContext,
+      docsPath: CODEMODE_DOCS_PATH,
+    }),
   );
 
 const imagesError = (problem: string) =>
   new Error(
-    `${ModelGlobalName.GenerateImages}() ${problem}. Expected context: { input: [{ type: "text", text: <prompt> }, ...optional { type: "image", data: <base64>, mimeType } references] }. See "Generate images" in ${CODEMODE_DOCS_PATH}.`,
+    prompts.models.imagesError({ name: ModelGlobalName.GenerateImages, problem, docsPath: CODEMODE_DOCS_PATH }),
   );
 
 const isStrings = (values: unknown[]) => values.length > 0 && values.every((value) => typeof value === "string");
@@ -354,15 +360,21 @@ function resolveModel<TType extends "classifier" | "image">(
   type: TType,
   model: unknown,
 ): ModelTypeMap[TType] {
-  const listHint = `List the ${type} models you can use with ${ModelGlobalName.GetAvailableOfType}("${type}").`;
+  const listHint = prompts.models.listAvailable({ type, name: ModelGlobalName.GetAvailableOfType });
   if (!isRecord(model) || typeof model.provider !== "string" || typeof model.id !== "string") {
     // undefined arrives as null: spread arguments cross the sandbox as a JSON array.
     const undefinedHint =
       model === undefined || model === null
-        ? ` ${ModelGlobalName.GetModelOfType}() returns undefined for an unknown provider or id.`
+        ? prompts.models.unknownLookup({ name: ModelGlobalName.GetModelOfType })
         : "";
     throw new Error(
-      `${name}() expects ${withArticle(type)} model as its first argument, got ${describeValue(model)}.${undefinedHint} ${listHint}`,
+      prompts.models.expectedModel({
+        name,
+        type: withArticle(type),
+        value: describeValue(model),
+        undefinedHint,
+        listHint,
+      }),
     );
   }
 
@@ -375,8 +387,8 @@ function resolveModel<TType extends "classifier" | "image">(
     );
     throw new Error(
       actualType
-        ? `"${ref}" is ${withArticle(actualType)} model, not ${withArticle(type)} model. ${listHint}`
-        : `Unknown ${type} model "${ref}". ${listHint}`,
+        ? prompts.models.wrongModelType({ ref, actualType: withArticle(actualType), type: withArticle(type), listHint })
+        : prompts.models.unknownModel({ type, ref, listHint }),
     );
   }
 
