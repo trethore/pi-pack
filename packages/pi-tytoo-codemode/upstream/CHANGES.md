@@ -16,6 +16,12 @@ Intentional local changes to preserve when updating from upstream.
 
 - Set `executionMode: "sequential"` so Pi's scheduler runs codemode invocations one at a time. Independent nested calls can still run in parallel.
 
+## Manual
+
+- Vendor `pi/packages/coding-agent/docs/codemode.md` in `manual/codemode.md` and ship it with the extension. Resolve prompt and model-error references relative to the package instead of Pi's installed docs.
+- Point installation guidance to the package README and replace links to upstream settings and model docs with local guidance.
+- Keep the manual aligned with local scheduling and rendering, structured and thrown errors, cooperative cancellation, discovery, output truncation, and store-size accounting.
+
 ## Model-facing text
 
 - Centralize package-owned prompts, result notices, and recovery guidance in `src/prompts/prompts.yaml`.
