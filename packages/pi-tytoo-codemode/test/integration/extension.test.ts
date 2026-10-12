@@ -8,6 +8,18 @@ import { expect, it } from "vitest";
 
 const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
 
+function expectBuiltinWarnings(
+  warnings: readonly { path: string; warning: string }[] | undefined,
+  builtinEnabled: boolean,
+): void {
+  const entries = warnings ?? [];
+  expect(entries).toHaveLength(builtinEnabled ? 1 : 0);
+  if (builtinEnabled) {
+    expect(entries[0]?.path).toBe("builtin:codemode");
+    expect(entries[0]?.warning).toContain("was not loaded");
+  }
+}
+
 it.each([true, false])("loads the package with builtin codemode enabled: %s", async (builtinEnabled) => {
   // Arrange
   const root = await mkdtemp(join(tmpdir(), "tytoo-loader-"));
@@ -35,9 +47,7 @@ it.each([true, false])("loads the package with builtin codemode enabled: %s", as
 
     // Assert
     expect(loaded.errors).toEqual([]);
-    expect(loaded.warnings ?? []).toEqual(
-      builtinEnabled ? [{ path: "builtin:codemode", warning: expect.stringContaining("was not loaded") }] : [],
-    );
+    expectBuiltinWarnings(loaded.warnings, builtinEnabled);
     expect(owners).toHaveLength(1);
     const definition = owners[0]?.tools.get("codemode")?.definition;
     if (!definition) {

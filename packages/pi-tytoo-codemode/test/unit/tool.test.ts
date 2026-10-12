@@ -234,3 +234,21 @@ it.each([
   // Assert
   expect(declaration.description).toBe(expected);
 });
+
+it("uses canonical call syntax in direct tool descriptions and catalog declarations", () => {
+  // Arrange
+  const tools = [sampleTool("foo-bar"), sampleTool("foo_bar")];
+  const loadout = { ...createLoadout(tools), declared: tools, getExposure: () => "direct" as const };
+  const direct = createCodemodeToolDefinition({ getMode: () => "on" });
+  const nested = createCodemodeToolDefinition({ getMode: () => "only" });
+
+  // Act
+  const directDescriptions = direct.prepareLoadout?.(loadout)?.descriptions;
+  const catalog = nested.prepareLoadout?.(loadout)?.descriptions?.codemode;
+
+  // Assert
+  expect(directDescriptions?.["foo-bar"]).toContain('`tools["foo-bar"](args)`');
+  expect(directDescriptions?.foo_bar).toContain("`tools.foo_bar(args)`");
+  expect(catalog).toContain('"foo-bar"(args:');
+  expect(catalog).toContain("foo_bar(args:");
+});

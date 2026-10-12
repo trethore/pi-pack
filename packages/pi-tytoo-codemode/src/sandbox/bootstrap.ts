@@ -2,7 +2,6 @@ import { isRecord, isArray, isString } from "#src/sandbox/values";
 
 export interface ToolDefinition {
   name: string;
-  jsName: string;
   description: string;
 }
 
@@ -12,7 +11,7 @@ export interface GlobalDefinition {
 }
 
 export interface BootstrapData {
-  /** `jsName` is the identifier the script uses; `description` is listed in `ALL_TOOLS`. */
+  /** Original tool names and descriptions, listed in `ALL_TOOLS`. */
   tools: ToolDefinition[];
   globals: GlobalDefinition[];
   /** Snapshot for `load()`: key to JSON text. */
@@ -34,7 +33,7 @@ function isArrayOf<T>(value: unknown, isItem: (item: unknown) => item is T): val
 }
 
 function isToolDefinition(value: unknown): value is ToolDefinition {
-  return isRecord(value) && isString(value.name) && isString(value.jsName) && isString(value.description);
+  return isRecord(value) && isString(value.name) && isString(value.description);
 }
 
 export function isToolDefinitions(value: unknown): value is ToolDefinition[] {

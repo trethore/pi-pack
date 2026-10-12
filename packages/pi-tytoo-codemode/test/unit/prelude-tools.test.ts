@@ -6,7 +6,7 @@ const TOOL_HINT = "ALL_TOOLS lists tools available to this script. Use searchToo
 const sandboxes: CodemodeSandbox[] = [];
 
 function createSandbox(names: string[]): CodemodeSandbox {
-  const tools: CodemodeTool[] = names.map((name) => ({ name, execute: () => undefined }));
+  const tools: CodemodeTool[] = names.map((name) => ({ name, execute: () => name }));
   const sandbox = new CodemodeSandbox({ tools });
   sandboxes.push(sandbox);
   return sandbox;
@@ -79,7 +79,7 @@ describe("guarded tool names", () => {
     expect(result).toMatchObject({
       ok: false,
       error: {
-        message: `tools.!!! does not exist. Did you mean tools.___? ${TOOL_HINT}`,
+        message: `tools["!!!"] does not exist. Did you mean tools.___? ${TOOL_HINT}`,
       },
     });
   });
@@ -104,5 +104,142 @@ describe("guarded tool names", () => {
 
     // Assert
     expect(result).toMatchObject({ ok: true, value: [true, "{}", "undefined", "undefined", true, true, true, true] });
+  });
+});
+
+describe("canonical tool names and safe aliases", () => {
+  it.each([
+    { names: ["foo-bar", "foo_bar"], alias: true },
+    { names: ["foo_bar", "foo-bar"], alias: true },
+    { names: ["foo-bar", "foo.bar"], alias: false },
+    { names: ["foo.bar", "foo-bar"], alias: false },
+    { names: ["foo-bar", "foo.bar", "foo_bar"], alias: true },
+  ])("preserves every original name in $names", async ({ names, alias }) => {
+    // Arrange
+    const sandbox = createSandbox(names);
+
+    // Act
+    const result = await sandbox.execute(`
+      return {
+        names: ALL_TOOLS.map(tool => tool.name),
+        calls: await Promise.all(ALL_TOOLS.map(tool => tools[tool.name]({}))),
+        hasAlias: "foo_bar" in tools,
+        aliasResult: "foo_bar" in tools ? await tools.foo_bar({}) : null,
+      };
+    `);
+
+    // Assert
+    expect(result).toMatchObject({
+      ok: true,
+      value: { names, calls: names, hasAlias: alias, aliasResult: alias ? "foo_bar" : null },
+    });
+  });
+
+  it("keeps unique aliases without replacing the canonical discovery names", async () => {
+    // Arrange
+    const sandbox = createSandbox(["foo-bar", "__proto__", 'quoted"name', "", "default"]);
+
+    // Act
+    const result = await sandbox.execute(`
+      return {
+        originals: await Promise.all(ALL_TOOLS.map(tool => tools[tool.name]({}))),
+        alias: await tools.foo_bar({}),
+        sameFunction: tools.foo_bar === tools["foo-bar"],
+      };
+    `);
+
+    // Assert
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        originals: ["foo-bar", "__proto__", 'quoted"name', "", "default"],
+        alias: "foo-bar",
+        sameFunction: true,
+      },
+    });
+  });
+
+  it("explains an ambiguous alias without calling a tool", async () => {
+    // Arrange
+    const sandbox = createSandbox(["foo-bar", "foo.bar"]);
+
+    // Act
+    const result = await sandbox.execute("await tools.foo_bar({});");
+
+    // Assert
+    expect(result).toMatchObject({
+      ok: false,
+      calls: [],
+      error: {
+        name: "TypeError",
+        message: 'Ambiguous tool alias "foo_bar". Use tools["foo-bar"], tools["foo.bar"].',
+      },
+    });
+  });
+
+  it.each(["foo.bar", "foo_bar"])("keeps running aliases stable when %s is registered", async (addedName) => {
+    // Arrange
+    const sandbox = createSandbox(["foo-bar"]);
+    const started = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    sandbox.registerTool({
+      name: "wait",
+      execute() {
+        started.resolve();
+        return release.promise;
+      },
+    });
+    const execution = sandbox.execute(`
+      const alias = tools.foo_bar;
+      await tools.wait({});
+      return {
+        names: ALL_TOOLS.map(tool => tool.name),
+        value: await tools.foo_bar({}),
+        sameFunction: tools.foo_bar === alias,
+      };
+    `);
+    await started.promise;
+
+    // Act
+    sandbox.registerTool({ name: addedName, execute: () => addedName });
+    release.resolve();
+    const running = await execution;
+    const next = await sandbox.execute(`
+      return {
+        names: ALL_TOOLS.map(tool => tool.name),
+        hasAlias: "foo_bar" in tools,
+        value: await tools[${JSON.stringify(addedName)}]({}),
+        original: await tools["foo-bar"]({}),
+      };
+    `);
+
+    // Assert
+    expect(running).toMatchObject({
+      ok: true,
+      value: { names: ["foo-bar", "wait"], value: "foo-bar", sameFunction: true },
+    });
+    expect(next).toMatchObject({
+      ok: true,
+      value: {
+        names: ["foo-bar", "wait", addedName],
+        hasAlias: addedName === "foo_bar",
+        value: addedName,
+        original: "foo-bar",
+      },
+    });
+  });
+
+  it("restores an alias on the next execution after the conflict is removed", async () => {
+    // Arrange
+    const sandbox = createSandbox(["foo-bar", "foo.bar"]);
+    const before = await sandbox.execute('return "foo_bar" in tools;');
+
+    // Act
+    sandbox.unregisterTool("foo.bar");
+    const after = await sandbox.execute("return await tools.foo_bar({});");
+
+    // Assert
+    expect(before).toMatchObject({ ok: true, value: false });
+    expect(after).toMatchObject({ ok: true, value: "foo-bar" });
   });
 });

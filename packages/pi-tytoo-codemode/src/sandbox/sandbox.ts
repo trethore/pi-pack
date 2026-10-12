@@ -1,6 +1,5 @@
 import { isRecord, isArray, encodeJson } from "#src/sandbox/values";
 import { Worker } from "node:worker_threads";
-import { toCodemodeIdentifier } from "#src/declarations/identifier";
 import {
   CodemodeErrorKind,
   type CodemodeCall,
@@ -227,7 +226,6 @@ class Execution {
       code: options.code,
       tools: [...options.tools.values()].map((tool) => ({
         name: tool.name,
-        jsName: toCodemodeIdentifier(tool.name),
         description: tool.description ?? "",
       })),
       globals: [...options.globals.values()].map((global) => ({

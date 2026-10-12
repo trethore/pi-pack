@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { harness, resultText, sampleTool } from "#test/support/harness";
+import { harness, outcome, resultText, sampleTool } from "#test/support/harness";
 import { createCodemodeToolDefinition } from "#src/tool";
 import type { ToolLoadout } from "@earendil-works/pi-coding-agent";
 
@@ -90,5 +90,70 @@ describe("discovery", () => {
     expect(changes?.hiddenDeclarations).toEqual(["direct"]);
     expect(changes?.descriptions?.codemode).toContain("direct(args:");
     expect(changes?.descriptions?.codemode).not.toContain("deferred(args:");
+  });
+});
+
+describe("canonical discovery", () => {
+  it.each([false, true])("discovers and calls colliding tools (reverse=%s)", async (reverse) => {
+    // Arrange
+    const names = ["foo-bar", "foo.bar", "foo_bar", "solo-tool"];
+    if (reverse) {
+      names.reverse();
+    }
+    const test = harness(
+      names.map((name) => sampleTool(name)),
+      {
+        getToolNamespace: () => ({ name: "example" }),
+      },
+    );
+    test.executeTool.mockImplementation(async (name) =>
+      outcome(name, {
+        content: [{ type: "text", text: name }],
+        details: undefined,
+      }),
+    );
+
+    // Act
+    const result = await test.run(`
+      const matches = await searchTools("foo");
+      return {
+        all: ALL_TOOLS.map(tool => tool.name),
+        matches: matches.map(tool => tool.name).sort(),
+        calls: await Promise.all(matches.map(tool => tools[tool.name]({}))),
+        namespace: await describeNamespace("example"),
+        described: await describeTool("foo_bar"),
+        uniqueAlias: await describeTool("solo_tool"),
+      };
+    `);
+
+    // Assert
+    expect(result.isError).toBeUndefined();
+    const content = result.content[1];
+    if (content?.type !== "text") {
+      throw new Error("Expected discovery output");
+    }
+    const discovered: unknown = JSON.parse(content.text);
+    expect(discovered).toMatchObject({
+      all: names,
+      matches: ["foo-bar", "foo.bar", "foo_bar"],
+      namespace: { tools: names },
+    });
+    expect(discovered).toHaveProperty("calls", expect.arrayContaining(["foo-bar", "foo.bar", "foo_bar"]));
+    expect(discovered).toHaveProperty("described", expect.stringContaining("Run foo_bar"));
+    expect(discovered).toHaveProperty("uniqueAlias", expect.stringContaining('"solo-tool"(args:'));
+    expect(test.executeTool.mock.calls.map((call) => call[0]).sort()).toEqual(["foo-bar", "foo.bar", "foo_bar"]);
+  });
+
+  it("rejects ambiguous alias lookups instead of describing the first tool", async () => {
+    // Arrange
+    const test = harness([sampleTool("foo-bar"), sampleTool("foo.bar")]);
+
+    // Act
+    const result = await test.run('return await describeTool("foo_bar");');
+
+    // Assert
+    expect(result.isError).toBe(true);
+    expect(resultText(result)).toContain('Ambiguous tool alias "foo_bar". Use tools["foo-bar"], tools["foo.bar"].');
+    expect(test.executeTool).not.toHaveBeenCalled();
   });
 });

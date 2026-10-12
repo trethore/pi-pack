@@ -94,7 +94,15 @@ describe("Pi execution", () => {
     expect(result.details.calls[0]?.status).toBe("cancelled");
   });
 
-  it("discards failed state writes without undoing a completed file write", async () => {
+  it.each([
+    { label: "thrown error", code: 'throw new Error("failed");', error: "Error: failed" },
+    { label: "oversized return", code: 'return "x".repeat(16777217);', error: "RangeError: Script output exceeded" },
+    {
+      label: "combined output limit",
+      code: 'return "x".repeat(16777216);',
+      error: "RangeError: Script output exceeded",
+    },
+  ])("discards state writes without undoing a completed file write on $label", async ({ code, error }) => {
     // Arrange
     const directory = await mkdtemp(join(tmpdir(), "codemode-rollback-"));
     directories.push(directory);
@@ -108,11 +116,13 @@ describe("Pi execution", () => {
     });
 
     // Act
-    const failed = await test.run('store("key", "after"); await tools.write({}); throw new Error("failed");');
+    const failed = await test.run(`store("key", "after"); await tools.write({}); text("partial"); ${code}`);
     const stored = await test.run('return load("key")');
 
     // Assert
     expect(failed.isError).toBe(true);
+    expect(resultText(failed)).toContain("partial");
+    expect(resultText(failed)).toContain(error);
     expect(failed.details.calls).toMatchObject([{ name: "write", status: "ok" }]);
     expect(test.appendEntry).not.toHaveBeenCalled();
     expect(stored.content.slice(1)).toEqual([{ type: "text", text: "before" }]);

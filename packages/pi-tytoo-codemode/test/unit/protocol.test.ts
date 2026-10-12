@@ -61,7 +61,7 @@ describe("host-to-worker messages", () => {
 
 describe("worker data collections", () => {
   it.each([
-    { name: "tools", validate: isToolDefinitions, valid: [{ name: "read", jsName: "read", description: "Read" }] },
+    { name: "tools", validate: isToolDefinitions, valid: [{ name: "read", description: "Read" }] },
     { name: "globals", validate: isGlobalDefinitions, valid: [{ name: "helper", spread: false }] },
   ])("validates $name definitions", ({ validate, valid }) => {
     // Arrange
@@ -83,7 +83,7 @@ describe("worker data collections", () => {
     expect(validate(holes)).toBe(false);
     expect(validate(sparse)).toBe(false);
     expect(validate(inherited)).toBe(false);
-    expect(validate([{ name: 42, jsName: 42, description: 42, spread: "false" }])).toBe(false);
+    expect(validate([{ name: 42, description: 42, spread: "false" }])).toBe(false);
   });
 
   it("accepts only string-valued store snapshots", () => {

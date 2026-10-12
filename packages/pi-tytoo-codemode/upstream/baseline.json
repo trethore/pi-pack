@@ -6,7 +6,7 @@
     {
       "path": "declarations.test.ts",
       "upstreamSha256": "23da43998b380ba584fe2b128ed867926f111eef13634e5da8728b87595cc458",
-      "importedSha256": "d4fdfc7e7da60cf648d87f94cfa18faf903994d4041b3d046fe747b401a76094"
+      "importedSha256": "8dd89134367d116fe83dc2b713b3645b9a720ea7604671e79e7b258997636058"
     },
     {
       "path": "fixtures/raw-worker.ts",
@@ -16,7 +16,7 @@
     {
       "path": "sandbox.test.ts",
       "upstreamSha256": "3e036df065b6ba6f52413029d85bf962308a154d95799b6f337f93b8ecafc754",
-      "importedSha256": "09098254b4b745e75680215ed2625d00e2bbb5f6096c593362fbe04806b109d0"
+      "importedSha256": "c2d44a604507d21a9bddc3556175cb82464e0eb5704c6b95817262657376ac8f"
     },
     {
       "path": "source.test.ts",

@@ -13,9 +13,9 @@ export type CodemodeJsonSchema = { [key: string]: unknown } | boolean;
 
 export interface CodemodeTool {
   /**
-   * The script calls tools as `tools.<id>(args)`, where `<id>` is the name with characters that
-   * are not valid in identifiers replaced by `_` (see `toCodemodeIdentifier`), and also as
-   * `tools["<name>"](args)`. Globals are called as `<name>(args)` and must be identifiers, or
+   * The script calls tools by their original names as `tools["<name>"](args)`. Normalized
+   * dot aliases are also available when they do not conflict with original names or other aliases.
+   * Globals are called as `<name>(args)` and must be identifiers, or
    * `<namespace>.<member>`, which groups them into a frozen namespace object.
    */
   name: string;

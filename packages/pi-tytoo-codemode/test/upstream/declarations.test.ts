@@ -123,7 +123,7 @@ describe("schemaToType", () => {
 });
 
 describe("tool declarations", () => {
-	it("renders signatures with normalized identifiers", () => {
+	it("renders signatures with canonical property names", () => {
 		expect(
 			renderToolSignature({
 				name: "hidden-dynamic-tool",
@@ -135,7 +135,7 @@ describe("tool declarations", () => {
 				},
 				outputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
 			}),
-		).toBe("hidden_dynamic_tool(args: { city: string; }): Promise<{ ok: boolean; }>;");
+		).toBe('"hidden-dynamic-tool"(args: { city: string; }): Promise<{ ok: boolean; }>;');
 		expect(renderToolSignature({ name: "free" })).toBe("free(args: unknown): Promise<unknown>;");
 	});
 
@@ -201,7 +201,7 @@ describe("renderDeclarations", () => {
 				"   * Second line.",
 				"   */",
 				"  read(args: { path: string; }): Promise<string>;",
-				"  remote_api(args: unknown): Promise<unknown>;",
+				'  "remote-api"(args: unknown): Promise<unknown>;',
 				"};",
 				"",
 				"/** Attach it. */",

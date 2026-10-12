@@ -9,12 +9,12 @@ import {
   mcpStructuredContentSchema,
   renderToolOutputType,
   renderToolSample,
-  toCodemodeIdentifier,
 } from "#src/declarations/render";
 import { CODEMODE_SOURCE_GRAMMAR } from "#src/source/grammar";
 import { Type } from "typebox";
 import type { ToolDefinition, ToolLoadout, ToolLoadoutChanges, ToolNamespace } from "@earendil-works/pi-coding-agent";
 import { executeCodemode } from "#src/execute";
+import { renderMemberAccess } from "#src/declarations/identifier";
 import { createRenderers } from "#src/render";
 
 /** Default for {@link CodemodeDescriptionOptions.inlineBudget}, in estimated tokens. */
@@ -57,8 +57,7 @@ interface CodemodeDescriptionOptions {
 
 /** `### \`id\` (\`raw name\`)` followed by the tool's description and declaration. */
 function renderToolSection(declaration: Omit<CodemodeTool, "execute">): string {
-  const id = toCodemodeIdentifier(declaration.name);
-  const heading = id === declaration.name ? `### \`${id}\`` : `### \`${id}\` (\`${declaration.name}\`)`;
+  const heading = `### \`${declaration.name}\``;
 
   return `${heading}\n${renderToolSample(declaration).trim()}`;
 }
@@ -206,7 +205,7 @@ function describeOutput(schema: CodemodeJsonSchema | undefined): string {
  */
 function describeScriptCall(tool: AgentTool): string {
   const output = describeOutput(toCodemodeDeclaration(tool).outputSchema);
-  const call = prompts.tool.scriptCall({ name: toCodemodeIdentifier(tool.name), output });
+  const call = prompts.tool.scriptCall({ call: renderMemberAccess("tools", tool.name), output });
 
   return [tool.description.trim(), call].join("\n\n");
 }

@@ -18,6 +18,7 @@ Globals:
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
 - \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
+- Tool names are canonical. Use \`tools["original-name"](args)\` for names with punctuation. Convenience aliases can change between scripts.
 - Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
 - \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
@@ -27,14 +28,14 @@ Nested tools:
 ## server
 Server tools.
 
-### \`server_search\` (\`server-search\`)
+### \`server-search\`
 Search the server.
 
 - Use narrow queries
 
 codemode tool declaration:
 \`\`\`ts
-declare const tools: { server_search(args: { [key: string]: unknown; }): Promise<string>; };
+declare const tools: { "server-search"(args: { [key: string]: unknown; }): Promise<string>; };
 \`\`\`",
       "read": "Run read
 
@@ -56,6 +57,7 @@ Globals:
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
 - \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
+- Tool names are canonical. Use \`tools["original-name"](args)\` for names with punctuation. Convenience aliases can change between scripts.
 - Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
 - \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.",
@@ -101,6 +103,7 @@ Globals:
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
 - \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
+- Tool names are canonical. Use \`tools["original-name"](args)\` for names with punctuation. Convenience aliases can change between scripts.
 - Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
 - \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
@@ -129,6 +132,7 @@ Globals:
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
 - \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
+- Tool names are canonical. Use \`tools["original-name"](args)\` for names with punctuation. Convenience aliases can change between scripts.
 - Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
 - \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
@@ -175,6 +179,7 @@ Globals:
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
 - \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
+- Tool names are canonical. Use \`tools["original-name"](args)\` for names with punctuation. Convenience aliases can change between scripts.
 - Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
 - \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.
@@ -195,14 +200,14 @@ declare const tools: { read(args: { [key: string]: unknown; }): Promise<string>;
 ## server
 Server tools.
 
-### \`server_search\` (\`server-search\`)
+### \`server-search\`
 Search the server.
 
 - Use narrow queries
 
 codemode tool declaration:
 \`\`\`ts
-declare const tools: { server_search(args: { [key: string]: unknown; }): Promise<string>; };
+declare const tools: { "server-search"(args: { [key: string]: unknown; }): Promise<string>; };
 \`\`\`",
     },
     "hiddenDeclarations": [
@@ -223,6 +228,7 @@ Globals:
 - \`image(value)\` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
 - \`store(key, value)\` and \`load(key)\` keep small JSON values across calls.
 - \`ALL_TOOLS\` lists tools available to this script. Find tools with \`searchTools(query, options)\`. Optional search fields: \`limit\`, \`namespace\`.
+- Tool names are canonical. Use \`tools["original-name"](args)\` for names with punctuation. Convenience aliases can change between scripts.
 - Get tool or namespace details with \`await describeTool(name)\` or \`await describeNamespace(name)\`. \`tools\` is not automatically a registered namespace.
 - \`load()\`, \`describeTool()\`, and \`describeNamespace()\` return \`undefined\` when no match exists. JSON output omits object properties with this value. Print it directly, or use \`value ?? null\` to keep the property.
 - Print discovery results: \`text(await searchTools("query"))\`.

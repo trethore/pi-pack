@@ -1,9 +1,10 @@
+import { prompts } from "#src/prompts/generated";
 import { argumentsArray, isRecord } from "#src/sandbox/values";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { ToolNamespace } from "@earendil-works/pi-coding-agent";
 import type { CodemodeTool } from "#src/sandbox/types";
 import type { CodemodeToolOptions } from "#src/types";
-import { toCodemodeIdentifier } from "#src/declarations/identifier";
+import { createToolAliases, renderMemberAccess, toCodemodeIdentifier } from "#src/declarations/identifier";
 import { Bm25Ranker, createToolSearchDocument } from "#src/search";
 
 const DiscoveryGlobalName = {
@@ -30,7 +31,9 @@ export function createDiscoveryGlobals(
   options: CodemodeToolOptions,
 ): CodemodeTool[] {
   const ranker = new Bm25Ranker();
-  const entry = (name: string) => ({ name: toCodemodeIdentifier(name), description: samples.get(name) ?? "" });
+  const entry = (name: string) => ({ name, description: samples.get(name) ?? "" });
+  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+  const { aliases, ambiguousAliases } = createToolAliases([...toolsByName.keys()]);
 
   function searchTools(args: unknown) {
     const { query, limit, namespace } = searchArguments(args);
@@ -51,7 +54,18 @@ export function createDiscoveryGlobals(
       throw new Error(`${DiscoveryGlobalName.DescribeTool}() expects a tool name`);
     }
 
-    const tool = tools.find((candidate) => candidate.name === name || toCodemodeIdentifier(candidate.name) === name);
+    const candidates = ambiguousAliases.get(name);
+    if (candidates) {
+      throw new TypeError(
+        prompts.discovery.ambiguousAlias({
+          name,
+          calls: candidates.map((candidate) => renderMemberAccess("tools", candidate)).join(", "),
+        }),
+      );
+    }
+
+    const canonicalName = aliases.get(name) ?? name;
+    const tool = toolsByName.get(canonicalName);
     return tool ? samples.get(tool.name) : undefined;
   }
 
@@ -69,7 +83,7 @@ export function createDiscoveryGlobals(
         continue;
       }
       namespace ??= toolNamespace;
-      names.push(toCodemodeIdentifier(tool.name));
+      names.push(tool.name);
     }
 
     if (!namespace) {

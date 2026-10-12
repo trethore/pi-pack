@@ -1,4 +1,5 @@
 import { prompts } from "#src/prompts/generated";
+import { createToolAliases, renderMemberAccess } from "#src/declarations/identifier";
 import { BridgeMessageType } from "#src/sandbox/bridge-protocol";
 import type { createBridge, ScriptFunction } from "#src/sandbox/prelude/bridge";
 import type { ToolDefinition, GlobalDefinition } from "#src/sandbox/bootstrap";
@@ -38,7 +39,7 @@ function findCloseNames(property: string, names: string[]): string[] {
 
 function formatSuggestions(label: string, names: string[]): string {
   function qualifyName(name: string): string {
-    return `${label}.${name}`;
+    return renderMemberAccess(label, name);
   }
 
   return names.slice(0, MAX_NAME_SUGGESTIONS).map(qualifyName).join(", ");
@@ -46,7 +47,7 @@ function formatSuggestions(label: string, names: string[]): string {
 
 function missingMemberMessage(label: string, property: string, names: string[], hint?: string): string {
   const close = findCloseNames(property, names);
-  let message = prompts.discovery.missingMember({ label, property });
+  let message = prompts.discovery.missingMember({ member: renderMemberAccess(label, property) });
 
   if (close.length > 0) {
     message += prompts.discovery.suggestions({ names: formatSuggestions(label, close) });
@@ -61,15 +62,29 @@ function missingMemberMessage(label: string, property: string, names: string[], 
   return message;
 }
 
-function guardMembers(target: ToolMembers, label: string, names: string[], hint?: string) {
+function guardMembers(
+  target: ToolMembers,
+  label: string,
+  names: string[],
+  hint?: string,
+  ambiguousAliases: ReadonlyMap<string, readonly string[]> = new Map(),
+) {
   function getProperty(object: ToolMembers, property: string | symbol, receiver: unknown): unknown {
-    if (
-      typeof property !== "string" ||
-      property in object ||
-      property in Object.prototype ||
-      property === "then" ||
-      property === "toJSON"
-    ) {
+    if (typeof property !== "string" || property in object) {
+      return Reflect.get(object, property, receiver);
+    }
+
+    const candidates = ambiguousAliases.get(property);
+    if (candidates) {
+      throw new TypeError(
+        prompts.discovery.ambiguousAlias({
+          name: property,
+          calls: candidates.map((name) => renderMemberAccess(label, name)).join(", "),
+        }),
+      );
+    }
+
+    if (property in Object.prototype || property === "then" || property === "toJSON") {
       return Reflect.get(object, property, receiver);
     }
 
@@ -86,28 +101,26 @@ function createToolTable(definitions: ToolDefinition[], rpc: RpcBridge) {
   const allTools: { name: string; description: string }[] = [];
   const names: string[] = [];
 
-  for (const { name, jsName, description } of definitions) {
-    const fn = rpc.caller(BridgeMessageType.Call, name);
-    if (!(jsName in tools)) {
-      tools[jsName] = fn;
-      allTools.push(Object.freeze({ name: jsName, description }));
-      names.push(jsName);
-    }
+  for (const { name, description } of definitions) {
+    tools[name] = rpc.caller(BridgeMessageType.Call, name);
+    allTools.push(Object.freeze({ name, description }));
+    names.push(name);
+  }
 
-    if (!(name in tools)) {
-      tools[name] = fn;
-    }
+  const { aliases, ambiguousAliases } = createToolAliases(names);
+  for (const [alias, name] of aliases) {
+    tools[alias] = tools[name]!;
   }
 
   Object.freeze(tools);
   Object.freeze(allTools);
 
-  return { tools, allTools, names };
+  return { tools, allTools, names, ambiguousAliases };
 }
 
 export function installTools(definitions: ToolDefinition[], globals: GlobalDefinition[], rpc: RpcBridge) {
-  const { tools, allTools, names } = createToolTable(definitions, rpc);
-  const proxy = guardMembers(tools, TOOLS_GLOBAL_NAME, names, prompts.discovery.toolHint);
+  const { tools, allTools, names, ambiguousAliases } = createToolTable(definitions, rpc);
+  const proxy = guardMembers(tools, TOOLS_GLOBAL_NAME, names, prompts.discovery.toolHint, ambiguousAliases);
 
   installGlobal(TOOLS_GLOBAL_NAME, proxy);
   installGlobal(ALL_TOOLS_GLOBAL_NAME, allTools);

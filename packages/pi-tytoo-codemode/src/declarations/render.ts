@@ -2,9 +2,7 @@ import { prompts } from "#src/prompts/generated";
 import { readFileSync } from "node:fs";
 import { isRecord } from "#src/sandbox/values";
 import { schemaToType } from "#src/declarations/schema";
-import { toCodemodeIdentifier } from "#src/declarations/identifier";
-
-export { toCodemodeIdentifier };
+import { renderPropertyName } from "#src/declarations/identifier";
 
 import type { CodemodeJsonSchema, CodemodeTool } from "#src/sandbox/types";
 
@@ -76,7 +74,7 @@ function renderGlobalDeclarations(globals: readonly CodemodeTool[]): string[] {
 
 /**
  * One tool as a member of the `tools` object: `name(args: T): Promise<R>;` with the
- * name as the identifier scripts use. Input types longer than `inputMaxChars` render as `unknown`.
+ * original name quoted when it is not an identifier. Input types longer than `inputMaxChars` render as `unknown`.
  * Tools whose output schema is an MCP `CallToolResult` render as `Promise<CallToolResult<T>>`,
  * which needs {@link MCP_TYPESCRIPT_PREAMBLE}.
  */
@@ -89,7 +87,7 @@ export function renderToolSignature(
     input = schemaToType(tool.inputSchema, { maxChars: options.inputMaxChars ?? DEFAULT_INPUT_SCHEMA_MAX_CHARS });
   }
 
-  return `${toCodemodeIdentifier(tool.name)}(args: ${input}): Promise<${renderToolOutputType(tool.outputSchema)}>;`;
+  return `${renderPropertyName(tool.name)}(args: ${input}): Promise<${renderToolOutputType(tool.outputSchema)}>;`;
 }
 
 /**

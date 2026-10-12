@@ -13,8 +13,18 @@ it("compiles the shared MCP asset and generated tool declarations together", asy
   // Arrange
   const directory = await mkdtemp(join(tmpdir(), "tytoo-declarations-"));
   const compiler = join(dirname(createRequire(import.meta.url).resolve("typescript/package.json")), "bin/tsc");
+  const canonicalNames = ["foo-bar", "foo_bar", 'quoted"name'];
+  const calls = canonicalNames
+    .map((name, index) => `const result${index}: ${JSON.stringify(name)} = await tools[${JSON.stringify(name)}]({});`)
+    .join("\n");
   const source = `${MCP_TYPESCRIPT_PREAMBLE}\n${renderDeclarations({
     tools: [
+      ...canonicalNames.map((name) => ({
+        name,
+        execute,
+        inputSchema: { type: "object", additionalProperties: false },
+        outputSchema: { const: name },
+      })),
       {
         name: "search",
         execute: () => undefined,
@@ -29,7 +39,7 @@ it("compiles the shared MCP asset and generated tool declarations together", asy
         },
       },
     ],
-  })}\nasync function example() { const result = await tools.search({ query: "hello" }); return result.content.map(block => block.type); }`;
+  })}\nasync function example() { ${calls} const result = await tools.search({ query: "hello" }); return result.content.map(block => block.type); }`;
   try {
     await writeFile(join(directory, "test.ts"), source);
     await writeFile(

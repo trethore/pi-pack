@@ -1,8 +1,6 @@
-import { prompts } from "#src/prompts/generated";
 import { stringValue, encodeJson } from "#src/sandbox/values";
-import { MAX_OUTPUT_CHARS, MAX_OUTPUT_ITEMS } from "#src/sandbox/limits";
 import { BridgeMessageType, BridgeOutputType, type HostBridge } from "#src/sandbox/bridge-protocol";
-import { describeError, formatValue } from "#src/sandbox/prelude/errors";
+import { formatValue } from "#src/sandbox/prelude/errors";
 import { parseImage } from "#src/sandbox/prelude/images";
 import type { createLifecycle } from "#src/sandbox/prelude/lifecycle";
 
@@ -23,24 +21,12 @@ function createConsoleMethod(emitOutput: (kind: BridgeOutputType, data: string) 
 }
 
 export function createOutput(bridge: HostBridge, lifecycle: ReturnType<typeof createLifecycle>) {
-  let outputChars = 0;
-  let outputItems = 0;
-
   function emitOutput(kind: BridgeOutputType, data: string, mimeType?: string): void {
     if (lifecycle.isFinished()) {
       return;
     }
 
-    outputChars += data.length;
-    outputItems++;
-
-    if (outputChars > MAX_OUTPUT_CHARS || outputItems > MAX_OUTPUT_ITEMS) {
-      const error = new RangeError(
-        prompts.results.outputLimit({ characters: MAX_OUTPUT_CHARS, items: MAX_OUTPUT_ITEMS }),
-      );
-      lifecycle.done(false, describeError(error));
-      throw error;
-    }
+    lifecycle.recordOutput(data.length);
 
     bridge(BridgeMessageType.Output, kind, data, mimeType);
   }

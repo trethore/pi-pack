@@ -13,13 +13,13 @@ export const prompts = {
     description:
       'Run JavaScript in QuickJS. Use source code, not JSON or Markdown code fences. Top-level `await` and `return` work.\nIf the script fails, its stored-state writes are discarded. Completed tool actions are not undone.\nScripts have no direct access to Node.js APIs, files, networks, or timers.\n`await tools.<name>(args)` returns text or declared structured output. Calls can throw exceptions or return error results.\nCheck the tool\'s documented failure fields, such as a nonzero `exit_code` or `isError: true`.\nA returned error does not automatically fail the script. To fail the script, throw an uncaught Error.\nOptional first line: `// @options: {"max_output_tokens": 10000}`\n`max_output_tokens` sets an estimated text budget. Optional `timeout_ms` sets a deadline for the whole script. By default, no deadline is set.',
     globals:
-      'Globals:\n- `text(value)`, `console.log(...)`, and `return value` print output. `exit()` ends the script.\n- `image(value)` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.\n- `store(key, value)` and `load(key)` keep small JSON values across calls.\n- `ALL_TOOLS` lists tools available to this script. Find tools with `searchTools(query, options)`. Optional search fields: `limit`, `namespace`.\n- Get tool or namespace details with `await describeTool(name)` or `await describeNamespace(name)`. `tools` is not automatically a registered namespace.\n- `load()`, `describeTool()`, and `describeNamespace()` return `undefined` when no match exists. JSON output omits object properties with this value. Print it directly, or use `value ?? null` to keep the property.\n- Print discovery results: `text(await searchTools("query"))`.',
+      'Globals:\n- `text(value)`, `console.log(...)`, and `return value` print output. `exit()` ends the script.\n- `image(value)` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.\n- `store(key, value)` and `load(key)` keep small JSON values across calls.\n- `ALL_TOOLS` lists tools available to this script. Find tools with `searchTools(query, options)`. Optional search fields: `limit`, `namespace`.\n- Tool names are canonical. Use `tools["original-name"](args)` for names with punctuation. Convenience aliases can change between scripts.\n- Get tool or namespace details with `await describeTool(name)` or `await describeNamespace(name)`. `tools` is not automatically a registered namespace.\n- `load()`, `describeTool()`, and `describeNamespace()` return `undefined` when no match exists. JSON output omits object properties with this value. Print it directly, or use `value ?? null` to keep the property.\n- Print discovery results: `text(await searchTools("query"))`.',
     models: (values: { docsPath: string | number }): string =>
       `- \`models\`: classifiers and image generation. Before you use \`models\`, read ${values.docsPath}.`,
     sharedMcpTypes: "Shared MCP Types:\n```ts",
     stringOutput: "a string",
-    scriptCall: (values: { name: string | number; output: string | number }): string =>
-      `Codemode: \`tools.${values.name}(args)\` resolves to ${values.output}.`,
+    scriptCall: (values: { call: string | number; output: string | number }): string =>
+      `Codemode: \`${values.call}(args)\` resolves to ${values.output}.`,
     nestedTools: "Nested tools:",
     toolsNotListed: " (tools not listed)",
     someToolsNotListed: " (some tools not listed)",
@@ -76,7 +76,7 @@ ${values.lines}
     imageSaveFailed: (values: { kind: string | number; error: string | number }): string =>
       `[Image (${values.kind}) could not be saved: ${values.error}]`,
     outputLimit: (values: { characters: string | number; items: string | number }): string =>
-      `Script output exceeded ${values.characters} characters or ${values.items} output calls. Print a summary. Use a tool to save large data to a file.`,
+      `Script output exceeded ${values.characters} characters or ${values.items} output items (including return). Print a summary. Use a tool to save large data to a file.`,
     stalled:
       "The script is waiting for a promise that cannot settle. No tool call is pending. Timers are not available.",
   },
@@ -128,8 +128,9 @@ See "Generate images" in ${values.docsPath}.`,
   },
   discovery: {
     toolHint: "ALL_TOOLS lists tools available to this script. Use searchTools(query) to find a tool.",
-    missingMember: (values: { label: string | number; property: string | number }): string =>
-      `${values.label}.${values.property} does not exist.`,
+    missingMember: (values: { member: string | number }): string => `${values.member} does not exist.`,
+    ambiguousAlias: (values: { name: string | number; calls: string | number }): string =>
+      `Ambiguous tool alias "${values.name}". Use ${values.calls}.`,
     suggestions: (values: { names: string | number }): string => ` Did you mean ${values.names}?`,
     available: (values: { names: string | number }): string => ` Available: ${values.names}.`,
   },

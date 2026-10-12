@@ -39,6 +39,31 @@
       "before": "expect.stringContaining(\"script output exceeded\")",
       "after": "expect.stringContaining(\"Script output exceeded\")",
       "count": 1
+    },
+    {
+      "before": "exposes tools under normalized identifiers and lists them in ALL_TOOLS",
+      "after": "preserves canonical tools when an alias collides and lists every tool in ALL_TOOLS",
+      "count": 1
+    },
+    {
+      "before": "{ name: \"my_tool\", description: \"Dashes\" },",
+      "after": "{ name: \"my-tool\", description: \"Dashes\" },\n\t\t\t\t\t{ name: \"my_tool\", description: \"Shadowed\" },",
+      "count": 1
+    },
+    {
+      "before": "calls: [\"dash\", \"dash\", \"mcp\"]",
+      "after": "calls: [\"underscore\", \"dash\", \"mcp\"]",
+      "count": 1
+    },
+    {
+      "before": "\"Did you mean tools.web_search?\"",
+      "after": "'Did you mean tools[\"web-search\"]?'",
+      "count": 1
+    },
+    {
+      "before": "\"Available: echo, web_search.\"",
+      "after": "\"Available: echo, web-search.\"",
+      "count": 1
     }
   ],
   "source.test.ts": [
@@ -66,6 +91,23 @@
       "before": "The @options line must be followed by JavaScript source on subsequent lines",
       "after": "Put JavaScript source after the @options line.",
       "count": 2
+    }
+  ],
+  "declarations.test.ts": [
+    {
+      "before": "renders signatures with normalized identifiers",
+      "after": "renders signatures with canonical property names",
+      "count": 1
+    },
+    {
+      "before": "\"hidden_dynamic_tool(args: { city: string; }): Promise<{ ok: boolean; }>;\"",
+      "after": "'\"hidden-dynamic-tool\"(args: { city: string; }): Promise<{ ok: boolean; }>;'",
+      "count": 1
+    },
+    {
+      "before": "\"  remote_api(args: unknown): Promise<unknown>;\"",
+      "after": "'  \"remote-api\"(args: unknown): Promise<unknown>;'",
+      "count": 1
     }
   ]
 }

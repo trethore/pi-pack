@@ -22,6 +22,7 @@ tool:
     - `image(value)` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.
     - `store(key, value)` and `load(key)` keep small JSON values across calls.
     - `ALL_TOOLS` lists tools available to this script. Find tools with `searchTools(query, options)`. Optional search fields: `limit`, `namespace`.
+    - Tool names are canonical. Use `tools["original-name"](args)` for names with punctuation. Convenience aliases can change between scripts.
     - Get tool or namespace details with `await describeTool(name)` or `await describeNamespace(name)`. `tools` is not automatically a registered namespace.
     - `load()`, `describeTool()`, and `describeNamespace()` return `undefined` when no match exists. JSON output omits object properties with this value. Print it directly, or use `value ?? null` to keep the property.
     - Print discovery results: `text(await searchTools("query"))`.
@@ -30,7 +31,7 @@ tool:
     Shared MCP Types:
     ```ts
   stringOutput: a string
-  scriptCall: "Codemode: `tools.{{name}}(args)` resolves to {{output}}."
+  scriptCall: "Codemode: `{{call}}(args)` resolves to {{output}}."
   nestedTools: "Nested tools:"
   toolsNotListed: " (tools not listed)"
   someToolsNotListed: " (some tools not listed)"
@@ -78,7 +79,7 @@ results:
     [Could not save the full output: {{error}}]
   imageSaved: "[Image saved to {{path}} ({{kind}})]"
   imageSaveFailed: "[Image ({{kind}}) could not be saved: {{error}}]"
-  outputLimit: Script output exceeded {{characters}} characters or {{items}} output calls. Print a summary. Use a tool to save large data to a file.
+  outputLimit: Script output exceeded {{characters}} characters or {{items}} output items (including return). Print a summary. Use a tool to save large data to a file.
   stalled: The script is waiting for a promise that cannot settle. No tool call is pending. Timers are not available.
 models:
   classifierContext: |-
@@ -115,7 +116,8 @@ models:
   unknownType: Unknown model type {{value}}. Use "chat", "image", or "classifier".
 discovery:
   toolHint: ALL_TOOLS lists tools available to this script. Use searchTools(query) to find a tool.
-  missingMember: "{{label}}.{{property}} does not exist."
+  missingMember: "{{member}} does not exist."
+  ambiguousAlias: 'Ambiguous tool alias "{{name}}". Use {{calls}}.'
   suggestions: " Did you mean {{names}}?"
   available: " Available: {{names}}."
 store:

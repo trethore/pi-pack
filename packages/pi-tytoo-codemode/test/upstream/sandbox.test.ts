@@ -258,7 +258,7 @@ describe("tools", () => {
 		expect(result).toMatchObject({ ok: true, value: { values: [1, 2, 3], names: ["echo", "delay"] } });
 	});
 
-	it("exposes tools under normalized identifiers and lists them in ALL_TOOLS", async () => {
+	it("preserves canonical tools when an alias collides and lists every tool in ALL_TOOLS", async () => {
 		const sandbox = createSandbox([
 			{ name: "my-tool", description: "Dashes", execute: () => "dash" },
 			{ name: "my_tool", description: "Shadowed", execute: () => "underscore" },
@@ -275,10 +275,11 @@ describe("tools", () => {
 			ok: true,
 			value: {
 				all: [
-					{ name: "my_tool", description: "Dashes" },
+					{ name: "my-tool", description: "Dashes" },
+					{ name: "my_tool", description: "Shadowed" },
 					{ name: "mcp__docs__search", description: "" },
 				],
-				calls: ["dash", "dash", "mcp"],
+				calls: ["underscore", "dash", "mcp"],
 			},
 		});
 	});
@@ -345,8 +346,8 @@ describe("tools", () => {
 		expect(await attempt("tools.Echo")).toBe(
 			'tools.Echo does not exist. Did you mean tools.echo? ALL_TOOLS lists tools available to this script. Use searchTools(query) to find a tool.',
 		);
-		expect(await attempt("tools.websearch")).toContain("Did you mean tools.web_search?");
-		expect(await attempt("tools.nothing")).toContain("Available: echo, web_search.");
+		expect(await attempt("tools.websearch")).toContain('Did you mean tools["web-search"]?');
+		expect(await attempt("tools.nothing")).toContain("Available: echo, web-search.");
 		expect(
 			await attempt("['echo' in tools, 'nothing' in tools, String(tools.toString), JSON.stringify(tools)]"),
 		).toEqual([true, false, "undefined", "{}"]);
