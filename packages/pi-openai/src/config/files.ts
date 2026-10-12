@@ -6,7 +6,7 @@ import {
   createWarningReporter,
   type ConfigWarningOptions,
 } from "@pi-pack/shared/config";
-import { readOptionalFile } from "@pi-pack/shared/files";
+import { isMissingFileError, readOptionalFile } from "@pi-pack/shared/files";
 import { Destination, extensionName } from "#src/constants";
 import { readEnvironment, type Layers } from "#src/config/settings";
 import type { ScopePatch } from "#src/config/changes";
@@ -18,10 +18,6 @@ export type ConfigPaths = Record<Destination, string>;
 
 export function configPaths(cwd: string, agentDir?: string): ConfigPaths {
   return sharedConfigPaths(extensionName, cwd, agentDir);
-}
-
-function isMissing(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
 async function readSource(file: string, destination: Destination): Promise<string | undefined> {
@@ -68,7 +64,7 @@ export async function defaultDestination(
     await stat(paths.project);
     return Destination.PROJECT;
   } catch (error) {
-    if (isMissing(error)) {
+    if (isMissingFileError(error)) {
       return Destination.GLOBAL;
     }
     throw new Error("Could not inspect project configuration.", { cause: error });

@@ -1,3 +1,4 @@
+import { errorMessage } from "@pi-pack/shared/errors";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
 import { Command, completeArguments, parseCommand } from "#src/ui/commands";
@@ -173,7 +174,7 @@ export default function openai(pi: ExtensionAPI): void {
         saving: false,
       };
     } catch (error) {
-      throw new Error(`${extensionName}: ${error instanceof Error ? error.message : "Could not load configuration."}`, {
+      throw new Error(`${extensionName}: ${errorMessage(error, "Could not load configuration.")}`, {
         cause: error,
       });
     }
@@ -209,7 +210,7 @@ export default function openai(pi: ExtensionAPI): void {
         }
         await executeCommand(command, state, pi, ctx);
       } catch (error) {
-        ctx.ui.notify(`${extensionName}: ${error instanceof Error ? error.message : "Command failed."}`, "error");
+        ctx.ui.notify(`${extensionName}: ${errorMessage(error, "Command failed.")}`, "error");
       }
     },
   });

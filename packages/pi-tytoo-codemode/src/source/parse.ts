@@ -1,3 +1,4 @@
+import { errorMessage } from "@pi-pack/shared/errors";
 import { prompts } from "#src/prompts/generated";
 import { isRecord } from "#src/sandbox/values";
 
@@ -55,7 +56,7 @@ function parseOptions(directive: string): CodemodeSourceOptions {
     throw new CodemodeSourceError(
       prompts.source.optionsJson({
         fields: SUPPORTED_FIELDS_TEXT,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
   }

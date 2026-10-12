@@ -1,3 +1,4 @@
+import { errorMessage } from "@pi-pack/shared/errors";
 import { prompts } from "#src/prompts/generated";
 import { argumentsArray, isRecord } from "#src/sandbox/values";
 import type {
@@ -215,7 +216,7 @@ export function createModelGlobals(
     } catch (error) {
       record.durationMs = performance.now() - startedAt;
       record.status = signal.aborted ? "cancelled" : "error";
-      record.error = truncateText(error instanceof Error ? error.message : String(error), ERROR_PREVIEW_CHARS);
+      record.error = truncateText(errorMessage(error), ERROR_PREVIEW_CHARS);
       publish();
       throw error;
     }

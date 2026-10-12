@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readOptionalFile } from "@pi-pack/shared/files";
+import { isMissingFileError, readOptionalFile } from "@pi-pack/shared/files";
 
 vi.mock("node:fs/promises", () => ({ readFile: vi.fn() }));
 
@@ -57,5 +57,30 @@ describe("readOptionalFile", () => {
 
     // Assert
     await expect(result).rejects.toBe(error);
+  });
+});
+
+describe("isMissingFileError", () => {
+  it("recognizes ENOENT on errors and plain objects", () => {
+    // Arrange
+    const error = Object.assign(new Error("missing"), { code: "ENOENT" });
+
+    // Act / Assert
+    expect(isMissingFileError(error)).toBe(true);
+    expect(isMissingFileError({ code: "ENOENT" })).toBe(true);
+  });
+
+  it.each([
+    { value: undefined },
+    { value: null },
+    { value: "ENOENT" },
+    { value: new Error("ENOENT") },
+    { value: {} },
+    { value: { code: "EACCES" } },
+    { value: { code: "ENOTDIR" } },
+    { value: { code: "EISDIR" } },
+  ])("rejects non-missing-file failure $value", ({ value }) => {
+    // Act / Assert
+    expect(isMissingFileError(value)).toBe(false);
   });
 });

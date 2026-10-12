@@ -1,3 +1,4 @@
+import { errorMessage } from "@pi-pack/shared/errors";
 import { isRecord, isArray, encodeJson } from "#src/sandbox/values";
 import { Worker } from "node:worker_threads";
 import {
@@ -38,10 +39,6 @@ const RESERVED_GLOBALS: ReadonlySet<string> = new Set([
   "store",
   "load",
 ]);
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 function serializeStore(store: Readonly<Record<string, unknown>> | undefined): Record<string, string> {
   const serialized: Record<string, string> = {};
@@ -283,7 +280,7 @@ class Execution {
     const reason: unknown = this.signal?.reason;
     this.finish({
       kind: CodemodeErrorKind.Aborted,
-      message: reason instanceof Error ? reason.message : "Execution aborted",
+      message: errorMessage(reason, "Execution aborted"),
     });
   };
 

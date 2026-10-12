@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { booleanOption, isObject } from "@pi-pack/shared/validation";
+import { booleanOption, isObject, unknownKeys } from "@pi-pack/shared/validation";
 
 describe("booleanOption", () => {
   it.each([true, false])("uses fallback %s only for undefined", (fallback) => {
@@ -31,4 +31,34 @@ describe("isObject", () => {
       expect(isObject(value)).toBe(false);
     },
   );
+});
+
+describe("unknownKeys", () => {
+  it("returns only unknown own enumerable keys in input order", () => {
+    // Arrange
+    const value: Record<string, unknown> = { known: { nested: true }, typo: "secret", constructor: true };
+    Object.setPrototypeOf(value, { inherited: true });
+    Object.defineProperty(value, "hidden", { value: true });
+
+    // Act
+    const keys = unknownKeys(value, ["known"]);
+
+    // Assert
+    expect(keys).toEqual(["typo", "constructor"]);
+    expect(value.typo).toBe("secret");
+  });
+
+  it.each([{}, { known: true }])("returns no keys for known configuration %j", (value) => {
+    // Act / Assert
+    expect(unknownKeys(value, ["known"])).toEqual([]);
+  });
+
+  it("accepts objects without a prototype", () => {
+    // Arrange
+    const value: Record<string, unknown> = { typo: true };
+    Object.setPrototypeOf(value, null);
+
+    // Act / Assert
+    expect(unknownKeys(value, [])).toEqual(["typo"]);
+  });
 });

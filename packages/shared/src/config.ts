@@ -1,8 +1,9 @@
+import { errorMessage } from "@pi-pack/shared/errors";
 import { join } from "node:path";
 import { getAgentDir, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { readOptionalFile } from "@pi-pack/shared/files";
-import { isObject } from "@pi-pack/shared/validation";
+import { isObject, unknownKeys } from "@pi-pack/shared/validation";
 
 interface ConfigLoaderOptions<T> {
   name: string;
@@ -48,16 +49,20 @@ export function parseConfig(source: string, warnings?: ConfigWarnings): Record<s
     throw new Error("Expected a configuration object");
   }
   if (warnings?.onWarning) {
-    const unknownKeys = Object.keys(value).filter((key) => !warnings.knownKeys.includes(key));
-    if (unknownKeys.length > 0) {
-      warnings.onWarning(`Unknown configuration entries: ${unknownKeys.map((key) => JSON.stringify(key)).join(", ")}.`);
-    }
+    warnUnknownConfig(value, warnings.knownKeys, warnings.onWarning);
   }
   return value;
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+export function warnUnknownConfig(
+  value: Record<string, unknown>,
+  knownKeys: readonly string[],
+  warn: (message: string) => void,
+): void {
+  const keys = unknownKeys(value, knownKeys);
+  if (keys.length > 0) {
+    warn(`Unknown configuration entries: ${keys.map((key) => JSON.stringify(key)).join(", ")}.`);
+  }
 }
 
 export function createConfigLoader<T>({ name, knownKeys, defaults, validate }: ConfigLoaderOptions<T>) {

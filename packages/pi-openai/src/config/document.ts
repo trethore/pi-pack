@@ -1,4 +1,5 @@
-import { parseConfig } from "@pi-pack/shared/config";
+import { errorMessage } from "@pi-pack/shared/errors";
+import { parseConfig, warnUnknownConfig } from "@pi-pack/shared/config";
 import { isObject } from "@pi-pack/shared/validation";
 import { applyEdits, createScanner, findNodeAtLocation, modify, parseTree, type Edit, type Node } from "jsonc-parser";
 import type { ScopePatch } from "#src/config/changes";
@@ -35,24 +36,13 @@ function checkDuplicates(source: string): void {
   }
 }
 
-function warnUnknown(
-  input: Record<string, unknown>,
-  knownKeys: readonly string[],
-  warn: (message: string) => void,
-): void {
-  const unknown = Object.keys(input).filter((key) => !knownKeys.includes(key));
-  if (unknown.length > 0) {
-    warn(`Unknown configuration entries: ${unknown.map((key) => JSON.stringify(key)).join(", ")}.`);
-  }
-}
-
 function validateRule(input: unknown, warn: (message: string) => void): ScopeRule {
   if (!isObject(input) || !isObject(input.settings)) {
     throw new Error("Expected an override object with match and settings objects");
   }
   const match = validateSelector(input.match);
-  warnUnknown(input, ["match", "settings"], warn);
-  warnUnknown(input.settings, settingNames, warn);
+  warnUnknownConfig(input, ["match", "settings"], warn);
+  warnUnknownConfig(input.settings, settingNames, warn);
   return { match, settings: validateSettings(input.settings) };
 }
 
@@ -71,7 +61,7 @@ function validateRules(input: unknown, warn: (message: string) => void): ScopeRu
       seen.add(id);
       return rule;
     } catch (error) {
-      throw new Error(`overrides[${index}]: ${error instanceof Error ? error.message : "Invalid override"}`, {
+      throw new Error(`overrides[${index}]: ${errorMessage(error, "Invalid override")}`, {
         cause: error,
       });
     }
@@ -93,10 +83,9 @@ export function parseSource(
     }
     return settings;
   } catch (error) {
-    throw new Error(
-      `Invalid ${destination} configuration: ${error instanceof Error ? error.message : "Invalid configuration"}`,
-      { cause: error },
-    );
+    throw new Error(`Invalid ${destination} configuration: ${errorMessage(error, "Invalid configuration")}`, {
+      cause: error,
+    });
   }
 }
 

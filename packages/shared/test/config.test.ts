@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import * as files from "@pi-pack/shared/files";
-import { configPaths, createConfigLoader, parseConfig } from "@pi-pack/shared/config";
+import { configPaths, createConfigLoader, parseConfig, warnUnknownConfig } from "@pi-pack/shared/config";
 
 let root: string;
 let cwd: string;
@@ -296,5 +296,33 @@ describe("project trust", () => {
     expect(result).toEqual({ items: [] });
     expect(defaults).toHaveBeenCalledOnce();
     expect(validate).not.toHaveBeenCalled();
+  });
+});
+
+describe("warnUnknownConfig", () => {
+  it("reports unknown key names once without exposing values or changing the object", () => {
+    // Arrange
+    const value = { known: true, typo: "secret", 'quoted"key': 42 };
+    const warn = vi.fn();
+
+    // Act
+    warnUnknownConfig(value, ["known"], warn);
+
+    // Assert
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      `Unknown configuration entries: "typo", ${JSON.stringify('quoted"key')}.`,
+    );
+    expect(value).toEqual({ known: true, typo: "secret", 'quoted"key': 42 });
+  });
+
+  it.each([{}, { known: { nested: true } }])("does not warn for known configuration %j", (value) => {
+    // Arrange
+    const warn = vi.fn();
+
+    // Act
+    warnUnknownConfig(value, ["known"], warn);
+
+    // Assert
+    expect(warn).not.toHaveBeenCalled();
   });
 });

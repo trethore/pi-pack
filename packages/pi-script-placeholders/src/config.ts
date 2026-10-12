@@ -1,6 +1,6 @@
 import { configPaths, parseConfig } from "@pi-pack/shared/config";
 import { readOptionalFile } from "@pi-pack/shared/files";
-import { booleanOption, isObject } from "@pi-pack/shared/validation";
+import { booleanOption, isObject, unknownKeys } from "@pi-pack/shared/validation";
 import { Scope } from "#src/constants";
 
 const ConfigKey = {
@@ -54,7 +54,7 @@ function positiveInteger(value: unknown, name: string, fallback: number): number
 }
 
 function warnUnknown(value: Record<string, unknown>, keys: string[], section: string, warn: (message: string) => void) {
-  if (Object.keys(value).some((key) => !keys.includes(key))) {
+  if (unknownKeys(value, keys).length > 0) {
     warn(`Unknown entries in ${section}.`);
   }
 }

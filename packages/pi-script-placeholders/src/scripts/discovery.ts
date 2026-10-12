@@ -1,11 +1,8 @@
+import { isMissingFileError } from "@pi-pack/shared/files";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { Scope } from "#src/constants";
 import type { Script } from "#src/scripts/execution";
-
-function isMissing(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
-}
 
 async function readScripts(directory: string, scope: Script["scope"], warn: (message: string) => void) {
   const scripts = new Map<string, Script[]>();
@@ -22,7 +19,7 @@ async function readScripts(directory: string, scope: Script["scope"], warn: (mes
       scripts.set(name, candidates);
     }
   } catch (error) {
-    if (!isMissing(error)) {
+    if (!isMissingFileError(error)) {
       warn(`Could not read ${scope} script-placeholders directory.`);
     }
   }

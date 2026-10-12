@@ -1,3 +1,4 @@
+import { errorMessage } from "@pi-pack/shared/errors";
 import { prompts } from "#src/prompts/generated";
 import { encodeJson } from "#src/sandbox/values";
 import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
@@ -116,7 +117,7 @@ async function spillOutput(text: string): Promise<{ path: string } | { error: st
   try {
     return { path: await writeOutputFile("pi-codemode", ".txt", text) };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { error: errorMessage(error) };
   }
 }
 
@@ -201,6 +202,6 @@ async function saveImageAndDescribe({ data, mimeType }: ImageContent): Promise<s
     const path = await writeOutputFile("pi-codemode", extension, bytes);
     return prompts.results.imageSaved({ path, kind });
   } catch (error) {
-    return prompts.results.imageSaveFailed({ kind, error: error instanceof Error ? error.message : String(error) });
+    return prompts.results.imageSaveFailed({ kind, error: errorMessage(error) });
   }
 }
