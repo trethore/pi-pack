@@ -1,10 +1,13 @@
 # Codemode
 
-The `codemode` tool lets the model write a JavaScript script that calls pi's other tools and runs non-LLM models, such as classifiers and image models. Only the script's output reaches the model, so a script can run calls in parallel and filter large results before the model sees them. To turn it on, see [Installation](../README.md#installation).
+The `codemode` tool lets the model write a JavaScript script that calls pi's other tools and runs non-LLM models, such as classifiers and image models.
+Only the script's output reaches the model, so a script can run calls in parallel and filter large results before the model sees them.
+To turn it on, see [Installation](../README.md#installation).
 
 ## Scripts
 
-The tool input is raw JavaScript source, not JSON and not a markdown code fence. It runs as the body of an async function in a QuickJS sandbox, so top-level `await` and `return` work. The sandbox has no Node APIs, file system, network, or timers; scripts reach the outside world only through tools and `models`.
+The tool input is raw JavaScript source, not JSON and not a markdown code fence. It runs as the body of an async function in a QuickJS sandbox, so top-level `await` and `return` work.
+The sandbox has no Node APIs, file system, network, or timers; scripts reach the outside world only through tools and `models`.
 
 Pi runs separate `codemode` calls one at a time. Within a script, independent tool calls can run in parallel; calls that depend on earlier results must run in order.
 
@@ -14,10 +17,12 @@ A script may start with an options line:
 // @options: {"max_output_tokens": 2000, "timeout_ms": 60000}
 ```
 
-- `max_output_tokens` (default 10000) sets an estimated text budget, at four characters per token. It must be a non-negative safe integer. Longer output keeps its start and end, and the full text is written to a temp file whose path is included in the result. Images, the result header, and truncation and image-save notices are not counted toward this budget. Separately, a script fails when its output passes 16777216 characters of text and base64 image data or 100000 `text()`, `image()`, and `console` calls; write large data to a file with a tool instead.
+- `max_output_tokens` (default 10000) sets an estimated text budget, at four characters per token. It must be a non-negative safe integer. Longer output keeps its start and end, and the full text is written to a temp file whose path is included in the result.
+  Images, the result header, and truncation and image-save notices are not counted toward this budget. Separately, a script fails when its output passes 16777216 characters of text and base64 image data or 100000 `text()`, `image()`, and `console` calls; write large data to a file with a tool instead.
 - `timeout_ms` is a hard deadline for the whole script, including tool calls. It must be a positive integer no greater than 2147483647 and is unset by default. Image generation can take minutes, so do not set a short deadline for scripts that generate images.
 
-The model-facing result starts with `Script completed` or `Script failed`, the wall time, and the output. Text and image items appear in order, each on its own line, unless the text is truncated; then the text is combined and images follow it. When the output has more than one text item (from `text()` or `return`), each starts with a `==> text N/M <==` line. `console` calls follow in one `<console_output>` block with one line per call. A failed script keeps its partial output, followed by `Script error:` and the error. Tool calls are real: calls made before a failure are not undone. Calls still running when the script ends receive an abort signal, and unawaited promises are discarded. Whether a call stops depends on the tool, so await every call whose result you need.
+The model-facing result starts with `Script completed` or `Script failed`, the wall time, and the output. Text and image items appear in order, each on its own line, unless the text is truncated; then the text is combined and images follow it. When the output has more than one text item (from `text()` or `return`), each starts with a `==> text N/M <==` line. `console` calls follow in one `<console_output>` block with one line per call.
+A failed script keeps its partial output, followed by `Script error:` and the error. Tool calls are real: calls made before a failure are not undone. Calls still running when the script ends receive an abort signal, and unawaited promises are discarded. Whether a call stops depends on the tool, so await every call whose result you need.
 
 In the terminal, the extension shows the code without a `codemode` heading and hides the result header. By default, `prettyResults` formats JSON output as indented objects and lists with triple-quoted multiline strings. This changes only what the user sees, not the model-facing output. Set it to `false` to keep raw JSON rendering; see [Configuration](../README.md#configuration).
 
@@ -55,7 +60,8 @@ A call can reject with an `Error` or resolve to a structured error result. When 
 
 Use `Promise.allSettled()` to wait for every call and inspect each outcome. `Promise.all()` stops waiting at the first rejection; if that rejection ends the script, calls still running receive an abort signal.
 
-The `codemode` description lists tools with their TypeScript declarations, grouped by namespace (for example one MCP server). Tools with `deferred` exposure, which includes MCP tools with the default `codemode` exposure, are not listed, so the description stays the same while MCP servers connect. Listed declarations share a budget of 3000 estimated tokens (`codemode.inlineBudget` in Pi settings). Scripts find the other tools with `searchTools()`, `describeTool()`, `describeNamespace()`, or by filtering `ALL_TOOLS`. Use declarations already in context before making discovery calls.
+The `codemode` description lists tools with their TypeScript declarations, grouped by namespace (for example one MCP server). Tools with `deferred` exposure, which includes MCP tools with the default `codemode` exposure, are not listed, so the description stays the same while MCP servers connect.
+Listed declarations share a budget of 3000 estimated tokens (`codemode.inlineBudget` in Pi settings). Scripts find the other tools with `searchTools()`, `describeTool()`, `describeNamespace()`, or by filtering `ALL_TOOLS`. Use declarations already in context before making discovery calls.
 
 Discovery calls return values without printing them; use `text(await searchTools("query"))` to show the results. `describeTool()` and `describeNamespace()` return `undefined` when no match exists. The `tools` global is not itself a registered namespace, so `describeNamespace("tools")` only works if a namespace has that name.
 
@@ -100,7 +106,8 @@ declare const models: {
 };
 ```
 
-`classify()` and `generateImages()` use only the `provider` and `id` of `model`, so `{ provider, id }` works as well. They resolve the model from the session's registry, not from script-supplied endpoints or credentials. Check `stopReason` and `errorMessage` for errors returned by the provider. Calls can also reject: invalid model references and contexts throw before the provider is called, and thrown provider failures propagate to the script. At most four classification and image-generation calls combined run at once per script; more calls wait for a free slot, so `Promise.all()` over many items is fine. Their usage is added to the `codemode` tool result and counts toward the session cost.
+`classify()` and `generateImages()` use only the `provider` and `id` of `model`, so `{ provider, id }` works as well. They resolve the model from the session's registry, not from script-supplied endpoints or credentials. Check `stopReason` and `errorMessage` for errors returned by the provider.
+Calls can also reject: invalid model references and contexts throw before the provider is called, and thrown provider failures propagate to the script. At most four classification and image-generation calls combined run at once per script; more calls wait for a free slot, so `Promise.all()` over many items is fine. Their usage is added to the `codemode` tool result and counts toward the session cost.
 
 Model IDs differ between providers, for example `typesafe/jev-latest` and `openrouter/typesafe/jev-1.13`. Use `models.getAvailableOfType(type)` to find the IDs that work with the current credentials.
 
