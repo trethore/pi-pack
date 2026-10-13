@@ -1,4 +1,6 @@
+import { stripVTControlCharacters } from "node:util";
 import type { ToolRenderers } from "@earendil-works/pi-coding-agent";
+import { Container, Text } from "@earendil-works/pi-tui";
 import type { CodemodePlusConfig } from "#src/config";
 import { formatOutputText } from "#src/output";
 
@@ -10,7 +12,18 @@ export function wrapRenderers(original: ToolRenderers, getConfig: () => Codemode
       renderCall(args, theme, context) {
         const config = getConfig();
         const showFullScript = config.enabled && config.showFullScript;
-        return renderCall(args, theme, showFullScript ? { ...context, expanded: true } : context);
+        const component = renderCall(args, theme, showFullScript ? { ...context, expanded: true } : context);
+        if (config.enabled && config.hideHeader && component instanceof Container) {
+          const header = component.children[0];
+          const title = "codemode";
+          if (
+            header instanceof Text &&
+            stripVTControlCharacters(header.render(title.length).join("\n")).trim() === title
+          ) {
+            component.removeChild(header);
+          }
+        }
+        return component;
       },
     }),
     ...(renderResult && {

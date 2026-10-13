@@ -8,29 +8,42 @@ function load(projectTrusted = true, onWarning = vi.fn()) {
   return loadConfig(workspace.cwd, { projectTrusted, agentDir: workspace.agentDir, onWarning });
 }
 
-it("enables both features by default", async () => {
+it("enables all features by default", async () => {
   // Act / Assert
-  await expect(load()).resolves.toEqual({ enabled: true, prettyPrintOutput: true, showFullScript: true });
+  await expect(load()).resolves.toEqual({
+    enabled: true,
+    hideHeader: true,
+    prettyPrintOutput: true,
+    showFullScript: true,
+  });
 });
 
 it("accepts JSONC comments and trailing commas", async () => {
   // Arrange
-  await workspace.configure('{ // settings\n "prettyPrintOutput": false, "showFullScript": false, }', true);
+  await workspace.configure(
+    '{ // settings\n "hideHeader": false, "prettyPrintOutput": false, "showFullScript": false, }',
+    true,
+  );
 
   // Act / Assert
-  await expect(load()).resolves.toEqual({ enabled: true, prettyPrintOutput: false, showFullScript: false });
+  await expect(load()).resolves.toEqual({
+    enabled: true,
+    hideHeader: false,
+    prettyPrintOutput: false,
+    showFullScript: false,
+  });
 });
 
 it("uses project configuration instead of merging with global configuration", async () => {
   // Arrange
-  await workspace.configure('{"prettyPrintOutput":false,"showFullScript":false}', true);
+  await workspace.configure('{"hideHeader":false,"prettyPrintOutput":false,"showFullScript":false}', true);
   await workspace.configure('{"enabled":false}');
 
   // Act / Assert
   await expect(load()).resolves.toEqual({ ...defaultConfig, enabled: false });
 });
 
-it.each(["enabled", "prettyPrintOutput", "showFullScript"])("requires a boolean for %s", async (key) => {
+it.each(["enabled", "hideHeader", "prettyPrintOutput", "showFullScript"])("requires a boolean for %s", async (key) => {
   // Arrange
   await workspace.configure(JSON.stringify({ [key]: "true" }));
 

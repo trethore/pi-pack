@@ -74,6 +74,7 @@ it("enables the UI features at session start without registering a tool", async 
 
   // Assert
   expect(renderCall(renderers!)).toContain("const line25");
+  expect(renderCall(renderers!)).not.toMatch(/^codemode\n/);
   expect(renderResult(renderers!, resultFor('{"name":"Alice"}'))).toBe("name: Alice");
   expect(extension.registerTool).not.toHaveBeenCalled();
 });
@@ -112,7 +113,7 @@ it("changes each feature independently", async () => {
   await extension.start();
 
   // Act / Assert
-  expect(renderCall(renderers)).toBe(renderCall(upstream));
+  expect(renderCall(renderers)).toBe(renderCall(upstream).replace(/^codemode\n/, ""));
   expect(renderResult(renderers, resultFor('{"x":1}'))).toBe("x: 1");
 
   // Arrange
@@ -124,6 +125,24 @@ it("changes each feature independently", async () => {
   // Assert
   expect(renderCall(renderers)).toContain("const line25");
   expect(renderResult(renderers, resultFor('{"x":1}'))).toBe('{"x":1}');
+});
+
+it("restores the header on reload without changing the other features", async () => {
+  // Arrange
+  const extension = harness();
+  const renderers = extension.resolve()!;
+  await extension.start();
+  const hidden = renderCall(renderers);
+  await workspace.configure('{"hideHeader":false}');
+
+  // Act
+  await extension.start();
+
+  // Assert
+  expect(hidden).not.toMatch(/^codemode\n/);
+  expect(renderCall(renderers)).toBe("codemode\n" + hidden);
+  expect(renderCall(renderers)).toContain("const line25");
+  expect(renderResult(renderers, resultFor('{"x":1}'))).toBe("x: 1");
 });
 
 it("disables overrides if loading configuration fails", async () => {

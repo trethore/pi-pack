@@ -20,6 +20,7 @@ No configuration is required. To customize it, create `.pi/pi-codemode-plus.json
 ```jsonc
 {
   "enabled": true,
+  "hideHeader": true,
   "prettyPrintOutput": true,
   "showFullScript": true,
 }
@@ -28,6 +29,7 @@ No configuration is required. To customize it, create `.pi/pi-codemode-plus.json
 The example above uses the default values.
 
 - `enabled`: set to `false` to leave codemode rendering unchanged.
+- `hideHeader`: hide the standalone `codemode` title above the script. Set to `false` to restore it.
 - `prettyPrintOutput`: display JSON objects and arrays in a readable, YAML-like format instead of raw JSON.
 - `showFullScript`: show the complete script even when tool results are collapsed.
 

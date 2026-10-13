@@ -1,5 +1,6 @@
 {
   "enabled": true,
+  "hideHeader": true,
   "prettyPrintOutput": true,
   "showFullScript": true
 }

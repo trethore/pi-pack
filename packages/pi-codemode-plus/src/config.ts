@@ -3,6 +3,7 @@ import { booleanOption } from "@pi-pack/shared/validation";
 
 const ConfigKey = {
   ENABLED: "enabled",
+  HIDE_HEADER: "hideHeader",
   PRETTY_PRINT_OUTPUT: "prettyPrintOutput",
   SHOW_FULL_SCRIPT: "showFullScript",
 } as const;
@@ -12,6 +13,7 @@ export type CodemodePlusConfig = Record<ConfigKey, boolean>;
 
 export const defaultConfig: CodemodePlusConfig = {
   [ConfigKey.ENABLED]: true,
+  [ConfigKey.HIDE_HEADER]: true,
   [ConfigKey.PRETTY_PRINT_OUTPUT]: true,
   [ConfigKey.SHOW_FULL_SCRIPT]: true,
 };
@@ -24,6 +26,7 @@ export const loadConfig = createConfigLoader({
     const option = (key: ConfigKey) => booleanOption(value[key], key, defaultConfig[key]);
     return {
       [ConfigKey.ENABLED]: option(ConfigKey.ENABLED),
+      [ConfigKey.HIDE_HEADER]: option(ConfigKey.HIDE_HEADER),
       [ConfigKey.PRETTY_PRINT_OUTPUT]: option(ConfigKey.PRETTY_PRINT_OUTPUT),
       [ConfigKey.SHOW_FULL_SCRIPT]: option(ConfigKey.SHOW_FULL_SCRIPT),
     };

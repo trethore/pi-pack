@@ -5,6 +5,9 @@
   "dependencies": {
     "@pi-pack/shared": "0.1.0"
   },
+  "devDependencies": {
+    "@earendil-works/pi-tui": "1.2.0"
+  },
   "files": [
     "pi-codemode-plus.example.jsonc",
     "src"
@@ -20,7 +23,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.2.0"
+    "@earendil-works/pi-coding-agent": "^1.2.0",
+    "@earendil-works/pi-tui": "^1.2.0"
   },
   "pi": {
     "extensions": [

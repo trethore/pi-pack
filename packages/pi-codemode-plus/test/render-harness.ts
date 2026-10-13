@@ -58,7 +58,7 @@ export function resultFor(text: string): AgentToolResult<unknown> {
   };
 }
 
-function plain(component: ReturnType<NonNullable<ToolRenderers["renderCall"]>>, width: number): string {
+export function plain(component: ReturnType<NonNullable<ToolRenderers["renderCall"]>>, width: number): string {
   return stripVTControlCharacters(component.render(width).join("\n"))
     .split("\n")
     .map((line) => line.trimEnd())
@@ -69,7 +69,7 @@ function plain(component: ReturnType<NonNullable<ToolRenderers["renderCall"]>>, 
 export function renderCall(
   renderers: ToolRenderers,
   context = renderContext(),
-  code = longScript,
+  code: unknown = longScript,
   width = 120,
 ): string {
   if (!renderers.renderCall) {

@@ -1,9 +1,11 @@
-import type { ToolRenderers } from "@earendil-works/pi-coding-agent";
+import { highlightCode, type ToolRenderers } from "@earendil-works/pi-coding-agent";
+import { Container, Text } from "@earendil-works/pi-tui";
 import { beforeAll, expect, it, vi } from "vitest";
 import { defaultConfig } from "#src/config";
 import { wrapRenderers } from "#src/renderers";
 import {
   longScript,
+  plain,
   renderCall,
   renderContext,
   renderResult,
@@ -27,7 +29,7 @@ it("shows the full script without expanding results or changing shared context",
   const result = renderResult(renderers, output, context);
 
   // Assert
-  expect(script).toContain("const line25 = 25;");
+  expect(script).toBe(longScript);
   expect(script).not.toContain("more lines");
   expect(context.expanded).toBe(false);
   expect(result).toContain("more lines");
@@ -36,7 +38,7 @@ it("shows the full script without expanding results or changing shared context",
 
 it.each([
   { ...defaultConfig, enabled: false },
-  { ...defaultConfig, showFullScript: false },
+  { ...defaultConfig, hideHeader: false, showFullScript: false },
 ])("preserves upstream call rendering for %j", (config) => {
   // Arrange
   const renderers = wrapRenderers(upstream, () => config);
@@ -46,7 +48,130 @@ it.each([
   expect(renderCall(renderers)).not.toContain("const line25");
 });
 
-it("preserves streaming source, options lines, wrapping, and component reuse", () => {
+it.each([false, true])("hides the header while preserving the script preview with expanded=%s", (expanded) => {
+  // Arrange
+  const renderers = wrapRenderers(upstream, () => ({ ...defaultConfig, showFullScript: false }));
+  const expected = renderCall(upstream, renderContext(expanded)).replace(/^codemode\n/, "");
+
+  // Act
+  const output = renderCall(renderers, renderContext(expanded));
+
+  // Assert
+  expect(output).toBe(expected);
+});
+
+it("can keep the header without disabling other features", () => {
+  // Arrange
+  const renderers = wrapRenderers(upstream, () => ({ ...defaultConfig, hideHeader: false }));
+
+  // Act / Assert
+  expect(renderCall(renderers)).toBe("codemode\n" + longScript);
+  expect(renderResult(renderers, resultFor('{"name":"Alice"}'))).toBe("name: Alice");
+});
+
+it.each([1, 4, 8, 40])("removes the entire header without losing script text at width %i", (width) => {
+  // Arrange
+  const renderers = wrapRenderers(upstream, () => defaultConfig);
+  const source = "const x = 1;\ntext(x);";
+  const highlighted = highlightCode(source, "javascript").join("\n");
+
+  // Act
+  const output = renderCall(renderers, renderContext(), source, width);
+
+  // Assert
+  expect(output).toBe(plain(new Text(highlighted, 0, 0), width));
+});
+
+it("recognizes a styled header without changing the remaining components", () => {
+  // Arrange
+  const component = new Container();
+  const script = new Text("text(1);", 0, 0);
+  component.addChild(new Text("\u001b[1m\u001b[31mcodemode\u001b[0m", 0, 0));
+  component.addChild(script);
+  const renderers = wrapRenderers({ renderCall: () => component }, () => defaultConfig);
+
+  // Act
+  const output = renderCall(renderers);
+
+  // Assert
+  expect(output).toBe("text(1);");
+  expect(component.children).toEqual([script]);
+});
+
+it.each([42, false, {}, []])("preserves invalid-argument diagnostics for %j", (code) => {
+  // Arrange
+  const renderers = wrapRenderers(upstream, () => defaultConfig);
+
+  // Act / Assert
+  expect(renderCall(renderers, renderContext(), code)).toBe("codemode [invalid arg]");
+});
+
+it.each(["", null])("does not leave an empty header line for code=%j", (code) => {
+  // Arrange
+  const original = { ...upstream, renderCall: vi.fn(upstream.renderCall) };
+  const renderers = wrapRenderers(original, () => defaultConfig);
+
+  // Act
+  const output = renderCall(renderers, renderContext(), code);
+
+  // Assert
+  expect(output).toBe("");
+  expect(original.renderCall.mock.results[0]?.value).toMatchObject({ children: [] });
+});
+
+it("preserves an unfamiliar call component", () => {
+  // Arrange
+  const component = new Text("codemode", 0, 0);
+  const renderers = wrapRenderers({ renderCall: () => component }, () => defaultConfig);
+
+  // Act / Assert
+  expect(renderCall(renderers)).toBe("codemode");
+});
+
+it.each(["", "custom header", "codemode [invalid arg]"])("preserves an unrecognized container header: %j", (header) => {
+  // Arrange
+  const component = new Container();
+  if (header) {
+    component.addChild(new Text(header, 0, 0));
+  }
+  const children = [...component.children];
+  const renderers = wrapRenderers({ renderCall: () => component }, () => defaultConfig);
+
+  // Act
+  const output = renderCall(renderers);
+
+  // Assert
+  expect(output).toBe(header);
+  expect(component.children).toEqual(children);
+});
+
+it("reuses the component while streaming and toggling header visibility", () => {
+  // Arrange
+  const original = { ...upstream, renderCall: vi.fn(upstream.renderCall) };
+  const config = { ...defaultConfig };
+  const renderers = wrapRenderers(original, () => config);
+  const component = new Container();
+  const context = { ...renderContext(), argsComplete: false, lastComponent: component };
+  const source = "codemode\ntext(1);";
+
+  // Act
+  const partial = renderCall(renderers, context, "codemode");
+  const streamed = renderCall(renderers, context, source);
+  context.argsComplete = true;
+  config.hideHeader = false;
+  const shown = renderCall(renderers, context, source);
+  config.hideHeader = true;
+  const hidden = renderCall(renderers, context, source);
+
+  // Assert
+  expect(partial).toBe("codemode");
+  expect(streamed).toBe(source);
+  expect(shown).toBe("codemode\n" + source);
+  expect(hidden).toBe(source);
+  expect(original.renderCall.mock.results.every((result) => result.value === component)).toBe(true);
+});
+
+it("preserves streaming source, options lines, and wrapping", () => {
   // Arrange
   const original = { ...upstream, renderCall: vi.fn(upstream.renderCall) };
   const renderers = wrapRenderers(original, () => defaultConfig);
