@@ -17,7 +17,6 @@ it("flattens nested fields and displays multiline strings", () => {
       "user.name: Alice",
       "user.age: 25",
       "user.active: true",
-      "",
       'message: """',
       "Hello!",
       "This is a multiline message.",
@@ -34,7 +33,7 @@ it.each([
   [{ empty: {}, list: [], missing: null }, "empty: {}\nlist: []\nmissing: null"],
   [{ value: "true", count: "25", blank: "", spaced: " x " }, 'value: "true"\ncount: "25"\nblank: ""\nspaced: " x "'],
   [{ value: "literal\\ntext" }, 'value: "literal\\\\ntext"'],
-  [{ value: "\nhello\n", next: "world" }, 'value: """\n\nhello\n\n"""\n\nnext: world'],
+  [{ value: "\nhello\n", next: "world" }, 'value: """\n\nhello\n\n"""\nnext: world'],
   [{ value: 'a\n"""\n\\n\r\t\u001b' }, 'value: """\na\n\\"\\"\\"\n\\\\n\\r\\t\\u001b\n"""'],
 ])("formats %j without ambiguous paths or scalars", (value, expected) => {
   // Act / Assert

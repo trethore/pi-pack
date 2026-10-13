@@ -62,7 +62,6 @@ Displays as:
 user.name: Alice
 user.age: 25
 user.active: true
-
 message: """
 Hello!
 This is a multiline message.

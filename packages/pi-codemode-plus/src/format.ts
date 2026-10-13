@@ -70,11 +70,7 @@ function formatValue(value: unknown): string {
   }
 
   visit(value, "", 0);
-  return entries.reduce((output, entry, index) => {
-    const multiline = entry.includes("\n") || entries[index - 1]?.includes("\n");
-    const separator = multiline ? "\n\n" : "\n";
-    return index === 0 ? entry : output + separator + entry;
-  }, "");
+  return entries.join("\n");
 }
 
 function checkNumber(_key: string, value: unknown): unknown {
