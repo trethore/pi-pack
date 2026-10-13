@@ -34,7 +34,7 @@ Run `/reload` after changing the configuration. Invalid configuration reports an
 
 ## Behavior
 
-At the start of each turn, the extension picks a random message from your list or the 245 built-in messages.
+At the start of each turn, the extension picks a random message from your list or the 295 built-in messages.
 Messages can repeat. The working message resets when the turn ends or the session shuts down.
 
 The extension only changes the working message when a UI is available.

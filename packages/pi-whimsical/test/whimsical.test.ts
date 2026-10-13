@@ -129,7 +129,7 @@ it.each(["{}", '{"messages":[]}'])("uses the supplied built-in list for %s", asy
   await extension.emit(Events.TurnStart);
 
   // Assert
-  expect(defaultMessages).toHaveLength(245);
+  expect(defaultMessages).toHaveLength(295);
   expect(extension.setWorkingMessage).toHaveBeenCalledWith("Schlepping...");
 });
 
