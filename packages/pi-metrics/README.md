@@ -29,7 +29,7 @@ No configuration is required. To customize it, create `.pi/pi-metrics.jsonc` in 
 - `enabled`: defaults to `true`. Set to `false` to disable metrics.
 - `mode`: defaults to `"live"`, which shows metrics above the editor. Use `"notify"` for a summary notification when the agent finishes instead.
 - `liveColor`: defaults to `"accent"`, which follows the current theme's accent color.
-  Override it with a six-digit hex color such as `"#aabbcc"` or `"#AABBCC"`. Applies only to `"live"` mode; notifications are unchanged because their colors are already managed by the theme.
+  Override it with a six-digit hex color such as `"#aabbcc"` or `"#AABBCC"`. Applies only to `"live"` mode.
 - `format`: controls the displayed text. The example above uses the default format.
 
 The project configuration replaces the global configuration completely.

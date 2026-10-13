@@ -94,10 +94,10 @@ At this scope, unset selects project before global. If both files define verbosi
 
 - Unset tracks pending sets and this session's saved edits, skipping already removed values. Environment values and defaults are not removable.
 - With no eligible value, it reports **Nothing to unset** and changes nothing.
-- Setting the same source/scope/key replaces its removal. Undo cancels pending edits at that scope across both sources, including removals.
+- Setting a value again for the same scope and file cancels its pending removal. Undo cancels pending edits at that scope across both sources, including removals.
 - Removing a project value can expose a global fallback. External file edits require reload before unset can target them.
 
-### Filtered saves and write guarantees
+### Save selected changes
 
 ```text
 /pi-openai verbosity low --scope model --source global
@@ -114,12 +114,14 @@ Only the global model edit is saved; the project API edit stays pending.
 | `--scope all`      | All-models edits, not every scope                              |
 | Both flags         | Edits matching both filters                                    |
 
-- Repeated edits replace the same source/scope/key operation. Global and project edits stay separate; the latest set at a scope supplies its runtime value regardless of destination.
-- Only pending edits are written, never inherited/environment/default values. No matching edits means no write.
-- Files are reread before writing. Unrelated values, unknown fields, and comments outside removed entries are preserved; the staged edit wins for its own key and scope.
-- Removing the last setting prunes empty override blocks unless unknown fields remain. Removing an absent setting creates nothing.
-- Each file is replaced atomically, but saving both files is not one transaction. Failed/unattempted writes and edits replaced during saving remain pending. Successful writes are not repeated.
-- Project trust is checked before a batch containing project edits. Successful saves retain runtime overrides; status records saved values/removals separately.
+- Editing the same setting again replaces its pending change for that scope and file. Global and project edits stay separate; the most recent value you set at a scope applies to the current session regardless of its save destination.
+- Only matching pending edits are saved. Inherited values are not copied into the file, and nothing is written if no edits match.
+- Unrelated settings, unknown fields, and comments outside removed entries are preserved. If you edited the file separately, pending changes take precedence only for the settings and scopes they change.
+- Removing the last setting also removes its empty override entry, unless other fields remain. Removing a value that is already absent creates no file or entry.
+- Files are never left half-written. When saving both files, one can succeed even if the other fails.
+- Changes that were not saved remain pending for another `/pi-openai save`, including edits made while saving. Changes already saved are not written again.
+- A save that includes project edits requires project trust before any changes are written.
+- Saving does not change your active settings. Status lists saved changes separately until the next session or `/reload`.
 
 ## Example status output
 
@@ -149,7 +151,7 @@ Default set destination: global
 | --------- | ----- | ------- | ------------------ | ----------------- |
 | verbosity | low   | command | Set text.verbosity | `model=gpt-6-sol` |
 
-Status also shows loaded scopes, skipped-feature reasons, and saved receipts for the next session/reload. Pending deletions appear as **Removed**.
+Status also shows loaded scopes, skipped-feature reasons, and saved changes for the next session or reload. Pending deletions appear as **Removed**.
 
 Request behavior describes intended changes, not guaranteed server acceptance.
 

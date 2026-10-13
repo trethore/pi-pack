@@ -57,7 +57,7 @@ Selected model: gpt-5.5              -> support checks use gpt-5.5
 Request model: production-assistant -> identity check passes
 ```
 
-Without a mapping, the request must name the selected model ID. Request-specific deployment options and scoped environment overrides are not exposed to the extension; a different deployment name leaves the request unchanged.
+If your deployment name differs from the selected model ID, this mapping is required for request overrides to apply.
 
 ## Unsafe overrides and payload safeguards
 

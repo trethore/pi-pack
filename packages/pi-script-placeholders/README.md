@@ -62,9 +62,8 @@ Explain how to install $1 on ${2:-{{platform}}}.
 Here, `platform` runs only if the second argument is missing. Placeholders supplied in command arguments are left literal.
 Script output is also literal: it is not expanded again as placeholders, prompt arguments, or slash commands.
 
-Prompt-template script placeholders expand for interactive and RPC input, not extension-originated input.
-Messages sent through `pi.sendUserMessage()` are left to Pi, even with `expandPromptTemplates: true`; Pi may expand the template, but its script placeholders remain literal.
-Pi 1.2.0 does not expose the template-expansion flag to input handlers, so this policy protects extension messages that are intended to stay literal. It cannot detect an SDK caller disabling expansion while using another input source.
+Prompt-template script placeholders expand for prompts you submit interactively or through RPC.
+They remain literal in messages sent by other extensions.
 
 ### Supported locations
 
@@ -111,9 +110,7 @@ Untrusted projects cannot supply scripts or extension configuration, but global 
 
 Each script runs at most once per workspace and trust state until `/reload`. The same result is shared across system prompts and prompt templates, including across new sessions in the same Pi process.
 
-Available template bodies are read and cached at session start, without executing scripts, and refreshed on `/reload`.
-Templates added after session start, such as through `resources_discover`, are read on first invocation instead.
-These are snapshots read from disk, not Pi's internal template snapshots.
+Existing prompt templates refresh at session start or on `/reload`. Newly available templates are picked up when first used.
 
 Missing scripts, ambiguous names, execution failures, timeouts, and oversized output leave the placeholder unchanged and produce a warning. Failed results are cached too; they are not retried on each turn.
 
