@@ -12,6 +12,7 @@ import {
 } from "#src/config/files";
 import {
   completeSave,
+  editPatch,
   prepareSave,
   undoCommand,
   unsetCommand,
@@ -44,7 +45,7 @@ async function executeSave(
     throw new Error("A save is already in progress.");
   }
   const batch = prepareSave(state.changes, command);
-  if (batch.some((patch) => patch.destination === Destination.PROJECT) && !ctx.isProjectTrusted()) {
+  if (batch.some((edit) => edit.destination === Destination.PROJECT) && !ctx.isProjectTrusted()) {
     throw new Error("Project is not trusted; refusing to save project configuration.");
   }
   if (batch.length === 0) {
@@ -54,12 +55,14 @@ async function executeSave(
   state.saving = true;
   try {
     for (const destination of [Destination.GLOBAL, Destination.PROJECT]) {
-      const patches = batch.filter((patch) => patch.destination === destination);
-      if (patches.length === 0) {
+      const edits = batch.filter((edit) => edit.destination === destination);
+      if (edits.length === 0) {
         continue;
       }
-      await saveConfiguration(state.paths, destination, patches, { projectTrusted: ctx.isProjectTrusted() });
-      completeSave(state.changes, patches);
+      await saveConfiguration(state.paths, destination, edits.map(editPatch), {
+        projectTrusted: ctx.isProjectTrusted(),
+      });
+      completeSave(state.changes, edits);
       ctx.ui.notify(
         `${extensionName}: Saved to ${destination}. Applies on next session/reload; active settings unchanged.`,
         "info",

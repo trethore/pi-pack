@@ -4,7 +4,15 @@ import { beforeAll, expect, it, vi } from "vitest";
 import { Setting } from "#src/config/settings";
 import { Verbosity, ReasoningSummary, Destination, ServiceTier } from "#src/constants";
 import { renderStatus, statusMarkdown } from "#src/ui/status";
-import { completeSave, prepareSave, undoCommand, unsetCommand, setCommand, type Changes } from "#src/config/changes";
+import {
+  PendingEditType,
+  completeSave,
+  prepareSave,
+  undoCommand,
+  unsetCommand,
+  setCommand,
+  type Changes,
+} from "#src/config/changes";
 import { layers, model } from "#test/support";
 
 beforeAll(() => {
@@ -90,7 +98,9 @@ it.each([30, 60, 100, 160])(
     const fg = vi.fn((color: keyof typeof colors, text: string) => `\u001b[${colors[color]}m${text}\u001b[0m`);
     const theme = { fg } as unknown as Theme;
     const changes: Changes = {
-      pending: [{ destination: Destination.GLOBAL, match: {}, settings: {}, unset: [Setting.VERBOSITY] }],
+      pending: [
+        { destination: Destination.GLOBAL, match: {}, type: PendingEditType.UNSET, setting: Setting.VERBOSITY },
+      ],
       receipts: [],
     };
     const component = renderStatus(statusMarkdown(layers(), model, Destination.GLOBAL, changes), theme);
@@ -270,8 +280,16 @@ it("shows all scopes, matching markers, provenance, and a final effective table"
 it("keeps saved-only receipts out of the default target and effective values", () => {
   // Arrange
   const input = layers({ command: { verbosity: Verbosity.LOW } });
-  const changes = {
-    pending: [{ destination: Destination.GLOBAL, match: {}, settings: { verbosity: Verbosity.LOW } }],
+  const changes: Changes = {
+    pending: [
+      {
+        destination: Destination.GLOBAL,
+        match: {},
+        type: PendingEditType.SET,
+        setting: Setting.VERBOSITY,
+        value: Verbosity.LOW,
+      },
+    ],
     receipts: [
       {
         destination: Destination.PROJECT,

@@ -463,11 +463,12 @@ it("preserves existing permissions even when the process umask is more restricti
   expect((await stat(workspace.paths.global)).mode & 0o777).toBe(0o660);
 });
 
-it("keeps the original file and removes temporary files if atomic replacement fails", async () => {
+it("preserves the original file and error cause and removes temporary files if atomic replacement fails", async () => {
   // Arrange
   const source = '{ // retain\n "verbosity": "high" }';
   await workspace.write(Destination.GLOBAL, source);
-  vi.mocked(filesystem.rename).mockRejectedValueOnce(new Error("rename failed"));
+  const cause = new Error(`rename failed: ${workspace.paths.global}`);
+  vi.mocked(filesystem.rename).mockRejectedValueOnce(cause);
 
   // Act / Assert
   await expect(
@@ -479,7 +480,7 @@ it("keeps the original file and removes temporary files if atomic replacement fa
         projectTrusted: true,
       },
     ),
-  ).rejects.toThrow("Could not save global configuration.");
+  ).rejects.toMatchObject({ message: "Could not save global configuration.", cause });
   expect(await workspace.read(Destination.GLOBAL)).toBe(source);
   expect(await readdir(workspace.agentDir)).toEqual(["pi-openai.jsonc"]);
 });

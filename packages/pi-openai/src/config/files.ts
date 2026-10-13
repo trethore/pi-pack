@@ -101,8 +101,8 @@ export async function saveConfiguration(
       await chmod(temporary, mode);
     }
     await rename(temporary, file);
-  } catch {
-    throw new Error(`Could not save ${destination} configuration.`);
+  } catch (error) {
+    throw new Error(`Could not save ${destination} configuration.`, { cause: error });
   } finally {
     await rm(temporary, { force: true }).catch(() => {});
   }

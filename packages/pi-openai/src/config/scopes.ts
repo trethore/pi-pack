@@ -119,7 +119,15 @@ export function explicitScope(scope: ScopeName, model: ModelIdentity | undefined
   return match;
 }
 
-function commandScopeRules(layers: Layers, model: ModelIdentity | undefined, pending: ScopeRule[] = []): ScopeRule[] {
+interface ScopeTarget {
+  readonly match: Readonly<Selector>;
+}
+
+function commandScopeRules(
+  layers: Layers,
+  model: ModelIdentity | undefined,
+  pending: readonly ScopeTarget[] = [],
+): ScopeTarget[] {
   const candidates = (["global", "project", "command"] as const).flatMap((source, priority) =>
     [...scopeRules(layers[source]), ...(source === "command" ? pending : [])]
       .filter((rule) => matchesScope(rule.match, model))
@@ -137,7 +145,7 @@ function commandScopeRules(layers: Layers, model: ModelIdentity | undefined, pen
 export function automaticScope(
   layers: Layers,
   model: ModelIdentity | undefined,
-  pending: ScopeRule[] = [],
+  pending: readonly ScopeTarget[] = [],
 ): Selector | undefined {
   if (!model) {
     return undefined;
@@ -149,7 +157,7 @@ export function commandScope(
   layers: Layers,
   model: ModelIdentity | undefined,
   scope?: ScopeName,
-  pending: ScopeRule[] = [],
+  pending: readonly ScopeTarget[] = [],
 ): Selector {
   const match = scope === undefined ? automaticScope(layers, model, pending) : explicitScope(scope, model);
   if (!match) {

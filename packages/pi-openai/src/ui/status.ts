@@ -20,7 +20,7 @@ import {
   scopeRules,
   type Selector,
 } from "#src/config/scopes";
-import { patchKeys, type Changes, type FilePatch, type ScopePatch } from "#src/config/changes";
+import { PendingEditType, patchKeys, type Changes, type FilePatch, type ScopePatch } from "#src/config/changes";
 
 const supportWarning =
   "Request behavior describes intended overrides, not server acceptance. Unverified support can be attempted with allowUnsupported.";
@@ -83,10 +83,11 @@ function scopeSource(view: ScopeView, key: Setting, changes: Changes): string {
     return view.sources[key] ?? "";
   }
   const pending = changes.pending.some(
-    (rule) =>
-      scopeId(rule.match) === scopeId(view.match) &&
-      Object.hasOwn(rule.settings, key) &&
-      rule.settings[key] === view.settings[key],
+    (edit) =>
+      scopeId(edit.match) === scopeId(view.match) &&
+      edit.type === PendingEditType.SET &&
+      edit.setting === key &&
+      edit.value === view.settings[key],
   );
   return pending ? "command, unsaved" : "command, saved";
 }
@@ -147,7 +148,7 @@ function temporaryTable(changes: Changes, model: RequestModel | undefined): stri
       "Unsaved command edits at their original scopes. Matching edits can still be masked by more specific command overrides.",
       "",
     );
-    if (changes.pending.some((patch) => patch.unset?.length)) {
+    if (changes.pending.some((edit) => edit.type === PendingEditType.UNSET)) {
       lines.push(
         "Removals affect their recorded source on next session/reload, not the currently loaded configuration.",
         "",
@@ -158,12 +159,11 @@ function temporaryTable(changes: Changes, model: RequestModel | undefined): stri
       (left, right) =>
         scopeRank(left.match) - scopeRank(right.match) || scopeId(left.match).localeCompare(scopeId(right.match)),
     );
-    for (const rule of pending) {
-      const scope = inlineCode(scopeLabel(rule.match));
-      const matches = matchesScope(rule.match, model) ? "Yes" : "No";
-      for (const key of patchKeys(rule)) {
-        lines.push(`| ${scope} | ${key} | ${patchValue(rule, key)} | ${rule.destination} | ${matches} |`);
-      }
+    for (const edit of pending) {
+      const scope = inlineCode(scopeLabel(edit.match));
+      const matches = matchesScope(edit.match, model) ? "Yes" : "No";
+      const value = inlineCode(edit.type === PendingEditType.UNSET ? "Removed" : String(edit.value));
+      lines.push(`| ${scope} | ${edit.setting} | ${value} | ${edit.destination} | ${matches} |`);
     }
     lines.push("", `Use ${inlineCode(`/${extensionName} save`)} to save the changes.`);
   }

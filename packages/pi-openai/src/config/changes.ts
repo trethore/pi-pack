@@ -21,8 +21,23 @@ export interface ScopePatch extends ScopeRule {
 export interface FilePatch extends ScopePatch {
   destination: Destination;
 }
+export const PendingEditType = {
+  SET: "set",
+  UNSET: "unset",
+} as const;
+
+export type PendingEdit<K extends Setting = Setting> = {
+  [P in K]: {
+    readonly destination: Destination;
+    readonly match: Readonly<Selector>;
+    readonly setting: P;
+  } & (
+    | { readonly type: typeof PendingEditType.SET; readonly value: Settings[P] }
+    | { readonly type: typeof PendingEditType.UNSET; readonly value?: never }
+  );
+}[K];
 export interface Changes {
-  pending: FilePatch[];
+  pending: readonly PendingEdit[];
   receipts: FilePatch[];
 }
 export interface SaveFilters {
@@ -63,15 +78,34 @@ function configuration(rules: ScopeRule[]): ScopedSettings {
   return overrides.length === 0 ? { ...unscoped } : { ...unscoped, overrides };
 }
 
-function stageEdit(changes: Changes, patch: FilePatch): void {
-  const keys = patchKeys(patch);
-  changes.pending = changes.pending.filter(
+function stageEdit(changes: Changes, edit: PendingEdit): void {
+  const pending = changes.pending.filter(
     (entry) =>
-      entry.destination !== patch.destination ||
-      scopeId(entry.match) !== scopeId(patch.match) ||
-      !patchKeys(entry).some((key) => keys.includes(key)),
+      entry.destination !== edit.destination ||
+      scopeId(entry.match) !== scopeId(edit.match) ||
+      entry.setting !== edit.setting,
   );
-  changes.pending.push(patch);
+  // Save batches track edit identity; neither an edit nor its selector may change in place.
+  changes.pending = [...pending, Object.freeze({ ...edit, match: Object.freeze({ ...edit.match }) })];
+}
+
+function setEdit<K extends Setting>(
+  match: Selector,
+  setting: K,
+  value: Settings[K],
+  destination: Destination,
+): PendingEdit<K> {
+  return { type: PendingEditType.SET, destination, match, setting, value };
+}
+
+export function editPatch(edit: PendingEdit): FilePatch {
+  return {
+    destination: edit.destination,
+    match: { ...edit.match },
+    ...(edit.type === PendingEditType.SET
+      ? { settings: { [edit.setting]: edit.value } }
+      : { settings: {}, unset: [edit.setting] }),
+  };
 }
 
 export function setCommand(
@@ -82,15 +116,17 @@ export function setCommand(
   destination: Destination,
 ): void {
   layers.command = configuration(mergeRule(scopeRules(layers.command), match, override));
-  // Separate settings retain their identity when another edit changes during a save.
   for (const key of settingNames.filter((setting) => Object.hasOwn(override, setting))) {
-    stageEdit(changes, { destination, match: { ...match }, settings: { [key]: override[key] } });
+    const value = override[key];
+    if (value !== undefined) {
+      stageEdit(changes, setEdit(match, key, value, destination));
+    }
   }
 }
 
-function removeSetting<T extends ScopePatch>(rules: T[], match: Selector, setting?: Setting): T[] {
+function removeSetting(rules: ScopeRule[], match: Selector, setting?: Setting): ScopeRule[] {
   return rules.flatMap((rule) => {
-    if (scopeId(rule.match) !== scopeId(match) || (setting !== undefined && !patchKeys(rule).includes(setting))) {
+    if (scopeId(rule.match) !== scopeId(match) || (setting !== undefined && !Object.hasOwn(rule.settings, setting))) {
       return [rule];
     }
     if (!setting) {
@@ -98,13 +134,7 @@ function removeSetting<T extends ScopePatch>(rules: T[], match: Selector, settin
     }
     const settings = { ...rule.settings };
     Reflect.deleteProperty(settings, setting);
-    const unset = rule.unset?.filter((key) => key !== setting) ?? [];
-    if (Object.keys(settings).length === 0 && unset.length === 0) {
-      return [];
-    }
-    const remaining = { ...rule, settings };
-    Reflect.deleteProperty(remaining, "unset");
-    return [{ ...remaining, ...(unset.length > 0 ? { unset } : {}) }];
+    return Object.keys(settings).length === 0 ? [] : [{ ...rule, settings }];
   });
 }
 
@@ -115,12 +145,16 @@ export function undoCommand(layers: Layers, changes: Changes, match?: Selector, 
     return;
   }
   layers.command = configuration(removeSetting(scopeRules(layers.command), match, setting));
-  changes.pending = removeSetting(changes.pending, match, setting);
+  changes.pending = changes.pending.filter(
+    (edit) => scopeId(edit.match) !== scopeId(match) || (setting !== undefined && edit.setting !== setting),
+  );
 }
 
 function editedConfiguration(layers: Layers, changes: Changes, destination: Destination): ScopedSettings {
   let rules: ScopePatch[] = scopeRules(layers[destination]);
-  for (const patch of [...changes.receipts, ...changes.pending].filter((entry) => entry.destination === destination)) {
+  for (const patch of [...changes.receipts, ...changes.pending.map(editPatch)].filter(
+    (entry) => entry.destination === destination,
+  )) {
     rules = mergeRule(rules, patch.match, patch.settings, patch.unset);
   }
   return configuration(rules);
@@ -168,21 +202,22 @@ export function unsetCommand(
   destination: Destination,
 ): void {
   layers.command = configuration(removeSetting(scopeRules(layers.command), match, setting));
-  stageEdit(changes, { destination, match: { ...match }, settings: {}, unset: [setting] });
+  stageEdit(changes, { type: PendingEditType.UNSET, destination, match, setting });
 }
 
-export function prepareSave(changes: Changes, filters: SaveFilters = {}): FilePatch[] {
+export function prepareSave(changes: Changes, filters: SaveFilters = {}): readonly PendingEdit[] {
   return changes.pending.filter(
-    (patch) =>
-      (filters.source === undefined || patch.destination === filters.source) &&
-      (filters.scope === undefined || matchesScopeFilter(patch.match, filters.scope)),
+    (edit) =>
+      (filters.source === undefined || edit.destination === filters.source) &&
+      (filters.scope === undefined || matchesScopeFilter(edit.match, filters.scope)),
   );
 }
 
-export function completeSave(changes: Changes, batch: FilePatch[]): void {
+export function completeSave(changes: Changes, batch: readonly PendingEdit[]): void {
   // Edits replaced during an asynchronous save must remain pending.
-  changes.pending = changes.pending.filter((rule) => !batch.includes(rule));
-  for (const patch of batch) {
+  changes.pending = changes.pending.filter((edit) => !batch.includes(edit));
+  for (const edit of batch) {
+    const patch = editPatch(edit);
     const otherDestinations = changes.receipts.filter((receipt) => receipt.destination !== patch.destination);
     const saved = mergeRule(
       changes.receipts.filter((receipt) => receipt.destination === patch.destination),
