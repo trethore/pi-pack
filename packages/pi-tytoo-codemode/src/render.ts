@@ -1,3 +1,4 @@
+import { startToolTimer, toolTimerText, type TimedRenderContext, type ToolTimerState } from "#src/render-timer";
 import {
   highlightCode,
   keyHint,
@@ -58,7 +59,10 @@ function formatCall(call: CodemodeNestedCall, theme: Theme, expanded: boolean): 
 
 export function createRenderers(
   getPrettyResults: () => boolean = () => true,
-): Pick<ToolDefinition<typeof codemodeSchema, CodemodeToolDetails | undefined>, "renderCall" | "renderResult"> {
+): Pick<
+  ToolDefinition<typeof codemodeSchema, CodemodeToolDetails | undefined, ToolTimerState>,
+  "renderCall" | "renderResult"
+> {
   return {
     renderCall,
     renderResult: (result, options, theme, context) =>
@@ -66,7 +70,8 @@ export function createRenderers(
   };
 }
 
-function renderCall(args: CodemodeToolInput): Component {
+function renderCall(args: CodemodeToolInput, _theme: Theme, context: TimedRenderContext): Component {
+  startToolTimer(context);
   const source = typeof args.code === "string" ? args.code : "[invalid code]";
   const code = highlightCode(source.replace(/\t/g, "    "), "javascript").join("\n");
   return new Text(code, 0, 0);
@@ -76,12 +81,14 @@ function renderResult(
   result: AgentToolResult<CodemodeToolDetails | undefined>,
   options: ToolRenderResultOptions,
   theme: Theme,
-  context: { showImages: boolean; isError: boolean },
+  context: TimedRenderContext,
   prettyResults: boolean,
 ): Component {
   const component = new Container();
+  const timer = toolTimerText(context, options.isPartial);
   addCalls(component, result.details?.calls ?? [], theme, options.expanded);
   if (options.isPartial) {
+    addTimer(component, timer, theme);
     return component;
   }
 
@@ -113,7 +120,15 @@ function renderResult(
     component.addChild(new Text(theme.fg("muted", `Full output: ${result.details.fullOutputPath}`), 0, 0));
   }
 
+  addTimer(component, timer, theme);
   return component;
+}
+
+function addTimer(component: Container, timer: string | undefined, theme: Theme): void {
+  if (timer) {
+    component.addChild(new Spacer(1));
+    component.addChild(new Text(theme.fg("muted", timer), 0, 0));
+  }
 }
 
 function addCalls(component: Container, calls: CodemodeNestedCall[], theme: Theme, expanded: boolean): void {

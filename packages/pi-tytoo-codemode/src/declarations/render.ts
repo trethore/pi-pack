@@ -1,6 +1,4 @@
 import { prompts } from "#src/prompts/generated";
-import { readFileSync } from "node:fs";
-import { isRecord } from "#src/sandbox/values";
 import { schemaToType } from "#src/declarations/schema";
 import { renderPropertyName } from "#src/declarations/identifier";
 
@@ -9,12 +7,6 @@ import type { CodemodeJsonSchema, CodemodeTool } from "#src/sandbox/types";
 const INDENT = "  ";
 /** Largest rendered input type, in characters, before it becomes `unknown`. */
 const DEFAULT_INPUT_SCHEMA_MAX_CHARS = 16_000;
-
-/**
- * TypeScript types for MCP results, from the MCP `CallToolResult` schema, so `CallToolResult<T>`
- * declarations can refer to them.
- */
-export const MCP_TYPESCRIPT_PREAMBLE = readFileSync(new URL("./mcp.d.ts", import.meta.url), "utf8").trim();
 
 export interface RenderDeclarationsOptions {
   tools?: readonly CodemodeTool[];
@@ -75,8 +67,6 @@ function renderGlobalDeclarations(globals: readonly CodemodeTool[]): string[] {
 /**
  * One tool as a member of the `tools` object: `name(args: T): Promise<R>;` with the
  * original name quoted when it is not an identifier. Input types longer than `inputMaxChars` render as `unknown`.
- * Tools whose output schema is an MCP `CallToolResult` render as `Promise<CallToolResult<T>>`,
- * which needs {@link MCP_TYPESCRIPT_PREAMBLE}.
  */
 export function renderToolSignature(
   tool: Pick<CodemodeTool, "name" | "inputSchema" | "outputSchema">,
@@ -103,39 +93,7 @@ export function renderToolSample(
   return prompts.tool.declaration({ description: tool.description?.trim() ?? "", declaration });
 }
 
-/**
- * The `structuredContent` schema of an MCP `CallToolResult` output schema (detected by a
- * `content` array of objects, boolean `isError`, and object `_meta`), `true` when it declares none, or
- * `undefined` when the schema is not a `CallToolResult`.
- */
-export function mcpStructuredContentSchema(schema: CodemodeJsonSchema | undefined): CodemodeJsonSchema | undefined {
-  if (!isRecord(schema) || !isRecord(schema.properties)) {
-    return undefined;
-  }
-
-  const { content, isError, _meta, structuredContent } = schema.properties;
-  if (!isContentArray(content)) {
-    return undefined;
-  }
-
-  if (!isRecord(isError) || isError.type !== "boolean" || !isRecord(_meta) || _meta.type !== "object") {
-    return undefined;
-  }
-
-  return isRecord(structuredContent) || typeof structuredContent === "boolean" ? structuredContent : true;
-}
-
-/**
- * The type a tool call resolves to: `CallToolResult<T>` for MCP output schemas (needs
- * {@link MCP_TYPESCRIPT_PREAMBLE}), the schema's type otherwise, and `unknown` without a schema.
- */
 export function renderToolOutputType(schema: CodemodeJsonSchema | undefined): string {
-  const structured = mcpStructuredContentSchema(schema);
-  if (structured !== undefined) {
-    const type = schemaToType(structured);
-    return type === "unknown" ? "CallToolResult" : `CallToolResult<${type}>`;
-  }
-
   return schema === undefined ? "unknown" : schemaToType(schema);
 }
 
@@ -162,8 +120,4 @@ function docComment(description: string | undefined, indent: string): string {
   }
 
   return `${indent}/**\n${lines.map((line) => `${indent} *${line ? ` ${line}` : ""}`).join("\n")}\n${indent} */\n`;
-}
-
-function isContentArray(content: unknown): boolean {
-  return isRecord(content) && content.type === "array" && isRecord(content.items) && content.items.type === "object";
 }

@@ -164,3 +164,17 @@ it("does not invalidate output when inherited environment values change", async 
   // Act / Assert
   expect((await extension.system()).customPrompt).toBe("initial");
 });
+
+it.each(["user", "custom"] as const)("expands system prompts for %s runs", async (messageType) => {
+  // Arrange
+  await files.script("platform", countingScript("expanded"));
+  const extension = createHarness(files.cwd);
+
+  // Act
+  const options = await extension.system("{{platform}}", "{{platform}}", messageType);
+
+  // Assert
+  expect(options.customPrompt).toBe("expanded");
+  expect(options.appendSystemPrompt).toBe("expanded");
+  expect(await files.runs()).toBe("x");
+});

@@ -16,6 +16,10 @@
 
 ### Changed
 
+- Require Pi 1.2.0 and refresh its worker, declaration, and parser regression suites. Record the unsupported standalone portable and deterministic replay suites explicitly.
+- Support MCP readiness through `reachesTools`, explicit namespace aliases, schema constraint tags, and self-contained MCP result declarations.
+- Show elapsed and total execution time while preserving the header-free code display and local pretty-result rendering.
+
 - Refactor sandbox workers and prelude helpers into named stages, centralize protocol constants, and separate image parsing from output emission.
 - Default sandbox memory to 256 MiB and accept only positive integer limits up to 1 GiB. Require compiled WASM modules and reject sparse tool and global definitions.
 - Reject duplicate imports during linting.
@@ -27,6 +31,10 @@
 - Use the shared `dedent` utility for multiline tool descriptions and declare the `@pi-pack/shared` dependency.
 
 ### Fixed
+
+- Poll the shared interrupt flag every 50 promise jobs during initial execution and tool-result delivery, matching Pi 1.2.0 even when short jobs do not trigger the VM's own opcode-based polling.
+
+- Reject misplaced options lines before executing scripts, join large text output in linear time, and ignore Node watch-mode dependency messages on the worker channel.
 
 - Clear pending bridge calls when sending fails, preventing false reports of outstanding work.
 - Report worker startup and reply-send failures as sandbox errors instead of leaving execution unsettled.

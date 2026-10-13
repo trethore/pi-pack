@@ -30,7 +30,7 @@ describe.each(outputs)("rendering $name output", ({ value }) => {
     const result = scriptResult(raw);
     const original = structuredClone(result);
     const theme = { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2];
-    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+    const context = { state: {}, showImages: false, isError: false } as Parameters<typeof render>[3];
 
     // Act
     const component = render(result, { expanded, isPartial: false }, theme, context);
@@ -58,7 +58,7 @@ describe("pretty results", () => {
     const result = scriptResult(raw);
     const original = structuredClone(result);
     const theme = { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2];
-    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+    const context = { state: {}, showImages: false, isError: false } as Parameters<typeof render>[3];
 
     // Act
     const rendered = stripVTControlCharacters(
@@ -93,7 +93,7 @@ describe("renderer display limits", () => {
       fg: (_color: unknown, text: string) => text,
       bold: (text: string) => text,
     } as Parameters<typeof render>[1];
-    const context = { expanded } as Parameters<typeof render>[2];
+    const context = { state: {}, expanded } as Parameters<typeof render>[2];
 
     // Act
     const component = render({ code: lines.join("\n") }, theme, context);
@@ -114,7 +114,7 @@ describe("renderer display limits", () => {
     const lines = Array.from({ length: 7 }, (_, index) => `line-${index}`);
     const result = { content: [{ type: "text" as const, text: lines.join("\n") }], details: { calls: [] } };
     const theme = { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2];
-    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+    const context = { state: {}, showImages: false, isError: false } as Parameters<typeof render>[3];
 
     // Act
     const component = render(result, { expanded, isPartial: false }, theme, context);
@@ -141,7 +141,7 @@ describe("renderer display limits", () => {
     }));
     const result = { content: [], details: { calls } };
     const theme = { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2];
-    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+    const context = { state: {}, showImages: false, isError: false } as Parameters<typeof render>[3];
 
     // Act
     const component = render(result, { expanded, isPartial: true }, theme, context);
@@ -173,7 +173,7 @@ describe.each([
         return `\x1b[32m${text}\x1b[39m`;
       },
     } as Parameters<typeof render>[2];
-    const context = { showImages: false, isError: false } as Parameters<typeof render>[3];
+    const context = { state: {}, showImages: false, isError: false } as Parameters<typeof render>[3];
     const rendered = render(result, { expanded, isPartial: false }, theme, context).render(200);
     expect(result).toEqual(original);
     expect(rendered.join("\n")).not.toContain("\x1b[0m");

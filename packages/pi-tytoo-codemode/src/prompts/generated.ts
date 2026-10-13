@@ -16,7 +16,6 @@ export const prompts = {
       'Globals:\n- `text(value)`, `console.log(...)`, and `return value` print output. `exit()` ends the script.\n- `image(value)` shows an image from a base64 data URL or image block. The result includes a saved file path or a save error.\n- `store(key, value)` and `load(key)` keep small JSON values across calls.\n- `ALL_TOOLS` lists tools available to this script. Find tools with `searchTools(query, options)`. Optional search fields: `limit`, `namespace`.\n- Tool names are canonical. Use `tools["original-name"](args)` for names with punctuation. Convenience aliases can change between scripts.\n- Get tool or namespace details with `await describeTool(name)` or `await describeNamespace(name)`. `tools` is not automatically a registered namespace.\n- `load()`, `describeTool()`, and `describeNamespace()` return `undefined` when no match exists. JSON output omits object properties with this value. Print it directly, or use `value ?? null` to keep the property.\n- Print discovery results: `text(await searchTools("query"))`.',
     models: (values: { docsPath: string | number }): string =>
       `- \`models\`: classifiers and image generation. Before you use \`models\`, read ${values.docsPath}.`,
-    sharedMcpTypes: "Shared MCP Types:\n```ts",
     stringOutput: "a string",
     scriptCall: (values: { call: string | number; output: string | number }): string =>
       `Codemode: \`${values.call}(args)\` resolves to ${values.output}.`,
@@ -164,5 +163,7 @@ See "Generate images" in ${values.docsPath}.`,
       `@options field \`timeout_ms\` must be a positive integer up to ${values.limit} milliseconds.`,
     empty: "Provide JavaScript source. Do not use JSON or Markdown code fences.",
     missingCode: "Put JavaScript source after the @options line.",
+    misplacedOptions: (values: { line: string | number }): string =>
+      `The // @options: line must be the first line of the input; found one on line ${values.line}`,
   },
 } as const;

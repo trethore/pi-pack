@@ -2,6 +2,8 @@
 
 Monorepo for the pi extensions I develop.
 
+Requires Pi `1.2.0` or a compatible later release.
+
 ## Extensions
 
 ### [pi-metrics](packages/pi-metrics/README.md)

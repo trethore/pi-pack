@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 import { CodemodeErrorKind, type CodemodeError } from "#src/sandbox/types";
-import { formatError, saveImages, truncateOutput } from "#src/output";
+import { formatError, joinAdjacentText, saveImages, truncateOutput } from "#src/output";
 import * as outputFiles from "#src/output-files";
 
 afterEach(() => {
@@ -74,5 +74,53 @@ describe("output formatting", () => {
       ],
       fullOutputPath: "/tmp/output.txt",
     });
+  });
+});
+
+describe("adjacent text joining", () => {
+  it.each([
+    { parts: [], expected: [] },
+    { parts: [""], expected: [{ type: "text", text: "" }] },
+    { parts: ["", "", "first", "", "second", ""], expected: [{ type: "text", text: "first\nsecond\n" }] },
+    { parts: ["first\n", "", "second"], expected: [{ type: "text", text: "first\nsecond" }] },
+  ])("preserves separators for $parts", ({ parts, expected }) => {
+    // Arrange
+    const items: TextContent[] = parts.map((text) => ({ type: "text", text }));
+
+    // Act
+    const joined = joinAdjacentText(items);
+
+    // Assert
+    expect(joined).toEqual(expected);
+  });
+
+  it("flushes text at image boundaries without mutating input", () => {
+    // Arrange
+    const image: ImageContent = { type: "image", data: "aGVsbG8=", mimeType: "image/png" };
+    const items: (TextContent | ImageContent)[] = [
+      { type: "text", text: "first" },
+      { type: "text", text: "second" },
+      image,
+      { type: "text", text: "third" },
+    ];
+    const original = structuredClone(items);
+
+    // Act
+    const joined = joinAdjacentText(items);
+
+    // Assert
+    expect(joined).toEqual([{ type: "text", text: "first\nsecond" }, image, { type: "text", text: "third" }]);
+    expect(items).toEqual(original);
+  });
+
+  it("joins many output items into one block", () => {
+    // Arrange
+    const items: TextContent[] = Array.from({ length: 100_000 }, () => ({ type: "text", text: "value" }));
+
+    // Act
+    const joined = joinAdjacentText(items);
+
+    // Assert
+    expect(joined).toEqual([{ type: "text", text: Array(100_000).fill("value").join("\n") }]);
   });
 });

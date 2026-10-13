@@ -145,6 +145,18 @@ async function checkDestination(previous) {
   }
 }
 
+async function readExclusions(files) {
+  const exclusions = await readOptionalJson(join(root, "upstream/exclusions.json"), {});
+  const excluded = [];
+  for (const [path, reason] of Object.entries(exclusions)) {
+    if (!files.includes(path) || !path.endsWith(".test.ts") || typeof reason !== "string" || !reason.trim()) {
+      throw new Error(`Invalid upstream test exclusion: ${path}`);
+    }
+    excluded.push({ path, reason, upstreamSha256: hash(await readFile(join(sourceDirectory, path))) });
+  }
+  return excluded;
+}
+
 async function main() {
   if (process.argv.length > 3) {
     throw new Error("Usage: npm run upstream:import -- [checkout-path]");
@@ -159,13 +171,18 @@ async function main() {
   await checkDestination(previous);
 
   const files = await listFiles(sourceDirectory);
-  const selected = files.filter((file) => file.endsWith(".test.ts") || file.startsWith("fixtures/"));
+  const excluded = await readExclusions(files);
+  const selected = files.filter(
+    (file) =>
+      (file.endsWith(".test.ts") || file.startsWith("fixtures/")) && !excluded.some((entry) => entry.path === file),
+  );
   if (!selected.some((file) => file.endsWith(".test.ts"))) {
     throw new Error("No upstream tests found; refusing to replace the existing suite");
   }
 
   const expectations = await readOptionalJson(join(root, "upstream/prompt-expectations.json"), {});
-  for (const file of Object.keys(expectations)) {
+  const adaptations = await readOptionalJson(join(root, "upstream/test-adaptations.json"), {});
+  for (const file of new Set([...Object.keys(expectations), ...Object.keys(adaptations)])) {
     if (!selected.includes(file)) {
       throw new Error(`Missing upstream test for prompt expectations: ${file}`);
     }
@@ -174,12 +191,15 @@ async function main() {
   const entries = await Promise.all(
     selected.map(async (path) => {
       const original = await readFile(join(sourceDirectory, path), "utf8");
-      const content = adapt(original, path, expectations);
+      const content = adaptPromptExpectations(adapt(original, path, expectations), path, adaptations[path] ?? []);
       return { path, content, upstreamSha256: hash(original), importedSha256: hash(content) };
     }),
   );
 
-  await installTests(entries, commit);
+  await installTests(entries, commit, excluded);
+  for (const { path, reason } of excluded) {
+    console.log(`excluded ${path}: ${reason}`);
+  }
 
   reportChanges(previous, entries, selected);
   console.log(`Imported tests from ${commit}. Review upstream source changes separately.`);
@@ -193,11 +213,12 @@ async function stageTests(entries, stage) {
   }
 }
 
-async function stageBaseline(entries, commit, stagedManifest) {
+async function stageBaseline(entries, commit, stagedManifest, excluded) {
   const baseline = {
     repository: "https://github.com/earendil-works/pi.git",
     commit,
     source,
+    excluded,
     files: entries.map(({ content: _content, ...entry }) => entry),
   };
 
@@ -236,7 +257,7 @@ async function replaceTests(stage, backup, stagedManifest) {
   }
 }
 
-async function installTests(entries, commit) {
+async function installTests(entries, commit, excluded) {
   const stage = `${target}.staging`;
   const backup = `${target}.previous`;
   const stagedManifest = `${manifestPath}.staging`;
@@ -247,7 +268,7 @@ async function installTests(entries, commit) {
 
   try {
     await stageTests(entries, stage);
-    await stageBaseline(entries, commit, stagedManifest);
+    await stageBaseline(entries, commit, stagedManifest, excluded);
 
     await replaceTests(stage, backup, stagedManifest);
   } finally {

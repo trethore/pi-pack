@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, it } from "vitest";
 import { dedent } from "@pi-pack/shared/dedent";
-import { MCP_TYPESCRIPT_PREAMBLE, renderDeclarations, type RenderDeclarationsOptions } from "#src/declarations/render";
+import { renderDeclarations, type RenderDeclarationsOptions } from "#src/declarations/render";
 
 const execute = () => undefined;
 
-it("compiles the shared MCP asset and generated tool declarations together", async () => {
+it("compiles generated MCP and canonical tool declarations without shared types", async () => {
   // Arrange
   const directory = await mkdtemp(join(tmpdir(), "tytoo-declarations-"));
   const compiler = join(dirname(createRequire(import.meta.url).resolve("typescript/package.json")), "bin/tsc");
@@ -17,7 +17,7 @@ it("compiles the shared MCP asset and generated tool declarations together", asy
   const calls = canonicalNames
     .map((name, index) => `const result${index}: ${JSON.stringify(name)} = await tools[${JSON.stringify(name)}]({});`)
     .join("\n");
-  const source = `${MCP_TYPESCRIPT_PREAMBLE}\n${renderDeclarations({
+  const source = `${renderDeclarations({
     tools: [
       ...canonicalNames.map((name) => ({
         name,
@@ -31,6 +31,7 @@ it("compiles the shared MCP asset and generated tool declarations together", asy
         inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
         outputSchema: {
           type: "object",
+          required: ["content"],
           properties: {
             content: { type: "array", items: { type: "object" } },
             isError: { type: "boolean" },

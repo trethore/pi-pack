@@ -1,0 +1,4 @@
+{
+  "deterministic.test.ts": "Deterministic start()/deliver() replay is a standalone SDK API, not implemented by this worker-only Pi extension.",
+  "portable.test.ts": "Inline and remote backends are standalone SDK APIs, not implemented by this worker-only Pi extension."
+}

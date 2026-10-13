@@ -23,6 +23,7 @@ import {
   type WorkerToHostMessage,
 } from "#src/sandbox/protocol";
 import type { CodemodeOutputItem } from "#src/sandbox/types";
+import { drainPromiseJobs } from "#src/sandbox/jobs";
 import { discardOutput } from "#src/sandbox/wasi";
 import { WorkerEvents } from "#src/sandbox/worker-events";
 import { PRELUDE_FILENAME } from "#src/sandbox/constants";
@@ -60,16 +61,14 @@ function optionalString(value: JSValueHandle | undefined): string | undefined {
   return value === undefined || value.isUndefined ? undefined : value.toString();
 }
 
-function createVm(data: WorkerData): Promise<QuickJS> {
-  const interrupt = new Int32Array(data.interrupt);
-
+function createVm(data: WorkerData, shouldInterrupt: () => boolean): Promise<QuickJS> {
   return QuickJS.create({
     wasm: data.wasm,
     memoryLimit: data.memoryLimitBytes,
     // Without a guard, deep recursion overflows the wasm stack and traps instead of throwing a
     // catchable RangeError.
     maxStackSize: MAX_STACK_SIZE,
-    interruptHandler: () => Atomics.load(interrupt, 0) !== 0,
+    interruptHandler: shouldInterrupt,
     wasi: discardOutput,
   });
 }
@@ -166,8 +165,11 @@ function createPrelude(vm: QuickJS, data: WorkerData): PreludeApi {
 }
 
 /** Run queued jobs, then fail a script that waits on nothing that can ever resume it. */
-function drainJobs(vm: QuickJS, api: PreludeApi): void {
-  vm.executePendingJobs();
+function drainJobs(vm: QuickJS, api: PreludeApi, shouldInterrupt: () => boolean): void {
+  // Drain individual jobs so short promise loops cannot defer interrupt polling indefinitely.
+  // These internal exports are tied to the exact quickjs-wasi version in package.json.
+  // oxlint-disable-next-line eslint/no-underscore-dangle
+  drainPromiseJobs(vm._getExports(), shouldInterrupt);
   vm.callFunction(api.stalled, api.receiver).dispose();
 }
 
@@ -183,20 +185,20 @@ function settleCall(vm: QuickJS, api: PreludeApi, message: HostToWorkerMessage):
   });
 }
 
-function handleHostMessage(vm: QuickJS, api: PreludeApi, message: unknown): void {
+function handleHostMessage(vm: QuickJS, api: PreludeApi, message: unknown, shouldInterrupt: () => boolean): void {
   if (!isHostToWorkerMessage(message)) {
     return;
   }
 
   try {
     settleCall(vm, api, message);
-    drainJobs(vm, api);
+    drainJobs(vm, api, shouldInterrupt);
   } catch (error) {
     crash(error);
   }
 }
 
-function runScript(vm: QuickJS, api: PreludeApi, code: string): void {
+function runScript(vm: QuickJS, api: PreludeApi, code: string, shouldInterrupt: () => boolean): void {
   // The prefix shares the first line with the script so reported line numbers
   // match the script as written.
   let fn: JSValueHandle;
@@ -217,16 +219,18 @@ function runScript(vm: QuickJS, api: PreludeApi, code: string): void {
     fn.dispose();
   }
 
-  drainJobs(vm, api);
+  drainJobs(vm, api, shouldInterrupt);
 }
 
 async function main(data: WorkerData): Promise<void> {
-  const vm = await createVm(data);
+  const interrupt = new Int32Array(data.interrupt);
+  const shouldInterrupt = () => Atomics.load(interrupt, 0) !== 0;
+  const vm = await createVm(data, shouldInterrupt);
   const api = createPrelude(vm, data);
 
-  parentPort?.on(WorkerEvents.Message, (message: unknown) => handleHostMessage(vm, api, message));
+  parentPort?.on(WorkerEvents.Message, (message: unknown) => handleHostMessage(vm, api, message, shouldInterrupt));
 
-  runScript(vm, api, data.code);
+  runScript(vm, api, data.code, shouldInterrupt);
 }
 
 if (parentPort) {

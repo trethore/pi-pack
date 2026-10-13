@@ -15,10 +15,11 @@ const DiscoveryGlobalName = {
 
 const DEFAULT_TOOL_SEARCH_LIMIT = 8;
 
-function isNamespaceName(namespace: string, query: string): boolean {
-  const id = toCodemodeIdentifier(namespace);
+function isNamespaceName(namespace: ToolNamespace, query: string): boolean {
   const queryId = toCodemodeIdentifier(query);
-  return namespace === query || id === queryId || suffix(namespace) === query || suffix(id) === queryId;
+  return [namespace.name, ...(namespace.aliases ?? [])].some(
+    (name) => name === query || toCodemodeIdentifier(name) === queryId,
+  );
 }
 
 /**
@@ -39,7 +40,7 @@ export function createDiscoveryGlobals(
     const { query, limit, namespace } = searchArguments(args);
     const documents = tools.flatMap((tool) => {
       const toolNamespace = options.getToolNamespace?.(tool.name);
-      if (namespace && (!toolNamespace || !isNamespaceName(toolNamespace.name, namespace))) {
+      if (namespace && (!toolNamespace || !isNamespaceName(toolNamespace, namespace))) {
         return [];
       }
       return [createToolSearchDocument(tool, toolNamespace)];
@@ -79,7 +80,7 @@ export function createDiscoveryGlobals(
     const names: string[] = [];
     for (const tool of tools) {
       const toolNamespace = options.getToolNamespace?.(tool.name);
-      if (!toolNamespace || !isNamespaceName(toolNamespace.name, name)) {
+      if (!toolNamespace || !isNamespaceName(toolNamespace, name)) {
         continue;
       }
       namespace ??= toolNamespace;
@@ -104,8 +105,6 @@ export function createDiscoveryGlobals(
     { name: DiscoveryGlobalName.DescribeNamespace, spread: true, execute: describeNamespace },
   ];
 }
-
-const suffix = (name: string) => (name.includes("__") ? name.slice(name.lastIndexOf("__") + 2) : undefined);
 
 function searchArguments(args: unknown) {
   const [query, rawOptions] = argumentsArray(args);

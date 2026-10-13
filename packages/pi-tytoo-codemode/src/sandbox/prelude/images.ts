@@ -56,11 +56,11 @@ function readImageBlockData(value: Record<string, unknown>): string {
   }
 
   if (value.type !== BridgeOutputType.Image) {
-    throw new TypeError(`image only accepts MCP image blocks, got "${value.type}"`);
+    throw new TypeError(`image only accepts image blocks, got "${value.type}"`);
   }
 
   if (typeof value.data !== "string" || value.data === "") {
-    throw new TypeError("image expected MCP image data");
+    throw new TypeError("image expected image block data");
   }
 
   if (value.data.toLowerCase().startsWith(DATA_URI_PREFIX)) {

@@ -3,7 +3,7 @@ import { Type } from "typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { ToolLoadout } from "@earendil-works/pi-coding-agent";
 import { CODEMODE_DOCS_PATH } from "#src/constants";
-import { MCP_TYPESCRIPT_PREAMBLE, renderToolSample } from "#src/declarations/render";
+import { renderToolSample } from "#src/declarations/render";
 import { toCodemodeDeclaration } from "#src/declarations/tools";
 import { createCodemodeToolDefinition } from "#src/tool";
 import { sampleTool } from "#test/support/harness";
@@ -99,7 +99,7 @@ describe("codemode descriptions", () => {
     expect(guidelines).toContain("Use discovery only for unlisted tools or missing details.");
   });
 
-  it.each([0, 3000])("includes shared MCP types only for listed tools (budget=%s)", (budget) => {
+  it.each([0, 3000])("renders self-contained MCP types only for listed tools (budget=%s)", (budget) => {
     // Arrange
     const tool = {
       ...sampleTool("mcp_search"),
@@ -123,7 +123,9 @@ describe("codemode descriptions", () => {
       expect(description).not.toContain("Shared MCP Types:");
       expect(description).not.toContain(tool.description);
     } else {
-      expect(description).toContain(`Shared MCP Types:\n\`\`\`ts\n${MCP_TYPESCRIPT_PREAMBLE}\n\`\`\``);
+      expect(description).not.toContain("Shared MCP Types:");
+      expect(description).not.toContain("CallToolResult");
+      expect(description).toContain("content: Array<");
       expect(description).toContain(tool.description);
     }
   });
@@ -251,4 +253,47 @@ it("uses canonical call syntax in direct tool descriptions and catalog declarati
   expect(directDescriptions?.foo_bar).toContain("`tools.foo_bar(args)`");
   expect(catalog).toContain('"foo-bar"(args:');
   expect(catalog).toContain("foo_bar(args:");
+});
+
+describe("MCP readiness", () => {
+  it.each(["searchTools", "describeTool", "describeNamespace", "ALL_TOOLS"])(
+    "waits for all tools when a script uses %s",
+    (name) => {
+      // Arrange
+      const tool = createCodemodeToolDefinition({});
+
+      // Act
+      const reach = tool.reachesTools?.({ code: `text(${name});` });
+
+      // Assert
+      expect(reach).toBe("all");
+    },
+  );
+
+  it.each([
+    ["await tools.mcp__docs__search({})", "mcp__docs__search"],
+    ['await tools["mcp__docs__" + name]({})', "mcp__docs__"],
+    ['await tools["mcp__dev-radius__search"]({})', "mcp__dev"],
+  ])("reports source words for %s", (code, expected) => {
+    // Arrange
+    const tool = createCodemodeToolDefinition({});
+
+    // Act
+    const reach = tool.reachesTools?.({ code });
+
+    // Assert
+    expect(reach).not.toBe("all");
+    expect(reach).toContain(expected);
+  });
+
+  it.each([undefined, null, 42, "", "()", "const myALL_TOOLS = 1"])("does not claim all tools for %j", (code) => {
+    // Arrange
+    const tool = createCodemodeToolDefinition({});
+
+    // Act
+    const reach = tool.reachesTools?.({ code });
+
+    // Assert
+    expect(Array.isArray(reach)).toBe(true);
+  });
 });

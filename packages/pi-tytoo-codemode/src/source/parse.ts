@@ -99,11 +99,18 @@ function readOptions(fields: Record<string, unknown>): CodemodeSourceOptions {
 
 /**
  * Split an optional first-line `// @options: {...}` from the script. Throws
- * {@link CodemodeSourceError} for empty input and invalid options.
+ * {@link CodemodeSourceError} for empty input, invalid options, and misplaced options lines.
  */
 export function parseCodemodeSource(input: string): ParsedCodemodeSource {
   if (input.trim() === "") {
     throw new CodemodeSourceError(prompts.source.empty);
+  }
+
+  const misplaced = input
+    .split("\n")
+    .findIndex((line, index) => index > 0 && line.trimStart().startsWith(CODEMODE_OPTIONS_PREFIX));
+  if (misplaced !== -1) {
+    throw new CodemodeSourceError(prompts.source.misplacedOptions({ line: misplaced + 1 }));
   }
 
   const newline = input.indexOf("\n");

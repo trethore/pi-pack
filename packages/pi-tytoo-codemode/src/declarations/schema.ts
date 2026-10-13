@@ -1,3 +1,4 @@
+import { constraintTags } from "#src/declarations/constraints";
 import { encodeJson, isArray, isRecord } from "#src/sandbox/values";
 import type { CodemodeJsonSchema } from "#src/sandbox/types";
 
@@ -20,15 +21,19 @@ function union(types: string[]): string {
 
 /**
  * Convert a JSON Schema to a TypeScript type expression: objects on one line (`{ a: string; b?: number; }`) with properties sorted by name,
- * or one property per line with `//` comments when a property has a description; `Array<T>` for
+ * or one property per line with `//` comments for descriptions and constraint tags; `Array<T>` for
  * arrays. Local references (`#/$defs/...`, `#/definitions/...`) resolve against `schema`;
- * recursive and remote references render as `unknown`. A result longer than `maxChars` renders as
- * `unknown`.
+ * recursive and remote references render as `unknown`. A result longer than `maxChars` is rendered
+ * again without constraint tags, then becomes `unknown` if it still exceeds the limit.
  */
 export function schemaToType(schema: CodemodeJsonSchema, options: { maxChars?: number } = {}): string {
-  const type = toType(schema, { root: schema, resolving: new Set(), expansions: 0 });
-
-  return options.maxChars !== undefined && type.length > options.maxChars ? "unknown" : type;
+  const render = (tags: boolean) => toType(schema, { root: schema, resolving: new Set(), expansions: 0, tags });
+  const type = render(true);
+  if (options.maxChars === undefined || type.length <= options.maxChars) {
+    return type;
+  }
+  const untagged = render(false);
+  return untagged.length <= options.maxChars ? untagged : "unknown";
 }
 
 interface SchemaContext {
@@ -36,6 +41,7 @@ interface SchemaContext {
   /** References being expanded on the current path, to stop at recursive types. */
   resolving: Set<string>;
   expansions: number;
+  tags: boolean;
 }
 
 function resolveRef(ref: string, root: CodemodeJsonSchema): CodemodeJsonSchema | undefined {
@@ -190,7 +196,9 @@ function objectProperties(schema: Record<string, unknown>, context: SchemaContex
     const optional = required.has(name) ? "" : "?";
     const declaration = `${propertyKey(name)}${optional}: ${toType(property, context)};`;
 
-    return { description: descriptionOf(property), declaration };
+    const tags = context.tags ? constraintTags(property) : "";
+    const description = [descriptionOf(property), tags].filter(Boolean).join("\n");
+    return { description, declaration };
   });
 }
 
@@ -198,7 +206,7 @@ function multilineObjectType(properties: ObjectProperty[], additional: string | 
   const lines = ["{"];
 
   for (const property of properties) {
-    for (const line of property.description.split(/\r?\n/)) {
+    for (const line of property.description.split(/[\r\n\u2028\u2029]/)) {
       const description = line.trim();
       if (description) {
         lines.push(`${INDENT}// ${description}`);

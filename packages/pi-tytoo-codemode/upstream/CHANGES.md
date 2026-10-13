@@ -2,6 +2,14 @@
 
 Intentional local changes to preserve when updating from upstream.
 
+## Runtime and test scope
+
+- Pi compatibility and imported tests target `v1.2.0` (`06a466935536f8c9bcacb2d5efc0fc021be1bdff`).
+- Keep the local worker-only sandbox, protocol validation, canonical-name handling, and 256 MiB default / 1 GiB maximum memory limits.
+- Do not expose the standalone SDK's inline/remote backends or deterministic `start()` / `deliver()` replay API. `portable.test.ts` and `deterministic.test.ts` are excluded with reasons and upstream hashes in the baseline; the shared sandbox suite runs only against the local worker.
+- Record backend adaptations in `upstream/test-adaptations.json` with exact occurrence counts, and whole-suite exclusions in `upstream/exclusions.json`. Changes to expected source text or removed excluded files fail the import rather than silently changing its scope.
+- Preserve the Pi 1.2.0 integration changes: `reachesTools`, explicit namespace aliases, schema constraint tags, self-contained MCP result types, misplaced-options validation, linear-time output joining, worker watch-message filtering, promise-job interrupt polling every 50 jobs, and elapsed/total time rendering.
+
 ## Render
 
 - Remove the `codemode` header from call rendering so the code starts on the first line in both collapsed and expanded views.

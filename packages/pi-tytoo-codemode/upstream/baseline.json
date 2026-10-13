@@ -1,27 +1,39 @@
 {
   "repository": "https://github.com/earendil-works/pi.git",
-  "commit": "abe508e1b89912adde45528136c3221eb69acdd7",
+  "commit": "06a466935536f8c9bcacb2d5efc0fc021be1bdff",
   "source": "packages/codemode/test",
+  "excluded": [
+    {
+      "path": "deterministic.test.ts",
+      "reason": "Deterministic start()/deliver() replay is a standalone SDK API, not implemented by this worker-only Pi extension.",
+      "upstreamSha256": "7e052391ea766e58e34ae204c8b641f60a0eeaa47137f3247304c47d2847d912"
+    },
+    {
+      "path": "portable.test.ts",
+      "reason": "Inline and remote backends are standalone SDK APIs, not implemented by this worker-only Pi extension.",
+      "upstreamSha256": "e80323f38106e4f63590a7ff727965c3b450422b95f6de679d9960b7d9db784f"
+    }
+  ],
   "files": [
     {
       "path": "declarations.test.ts",
-      "upstreamSha256": "23da43998b380ba584fe2b128ed867926f111eef13634e5da8728b87595cc458",
-      "importedSha256": "8dd89134367d116fe83dc2b713b3645b9a720ea7604671e79e7b258997636058"
+      "upstreamSha256": "6f4366071bd15e977da25ef8292996a013505e3b0acc06786128ef4bc434275f",
+      "importedSha256": "de7eb4a5eaf588241a9a4d5a5ce6005b65330026a59479e780497f3fde299f99"
     },
     {
       "path": "fixtures/raw-worker.ts",
-      "upstreamSha256": "5f1055e3be3fd7d726137d7bb741a462ad71bf0b89e9aa5a17db1f7259a8d798",
-      "importedSha256": "5f1055e3be3fd7d726137d7bb741a462ad71bf0b89e9aa5a17db1f7259a8d798"
+      "upstreamSha256": "d777da690d57d5c1a4878b325ef9a64fe722a147d968a774286b31e482d33366",
+      "importedSha256": "d777da690d57d5c1a4878b325ef9a64fe722a147d968a774286b31e482d33366"
     },
     {
       "path": "sandbox.test.ts",
-      "upstreamSha256": "3e036df065b6ba6f52413029d85bf962308a154d95799b6f337f93b8ecafc754",
-      "importedSha256": "c2d44a604507d21a9bddc3556175cb82464e0eb5704c6b95817262657376ac8f"
+      "upstreamSha256": "f9252a9b5851d6187ce3bdbefe89f83fff5c5395b197c378640936fd94a9da63",
+      "importedSha256": "63b9a7bf2d4a882de57949518347572d92996d2e16ea059d7efa5d7fb808a81c"
     },
     {
       "path": "source.test.ts",
-      "upstreamSha256": "8c6889750c0837abff3dd1ca7b822cbbcbd610a3e5d099d4bcaa2632b0ebdba3",
-      "importedSha256": "ec3279d54f5bef7f3b41a7421c6cf0b972417f5b982fb295b53e7011ddfc40ba"
+      "upstreamSha256": "95fee0e41ece5f48851a430a933db1660c002034d25f3dd07a0003063c8eb3bb",
+      "importedSha256": "bf497279b4d795aee062630f30214372b458d286b1f46c5f580b88fa11b65633"
     }
   ]
 }

@@ -3,3 +3,7 @@
 # Changelog
 
 ## [Unreleased]
+
+### Changed
+
+- Require Pi 1.2.0 or a compatible later release.

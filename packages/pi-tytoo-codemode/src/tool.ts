@@ -1,15 +1,11 @@
+import { isArray, isRecord } from "#src/sandbox/values";
 import { prompts } from "#src/prompts/generated";
 import { CODEMODE_TOOL_NAME, CODEMODE_DOCS_PATH } from "#src/constants";
 import { getCodemodeCallableTools, toCodemodeDeclaration } from "#src/declarations/tools";
 import type { CodemodeToolOptions, CodemodeToolDetails } from "#src/types";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { CodemodeJsonSchema, CodemodeTool } from "#src/sandbox/types";
-import {
-  MCP_TYPESCRIPT_PREAMBLE,
-  mcpStructuredContentSchema,
-  renderToolOutputType,
-  renderToolSample,
-} from "#src/declarations/render";
+import { renderToolOutputType, renderToolSample } from "#src/declarations/render";
 import { CODEMODE_SOURCE_GRAMMAR } from "#src/source/grammar";
 import { Type } from "typebox";
 import type { ToolDefinition, ToolLoadout, ToolLoadoutChanges, ToolNamespace } from "@earendil-works/pi-coding-agent";
@@ -141,7 +137,7 @@ function selectCatalog(groups: readonly CatalogGroup[], budget: number | undefin
 
 /**
  * Model-facing description: the helper list, guidance for finding tools that are not listed, the
- * shared MCP types when listed tools need them, the `models` API, and one section per listed tool,
+ * `models` API, and one section per listed tool,
  * grouped by namespace. Deferred tools are never listed and do not affect the description at all, so
  * it stays the same while MCP servers connect or change their tools. Tool sections are limited to
  * `inlineBudget`.
@@ -155,14 +151,6 @@ function createCodemodeDescription(tools: readonly AgentTool[], options: Codemod
   const shown = selectCatalog(ordered, options.inlineBudget);
 
   const sections = [prompts.tool.description, describeGlobals(options.models === true)];
-  const needsMcpTypes = declarations.some(
-    (declaration) => shown.has(declaration.name) && mcpStructuredContentSchema(declaration.outputSchema) !== undefined,
-  );
-  if (needsMcpTypes) {
-    const heading = prompts.tool.sharedMcpTypes;
-    sections.push([heading, MCP_TYPESCRIPT_PREAMBLE, "```"].join("\n"));
-  }
-
   if (declarations.length === 0) {
     return sections.join("\n\n");
   }
@@ -171,6 +159,22 @@ function createCodemodeDescription(tools: readonly AgentTool[], options: Codemod
   sections.push(toolSections.join("\n\n"));
 
   return sections.join("\n\n");
+}
+
+function describeFields(schema: unknown, depth: number): string | undefined {
+  if (!isRecord(schema)) {
+    return undefined;
+  }
+  const { type, properties, required } = schema;
+  if (type !== "object" || !isRecord(properties)) {
+    return undefined;
+  }
+  const requiredNames = new Set(isArray(required) ? required : []);
+  const fields = Object.entries(properties).map(([name, field]) => {
+    const nested = depth > 0 ? describeFields(field, depth - 1) : undefined;
+    return `${name}${requiredNames.has(name) ? "" : "?"}${nested ? `: ${nested}` : ""}`;
+  });
+  return `{ ${fields.join(", ")} }`;
 }
 
 /**
@@ -183,20 +187,8 @@ function describeOutput(schema: CodemodeJsonSchema | undefined): string {
     return prompts.tool.stringOutput;
   }
 
-  const object = typeof schema === "object" ? schema : undefined;
-  const properties = object?.properties;
-  if (
-    object?.type === "object" &&
-    typeof properties === "object" &&
-    properties !== null &&
-    mcpStructuredContentSchema(schema) === undefined
-  ) {
-    const required = new Set(Array.isArray(object.required) ? object.required : []);
-    const fields = Object.keys(properties).map((name) => (required.has(name) ? name : `${name}?`));
-    return `\`{ ${fields.join(", ")} }\``;
-  }
-
-  return `\`${type.replace(/\s+/g, " ")}\``;
+  const fields = describeFields(schema, 1);
+  return `\`${fields ?? type.replace(/\s+/g, " ")}\``;
 }
 
 /**
@@ -281,6 +273,20 @@ function createLoadoutDescriptionOptions(
   };
 }
 
+const DISCOVERY_GLOBALS = /\b(searchTools|describeNamespace|describeTool|ALL_TOOLS)\b/;
+
+/**
+ * The tools a script may call (`ToolDefinition.reachesTools`): every tool when it uses a discovery
+ * global, else the words of its source, so `tools.mcp__docs__search` and
+ * `tools["mcp__docs__" + name]` both name the `mcp__docs` namespace.
+ */
+function getScriptReach(code: unknown): "all" | readonly string[] {
+  if (typeof code !== "string") {
+    return [];
+  }
+  return DISCOVERY_GLOBALS.test(code) ? "all" : (code.match(/\w+/g) ?? []);
+}
+
 export function createCodemodeToolDefinition(
   options: CodemodeToolOptions,
 ): ToolDefinition<typeof codemodeSchema, CodemodeToolDetails | undefined> {
@@ -295,6 +301,7 @@ export function createCodemodeToolDefinition(
     // Scripts must not start other scripts.
     exposure: "model-only",
     executionMode: "sequential",
+    reachesTools: (input) => getScriptReach(input.code),
     prepareLoadout: (loadout) => prepareCodemodeLoadout(loadout, options),
     // Capable models write the script as raw text instead of a JSON-escaped string.
     constrainedSampling: { type: "grammar", variants: { openai_lark: CODEMODE_SOURCE_GRAMMAR } },

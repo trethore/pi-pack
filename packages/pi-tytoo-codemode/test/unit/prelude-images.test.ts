@@ -82,11 +82,11 @@ describe("image parsing", () => {
     {
       label: "wrong block type",
       input: { type: "text", data: PNG },
-      message: 'image only accepts MCP image blocks, got "text"',
+      message: 'image only accepts image blocks, got "text"',
     },
-    { label: "missing block data", input: { type: "image" }, message: "image expected MCP image data" },
-    { label: "empty block data", input: { type: "image", data: "" }, message: "image expected MCP image data" },
-    { label: "non-string block data", input: { type: "image", data: 42 }, message: "image expected MCP image data" },
+    { label: "missing block data", input: { type: "image" }, message: "image expected image block data" },
+    { label: "empty block data", input: { type: "image", data: "" }, message: "image expected image block data" },
+    { label: "non-string block data", input: { type: "image", data: 42 }, message: "image expected image block data" },
     { label: "remote URL", input: "https://example.com/image.png", message: REMOTE_IMAGE },
     { label: "remote image_url", input: { image_url: "HTTP://example.com/image.png" }, message: REMOTE_IMAGE },
     {

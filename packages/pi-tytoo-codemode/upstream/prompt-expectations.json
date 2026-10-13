@@ -1,7 +1,7 @@
 {
   "sandbox.test.ts": [
     {
-      "before": "TypeError: image expects a non-empty image URL string, an object with image_url, or a raw MCP image block",
+      "before": "TypeError: image expects a non-empty image URL string, an object with image_url, or an image block { type: \"image\", data, mimeType }",
       "after": "TypeError: image() accepts a base64 data URL, an { image_url } object, or an image block. HTTP and HTTPS URLs are not supported.",
       "count": 2
     },

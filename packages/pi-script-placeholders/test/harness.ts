@@ -38,7 +38,11 @@ export function createHarness(cwd: string, commands: SlashCommandInfo[] = [], tr
     input(text: string, source: InputEvent["source"] = "interactive") {
       return emit(Events.Input, { text, source });
     },
-    async system(customPrompt = "{{platform}}", appendSystemPrompt = "{{platform}}") {
+    async system(
+      customPrompt = "{{platform}}",
+      appendSystemPrompt = "{{platform}}",
+      messageType: BeforeAgentStartEvent["messageType"] = "user",
+    ) {
       const options: BeforeAgentStartEvent["systemPromptOptions"] = {
         cwd,
         customPrompt,
@@ -52,7 +56,22 @@ export function createHarness(cwd: string, commands: SlashCommandInfo[] = [], tr
         promptGuidelines: [],
         skills: [],
       };
-      await emit(Events.BeforeAgentStart, { systemPromptOptions: options });
+      const base = { type: Events.BeforeAgentStart, systemPrompt: customPrompt, systemPromptOptions: options } as const;
+      const event: BeforeAgentStartEvent =
+        messageType === "user"
+          ? { ...base, messageType, prompt: "User prompt" }
+          : {
+              ...base,
+              messageType,
+              message: {
+                role: "custom",
+                customType: "test",
+                content: "Start a run",
+                display: false,
+                timestamp: Date.now(),
+              },
+            };
+      await emit(Events.BeforeAgentStart, event);
       return options;
     },
   };

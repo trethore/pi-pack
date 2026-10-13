@@ -28,7 +28,8 @@ describe("Pi execution", () => {
     expect(tool.execute).not.toHaveBeenCalled();
     expect(resultText(result)).toContain('{"value":42}');
     expect(result.details.calls).toMatchObject([{ id: "script/echo", status: "ok" }]);
-    expect(test.onUpdate.mock.calls[0]?.[0].details.calls[0]?.status).toBe("running");
+    expect(test.onUpdate.mock.calls[0]?.[0].details.calls).toEqual([]);
+    expect(test.onUpdate.mock.calls[1]?.[0].details.calls[0]?.status).toBe("running");
   });
 
   it("rejects blocked nested calls without executing tool implementations", async () => {
@@ -233,3 +234,33 @@ describe("Pi execution", () => {
     expect(response).not.toContain("x".repeat(9));
   });
 });
+
+it("rejects misplaced options before any script effects or progress updates", async () => {
+  // Arrange
+  const test = harness();
+
+  // Act / Assert
+  await expect(test.run('await tools.echo({});\n// @options: {"timeout_ms": 1}\nstore("k", 1);')).rejects.toThrow(
+    "first line",
+  );
+  expect(test.executeTool).not.toHaveBeenCalled();
+  expect(test.appendEntry).not.toHaveBeenCalled();
+  expect(test.onUpdate).not.toHaveBeenCalled();
+});
+
+it.each([null, 42, "error", ["first", "second"]])(
+  "preserves non-object structured MCP content: %j",
+  async (structuredContent) => {
+    // Arrange
+    const tool = { ...sampleTool(), outputSchema: Type.Unknown() };
+    const test = harness([tool]);
+    test.executeTool.mockResolvedValue(outcome("echo", { content: [], details: undefined, structuredContent }, true));
+
+    // Act
+    const result = await test.run("return { value: await tools.echo({}) };");
+
+    // Assert
+    expect(result.isError).toBeUndefined();
+    expect(resultText(result)).toContain(JSON.stringify({ value: structuredContent }));
+  },
+);

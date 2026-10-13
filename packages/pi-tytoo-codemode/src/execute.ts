@@ -63,6 +63,7 @@ export async function executeCodemode(
   const { code, options: sourceOptions } = parseCodemodeSource(input.code);
 
   const tracking = createExecutionTracking(onUpdate);
+  tracking.publish();
   const sandbox = createExecutionSandbox(toolCallId, ctx, options, tracking, sourceOptions.timeoutMs);
 
   let result: CodemodeResult;

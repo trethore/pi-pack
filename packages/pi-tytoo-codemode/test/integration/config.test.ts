@@ -124,7 +124,7 @@ function extension() {
         { content: [{ type: "text", text: '{"name":"Alice"}' }], details: { calls: [] } },
         { expanded: true, isPartial: false },
         { fg: (_color: unknown, text: string) => text } as Parameters<typeof render>[2],
-        { showImages: false, isError: false } as Parameters<typeof render>[3],
+        { state: {}, showImages: false, isError: false } as Parameters<typeof render>[3],
       )
         .render(80)
         .join("\n"),

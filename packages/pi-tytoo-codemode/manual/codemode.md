@@ -11,7 +11,7 @@ The sandbox has no Node APIs, file system, network, or timers; scripts reach the
 
 Pi runs separate `codemode` calls one at a time. Within a script, independent tool calls can run in parallel; calls that depend on earlier results must run in order.
 
-A script may start with an options line:
+A script may start with an options line. It must be the first line; an options line anywhere else fails the call before the script runs:
 
 ```js
 // @options: {"max_output_tokens": 2000, "timeout_ms": 60000}
@@ -24,7 +24,7 @@ A script may start with an options line:
 The model-facing result starts with `Script completed` or `Script failed`, the wall time, and the output. Text and image items appear in order, each on its own line, unless the text is truncated; then the text is combined and images follow it. When the output has more than one text item (from `text()` or `return`), each starts with a `==> text N/M <==` line. `console` calls follow in one `<console_output>` block, separated by newlines.
 A failed script keeps its partial output, followed by `Script error:` and the error. Tool calls are real: calls made before a failure are not undone. Calls still running when the script ends receive an abort signal, and unawaited promises are discarded. Whether a call stops depends on the tool, so await every call whose result you need.
 
-In the terminal, the extension shows the code without a `codemode` heading and hides the result header. By default, `prettyResults` formats JSON output as indented objects and lists with triple-quoted multiline strings. This changes only what the user sees, not the model-facing output. Set it to `false` to keep raw JSON rendering; see [Configuration](../README.md#configuration).
+In the terminal, the extension shows the code without a `codemode` heading and hides the result header. The tool row shows `Elapsed` while running and `Took` when finished. By default, `prettyResults` formats JSON output as indented objects and lists with triple-quoted multiline strings. This changes only what the user sees, not the model-facing output. Set it to `false` to keep raw JSON rendering; see [Configuration](../README.md#configuration).
 
 If saving full text or an image to a temp file fails, the result includes the save error instead of a path. The save failure does not make an otherwise successful script fail.
 
@@ -51,12 +51,14 @@ Tools that Pi exposes for nested calls are methods of `tools`: active `direct` t
 
 Convenience aliases replace characters that are not valid in a JavaScript identifier with `_`. An alias is created only if exactly one tool needs it and it does not conflict with an original name. For example, `foo-bar` and `foo.bar` remain callable through bracket notation, but neither gets the ambiguous alias `foo_bar`. Accessing that alias throws an error listing the canonical calls. If a tool is actually named `foo_bar`, `tools.foo_bar(args)` calls that tool instead.
 
+Pi uses the tool's `reachesTools` declaration to wait for MCP servers named in the source before the call starts. Scripts using discovery globals wait for all servers.
+
 Each script uses a fixed tool snapshot. Tools added during execution become available on the next `codemode` call, when aliases are recomputed; running scripts keep their existing names and aliases. Discovery results and declarations use canonical names, so prefer those over aliases remembered from earlier scripts.
 
 What a call resolves to depends on the tool:
 
 - Tools with an output schema and structured content resolve to that structured value. `bash` resolves to `{ output, truncated, full_output_path?, exit_code, wall_time_seconds }`, also for non-zero exit codes. Its `output` is not limited to the 2000 lines or 50KB the model sees: it keeps up to 1 MiB of output. Longer output keeps its first and last 512 KiB plus an omission marker, with `truncated` set and the full output in `full_output_path`.
-- MCP tools resolve to their `CallToolResult`, including `isError` and `structuredContent`.
+- MCP tools resolve to a result object with `content` and optional `isError` and `structuredContent`. Declarations spell out these fields without a shared `CallToolResult` type. Without a declared structured-output schema, `structuredContent` is `unknown` and can be an array, primitive, or `null`.
 - `read` resolves to the file's text, or for a successfully processed image to an image block `{ type: "image", data, mimeType, note }` that `image()` shows. `data` is the base64 image the model would see and `note` the text that goes with it, such as resize hints.
 - Other tools, such as `edit` and `write`, resolve to their text output.
 
@@ -65,9 +67,12 @@ A call can reject with an `Error` or resolve to a structured error result. When 
 Use `Promise.allSettled()` to wait for every call and inspect each outcome. `Promise.all()` stops waiting at the first rejection; if that rejection ends the script, calls still running receive an abort signal.
 
 The `codemode` description lists tools with their TypeScript declarations, grouped by namespace (for example one MCP server). Tools with `deferred` exposure, which includes MCP tools with the default `codemode` exposure, are not listed, so the description stays the same while MCP servers connect.
+Property comments include schema constraints such as `@integer`, `@minimum`, `@maxLength`, and `@default`. These are guidance, not sandbox-side argument validation. Constraint tags are omitted before a declaration falls back to `unknown` when its input type is too large.
 Listed declarations share a budget of 3000 estimated tokens (`codemode.inlineBudget` in Pi settings). Scripts find the other tools with `searchTools()`, `describeTool()`, `describeNamespace()`, or by filtering `ALL_TOOLS`. Use declarations already in context before making discovery calls.
 
 Discovery calls return values without printing them; use `text(await searchTools("query"))` to show the results. `describeTool()` and `describeNamespace()` return `undefined` when no match exists. `describeTool()` also accepts safe aliases and rejects ambiguous aliases with an error listing the canonical calls. The `tools` global is not itself a registered namespace, so `describeNamespace("tools")` only works if a namespace has that name.
+
+Namespace lookup and the `searchTools()` namespace filter accept a namespace's name or explicitly registered aliases, including their normalized identifiers. MCP registers the server name as an alias. A suffix after `__` is not automatically an alias.
 
 While `codemode` is active, `codemode.mode` in Pi settings decides how the other tools are presented. With `on` (default) declared tools stay declared; tools that are also callable from scripts have that usage added to their descriptions. With `only`, active `direct` tools are hidden from the model and become eligible for listing in the `codemode` description, within its budget. Deferred tools remain excluded from that description, and `model-only` tools remain declared. Tool declarations in the `codemode` description, `describeTool()`, and `ALL_TOOLS` carry the tools' prompt guidelines, since the system prompt rules only cover declared tools.
 

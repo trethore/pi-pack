@@ -8,7 +8,7 @@ Configure OpenAI-compatible request parameters: verbosity, reasoning summaries, 
 
 ## Installation
 
-Requires Pi `1.1.0` or a compatible later release. From the repository root:
+Requires Pi `1.2.0` or a compatible later release. From the repository root:
 
 ```sh
 npm ci

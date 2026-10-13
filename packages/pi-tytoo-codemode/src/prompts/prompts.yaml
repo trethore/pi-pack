@@ -27,9 +27,6 @@ tool:
     - `load()`, `describeTool()`, and `describeNamespace()` return `undefined` when no match exists. JSON output omits object properties with this value. Print it directly, or use `value ?? null` to keep the property.
     - Print discovery results: `text(await searchTools("query"))`.
   models: "- `models`: classifiers and image generation. Before you use `models`, read {{docsPath}}."
-  sharedMcpTypes: |-
-    Shared MCP Types:
-    ```ts
   stringOutput: a string
   scriptCall: "Codemode: `{{call}}(args)` resolves to {{output}}."
   nestedTools: "Nested tools:"
@@ -136,3 +133,4 @@ source:
   timeout: "@options field `timeout_ms` must be a positive integer up to {{limit}} milliseconds."
   empty: Provide JavaScript source. Do not use JSON or Markdown code fences.
   missingCode: Put JavaScript source after the @options line.
+  misplacedOptions: "The // @options: line must be the first line of the input; found one on line {{line}}"

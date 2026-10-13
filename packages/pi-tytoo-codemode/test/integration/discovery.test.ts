@@ -8,7 +8,11 @@ describe("discovery", () => {
     // Arrange
     const toolName = "mcp__docs__search";
     const test = harness([sampleTool(toolName)], {
-      getToolNamespace: () => ({ name: "mcp__docs", instructions: "Read documentation before editing" }),
+      getToolNamespace: () => ({
+        name: "mcp__docs",
+        aliases: ["docs"],
+        instructions: "Read documentation before editing",
+      }),
       getToolGuidelines: () => new Map([[toolName, ["Use narrow queries"]]]),
     });
 
@@ -156,4 +160,41 @@ describe("canonical discovery", () => {
     expect(resultText(result)).toContain('Ambiguous tool alias "foo_bar". Use tools["foo-bar"], tools["foo.bar"].');
     expect(test.executeTool).not.toHaveBeenCalled();
   });
+});
+
+it.each(["docs", "mcp__docs", "project-docs", "project_docs"])(
+  "matches registered namespace names and aliases: %s",
+  async (name) => {
+    // Arrange
+    const test = harness([sampleTool("search")], {
+      getToolNamespace: () => ({ name: "mcp__docs", aliases: ["docs", "project-docs"] }),
+    });
+
+    // Act
+    const result = await test.run(`return {
+      namespace: await describeNamespace(${JSON.stringify(name)}),
+      matches: await searchTools("search", { namespace: ${JSON.stringify(name)} }),
+    };`);
+
+    // Assert
+    expect(result.isError).toBeUndefined();
+    expect(resultText(result)).toContain('"name":"mcp__docs"');
+    expect(resultText(result)).toContain('"matches":[{"name":"search"');
+  },
+);
+
+it("does not infer an unregistered namespace alias from a suffix", async () => {
+  // Arrange
+  const test = harness([sampleTool("search")], {
+    getToolNamespace: () => ({ name: "mcp__docs" }),
+  });
+
+  // Act
+  const result = await test.run(
+    'return [await describeNamespace("docs") ?? null, await searchTools("search", { namespace: "docs" })];',
+  );
+
+  // Assert
+  expect(result.isError).toBeUndefined();
+  expect(resultText(result)).toContain("[null,[]]");
 });

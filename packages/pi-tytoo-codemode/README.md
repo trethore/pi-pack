@@ -3,12 +3,12 @@
 Opinionated implementation of Pi's built-in codemode.
 
 > [!NOTE]
-> This extension follows upstream features and changes, with my opinionated changes on top.
-> See the [upstream codemode README](https://github.com/earendil-works/pi/blob/main/packages/codemode/README.md) for the sandbox API and behavior, and [local changes from upstream](upstream/CHANGES.md) for the differences maintained here.
+> This worker-only Pi extension follows upstream codemode behavior, with my opinionated changes on top. It does not implement the standalone SDK's inline/remote backends or deterministic replay API.
+> See the [upstream codemode README](https://github.com/earendil-works/pi/blob/v1.2.0/packages/codemode/README.md) for the sandbox API and behavior, and [local changes from upstream](upstream/CHANGES.md) for the differences maintained here.
 
 ## Installation
 
-Requires Pi `1.1.0` or a compatible later release.
+Requires Pi `1.2.0` or a compatible later release.
 
 From the repository root, install pi-tytoo-codemode globally:
 
@@ -21,6 +21,7 @@ In Pi's settings (`~/.pi/agent/settings.json` globally or `.pi/settings.json` fo
 
 ```json
 {
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
   "defaultTools": ["+codemode"],
   "extensions": ["-builtin:codemode"]
 }
@@ -48,6 +49,22 @@ A trusted project's configuration replaces the global configuration completely. 
 The global path follows Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
 Configuration loads on session start. Run `/reload` after changing it. Invalid configuration reports an error rather than falling back.
+
+## Upstream tests
+
+The imported worker, declaration, and source-parser tests are based on Pi `v1.2.0`.
+From the repository root:
+
+```sh
+npm run import:pi -- v1.2.0
+npm run upstream:import --workspace=pi-tytoo-codemode
+npm run test:upstream --workspace=pi-tytoo-codemode
+```
+
+The importer records the upstream commit and file hashes in `upstream/baseline.json`.
+`upstream/test-adaptations.json` restricts the shared sandbox suite to this extension's worker backend.
+`upstream/exclusions.json` records the unsupported standalone SDK suites (`portable.test.ts` and `deterministic.test.ts`); their hashes and reasons are also recorded in the baseline. These are coverage gaps, not passing tests.
+Local prompt and canonical-name expectations remain in `upstream/prompt-expectations.json`.
 
 ## License
 

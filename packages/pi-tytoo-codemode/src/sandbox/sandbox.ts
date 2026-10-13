@@ -245,6 +245,10 @@ class Execution {
   private readonly onWorkerMessage = (message: unknown): void => {
     // An exception here would be uncaught in the host process and leave the execution unsettled.
     try {
+      // Node 24/26 watch mode sends dependency reports on the worker message channel.
+      if (isRecord(message) && ("watch:import" in message || "watch:require" in message)) {
+        return;
+      }
       this.handleMessage(message);
     } catch (error) {
       this.onHostError(error);

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -311,4 +312,83 @@ describe("upstream test imports", () => {
     await expect(readFile(join(output, "test/upstream/sample.test.ts"))).rejects.toThrow();
     expect(await readFile(join(output, "test/support/adapter.ts"), "utf8")).toBe("owned by us");
   });
+});
+
+it("records excluded SDK suites with their reason and upstream hash", async () => {
+  // Arrange
+  const standalone = 'import { InlineCodemodeSandbox } from "../src/index.ts";\n';
+  await writeFile(join(upstream, "packages/codemode/test/portable.test.ts"), standalone);
+  commit();
+  await mkdir(join(output, "upstream"));
+  await writeFile(
+    join(output, "upstream/exclusions.json"),
+    JSON.stringify({ "portable.test.ts": "Only the worker backend is implemented." }),
+  );
+
+  // Act
+  const first = run();
+  const baseline = await readFile(join(output, "upstream/baseline.json"), "utf8");
+  const second = run();
+
+  // Assert
+  expect(first.status, first.stderr).toBe(0);
+  expect(second.status, second.stderr).toBe(0);
+  expect(first.stdout).toContain("excluded portable.test.ts: Only the worker backend is implemented.");
+  expect(JSON.parse(baseline)).toMatchObject({
+    excluded: [
+      {
+        path: "portable.test.ts",
+        reason: "Only the worker backend is implemented.",
+        upstreamSha256: createHash("sha256").update(standalone).digest("hex"),
+      },
+    ],
+  });
+  expect(await readFile(join(output, "upstream/baseline.json"), "utf8")).toBe(baseline);
+  await expect(stat(join(output, "test/upstream/portable.test.ts"))).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it.each([{ "missing.test.ts": "Not implemented" }, { "sample.test.ts": "" }, { "sample.test.ts": 1 }])(
+  "rejects invalid exclusions without changing the installed suite: %j",
+  async (exclusions) => {
+    // Arrange
+    expect(run().status).toBe(0);
+    const manifest = join(output, "upstream/baseline.json");
+    const baseline = await readFile(manifest, "utf8");
+    await writeFile(join(output, "upstream/exclusions.json"), JSON.stringify(exclusions));
+
+    // Act
+    const result = run();
+
+    // Assert
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Invalid upstream test exclusion");
+    expect(await readFile(manifest, "utf8")).toBe(baseline);
+  },
+);
+
+it("guards backend adaptations with exact occurrence counts", async () => {
+  // Arrange
+  await mkdir(join(output, "upstream"));
+  const path = join(output, "upstream/test-adaptations.json");
+  await writeFile(
+    path,
+    JSON.stringify({ "sample.test.ts": [{ before: 'it("sample"', after: 'it("worker"', count: 1 }] }),
+  );
+  const first = run();
+  const target = join(output, "test/upstream/sample.test.ts");
+  const imported = await readFile(target, "utf8");
+  await writeFile(
+    path,
+    JSON.stringify({ "sample.test.ts": [{ before: "missing backend", after: "worker", count: 1 }] }),
+  );
+
+  // Act
+  const result = run();
+
+  // Assert
+  expect(first.status, first.stderr).toBe(0);
+  expect(imported).toContain('it("worker"');
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toContain("Upstream prompt expectation changed");
+  expect(await readFile(target, "utf8")).toBe(imported);
 });

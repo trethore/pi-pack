@@ -7,7 +7,7 @@
     "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
-    "@earendil-works/pi-tui": "1.1.0"
+    "@earendil-works/pi-tui": "1.2.0"
   },
   "files": [
     "docs",
@@ -25,8 +25,8 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.1.0",
-    "@earendil-works/pi-tui": "^1.1.0"
+    "@earendil-works/pi-coding-agent": "^1.2.0",
+    "@earendil-works/pi-tui": "^1.2.0"
   },
   "pi": {
     "extensions": [
