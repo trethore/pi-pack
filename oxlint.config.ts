@@ -20,7 +20,6 @@ export default defineConfig({
     "**/coverage/**",
     "references/**",
     "pi/**",
-    "packages/pi-tytoo-codemode/test/upstream/**",
     "**/*.tgz",
     ".pi/**",
   ],
