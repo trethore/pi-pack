@@ -1,6 +1,6 @@
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
-import { expandPrompt } from "#src/prompts/expansion";
+import { expandPrompt, preloadPrompts } from "#src/prompts/expansion";
 import { clearWorkspaces, getWorkspace, type Workspace } from "#src/workspace";
 
 function reportWarnings(workspace: Workspace, ctx: ExtensionContext): void {
@@ -18,7 +18,11 @@ export default function scriptPlaceholders(pi: ExtensionAPI): void {
     if (event.reason === "reload") {
       clearWorkspaces();
     }
-    reportWarnings(await currentWorkspace(ctx), ctx);
+    const workspace = await currentWorkspace(ctx);
+    if (workspace.config?.enabled && workspace.config.surfaces.promptTemplates) {
+      await preloadPrompts(pi.getCommands(), workspace, ctx.isProjectTrusted());
+    }
+    reportWarnings(workspace, ctx);
   });
 
   pi.on(Events.BeforeAgentStart, async (event, ctx) => {
@@ -39,6 +43,10 @@ export default function scriptPlaceholders(pi: ExtensionAPI): void {
   });
 
   pi.on(Events.Input, async (event, ctx) => {
+    // Input events omit Pi's expansion flag, so leave extension messages to Pi.
+    if (event.source === "extension") {
+      return { action: "continue" };
+    }
     const workspace = await currentWorkspace(ctx);
     if (!workspace.config?.enabled || !workspace.config.surfaces.promptTemplates) {
       reportWarnings(workspace, ctx);

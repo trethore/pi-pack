@@ -19,6 +19,28 @@ async function readPrompt(command: SlashCommandInfo, workspace: Workspace): Prom
   }
 }
 
+function getPrompt(command: SlashCommandInfo, workspace: Workspace): Promise<string | undefined> {
+  const path = command.sourceInfo.path;
+  let pending = workspace.prompts.get(path);
+  if (!pending) {
+    pending = readPrompt(command, workspace);
+    workspace.prompts.set(path, pending);
+  }
+  return pending;
+}
+
+export async function preloadPrompts(
+  commands: SlashCommandInfo[],
+  workspace: Workspace,
+  projectTrusted: boolean,
+): Promise<void> {
+  await Promise.all(
+    commands
+      .filter((command) => isAllowedPrompt(command, projectTrusted))
+      .map((command) => getPrompt(command, workspace)),
+  );
+}
+
 export async function expandPrompt(
   text: string,
   commands: SlashCommandInfo[],
@@ -35,14 +57,7 @@ export async function expandPrompt(
     return undefined;
   }
 
-  const path = command.sourceInfo.path;
-  let pending = workspace.prompts.get(path);
-  if (!pending) {
-    pending = readPrompt(command, workspace);
-    workspace.prompts.set(path, pending);
-  }
-
-  const body = await pending;
+  const body = await getPrompt(command, workspace);
   if (body === undefined || !/\{\{[a-zA-Z0-9_-]+\}\}/.test(body)) {
     return undefined;
   }

@@ -177,3 +177,45 @@ it("keeps rendered slash commands literal rather than expanding them a second ti
   expect(userTexts(session)).toEqual(["\n/other argument"]);
   expect(await files.runs()).toBe("x");
 });
+
+it("preloads templates before first use and refreshes their bodies through real /reload", async () => {
+  // Arrange
+  await files.script("platform", countingScript("linux"));
+  await files.prompt("environment", "Loaded: {{platform}}");
+  const { session, errors } = await createSession();
+  await files.prompt("environment", "Changed: {{platform}}");
+
+  // Act
+  const runsBeforeInvocation = await files.runs();
+  await session.prompt("/environment");
+  await session.reload();
+  await files.prompt("environment", "Changed again: {{platform}}");
+  await session.prompt("/environment");
+
+  // Assert
+  expect(errors).toEqual([]);
+  expect(runsBeforeInvocation).toBe("");
+  expect(userTexts(session)).toEqual(["Loaded: linux", "Changed: linux"]);
+  expect(await files.runs()).toBe("xx");
+});
+
+it.each([undefined, false, true])(
+  "leaves extension messages to Pi with expandPromptTemplates=%s",
+  async (expandPromptTemplates) => {
+    // Arrange
+    await files.script("platform", countingScript("linux"));
+    await files.prompt("environment", "Expanded: {{platform}}");
+    const { session, errors } = await createSession();
+
+    // Act
+    await session.sendUserMessage(
+      "/environment",
+      expandPromptTemplates === undefined ? undefined : { expandPromptTemplates },
+    );
+
+    // Assert
+    expect(errors).toEqual([]);
+    expect(userTexts(session)).toEqual([expandPromptTemplates ? "Expanded: {{platform}}" : "/environment"]);
+    expect(await files.runs()).toBe("");
+  },
+);
