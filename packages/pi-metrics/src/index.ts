@@ -8,6 +8,15 @@ import { createMetricsWidget } from "#src/widget";
 export default function metrics(pi: ExtensionAPI): void {
   let subscriptions: (() => void)[] = [];
   let widgetVisible = false;
+  let refreshTimer: ReturnType<typeof setInterval> | undefined;
+
+  function stopRefresh(): void {
+    if (refreshTimer === undefined) {
+      return;
+    }
+    clearInterval(refreshTimer);
+    refreshTimer = undefined;
+  }
 
   function clearWidget(ctx: ExtensionContext): void {
     if (!widgetVisible) {
@@ -18,6 +27,7 @@ export default function metrics(pi: ExtensionAPI): void {
   }
 
   pi.on(Events.SessionStart, async (_sessionEvent, ctx) => {
+    stopRefresh();
     for (const unsubscribe of subscriptions) {
       unsubscribe();
     }
@@ -30,24 +40,34 @@ export default function metrics(pi: ExtensionAPI): void {
 
     const turn = new TurnMetrics(config.format);
     const live = config.mode === "live";
+    let lastText: string | undefined;
 
     function updateWidget(context: ExtensionContext): void {
       if (!live || !turn.active) {
         return;
       }
       const text = turn.render();
+      if (widgetVisible && text === lastText) {
+        return;
+      }
       context.ui.setWidget(EXTENSION_NAME, (_tui, theme) => createMetricsWidget(text, theme, config.liveColor), {
         placement: "aboveEditor",
       });
       widgetVisible = true;
+      lastText = text;
     }
 
     subscriptions.push(
       pi.on(Events.AgentStart, (_event, context) => {
         turn.start();
         updateWidget(context);
+        if (live && turn.needsDuration && refreshTimer === undefined) {
+          refreshTimer = setInterval(() => updateWidget(context), 1000);
+          refreshTimer.unref();
+        }
       }),
       pi.on(Events.AgentSettled, (_event, context) => {
+        stopRefresh();
         if (!turn.active) {
           return;
         }
@@ -77,7 +97,11 @@ export default function metrics(pi: ExtensionAPI): void {
     if (live) {
       subscriptions.push(
         pi.on(Events.ToolExecutionEnd, (_event, context) => updateWidget(context)),
-        pi.on(Events.SessionShutdown, (_event, context) => clearWidget(context)),
+        pi.on(Events.SessionShutdown, (_event, context) => {
+          stopRefresh();
+          turn.active = false;
+          clearWidget(context);
+        }),
       );
     }
   });

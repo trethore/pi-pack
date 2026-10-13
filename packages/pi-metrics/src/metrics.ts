@@ -46,7 +46,7 @@ function metricToken(name: string): string {
 export class TurnMetrics {
   readonly needsSpeed: boolean;
   readonly needsUsage: boolean;
-  private readonly needsDuration: boolean;
+  readonly needsDuration: boolean;
   private readonly needsInput: boolean;
   private readonly needsOutput: boolean;
   private readonly needsCost: boolean;

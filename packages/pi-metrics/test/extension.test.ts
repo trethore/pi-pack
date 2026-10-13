@@ -31,13 +31,16 @@ beforeEach(async () => {
   vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
   await mkdir(join(cwd, ".pi"), { recursive: true });
   await mkdir(agentDir);
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
   now = 0;
   vi.spyOn(performance, "now").mockImplementation(() => now);
 });
 
 afterEach(async () => {
   vi.unstubAllEnvs();
+  vi.clearAllTimers();
   vi.restoreAllMocks();
+  vi.useRealTimers();
   await rm(root, { recursive: true, force: true });
 });
 
@@ -134,15 +137,34 @@ it("provides all defaults without a config file", async () => {
   // Assert
   expect(config).toEqual({
     enabled: true,
-    mode: "notify",
+    mode: "live",
     liveColor: "accent",
     format: "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
   });
 });
 
+it("shows live metrics and refreshes duration without a config file", async () => {
+  // Arrange
+  const extension = harness();
+  await extension.emit(Events.SessionStart);
+
+  // Act
+  await extension.emit(Events.AgentStart);
+  now = 1000;
+  vi.advanceTimersByTime(1000);
+
+  // Assert
+  expect(extension.notify).not.toHaveBeenCalled();
+  expect(extension.setWidget).toHaveBeenCalledTimes(2);
+  expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual([
+    "1s | N/A | \u2191 0 \u2193 0 | $0.0000".padStart(80),
+  ]);
+  expect(vi.getTimerCount()).toBe(1);
+});
+
 it("accepts global JSONC and lets project configuration replace it", async () => {
   // Arrange
-  await writeFile(join(agentDir, "pi-metrics.jsonc"), '{ // live metrics\n "mode": "live", "format": "<cost>", }');
+  await writeFile(join(agentDir, "pi-metrics.jsonc"), '{ // summary metrics\n "mode": "notify", "format": "<cost>", }');
 
   // Act
   const global = await loadConfig(cwd, { projectTrusted: true, agentDir });
@@ -150,8 +172,8 @@ it("accepts global JSONC and lets project configuration replace it", async () =>
   const project = await loadConfig(cwd, { projectTrusted: true, agentDir });
 
   // Assert
-  expect(global).toEqual({ enabled: true, mode: "live", format: "<cost>", liveColor: "accent" });
-  expect(project).toMatchObject({ enabled: false, mode: "notify" });
+  expect(global).toEqual({ enabled: true, mode: "notify", format: "<cost>", liveColor: "accent" });
+  expect(project).toMatchObject({ enabled: false, mode: "live" });
   expect(project.format).toContain("<tokps>");
   expect(project.liveColor).toBe("accent");
 });
@@ -220,7 +242,7 @@ it.each([undefined, "accent", "#abcdef", "#ABCDEF"])("applies liveColor %s to th
 
 it("does not apply liveColor to notifications", async () => {
   // Arrange
-  await configure({ liveColor: "#abcdef", format: "metrics" });
+  await configure({ mode: "notify", liveColor: "#abcdef", format: "metrics" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
 
@@ -235,6 +257,7 @@ it("does not apply liveColor to notifications", async () => {
 
 it("notifies only when control returns to the user, with uncached tokens and full cost", async () => {
   // Arrange
+  await configure({ mode: "notify" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -257,7 +280,7 @@ it("notifies only when control returns to the user, with uncached tokens and ful
 
 it("excludes preparation time but includes latency before the assistant message starts", async () => {
   // Arrange
-  await configure({ format: "<tokps> <timetaken>" });
+  await configure({ mode: "notify", format: "<tokps> <timetaken>" });
   const extension = harness();
   const response = assistant(100, 60);
   await extension.emit(Events.SessionStart);
@@ -279,7 +302,7 @@ it("excludes preparation time but includes latency before the assistant message 
 
 it("reports unavailable speed when the provider request event is missing", async () => {
   // Arrange
-  await configure({ format: "<tokps> <output_tokens> <timetaken>" });
+  await configure({ mode: "notify", format: "<tokps> <output_tokens> <timetaken>" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -296,7 +319,7 @@ it("reports unavailable speed when the provider request event is missing", async
 
 it("starts fresh after settling without counting idle time or other message roles", async () => {
   // Arrange
-  await configure({ format: "<input_tokens>/<output_tokens> <timetaken>" });
+  await configure({ mode: "notify", format: "<input_tokens>/<output_tokens> <timetaken>" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -320,7 +343,6 @@ it("updates one live widget after model responses and tools, then retains final 
   // Arrange
   await configure({ mode: "live", format: "<input_tokens> <timetaken>" });
   const extension = harness();
-  const timer = vi.spyOn(globalThis, "setInterval");
   await extension.emit(Events.SessionStart);
 
   // Act
@@ -337,20 +359,178 @@ it("updates one live widget after model responses and tools, then retains final 
   expect(
     extension.setWidget.mock.calls.map(([key, content, options]) => [key, renderWidget(content), options]),
   ).toEqual(
-    ["0 0s", "100 1s", "100 3s", "100 4s", "300 5s", "300 5s"].map((text) => [
+    ["0 0s", "100 1s", "100 3s", "100 4s", "300 5s"].map((text) => [
       "pi-metrics",
       [text.padStart(80)],
       { placement: "aboveEditor" },
     ]),
   );
   expect(extension.notify).not.toHaveBeenCalled();
-  expect(timer).not.toHaveBeenCalled();
+  expect(vi.getTimerCount()).toBe(0);
   now += 60000;
   await extension.emit(Events.ToolExecutionEnd);
-  expect(extension.setWidget).toHaveBeenCalledTimes(6);
+  expect(extension.setWidget).toHaveBeenCalledTimes(5);
   expect(renderWidget(extension.setWidget.mock.lastCall?.[1], 40)).toEqual(["300 5s".padStart(40)]);
   await extension.emit(Events.AgentStart);
   expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual(["0 0s".padStart(80)]);
+});
+
+it("refreshes elapsed time every second while retaining completed request metrics", async () => {
+  // Arrange
+  await configure({ mode: "live", format: "<timetaken> <tokps> <input_tokens> <output_tokens> <cost>" });
+  const extension = harness();
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
+  await extension.emit(Events.BeforeProviderRequest, { payload: {} });
+
+  // Act
+  now = 1000;
+  vi.advanceTimersByTime(1000);
+  now = 2000;
+  vi.advanceTimersByTime(1000);
+  await extension.emit(Events.MessageEnd, assistant());
+  await extension.emit(Events.BeforeProviderRequest, { payload: {} });
+  now = 7000;
+  vi.advanceTimersByTime(1000);
+
+  // Assert
+  expect(extension.setWidget.mock.calls.map(([, content]) => renderWidget(content))).toEqual(
+    [
+      "0s N/A 0 0 $0.0000",
+      "1s N/A 0 0 $0.0000",
+      "2s N/A 0 0 $0.0000",
+      "2s 10.0 tok/s 100 20 $0.0100",
+      "7s 10.0 tok/s 100 20 $0.0100",
+    ].map((text) => [text.padStart(80)]),
+  );
+  expect(extension.notify).not.toHaveBeenCalled();
+});
+
+it("keeps one unreferenced timer across agent loops without resetting its cadence", async () => {
+  // Arrange
+  await configure({ mode: "live", format: "<timetaken>" });
+  const extension = harness();
+  const setInterval = vi.spyOn(globalThis, "setInterval");
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
+
+  // Act
+  now = 500;
+  vi.advanceTimersByTime(500);
+  await extension.emit(Events.AgentStart);
+  now = 1000;
+  vi.advanceTimersByTime(500);
+
+  // Assert
+  expect(setInterval).toHaveBeenCalledExactlyOnceWith(expect.any(Function), 1000);
+  const timer = setInterval.mock.results[0];
+  if (timer?.type !== "return") {
+    throw new Error("Missing refresh timer");
+  }
+  expect(timer.value.hasRef()).toBe(false);
+  expect(vi.getTimerCount()).toBe(1);
+  expect(extension.setWidget.mock.calls.map(([, content]) => renderWidget(content))).toEqual(
+    ["0s", "1s"].map((text) => [text.padStart(80)]),
+  );
+});
+
+it("skips unchanged widget text across timer and lifecycle updates", async () => {
+  // Arrange
+  await configure({ mode: "live", format: "<timetaken>" });
+  const extension = harness();
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
+
+  // Act
+  now = 1000;
+  await extension.emit(Events.ToolExecutionEnd);
+  vi.advanceTimersByTime(1000);
+  await extension.emit(Events.MessageEnd, assistant());
+  await extension.emit(Events.AgentSettled);
+
+  // Assert
+  expect(extension.setWidget.mock.calls.map(([, content]) => renderWidget(content))).toEqual(
+    ["0s", "1s"].map((text) => [text.padStart(80)]),
+  );
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it.each([false, true])(
+  "freezes the final duration on settlement and restarts for the next run (aborted=%s)",
+  async (aborted) => {
+    // Arrange
+    await configure({ mode: "live", format: "<timetaken>" });
+    const extension = harness();
+    await extension.emit(Events.SessionStart);
+    await extension.emit(Events.AgentStart);
+
+    // Act
+    now = 1500;
+    await extension.emit(Events.AgentSettled, { type: Events.AgentSettled, aborted });
+    now = 10000;
+    vi.advanceTimersByTime(10000);
+    await extension.emit(Events.ToolExecutionEnd);
+
+    // Assert
+    expect(vi.getTimerCount()).toBe(0);
+    expect(extension.setWidget).toHaveBeenCalledTimes(2);
+    expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual(["1s".padStart(80)]);
+    await extension.emit(Events.AgentStart);
+    expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual(["0s".padStart(80)]);
+    expect(vi.getTimerCount()).toBe(1);
+    now = 11000;
+    vi.advanceTimersByTime(1000);
+    expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual(["1s".padStart(80)]);
+  },
+);
+
+it.each([
+  { mode: "notify", format: "<timetaken>" },
+  { mode: "live", format: "literal" },
+  { mode: "live", format: "<cost>" },
+  { mode: "live", format: "<tokps>" },
+  { mode: "live", enabled: false, format: "<timetaken>" },
+])("does not start a refresh timer for %j", async (config) => {
+  // Arrange
+  await configure(config);
+  const extension = harness();
+  await extension.emit(Events.SessionStart);
+
+  // Act
+  await extension.emit(Events.AgentStart);
+
+  // Assert
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it.each([true, false, "invalid"])("stops the old refresh timer before reloading enabled=%s", async (enabled) => {
+  // Arrange
+  await configure({ mode: "live", format: "<timetaken>" });
+  const extension = harness();
+  await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
+  expect(vi.getTimerCount()).toBe(1);
+  await configure({ mode: "live", format: "<timetaken>", enabled });
+
+  // Act
+  const reload = extension.emit(Events.SessionStart);
+  if (enabled === "invalid") {
+    await expect(reload).rejects.toThrow("enabled must be a boolean");
+  } else {
+    await reload;
+  }
+  now = 10000;
+  vi.advanceTimersByTime(10000);
+
+  // Assert
+  expect(vi.getTimerCount()).toBe(0);
+  expect(extension.setWidget).toHaveBeenCalledTimes(2);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
+  await extension.emit(Events.AgentStart);
+  expect(vi.getTimerCount()).toBe(enabled === true ? 1 : 0);
+  if (enabled === true) {
+    expect(renderWidget(extension.setWidget.mock.lastCall?.[1])).toEqual(["0s".padStart(80)]);
+  }
 });
 
 it.each([false, true])("registers no metric handlers when disabled (hasUI=%s)", async (hasUI) => {
@@ -374,14 +554,17 @@ it.each([false, true])("registers no metric handlers when disabled (hasUI=%s)", 
 
 it("does not track metrics without a UI", async () => {
   // Arrange
+  await configure({ mode: "live" });
   const extension = harness(false);
 
   // Act
   await extension.emit(Events.SessionStart);
+  await extension.emit(Events.AgentStart);
 
   // Assert
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
   expect(performance.now).not.toHaveBeenCalled();
+  expect(vi.getTimerCount()).toBe(0);
 });
 
 it.each([
@@ -392,7 +575,7 @@ it.each([
   ["<tokps>", true, true],
 ])("registers only the required metric events for %s", async (format, usage, timing) => {
   // Arrange
-  await configure({ format });
+  await configure({ mode: "notify", format });
   const extension = harness();
 
   // Act
@@ -431,7 +614,7 @@ it("reloads configuration without duplicating subscriptions", async () => {
   // Arrange
   const extension = harness();
   await extension.emit(Events.SessionStart);
-  await configure({ format: "<output_tokens>" });
+  await configure({ mode: "notify", format: "<output_tokens>" });
 
   // Act
   await extension.emit(Events.SessionStart);
@@ -443,7 +626,7 @@ it("reloads configuration without duplicating subscriptions", async () => {
   expect(extension.notify.mock.calls).toEqual([["20", "info"]]);
 });
 
-it("clears the live widget on shutdown", async () => {
+it("stops refreshing and clears the live widget on shutdown", async () => {
   // Arrange
   await configure({ mode: "live" });
   const extension = harness();
@@ -452,8 +635,14 @@ it("clears the live widget on shutdown", async () => {
 
   // Act
   await extension.emit(Events.SessionShutdown);
+  now = 10000;
+  vi.advanceTimersByTime(10000);
+  await extension.emit(Events.ToolExecutionEnd);
+  await extension.emit(Events.AgentSettled);
 
   // Assert
+  expect(vi.getTimerCount()).toBe(0);
+  expect(extension.setWidget).toHaveBeenCalledTimes(2);
   expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
 });
 
@@ -575,7 +764,7 @@ it.each(["notify", "live"])(
         expect(notify).not.toHaveBeenCalled();
         expect(setWidget).toHaveBeenLastCalledWith("pi-metrics", expect.any(Function), { placement: "aboveEditor" });
         expect(renderWidget(setWidget.mock.lastCall?.[1])).toEqual([expected.padStart(80)]);
-        expect(setWidget).toHaveBeenCalledTimes(5);
+        expect(setWidget).toHaveBeenCalledTimes(4);
       }
     } finally {
       session.dispose();
@@ -595,14 +784,14 @@ it.each([true, false])("warns about unknown entries even when enabled is %s", as
   expect(extension.notify.mock.calls).toEqual([
     [`pi-metrics: ${join(cwd, ".pi", "pi-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
   ]);
-  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({ enabled, mode: "notify" });
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({ enabled, mode: "live" });
 });
 
 it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
   "uses global metrics without reading untrusted project configuration %s",
   async (source) => {
     // Arrange
-    await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"format":"Global metrics"}');
+    await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"mode":"notify","format":"Global metrics"}');
     await writeFile(join(cwd, ".pi", "pi-metrics.jsonc"), source);
     const extension = harness();
     extension.isProjectTrusted.mockReturnValue(false);

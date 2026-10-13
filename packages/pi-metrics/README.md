@@ -20,14 +20,14 @@ No configuration is required. To customize it, create `.pi/pi-metrics.jsonc` in 
 ```jsonc
 {
   "enabled": true,
-  "mode": "notify",
+  "mode": "live",
   "liveColor": "accent",
   "format": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
 }
 ```
 
 - `enabled`: defaults to `true`. Set to `false` to disable metrics.
-- `mode`: defaults to `"notify"`. Use `"live"` to show metrics above the editor instead.
+- `mode`: defaults to `"live"`, which shows metrics above the editor. Use `"notify"` for a summary notification when the agent finishes instead.
 - `liveColor`: defaults to `"accent"`, which follows the current theme's accent color.
   Override it with a six-digit hex color such as `"#aabbcc"` or `"#AABBCC"`. Applies only to `"live"` mode; notifications are unchanged because their colors are already managed by the theme.
 - `format`: controls the displayed text. The example above uses the default format.
@@ -54,7 +54,8 @@ Combine placeholders with any text or omit metrics you do not need. Unavailable 
 Metrics cover one agent run, including any model requests and tool calls, and reset when the next run starts.
 
 - **Notify:** sends a summary notification when the agent finishes.
-- **Live:** shows a right-aligned widget above the editor. It updates after assistant messages and tool executions, not continuously while streaming. The final summary stays visible until the next run.
+- **Live:** shows a right-aligned widget above the editor. Duration refreshes every second while the agent is running, including during streaming and tool execution.
+  Token usage, speed, and cost update after completed assistant messages. The final summary stays visible until the next run.
 
 Speed includes model request latency but excludes tool execution time. Token counts use Pi's reported input and output fields; cache reads and writes are not added to those counts.
 

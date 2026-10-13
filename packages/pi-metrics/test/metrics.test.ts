@@ -131,23 +131,28 @@ it("renders current values each time from the parsed format", () => {
 });
 
 it.each([
-  ["literal", false, false],
-  ["<unknown>", false, false],
-  ["<timetaken>", false, false],
-  ["<cost>", false, true],
-  ["<input_tokens>", false, true],
-  ["<output_tokens>", false, true],
-  ["<tokps>", true, true],
-  ["<tokps><output_tokens><cost>", true, true],
-])("derives collection requirements for %s", (format, needsSpeed, needsUsage) => {
+  ["literal", false, false, false],
+  ["<unknown>", false, false, false],
+  ["<timetaken>", false, false, true],
+  ["<cost>", false, true, false],
+  ["<input_tokens>", false, true, false],
+  ["<output_tokens>", false, true, false],
+  ["<tokps>", true, true, false],
+  ["<tokps><output_tokens><cost>", true, true, false],
+  ["<timetaken><tokps><cost>", true, true, true],
+])("derives collection requirements for %s", (format, needsSpeed, needsUsage, needsDuration) => {
   // Arrange
   const metrics = new TurnMetrics(format);
 
   // Act
-  const requirements = { needsSpeed: metrics.needsSpeed, needsUsage: metrics.needsUsage };
+  const requirements = {
+    needsSpeed: metrics.needsSpeed,
+    needsUsage: metrics.needsUsage,
+    needsDuration: metrics.needsDuration,
+  };
 
   // Assert
-  expect(requirements).toEqual({ needsSpeed, needsUsage });
+  expect(requirements).toEqual({ needsSpeed, needsUsage, needsDuration });
 });
 
 it.each(["", "literal", "<cost>", "<input_tokens>", "<output_tokens>"])(

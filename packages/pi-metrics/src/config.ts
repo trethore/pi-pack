@@ -16,13 +16,13 @@ export const loadConfig = createConfigLoader({
   knownKeys: ["enabled", "mode", "format", "liveColor"],
   defaults: (): MetricsConfig => ({
     enabled: true,
-    mode: "notify",
+    mode: "live",
     format: defaultFormat,
     liveColor: DEFAULT_LIVE_COLOR,
   }),
   validate(value): MetricsConfig {
     const enabled = booleanOption(value.enabled, "enabled", true);
-    const mode = value.mode === undefined ? "notify" : value.mode;
+    const mode = value.mode === undefined ? "live" : value.mode;
 
     if (mode !== "notify" && mode !== "live") {
       throw new Error('mode must be "notify" or "live"');
