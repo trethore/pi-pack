@@ -42,11 +42,6 @@ Unknown configuration keys produce warnings but do not disable the extension.
 
 ## Behavior
 
-### Show the Full Script
-
-See the entire script the model is running without expanding tool results.
-Set `showFullScript` to `false` to use the default collapsed script preview.
-
 ### Pretty-printed output
 
 For example, a script returning:
@@ -74,11 +69,9 @@ Goodbye!
 Nested fields use dotted paths, and array entries use indexes such as `users[0].name`.
 Keys containing dots or other special characters use bracket notation, such as `["user.name"]`.
 Strings containing newline characters use triple quotes. Ambiguous values such as the strings `"true"` and `"25"` remain quoted.
-This is a display format, not a YAML serialization format.
 
 Plain text, console output, errors, image blocks, and output markers are preserved.
 Incomplete or truncated JSON, unsafe numbers, and values exceeding the formatter's size or depth limits retain their original text.
-Expand tool results to see output beyond Pi's normal collapsed preview.
 
 ## Licence
 
