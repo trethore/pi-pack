@@ -4,7 +4,7 @@ Replace `{{name}}` placeholders with cached script output in system prompts and 
 
 ## Installation
 
-Requires Pi `1.2.0` or a compatible later release.
+Requires Pi `1.3.0` or a compatible later release.
 
 From the repository root, install pi-script-placeholders globally:
 
@@ -73,7 +73,7 @@ They remain literal in messages sent by other extensions.
 | `APPEND_SYSTEM.md` or `--append-system-prompt` | Appended system prompt text.              |
 | Prompt templates invoked as `/name`            | The template body, excluding frontmatter. |
 
-Expansion happens in memory. Source files are not modified. System and appended-system placeholders expand for both user-prompt runs and extension-triggered custom-message runs in Pi 1.2.0.
+Expansion happens in memory. Source files are not modified. System and appended-system placeholders expand for both user-prompt runs and extension-triggered custom-message runs in Pi 1.3.0.
 Ordinary messages, `AGENTS.md`, skills, and extension commands are not expanded.
 
 ## Scripts

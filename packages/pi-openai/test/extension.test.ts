@@ -367,19 +367,19 @@ it("loads through Pi's TypeScript loader with all workspace dependencies", async
 });
 
 it.each([
-  { provider: "openai", apiKey: "sk-proj-test", tier: "priority" },
-  { provider: "openai", apiKey: "sk-proj-test", tier: "fast" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "priority", configurationUpdate: true },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "fast", configurationUpdate: true },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "priority" },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "fast" },
-  { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6-astra" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6-astra", configurationUpdate: true },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "ultrafast", id: "gpt-6-astra" },
-  { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6.1-sol" },
+  { provider: "openai", apiKey: "sk-proj-test", tier: "ultrafast", id: "gpt-6.1-sol", configurationUpdate: true },
   { provider: "openai", apiKey: "chatgpt-access-token", tier: "ultrafast", id: "gpt-6.1-sol" },
   { provider: "azure", apiKey: "azure-test", tier: "priority" },
   { provider: "azure", apiKey: "azure-test", tier: "fast" },
 ])(
   "modifies real Pi $provider requests using $apiKey and $tier without restoring auth-rejected fields",
-  async ({ provider, apiKey, tier, id = model.id }) => {
+  async ({ provider, apiKey, tier, id = model.id, configurationUpdate }) => {
     // Arrange
     vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
     vi.stubEnv("PI_OPENAI_REASONING_SUMMARY", "none");
@@ -444,7 +444,8 @@ it.each([
     expect(sent).toMatchObject({
       model: provider === "openai" ? id : "production-assistant",
       text: { verbosity: "low" },
-      reasoning: { effort: "high" },
+      reasoning: { effort: configurationUpdate ? "medium" : "high" },
+      input: configurationUpdate ? [{ type: "configuration_update", reasoning: { effort: "high" } }] : [],
     });
     expect(sent).not.toHaveProperty("reasoning.summary");
     expect(sent).toMatchObject({ service_tier: tier === "fast" ? "priority" : tier, tools: [{ type: "web_search" }] });
