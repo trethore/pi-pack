@@ -6,9 +6,9 @@ Requires Pi `1.3.0` or a compatible later release.
 
 ## Extensions
 
-### [pi-metrics](packages/pi-metrics/README.md)
+### [pi-turn-metrics](packages/pi-turn-metrics/README.md)
 
-Display metrics like token usage, speed, duration, and estimated cost through notifications or live updates.
+Display turn metrics like token usage, speed, duration, and estimated cost through notifications or live updates.
 
 ### [pi-openai](packages/pi-openai/README.md)
 

@@ -8,7 +8,7 @@ Here is an overview of the project:
 
 ```text
 packages/
-  pi-metrics/
+  pi-turn-metrics/
   pi-openai/
   pi-script-placeholders/
   pi-whimsical/

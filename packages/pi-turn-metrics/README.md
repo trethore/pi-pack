@@ -1,22 +1,22 @@
-# pi-metrics
+# pi-turn-metrics
 
-Display metrics like token usage, speed, duration, and estimated cost.
+Display turn metrics like token usage, speed, duration, and estimated cost through notifications or live updates.
 
 ## Installation
 
 Requires Pi `1.3.0` or a compatible later release.
 
-From the repository root, install pi-metrics globally:
+From the repository root, install pi-turn-metrics globally:
 
 ```sh
 npm ci
-npm run install:global:pi-metrics
+npm run install:global:pi-turn-metrics
 ```
 
 ## Configuration
 
-No configuration is required. To customize it, create `.pi/pi-metrics.jsonc` in your project or
-`~/.pi/agent/pi-metrics.jsonc` globally:
+No configuration is required. To customize it, create `.pi/pi-turn-metrics.jsonc` in your project or
+`~/.pi/agent/pi-turn-metrics.jsonc` globally:
 
 ```jsonc
 {
@@ -27,7 +27,7 @@ No configuration is required. To customize it, create `.pi/pi-metrics.jsonc` in 
 }
 ```
 
-- `enabled`: defaults to `true`. Set to `false` to disable pi-metrics.
+- `enabled`: defaults to `true`. Set to `false` to disable pi-turn-metrics.
 - `mode`: defaults to `"live"`, which shows metrics above the editor. Use `"notify"` for a summary notification when the
   agent finishes instead.
 - `liveColor`: defaults to `"accent"`, which follows the current theme's accent color. Override it with a six-digit hex

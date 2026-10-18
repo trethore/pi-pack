@@ -25,7 +25,7 @@ let agentDir: string;
 let now: number;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "pi-metrics-"));
+  root = await mkdtemp(join(tmpdir(), "pi-turn-metrics-"));
   cwd = join(root, "project");
   agentDir = join(root, "agent");
   vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
@@ -45,7 +45,7 @@ afterEach(async () => {
 });
 
 async function configure(config: Record<string, unknown>): Promise<void> {
-  await writeFile(join(cwd, ".pi", "pi-metrics.jsonc"), JSON.stringify(config));
+  await writeFile(join(cwd, ".pi", "pi-turn-metrics.jsonc"), JSON.stringify(config));
 }
 
 type AssistantMessage = Extract<MessageEndEvent["message"], { role: "assistant" }>;
@@ -164,7 +164,10 @@ it("shows live metrics and refreshes duration without a config file", async () =
 
 it("accepts global JSONC and lets project configuration replace it", async () => {
   // Arrange
-  await writeFile(join(agentDir, "pi-metrics.jsonc"), '{ // summary metrics\n "mode": "notify", "format": "<cost>", }');
+  await writeFile(
+    join(agentDir, "pi-turn-metrics.jsonc"),
+    '{ // summary metrics\n "mode": "notify", "format": "<cost>", }',
+  );
 
   // Act
   const global = await loadConfig(cwd, { projectTrusted: true, agentDir });
@@ -360,7 +363,7 @@ it("updates one live widget after model responses and tools, then retains final 
     extension.setWidget.mock.calls.map(([key, content, options]) => [key, renderWidget(content), options]),
   ).toEqual(
     ["0 0s", "100 1s", "100 3s", "100 4s", "300 5s"].map((text) => [
-      "pi-metrics",
+      "pi-turn-metrics",
       [text.padStart(80)],
       { placement: "aboveEditor" },
     ]),
@@ -525,7 +528,7 @@ it.each([true, false, "invalid"])("stops the old refresh timer before reloading 
   // Assert
   expect(vi.getTimerCount()).toBe(0);
   expect(extension.setWidget).toHaveBeenCalledTimes(2);
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
   await extension.emit(Events.AgentStart);
   expect(vi.getTimerCount()).toBe(enabled === true ? 1 : 0);
   if (enabled === true) {
@@ -604,7 +607,7 @@ it("removes old handlers and widgets before reloading disabled configuration", a
   await extension.emit(Events.AgentStart);
 
   // Assert
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
   expect(extension.notify).not.toHaveBeenCalled();
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
   expect(performance.now).not.toHaveBeenCalled();
@@ -643,7 +646,7 @@ it("stops refreshing and clears the live widget on shutdown", async () => {
   // Assert
   expect(vi.getTimerCount()).toBe(0);
   expect(extension.setWidget).toHaveBeenCalledTimes(2);
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
 });
 
 it("stays inactive when configuration loading fails", async () => {
@@ -762,7 +765,9 @@ it.each(["notify", "live"])(
         expect(setWidget).not.toHaveBeenCalled();
       } else {
         expect(notify).not.toHaveBeenCalled();
-        expect(setWidget).toHaveBeenLastCalledWith("pi-metrics", expect.any(Function), { placement: "aboveEditor" });
+        expect(setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", expect.any(Function), {
+          placement: "aboveEditor",
+        });
         expect(renderWidget(setWidget.mock.lastCall?.[1])).toEqual([expected.padStart(80)]);
         expect(setWidget).toHaveBeenCalledTimes(4);
       }
@@ -782,7 +787,7 @@ it.each([true, false])("warns about unknown entries even when enabled is %s", as
 
   // Assert
   expect(extension.notify.mock.calls).toEqual([
-    [`pi-metrics: ${join(cwd, ".pi", "pi-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
+    [`pi-turn-metrics: ${join(cwd, ".pi", "pi-turn-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
   ]);
   await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({ enabled, mode: "live" });
 });
@@ -791,8 +796,8 @@ it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
   "uses global metrics without reading untrusted project configuration %s",
   async (source) => {
     // Arrange
-    await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"mode":"notify","format":"Global metrics"}');
-    await writeFile(join(cwd, ".pi", "pi-metrics.jsonc"), source);
+    await writeFile(join(agentDir, "pi-turn-metrics.jsonc"), '{"mode":"notify","format":"Global metrics"}');
+    await writeFile(join(cwd, ".pi", "pi-turn-metrics.jsonc"), source);
     const extension = harness();
     extension.isProjectTrusted.mockReturnValue(false);
 
@@ -808,7 +813,7 @@ it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
 
 it("clears trusted project widgets and handlers when reloading untrusted", async () => {
   // Arrange
-  await writeFile(join(agentDir, "pi-metrics.jsonc"), '{"enabled":false}');
+  await writeFile(join(agentDir, "pi-turn-metrics.jsonc"), '{"enabled":false}');
   await configure({ mode: "live" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
@@ -820,7 +825,7 @@ it("clears trusted project widgets and handlers when reloading untrusted", async
   await extension.emit(Events.AgentStart);
 
   // Assert
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
   expect(extension.notify).not.toHaveBeenCalled();
 });

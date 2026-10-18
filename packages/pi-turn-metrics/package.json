@@ -1,7 +1,7 @@
 {
-  "name": "pi-metrics",
+  "name": "pi-turn-metrics",
   "version": "0.1.0",
-  "description": "Display metrics like token usage, speed, duration, and estimated cost.",
+  "description": "Display turn metrics like token usage, speed, duration, and estimated cost through notifications or live updates.",
   "dependencies": {
     "@pi-pack/shared": "0.1.0"
   },
@@ -9,7 +9,7 @@
     "@earendil-works/pi-tui": "1.3.0"
   },
   "files": [
-    "pi-metrics.example.jsonc",
+    "pi-turn-metrics.example.jsonc",
     "src"
   ],
   "imports": {
