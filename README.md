@@ -8,7 +8,7 @@ Requires Pi `1.3.0` or a compatible later release.
 
 ### [pi-metrics](packages/pi-metrics/README.md)
 
-Show per-turn token usage, speed, duration, and estimated cost through notifications or live updates.
+Display metrics like token usage, speed, duration, and estimated cost through notifications or live updates.
 
 ### [pi-openai](packages/pi-openai/README.md)
 

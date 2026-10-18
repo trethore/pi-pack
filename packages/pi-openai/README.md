@@ -3,8 +3,8 @@
 Configure OpenAI-compatible request parameters: verbosity, reasoning summaries, native web search, and service tiers.
 
 > [!NOTE]
-> Default settings leave requests unchanged.
-> Feature support depends on the selected model, provider, and API.
+>
+> Default settings leave requests unchanged. Feature support depends on the selected model, provider, and API.
 
 ## Installation
 
@@ -37,12 +37,13 @@ To discard the model-scoped override and its pending edit instead:
 /pi-openai undo verbosity --scope model
 ```
 
-Undo does not reverse saved writes. Save changes you want to keep before `/reload` or starting a new session.
-See the [command lifecycle](docs/commands.md#what-changes-when) for details.
+Undo does not reverse saved writes. Save changes you want to keep before `/reload` or starting a new session. See the
+[command lifecycle](docs/commands.md#what-changes-when) for details.
 
 ## Configuration
 
-No file is required. To configure defaults, create `.pi/pi-openai.jsonc` in a trusted project or `~/.pi/agent/pi-openai.jsonc` globally:
+No file is required. To configure defaults, create `.pi/pi-openai.jsonc` in a trusted project or
+`~/.pi/agent/pi-openai.jsonc` globally:
 
 ```jsonc
 {
@@ -51,10 +52,11 @@ No file is required. To configure defaults, create `.pi/pi-openai.jsonc` in a tr
 }
 ```
 
-Settings merge per key: `commands > environment > project > global > defaults`.
-The global path follows `$PI_CODING_AGENT_DIR` when customized. Run `/reload` after editing files.
+Settings merge per key: `commands > environment > project > global > defaults`. The global path follows
+`$PI_CODING_AGENT_DIR` when customized. Run `/reload` after editing files.
 
-See the [configuration reference](docs/configuration.md) and [example configuration](pi-openai.example.jsonc) for scoped overrides.
+See the [configuration reference](docs/configuration.md) and [example configuration](pi-openai.example.jsonc) for scoped
+overrides.
 
 ## Documentation
 

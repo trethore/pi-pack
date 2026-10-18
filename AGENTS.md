@@ -39,14 +39,19 @@ Read root and package-level `package.json` files to learn more about available s
 ## Development
 
 - Write tests that are easy to scan and understand. Use clear `Arrange / Act / Assert` sections.
-- Do not add comments or documentation unless explicitly requested, needed to explain non-obvious behavior, or used for Arrange / Act / Assert test sections.
-- To browse the Pi source code, use the gitignored `pi/` directory. If it doesn't exist, run `npm run import:pi -- <tag>` to clone the Pi repository at a specific tag into it, for example `npm run import:pi -- v1.3.0`.
+- Do not add comments or documentation unless explicitly requested, needed to explain non-obvious behavior, or used for
+  Arrange / Act / Assert test sections.
+- To browse the Pi source code, use the gitignored `pi/` directory. If it doesn't exist, run
+  `npm run import:pi -- <tag>` to clone the Pi repository at a specific tag into it, for example
+  `npm run import:pi -- v1.3.0`.
 
 ### NixOS
 
-- On NixOS, use `nix develop --command COMMAND` to run commands in the development shell. This shell provides a NixOS-compatible `jscpd` binary required by `npm run check` and `npm run check:duplicates`.
+- On NixOS, use `nix develop --command COMMAND` to run commands in the development shell. This shell provides a
+  NixOS-compatible `jscpd` binary required by `npm run check` and `npm run check:duplicates`.
 
 ## Commits & Pull Requests
 
 - Follow the Conventional Commits specification for commit messages.
-- Pull request summaries should include the related issue(s), a brief description of the changes, and how the changes were tested.
+- Pull request summaries should include the related issue(s), a brief description of the changes, and how the changes
+  were tested.

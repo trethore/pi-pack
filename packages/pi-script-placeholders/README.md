@@ -52,18 +52,18 @@ After `/reload`, invoke it with:
 /environment How do I list running processes?
 ```
 
-Prompt arguments support `$1`, `$2`, `$@`, `$ARGUMENTS`, defaults such as `${1:-default}`, and slices such as `${@:2:3}`.
-You can use a script as a default, too:
+Prompt arguments support `$1`, `$2`, `$@`, `$ARGUMENTS`, defaults such as `${1:-default}`, and slices such as
+`${@:2:3}`. You can use a script as a default, too:
 
 ```markdown
 Explain how to install $1 on ${2:-{{platform}}}.
 ```
 
-Here, `platform` runs only if the second argument is missing. Placeholders supplied in command arguments are left literal.
-Script output is also literal: it is not expanded again as placeholders, prompt arguments, or slash commands.
+Here, `platform` runs only if the second argument is missing. Placeholders supplied in command arguments are left
+literal. Script output is also literal: it is not expanded again as placeholders, prompt arguments, or slash commands.
 
-Prompt-template script placeholders expand for prompts you submit interactively or through RPC.
-They remain literal in messages sent by other extensions.
+Prompt-template script placeholders expand for prompts you submit interactively or through RPC. They remain literal in
+messages sent by other extensions.
 
 ### Supported locations
 
@@ -73,8 +73,9 @@ They remain literal in messages sent by other extensions.
 | `APPEND_SYSTEM.md` or `--append-system-prompt` | Appended system prompt text.              |
 | Prompt templates invoked as `/name`            | The template body, excluding frontmatter. |
 
-Expansion happens in memory. Source files are not modified. System and appended-system placeholders expand for both user-prompt runs and extension-triggered custom-message runs in Pi 1.3.0.
-Ordinary messages, `AGENTS.md`, skills, and extension commands are not expanded.
+Expansion happens in memory. Source files are not modified. System and appended-system placeholders expand for both
+user-prompt runs and extension-triggered custom-message runs in Pi 1.3.0. Ordinary messages, `AGENTS.md`, skills, and
+extension commands are not expanded.
 
 ## Scripts
 
@@ -84,15 +85,16 @@ Place scripts in either directory:
 - `.pi/script-placeholders/` for the current project, after project trust is granted.
 
 Only direct `.js` and `.mjs` files are discovered. The filename without its extension becomes the placeholder name.
-Names are case-sensitive and may contain letters, digits, underscores, and hyphens. Use `{{platform}}`, not `{{ platform }}`.
-Paths and JavaScript expressions are not supported inside placeholders.
+Names are case-sensitive and may contain letters, digits, underscores, and hyphens. Use `{{platform}}`, not
+`{{ platform }}`. Paths and JavaScript expressions are not supported inside placeholders.
 
-A project script takes precedence over a global script with the same name, with a warning.
-If the selected scope contains both `name.js` and `name.mjs`, `{{name}}` is left unchanged with a warning rather than choosing one.
+A project script takes precedence over a global script with the same name, with a warning. If the selected scope
+contains both `name.js` and `name.mjs`, `{{name}}` is left unchanged with a warning rather than choosing one.
 
 ### Execution
 
-Scripts run with Node.js in the active workspace directory, including global scripts. They inherit Pi's environment plus:
+Scripts run with Node.js in the active workspace directory, including global scripts. They inherit Pi's environment
+plus:
 
 | Variable                      | Value                            |
 | ----------------------------- | -------------------------------- |
@@ -103,23 +105,27 @@ Scripts run with Node.js in the active workspace directory, including global scr
 Write the replacement text to stdout and exit successfully. One final newline is removed; other whitespace is preserved.
 Empty output removes the placeholder. Stdin is closed and stderr is discarded.
 
-Scripts run with your user permissions, not in a sandbox. Only install scripts you trust.
-Untrusted projects cannot supply scripts or extension configuration, but global scripts can still run in their workspace directory.
+Scripts run with your user permissions, not in a sandbox. Only install scripts you trust. Untrusted projects cannot
+supply scripts or extension configuration, but global scripts can still run in their workspace directory.
 
 ### Caching and failures
 
-Each script runs at most once per workspace and trust state until `/reload`. The same result is shared across system prompts and prompt templates, including across new sessions in the same Pi process.
+Each script runs at most once per workspace and trust state until `/reload`. The same result is shared across system
+prompts and prompt templates, including across new sessions in the same Pi process.
 
-Existing prompt templates refresh at session start or on `/reload`. Newly available templates are picked up when first used.
+Existing prompt templates refresh at session start or on `/reload`. Newly available templates are picked up when first
+used.
 
-Missing scripts, ambiguous names, execution failures, timeouts, and oversized output leave the placeholder unchanged and produce a warning. Failed results are cached too; they are not retried on each turn.
+Missing scripts, ambiguous names, execution failures, timeouts, and oversized output leave the placeholder unchanged and
+produce a warning. Failed results are cached too; they are not retried on each turn.
 
 Run `/reload` after changing scripts, prompt templates, or configuration, or whenever you want fresh script output.
 Changes to files or environment variables do not automatically invalidate cached output.
 
 ## Configuration
 
-No configuration is required. To customize it, create `.pi/pi-script-placeholders.jsonc` in your project or `~/.pi/agent/pi-script-placeholders.jsonc` globally:
+No configuration is required. To customize it, create `.pi/pi-script-placeholders.jsonc` in your project or
+`~/.pi/agent/pi-script-placeholders.jsonc` globally:
 
 ```jsonc
 {
@@ -141,11 +147,12 @@ The example above uses the default values.
 - `enabled`: set to `false` to disable the extension.
 - `surfaces`: enable or disable expansion separately for each supported location.
 - `execution.timeoutMs`: maximum runtime per script, in milliseconds.
-- `execution.maxOutputChars`: maximum stdout length, measured in JavaScript string units, not bytes. Oversized output is rejected, not truncated.
+- `execution.maxOutputChars`: maximum stdout length, measured in JavaScript string units, not bytes. Oversized output is
+  rejected, not truncated.
 
-Both execution limits must be positive integers no greater than `2147483647`.
-A trusted project's configuration replaces the global configuration completely; omitted settings use defaults.
-Global configuration and script paths follow Pi's agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
+Both execution limits must be positive integers no greater than `2147483647`. A trusted project's configuration replaces
+the global configuration completely; omitted settings use defaults. Global configuration and script paths follow Pi's
+agent directory if you customize it with `$PI_CODING_AGENT_DIR`.
 
 Invalid or unreadable configuration disables the extension until `/reload`, with a warning rather than a fallback.
 Unknown configuration keys produce warnings but do not disable the extension.

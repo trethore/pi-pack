@@ -15,7 +15,8 @@ Use unquoted [command](commands.md) values, for example `/pi-openai reasoningSum
 | `webSearch`        | `true`, `false`                               | `false`   | Make native search available, without forcing its use.                                            |
 | `serviceTier`      | `priority`, `ultrafast`, `default`            | `default` | Request a processing tier; see [compatibility](compatibility.md).                                 |
 
-`null`, `webSearch: false`, and `serviceTier: "default"` leave existing provider fields/tools unchanged; they do not reset them. The `fast` alias is accepted wherever values are configured and normalized to `priority`.
+`null`, `webSearch: false`, and `serviceTier: "default"` leave existing provider fields/tools unchanged; they do not
+reset them. The `fast` alias is accepted wherever values are configured and normalized to `priority`.
 
 ## Files
 
@@ -38,7 +39,8 @@ No file is required. To configure defaults and scoped overrides:
 }
 ```
 
-Top-level settings apply to All models; every setting can also appear in `settings`. Comments and trailing commas are supported. Run `/reload` after editing files.
+Top-level settings apply to All models; every setting can also appear in `settings`. Comments and trailing commas are
+supported. Run `/reload` after editing files.
 
 ### Project trust
 
@@ -52,11 +54,14 @@ Settings merge **per key**, strongest layer first:
 commands > environment > project > global > defaults
 ```
 
-Project values beat global values **even when the global selector is more specific**. Omitted keys inherit; explicit `null` cancels an inherited verbosity/summary override without deleting provider payload fields.
+Project values beat global values **even when the global selector is more specific**. Omitted keys inherit; explicit
+`null` cancels an inherited verbosity/summary override without deleting provider payload fields.
 
 ## Selector matching and precedence within a layer
 
-A `match` requires one or more of `provider`, `model`, and `api`; all supplied fields must match exactly. `model` is Pi's selected model ID, not an Azure deployment name. `api` is an identifier such as `openai-responses`, not an endpoint or authentication method.
+A `match` requires one or more of `provider`, `model`, and `api`; all supplied fields must match exactly. `model` is
+Pi's selected model ID, not an Azure deployment name. `api` is an identifier such as `openai-responses`, not an endpoint
+or authentication method.
 
 | Matching rule                | Dated model IDs                                                              |
 | ---------------------------- | ---------------------------------------------------------------------------- |
@@ -70,9 +75,11 @@ provider+model+api > provider+model > model+api > provider+api
                   > model > provider > api > All models
 ```
 
-Declaration order does not matter. For example, model-scoped verbosity can override provider-scoped verbosity while retaining provider-scoped service tier.
+Declaration order does not matter. For example, model-scoped verbosity can override provider-scoped verbosity while
+retaining provider-scoped service tier.
 
-These rules resolve effective settings. [Automatic command targeting](commands.md#scope-names-and-automatic-targeting) selects which scope a command edits and uses different rules.
+These rules resolve effective settings. [Automatic command targeting](commands.md#scope-names-and-automatic-targeting)
+selects which scope a command edits and uses different rules.
 
 ## Environment variables
 
@@ -96,5 +103,5 @@ Values use command spelling. Environment values are unscoped and override both f
 Invalid files or environment values stop all extension overrides. Configuration validation includes nonmatching scopes.
 Duplicate known keys/selectors and unknown selector fields are errors; unknown settings produce warnings.
 
-Fix configuration errors, then run `/reload`. Restart Pi if you need to supply corrected shell environment values.
-See [troubleshooting](troubleshooting.md) for common configuration problems.
+Fix configuration errors, then run `/reload`. Restart Pi if you need to supply corrected shell environment values. See
+[troubleshooting](troubleshooting.md) for common configuration problems.

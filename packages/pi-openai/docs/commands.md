@@ -45,7 +45,9 @@ For example, persist a model-specific setting globally, even when a project file
 /pi-openai save --source global --scope model
 ```
 
-**Save options filter edits; they never move them.** Scope and source are captured when an edit is staged. Switching models or creating/deleting the project file does not retarget it. `--source project` can create the file, but only on save.
+**Save options filter edits; they never move them.** Scope and source are captured when an edit is staged. Switching
+models or creating/deleting the project file does not retarget it. `--source project` can create the file, but only on
+save.
 
 ### Scope names and automatic targeting
 
@@ -58,9 +60,12 @@ Set and undo choose one matching scope, regardless of whether it defines the req
 3. Remaining ties prefer `model > provider > api`; for pairs, `provider+model > model+api > provider+api`.
 4. With no scoped match, use All models.
 
-Unset considers only eligible values for its setting: more fields first, then project before global, then the field ordering above. Pending sets use their recorded file priority. An explicit scope never falls through to another scope.
+Unset considers only eligible values for its setting: more fields first, then project before global, then the field
+ordering above. Pending sets use their recorded file priority. An explicit scope never falls through to another scope.
 
-Targeting is not [configuration precedence](configuration.md#precedence): a specific global scope can be targeted while a broader project value wins after reload. A more specific runtime override can also mask a command; its confirmation reports this.
+Targeting is not [configuration precedence](configuration.md#precedence): a specific global scope can be targeted while
+a broader project value wins after reload. A more specific runtime override can also mask a command; its confirmation
+reports this.
 
 Without a selected model, set/unset/undo require `--scope all`. Saving and `undo --all-scopes` need no model.
 
@@ -74,7 +79,9 @@ Without a selected model, set/unset/undo require `--scope all`. Saving and `undo
 | `save`                   | Active settings stay unchanged                                                        | Writes pending edits       |
 | `/reload` or new session | Reloads configuration; clears runtime overrides and pending edits                     | No additional writes       |
 
-**Undo does not reverse saved writes.** Save anything you want to keep **before reloading**. Undo exposes loaded/inherited values, not necessarily defaults. After a save, it exposes the session's loaded configuration, not the newly written file.
+**Undo does not reverse saved writes.** Save anything you want to keep **before reloading**. Undo exposes
+loaded/inherited values, not necessarily defaults. After a save, it exposes the session's loaded configuration, not the
+newly written file.
 
 ### Remove saved values
 
@@ -85,17 +92,21 @@ Without a selected model, set/unset/undo require `--scope all`. Saving and `undo
 /reload
 ```
 
-At this scope, unset selects project before global. If both files define verbosity, repeating unset stages two independent removals:
+At this scope, unset selects project before global. If both files define verbosity, repeating unset stages two
+independent removals:
 
 | Scope             | Setting   | Value   | Source  |
 | ----------------- | --------- | ------- | ------- |
 | `model=gpt-6-sol` | verbosity | Removed | project |
 | `model=gpt-6-sol` | verbosity | Removed | global  |
 
-- Unset tracks pending sets and this session's saved edits, skipping already removed values. Environment values and defaults are not removable.
+- Unset tracks pending sets and this session's saved edits, skipping already removed values. Environment values and
+  defaults are not removable.
 - With no eligible value, it reports **Nothing to unset** and changes nothing.
-- Setting a value again for the same scope and file cancels its pending removal. Undo cancels pending edits at that scope across both sources, including removals.
-- Removing a project value can expose a global fallback. External file edits require reload before unset can target them.
+- Setting a value again for the same scope and file cancels its pending removal. Undo cancels pending edits at that
+  scope across both sources, including removals.
+- Removing a project value can expose a global fallback. External file edits require reload before unset can target
+  them.
 
 ### Save selected changes
 
@@ -114,14 +125,20 @@ Only the global model edit is saved; the project API edit stays pending.
 | `--scope all`      | All-models edits, not every scope                              |
 | Both flags         | Edits matching both filters                                    |
 
-- Editing the same setting again replaces its pending change for that scope and file. Global and project edits stay separate; the most recent value you set at a scope applies to the current session regardless of its save destination.
-- Only matching pending edits are saved. Inherited values are not copied into the file, and nothing is written if no edits match.
-- Unrelated settings, unknown fields, and comments outside removed entries are preserved. If you edited the file separately, pending changes take precedence only for the settings and scopes they change.
-- Removing the last setting also removes its empty override entry, unless other fields remain. Removing a value that is already absent creates no file or entry.
+- Editing the same setting again replaces its pending change for that scope and file. Global and project edits stay
+  separate; the most recent value you set at a scope applies to the current session regardless of its save destination.
+- Only matching pending edits are saved. Inherited values are not copied into the file, and nothing is written if no
+  edits match.
+- Unrelated settings, unknown fields, and comments outside removed entries are preserved. If you edited the file
+  separately, pending changes take precedence only for the settings and scopes they change.
+- Removing the last setting also removes its empty override entry, unless other fields remain. Removing a value that is
+  already absent creates no file or entry.
 - Files are never left half-written. When saving both files, one can succeed even if the other fails.
-- Changes that were not saved remain pending for another `/pi-openai save`, including edits made while saving. Changes already saved are not written again.
+- Changes that were not saved remain pending for another `/pi-openai save`, including edits made while saving. Changes
+  already saved are not written again.
 - A save that includes project edits requires project trust before any changes are written.
-- Saving does not change your active settings. Status lists saved changes separately until the next session or `/reload`.
+- Saving does not change your active settings. Status lists saved changes separately until the next session or
+  `/reload`.
 
 ## Example status output
 
@@ -151,7 +168,8 @@ Default set destination: global
 | --------- | ----- | ------- | ------------------ | ----------------- |
 | verbosity | low   | command | Set text.verbosity | `model=gpt-6-sol` |
 
-Status also shows loaded scopes, skipped-feature reasons, and saved changes for the next session or reload. Pending deletions appear as **Removed**.
+Status also shows loaded scopes, skipped-feature reasons, and saved changes for the next session or reload. Pending
+deletions appear as **Removed**.
 
 Request behavior describes intended changes, not guaranteed server acceptance.
 
