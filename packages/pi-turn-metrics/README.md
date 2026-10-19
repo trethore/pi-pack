@@ -15,31 +15,47 @@ npm run install:global:pi-turn-metrics
 
 ## Configuration
 
-No configuration is required. To customize it, create `.pi/pi-turn-metrics.jsonc` in your project or
-`~/.pi/agent/pi-turn-metrics.jsonc` globally:
+No configuration is required, but you can customize the extension using a project-level `.pi/pi-turn-metrics.jsonc` or a
+global `~/.pi/agent/pi-turn-metrics.jsonc` file:
 
 ```jsonc
+// The following schema excerpt describes the available options.
 {
-  "enabled": true,
-  "mode": "live",
-  "liveColor": "accent",
-  "format": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the extension is enabled.",
+      "default": true,
+    },
+    "mode": {
+      "type": "string",
+      "description": "Display mode.",
+      "enum": ["live", "notify"],
+      "default": "live",
+    },
+    "liveColor": {
+      "type": "string",
+      "description": "Color of the live widget text. Accepts any Pi theme color token or a six-digit RGB hex color such as #aabbcc.",
+      "default": "accent",
+    },
+    "format": {
+      "type": "string",
+      "description": "Format of the displayed text.",
+      "default": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
+    },
+  },
 }
 ```
 
-- `enabled`: defaults to `true`. Set to `false` to disable pi-turn-metrics.
-- `mode`: defaults to `"live"`, which shows metrics above the editor. Use `"notify"` for a summary notification when the
-  agent finishes instead.
-- `liveColor`: defaults to `"accent"`. Accepts any Pi theme color token, such as `"success"`, `"muted"`, `"mdHeading"`,
-  or `"thinkingHigh"`, or a six-digit RGB hex color such as `"#aabbcc"` or `"#AABBCC"`. Theme tokens follow the current
-  theme. Background tokens such as `"selectedBg"` use that color for the widget text, not its background. Applies only
-  to `"live"` mode.
-- `format`: controls the displayed text. The example above uses the default format.
+See [pi-turn-metrics.example.jsonc](pi-turn-metrics.example.jsonc) for an example configuration.
 
 The project configuration replaces the global configuration completely. The global path follows Pi's agent directory if
 you customize it with `$PI_CODING_AGENT_DIR`.
 
-Run `/reload` after changing the configuration. Invalid configuration reports an error rather than falling back.
+Unknown configuration keys are ignored and reported as warnings. Invalid configuration causes an error rather than
+falling back to another configuration or the defaults.
+
+Run `/reload` after changing the configuration.
 
 ### Format placeholders
 
@@ -55,7 +71,8 @@ Combine placeholders with any text or omit metrics you do not need. Unavailable 
 
 ## Behavior
 
-Metrics cover one agent run, including any model requests and tool calls, and reset when the next run starts.
+When a UI is available, pi-turn-metrics displays metrics for one agent run, including all model requests and tool calls.
+Metrics reset when the next run starts.
 
 - **Live:** shows a right-aligned widget above the editor. Duration refreshes every second while the agent is running,
   including during streaming and tool execution. Token usage, speed, and cost update after completed assistant messages.
@@ -64,8 +81,6 @@ Metrics cover one agent run, including any model requests and tool calls, and re
 
 Speed includes model request latency but excludes tool execution time. Token counts use Pi's reported input and output
 fields; cache reads and writes are not added to those counts.
-
-The extension only displays metrics when a UI is available.
 
 ## License
 

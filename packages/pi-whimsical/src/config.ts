@@ -13,9 +13,11 @@ export const loadConfig = createConfigLoader({
   validate(value): WhimsicalConfig {
     const enabled = booleanOption(value.enabled, "enabled", true);
     const messages = value.messages === undefined ? [] : value.messages;
+
     if (!Array.isArray(messages) || !messages.every((message: unknown) => typeof message === "string")) {
       throw new Error("messages must be an array of strings");
     }
+
     return { enabled, messages };
   },
 });

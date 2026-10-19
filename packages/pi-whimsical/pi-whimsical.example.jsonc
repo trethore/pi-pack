@@ -1,4 +1,6 @@
 {
+  // Whether the extension is enabled.
   "enabled": true,
+  // Custom messages. If omitted or empty, the built-in list is used.
   "messages": ["Schlepping...", "Combobulating...", "Vibing...", "Brewing...", "Pondering..."]
 }

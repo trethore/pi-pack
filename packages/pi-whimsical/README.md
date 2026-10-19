@@ -15,30 +15,44 @@ npm run install:global:pi-whimsical
 
 ## Configuration
 
-No configuration is required. To customize it, create `.pi/pi-whimsical.jsonc` in your project or
-`~/.pi/agent/pi-whimsical.jsonc` globally:
+No configuration is required, but you can customize the extension using a project-level `.pi/pi-whimsical.jsonc` or a
+global `~/.pi/agent/pi-whimsical.jsonc` file:
 
 ```jsonc
+// The following schema excerpt describes the available options.
 {
-  "enabled": true,
-  "messages": ["Schlepping...", "Combobulating...", "Vibing..."],
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the extension is enabled.",
+      "default": true,
+    },
+    "messages": {
+      "type": "array",
+      "description": "Custom messages. If omitted or empty, the built-in list is used.",
+      "items": {
+        "type": "string",
+      },
+    },
+  },
 }
 ```
 
-- `enabled`: defaults to `true`. Set to `false` to leave Pi's working message unchanged.
-- `messages`: an optional array of strings. A missing or empty array uses the built-in list.
+See [pi-whimsical.example.jsonc](pi-whimsical.example.jsonc) for an example configuration.
 
 The project configuration replaces the global configuration completely. The global path follows Pi's agent directory if
 you customize it with `$PI_CODING_AGENT_DIR`.
 
-Run `/reload` after changing the configuration. Invalid configuration reports an error rather than falling back.
+Unknown configuration keys are ignored and reported as warnings. Invalid configuration causes an error rather than
+falling back.
+
+Run `/reload` after changing the configuration.
 
 ## Behavior
 
-At the start of each turn, the extension picks a random message from your list or the 295 built-in messages. Messages
-can repeat. The working message resets when the turn ends or the session shuts down.
-
-The extension only changes the working message when a UI is available.
+When a UI is available, the extension picks a random message from your list or the 295 built-in messages at the start of
+each turn and sets it as the working message. Messages can repeat. The working message resets when the turn ends or the
+session shuts down.
 
 ## License
 
