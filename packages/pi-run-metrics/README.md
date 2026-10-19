@@ -1,22 +1,22 @@
-# pi-turn-metrics
+# pi-run-metrics
 
-Display turn metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
+Display run metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
 
 ## Installation
 
 Requires Pi `1.3.0` or a compatible later release.
 
-From the repository root, install pi-turn-metrics globally:
+From the repository root, install pi-run-metrics globally:
 
 ```sh
 npm ci
-npm run install:global:pi-turn-metrics
+npm run install:global:pi-run-metrics
 ```
 
 ## Configuration
 
-No configuration is required, but you can customize the extension using a project-level `.pi/pi-turn-metrics.jsonc` or a
-global `~/.pi/agent/pi-turn-metrics.jsonc` file:
+No configuration is required, but you can customize the extension using a project-level `.pi/pi-run-metrics.jsonc` or a
+global `~/.pi/agent/pi-run-metrics.jsonc` file:
 
 ```jsonc
 // The following schema excerpt describes the available options.
@@ -30,12 +30,12 @@ global `~/.pi/agent/pi-turn-metrics.jsonc` file:
     "mode": {
       "type": "string",
       "description": "Display mode.",
-      "enum": ["live", "notify"],
-      "default": "live",
+      "enum": ["widget", "notify"],
+      "default": "widget",
     },
-    "liveColor": {
+    "widgetColor": {
       "type": "string",
-      "description": "Color of the live widget text. Accepts any Pi theme color token or a six-digit RGB hex color such as #aabbcc.",
+      "description": "Color of the widget text. Accepts any Pi theme color token or a six-digit RGB hex color such as #aabbcc.",
       "default": "accent",
     },
     "format": {
@@ -47,7 +47,7 @@ global `~/.pi/agent/pi-turn-metrics.jsonc` file:
 }
 ```
 
-See [pi-turn-metrics.example.jsonc](pi-turn-metrics.example.jsonc) for an example configuration.
+See [pi-run-metrics.example.jsonc](pi-run-metrics.example.jsonc) for an example configuration.
 
 The project configuration replaces the global configuration completely. The global path follows Pi's agent directory if
 you customize it with `$PI_CODING_AGENT_DIR`.
@@ -61,7 +61,7 @@ Run `/reload` after changing the configuration.
 
 | Placeholder       | Description                                                      | Example      |
 | ----------------- | ---------------------------------------------------------------- | ------------ |
-| `<timetaken>`     | Elapsed turn duration, including tool execution.                 | `12s`        |
+| `<timetaken>`     | Elapsed run duration, including tool execution.                  | `12s`        |
 | `<tokps>`         | Output tokens per second of model request time, excluding tools. | `42.5 tok/s` |
 | `<input_tokens>`  | Sum of reported input tokens.                                    | `1200`       |
 | `<output_tokens>` | Sum of reported output tokens.                                   | `340`        |
@@ -71,10 +71,10 @@ Combine placeholders with any text or omit metrics you do not need. Unavailable 
 
 ## Behavior
 
-When a UI is available, pi-turn-metrics displays metrics for one agent run, including all model requests and tool calls.
+When a UI is available, pi-run-metrics displays metrics for one agent run, including all model requests and tool calls.
 Metrics reset when the next run starts.
 
-- **Live:** shows a right-aligned widget above the editor. Duration refreshes every second while the agent is running,
+- **Widget:** shows a right-aligned widget above the editor. Duration refreshes every second while the agent is running,
   including during streaming and tool execution. Token usage, speed, and cost update after completed assistant messages.
   The final summary stays visible until the next run.
 - **Notify:** sends a summary notification when the agent finishes.

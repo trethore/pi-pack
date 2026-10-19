@@ -1,7 +1,7 @@
 import type { Theme, ThemeToken } from "@earendil-works/pi-coding-agent";
 import { parseColor, styleText, visibleWidth } from "@earendil-works/pi-tui";
 import { expect, it, vi } from "vitest";
-import type { LiveColor } from "#src/colors";
+import type { WidgetColor } from "#src/colors";
 import { createTestTheme } from "#test/theme";
 import { createMetricsWidget } from "#src/widget";
 
@@ -51,9 +51,9 @@ it("aligns each line of a multiline format separately", () => {
   expect(widget.render(8)).toEqual(["      1s", "   $0.01"]);
 });
 
-it.each(["#abcdef", "#ABCDEF", "#aBcDeF"] satisfies LiveColor[])(
+it.each(["#abcdef", "#ABCDEF", "#aBcDeF"] satisfies WidgetColor[])(
   "renders %s as RGB on every line without coloring padding",
-  (liveColor) => {
+  (widgetColor) => {
     // Arrange
     const style = vi.fn<Theme["style"]>((text, { fg }) => {
       if (fg === undefined || typeof fg === "string") {
@@ -61,14 +61,14 @@ it.each(["#abcdef", "#ABCDEF", "#aBcDeF"] satisfies LiveColor[])(
       }
       return styleText(text, { fg }, "truecolor");
     });
-    const widget = createMetricsWidget("1s\n$0.01", { colors, style }, liveColor);
+    const widget = createMetricsWidget("1s\n$0.01", { colors, style }, widgetColor);
 
     // Act
     const lines = widget.render(8);
 
     // Assert
     expect(lines).toEqual(["      \u001b[38;2;171;205;239m1s\u001b[39m", "   \u001b[38;2;171;205;239m$0.01\u001b[39m"]);
-    expect(style).toHaveBeenCalledWith("1s", { fg: parseColor(liveColor) });
+    expect(style).toHaveBeenCalledWith("1s", { fg: parseColor(widgetColor) });
     expect(lines.map(visibleWidth)).toEqual([8, 8]);
   },
 );
@@ -88,10 +88,10 @@ it.each([0, 1, 2, 3, 4, 10])("keeps colored metrics within a %i-column terminal"
   expect(lines[0]?.endsWith("\u001b[39m")).toBe(true);
 });
 
-it.each(Object.keys(colors) as ThemeToken[])("renders theme token %s with a real theme", (liveColor) => {
+it.each(Object.keys(colors) as ThemeToken[])("renders theme token %s with a real theme", (widgetColor) => {
   // Arrange
   const theme = createTestTheme();
-  const widget = createMetricsWidget("1s\n$0.01", theme, liveColor);
+  const widget = createMetricsWidget("1s\n$0.01", theme, widgetColor);
 
   // Act
   const lines = widget.render(8);
@@ -103,7 +103,7 @@ it.each(Object.keys(colors) as ThemeToken[])("renders theme token %s with a real
 
 it.each(["accent", "success", "muted", "thinkingHigh", "selectedBg"] as const)(
   "resolves theme token %s again on each render",
-  (liveColor) => {
+  (widgetColor) => {
     // Arrange
     const theme = createTestTheme();
     let currentColors = theme.colors;
@@ -116,13 +116,13 @@ it.each(["accent", "success", "muted", "thinkingHigh", "selectedBg"] as const)(
           return currentColors;
         },
       },
-      liveColor,
+      widgetColor,
     );
 
     // Act / Assert
     widget.render(4);
     expect(style).toHaveBeenLastCalledWith("1s", { fg: parseColor("#abcdef") });
-    currentColors = { ...currentColors, [liveColor]: parseColor("#fedcba") };
+    currentColors = { ...currentColors, [widgetColor]: parseColor("#fedcba") };
     widget.invalidate();
     widget.render(4);
     expect(style).toHaveBeenLastCalledWith("1s", { fg: parseColor("#fedcba") });

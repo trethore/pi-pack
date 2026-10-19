@@ -1,10 +1,10 @@
 {
   // Whether the extension is enabled. Defaults to true.
   "enabled": true,
-  // Display mode. "notify" or "live"
-  "mode": "live",
-  // Color of the live widget text. Accepts any Pi theme color token or a six-digit RGB hex color such as "#aabbcc".
-  "liveColor": "accent",
+  // Display mode. "notify" or "widget"
+  "mode": "widget",
+  // Color of the widget text. Accepts any Pi theme color token or a six-digit RGB hex color such as "#aabbcc".
+  "widgetColor": "accent",
   // Format of the displayed text.
   "format": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>"
 }

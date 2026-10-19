@@ -43,7 +43,7 @@ function metricToken(name: string): string {
   return `<${name}>`;
 }
 
-export class TurnMetrics {
+export class RunMetrics {
   readonly needsSpeed: boolean;
   readonly needsUsage: boolean;
   readonly needsDuration: boolean;

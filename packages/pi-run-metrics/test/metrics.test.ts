@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { TurnMetrics } from "#src/metrics";
+import { RunMetrics } from "#src/metrics";
 
 let now: number;
 
@@ -10,9 +10,9 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks());
 
-it("aggregates only the current turn and excludes tool time from throughput", () => {
+it("aggregates only the current run and excludes tool time from throughput", () => {
   // Arrange
-  const metrics = new TurnMetrics("<cost> | <tokps> | <timetaken> | <input_tokens> | <output_tokens>");
+  const metrics = new RunMetrics("<cost> | <tokps> | <timetaken> | <input_tokens> | <output_tokens>");
   metrics.start();
   metrics.startRequest();
   now = 2000;
@@ -30,7 +30,7 @@ it("aggregates only the current turn and excludes tool time from throughput", ()
 
 it("does not reset metrics when another agent loop starts before settling", () => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens> <timetaken>");
+  const metrics = new RunMetrics("<input_tokens> <timetaken>");
   metrics.start();
   metrics.completeRequest({ usage: { input: 10 } });
   now = 1000;
@@ -43,9 +43,9 @@ it("does not reset metrics when another agent loop starts before settling", () =
   expect(metrics.render()).toBe("30 1s");
 });
 
-it("resets all counters and timers for the next user turn", () => {
+it("resets all counters and timers for the next user run", () => {
   // Arrange
-  const metrics = new TurnMetrics("<cost> <tokps> <timetaken> <input_tokens> <output_tokens>");
+  const metrics = new RunMetrics("<cost> <tokps> <timetaken> <input_tokens> <output_tokens>");
   metrics.start();
   metrics.startRequest();
   now = 1000;
@@ -74,7 +74,7 @@ it.each([
   [90061000, "25h1m1s"],
 ])("formats %i milliseconds as %s", (milliseconds, expected) => {
   // Arrange
-  const metrics = new TurnMetrics("<timetaken>");
+  const metrics = new RunMetrics("<timetaken>");
   metrics.start();
 
   // Act
@@ -86,7 +86,7 @@ it.each([
 
 it("keeps unknown placeholders and replaces repeated known placeholders", () => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens>/<input_tokens> <unknown> <ouput_tokens>");
+  const metrics = new RunMetrics("<input_tokens>/<input_tokens> <unknown> <ouput_tokens>");
   metrics.start();
 
   // Act
@@ -105,7 +105,7 @@ it.each([
   ["<COST> <cost <tokps_extra>", "<COST> <cost <tokps_extra>"],
 ])("preserves literal text and resolves exact tokens in %s", (format, expected) => {
   // Arrange
-  const metrics = new TurnMetrics(format);
+  const metrics = new RunMetrics(format);
   metrics.start();
 
   // Act
@@ -117,7 +117,7 @@ it.each([
 
 it("renders current values each time from the parsed format", () => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens>/<input_tokens> <timetaken>");
+  const metrics = new RunMetrics("<input_tokens>/<input_tokens> <timetaken>");
   metrics.start();
   metrics.completeRequest({ usage: { input: 12 } });
   expect(metrics.render()).toBe("12/12 0s");
@@ -142,7 +142,7 @@ it.each([
   ["<timetaken><tokps><cost>", true, true, true],
 ])("derives collection requirements for %s", (format, needsSpeed, needsUsage, needsDuration) => {
   // Arrange
-  const metrics = new TurnMetrics(format);
+  const metrics = new RunMetrics(format);
 
   // Act
   const requirements = {
@@ -159,7 +159,7 @@ it.each(["", "literal", "<cost>", "<input_tokens>", "<output_tokens>"])(
   "does not read a clock without timing placeholders in %s",
   (format) => {
     // Arrange
-    const metrics = new TurnMetrics(format);
+    const metrics = new RunMetrics(format);
 
     // Act
     metrics.start();
@@ -174,7 +174,7 @@ it.each(["", "literal", "<cost>", "<input_tokens>", "<output_tokens>"])(
 
 it.each(["<timetaken>", "literal"])("does not read usage for %s", (format) => {
   // Arrange
-  const metrics = new TurnMetrics(format);
+  const metrics = new RunMetrics(format);
   const usage = vi.fn(() => {
     throw new Error("Unexpected usage access");
   });
@@ -201,7 +201,7 @@ it.each([
 ])("reads only the dependencies of %s", (format, expected) => {
   // Arrange
   const fields: string[] = [];
-  const metrics = new TurnMetrics(format);
+  const metrics = new RunMetrics(format);
   const usage = {
     get input() {
       fields.push("input");
@@ -230,7 +230,7 @@ it.each([
 
 it("marks incomplete totals unavailable instead of silently undercounting", () => {
   // Arrange
-  const metrics = new TurnMetrics("<cost> <tokps> <input_tokens> <output_tokens>");
+  const metrics = new RunMetrics("<cost> <tokps> <input_tokens> <output_tokens>");
   metrics.start();
   metrics.startRequest();
   now = 1000;
@@ -247,7 +247,7 @@ it("marks incomplete totals unavailable instead of silently undercounting", () =
 
 it.each([NaN, Infinity, -1])("does not display invalid provider values: %s", (value) => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens> <output_tokens> <cost>");
+  const metrics = new RunMetrics("<input_tokens> <output_tokens> <cost>");
   metrics.start();
 
   // Act
@@ -259,7 +259,7 @@ it.each([NaN, Infinity, -1])("does not display invalid provider values: %s", (va
 
 it.each(["error", "aborted"])("does not treat zero-filled %s usage as real usage", (stopReason) => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens> <output_tokens> <cost>");
+  const metrics = new RunMetrics("<input_tokens> <output_tokens> <cost>");
   metrics.start();
 
   // Act
@@ -271,7 +271,7 @@ it.each(["error", "aborted"])("does not treat zero-filled %s usage as real usage
 
 it("retains provider-reported partial usage on an aborted request", () => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens> <output_tokens> <cost>");
+  const metrics = new RunMetrics("<input_tokens> <output_tokens> <cost>");
   metrics.start();
 
   // Act
@@ -286,7 +286,7 @@ it("retains provider-reported partial usage on an aborted request", () => {
 
 it("avoids division by zero and accepts legitimate zero usage", () => {
   // Arrange
-  const metrics = new TurnMetrics("<tokps> <input_tokens> <output_tokens> <cost>");
+  const metrics = new RunMetrics("<tokps> <input_tokens> <output_tokens> <cost>");
   metrics.start();
   metrics.startRequest();
 
@@ -297,9 +297,9 @@ it("avoids division by zero and accepts legitimate zero usage", () => {
   expect(metrics.render()).toBe("N/A 0 0 $0.0000");
 });
 
-it("ignores usage outside an active turn", () => {
+it("ignores usage outside an active run", () => {
   // Arrange
-  const metrics = new TurnMetrics("<input_tokens>");
+  const metrics = new RunMetrics("<input_tokens>");
 
   // Act
   metrics.completeRequest({ usage: { input: 10 } });

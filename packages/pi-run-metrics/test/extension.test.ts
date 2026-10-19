@@ -29,7 +29,7 @@ let agentDir: string;
 let now: number;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "pi-turn-metrics-"));
+  root = await mkdtemp(join(tmpdir(), "pi-run-metrics-"));
   cwd = join(root, "project");
   agentDir = join(root, "agent");
   vi.stubEnv("PI_CODING_AGENT_DIR", agentDir);
@@ -49,7 +49,7 @@ afterEach(async () => {
 });
 
 async function configure(config: Record<string, unknown>): Promise<void> {
-  await writeFile(join(cwd, ".pi", "pi-turn-metrics.jsonc"), JSON.stringify(config));
+  await writeFile(join(cwd, ".pi", "pi-run-metrics.jsonc"), JSON.stringify(config));
 }
 
 type AssistantMessage = Extract<MessageEndEvent["message"], { role: "assistant" }>;
@@ -141,13 +141,13 @@ it("provides all defaults without a config file", async () => {
   // Assert
   expect(config).toEqual({
     enabled: true,
-    mode: "live",
-    liveColor: "accent",
+    mode: "widget",
+    widgetColor: "accent",
     format: "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>",
   });
 });
 
-it("shows live metrics and refreshes duration without a config file", async () => {
+it("shows widget metrics and refreshes duration without a config file", async () => {
   // Arrange
   const extension = harness();
   await extension.emit(Events.SessionStart);
@@ -169,7 +169,7 @@ it("shows live metrics and refreshes duration without a config file", async () =
 it("accepts global JSONC and lets project configuration replace it", async () => {
   // Arrange
   await writeFile(
-    join(agentDir, "pi-turn-metrics.jsonc"),
+    join(agentDir, "pi-run-metrics.jsonc"),
     '{ // summary metrics\n "mode": "notify", "format": "<cost>", }',
   );
 
@@ -179,16 +179,17 @@ it("accepts global JSONC and lets project configuration replace it", async () =>
   const project = await loadConfig(cwd, { projectTrusted: true, agentDir });
 
   // Assert
-  expect(global).toEqual({ enabled: true, mode: "notify", format: "<cost>", liveColor: "accent" });
-  expect(project).toMatchObject({ enabled: false, mode: "live" });
+  expect(global).toEqual({ enabled: true, mode: "notify", format: "<cost>", widgetColor: "accent" });
+  expect(project).toMatchObject({ enabled: false, mode: "widget" });
   expect(project.format).toContain("<tokps>");
-  expect(project.liveColor).toBe("accent");
+  expect(project.widgetColor).toBe("accent");
 });
 
 it.each([
   [{ enabled: "false" }, "enabled must be a boolean"],
-  [{ mode: "other" }, 'mode must be "notify" or "live"'],
-  [{ mode: null }, 'mode must be "notify" or "live"'],
+  [{ mode: "other" }, 'mode must be "notify" or "widget"'],
+  [{ mode: "live" }, 'mode must be "notify" or "widget"'],
+  [{ mode: null }, 'mode must be "notify" or "widget"'],
   [{ format: 1 }, "format must be a string"],
   [{ format: null }, "format must be a string"],
 ])("rejects invalid configuration %j", async (config, reason) => {
@@ -200,17 +201,17 @@ it.each([
 });
 
 it.each([...Object.keys(theme.colors), "#abcdef", "#ABCDEF", "#aBcDeF", "#000000", "#FFFFFF"])(
-  "accepts liveColor %s without warnings",
-  async (liveColor) => {
+  "accepts widgetColor %s without warnings",
+  async (widgetColor) => {
     // Arrange
-    await configure({ liveColor });
+    await configure({ widgetColor });
     const onWarning = vi.fn();
 
     // Act
     const config = await loadConfig(cwd, { projectTrusted: true, agentDir, onWarning });
 
     // Assert
-    expect(config.liveColor).toBe(liveColor);
+    expect(config.widgetColor).toBe(widgetColor);
     expect(onWarning).not.toHaveBeenCalled();
   },
 );
@@ -234,21 +235,21 @@ it.each([
   "#gggggg",
   " #abcdef",
   "#abcdef\n",
-])("rejects invalid liveColor %j", async (liveColor) => {
+])("rejects invalid widgetColor %j", async (widgetColor) => {
   // Arrange
-  await configure({ liveColor });
+  await configure({ widgetColor });
 
   // Act / Assert
   await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
-    "liveColor must be a theme color token or a hex color in #rrggbb format",
+    "widgetColor must be a theme color token or a hex color in #rrggbb format",
   );
 });
 
 it.each([undefined, ...Object.keys(theme.colors), "#abcdef", "#ABCDEF"])(
-  "applies liveColor %s to the live widget",
-  async (liveColor) => {
+  "applies widgetColor %s to the widget",
+  async (widgetColor) => {
     // Arrange
-    await configure({ mode: "live", format: "metrics", liveColor });
+    await configure({ mode: "widget", format: "metrics", widgetColor });
     const extension = harness();
     const style = vi.fn<Theme["style"]>((text) => `\u001b[36m${text}\u001b[39m`);
     await extension.emit(Events.SessionStart);
@@ -259,7 +260,7 @@ it.each([undefined, ...Object.keys(theme.colors), "#abcdef", "#ABCDEF"])(
     const lines = renderWidget(extension.setWidget.mock.lastCall?.[1], 10, { style, colors });
 
     // Assert
-    const color = liveColor ?? "accent";
+    const color = widgetColor ?? "accent";
     const expectedColor = color.startsWith("#") ? parseColor(color) : colors[color as keyof typeof colors];
     expect(style).toHaveBeenCalledWith("metrics", { fg: expectedColor });
     expect(lines).toEqual(["   \u001b[36mmetrics\u001b[39m"]);
@@ -267,9 +268,9 @@ it.each([undefined, ...Object.keys(theme.colors), "#abcdef", "#ABCDEF"])(
   },
 );
 
-it("does not apply liveColor to notifications", async () => {
+it("does not apply widgetColor to notifications", async () => {
   // Arrange
-  await configure({ mode: "notify", liveColor: "#abcdef", format: "metrics" });
+  await configure({ mode: "notify", widgetColor: "#abcdef", format: "metrics" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
 
@@ -366,9 +367,9 @@ it("starts fresh after settling without counting idle time or other message role
   expect(extension.notify).toHaveBeenLastCalledWith("10/5 1s", "info");
 });
 
-it("updates one live widget after model responses and tools, then retains final values", async () => {
+it("updates one widget after model responses and tools, then retains final values", async () => {
   // Arrange
-  await configure({ mode: "live", format: "<input_tokens> <timetaken>" });
+  await configure({ mode: "widget", format: "<input_tokens> <timetaken>" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
 
@@ -387,7 +388,7 @@ it("updates one live widget after model responses and tools, then retains final 
     extension.setWidget.mock.calls.map(([key, content, options]) => [key, renderWidget(content), options]),
   ).toEqual(
     ["0 0s", "100 1s", "100 3s", "100 4s", "300 5s"].map((text) => [
-      "pi-turn-metrics",
+      "pi-run-metrics",
       [text.padStart(80)],
       { placement: "aboveEditor" },
     ]),
@@ -404,7 +405,7 @@ it("updates one live widget after model responses and tools, then retains final 
 
 it("refreshes elapsed time every second while retaining completed request metrics", async () => {
   // Arrange
-  await configure({ mode: "live", format: "<timetaken> <tokps> <input_tokens> <output_tokens> <cost>" });
+  await configure({ mode: "widget", format: "<timetaken> <tokps> <input_tokens> <output_tokens> <cost>" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -435,7 +436,7 @@ it("refreshes elapsed time every second while retaining completed request metric
 
 it("keeps one unreferenced timer across agent loops without resetting its cadence", async () => {
   // Arrange
-  await configure({ mode: "live", format: "<timetaken>" });
+  await configure({ mode: "widget", format: "<timetaken>" });
   const extension = harness();
   const setInterval = vi.spyOn(globalThis, "setInterval");
   await extension.emit(Events.SessionStart);
@@ -463,7 +464,7 @@ it("keeps one unreferenced timer across agent loops without resetting its cadenc
 
 it("skips unchanged widget text across timer and lifecycle updates", async () => {
   // Arrange
-  await configure({ mode: "live", format: "<timetaken>" });
+  await configure({ mode: "widget", format: "<timetaken>" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -486,7 +487,7 @@ it.each([false, true])(
   "freezes the final duration on settlement and restarts for the next run (aborted=%s)",
   async (aborted) => {
     // Arrange
-    await configure({ mode: "live", format: "<timetaken>" });
+    await configure({ mode: "widget", format: "<timetaken>" });
     const extension = harness();
     await extension.emit(Events.SessionStart);
     await extension.emit(Events.AgentStart);
@@ -513,10 +514,10 @@ it.each([false, true])(
 
 it.each([
   { mode: "notify", format: "<timetaken>" },
-  { mode: "live", format: "literal" },
-  { mode: "live", format: "<cost>" },
-  { mode: "live", format: "<tokps>" },
-  { mode: "live", enabled: false, format: "<timetaken>" },
+  { mode: "widget", format: "literal" },
+  { mode: "widget", format: "<cost>" },
+  { mode: "widget", format: "<tokps>" },
+  { mode: "widget", enabled: false, format: "<timetaken>" },
 ])("does not start a refresh timer for %j", async (config) => {
   // Arrange
   await configure(config);
@@ -532,12 +533,12 @@ it.each([
 
 it.each([true, false, "invalid"])("stops the old refresh timer before reloading enabled=%s", async (enabled) => {
   // Arrange
-  await configure({ mode: "live", format: "<timetaken>" });
+  await configure({ mode: "widget", format: "<timetaken>" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
   expect(vi.getTimerCount()).toBe(1);
-  await configure({ mode: "live", format: "<timetaken>", enabled });
+  await configure({ mode: "widget", format: "<timetaken>", enabled });
 
   // Act
   const reload = extension.emit(Events.SessionStart);
@@ -552,7 +553,7 @@ it.each([true, false, "invalid"])("stops the old refresh timer before reloading 
   // Assert
   expect(vi.getTimerCount()).toBe(0);
   expect(extension.setWidget).toHaveBeenCalledTimes(2);
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
   await extension.emit(Events.AgentStart);
   expect(vi.getTimerCount()).toBe(enabled === true ? 1 : 0);
   if (enabled === true) {
@@ -562,7 +563,7 @@ it.each([true, false, "invalid"])("stops the old refresh timer before reloading 
 
 it.each([false, true])("registers no metric handlers when disabled (hasUI=%s)", async (hasUI) => {
   // Arrange
-  await configure({ enabled: false, mode: "live" });
+  await configure({ enabled: false, mode: "widget" });
   const extension = harness(hasUI);
 
   // Act
@@ -581,7 +582,7 @@ it.each([false, true])("registers no metric handlers when disabled (hasUI=%s)", 
 
 it("does not track metrics without a UI", async () => {
   // Arrange
-  await configure({ mode: "live" });
+  await configure({ mode: "widget" });
   const extension = harness(false);
 
   // Act
@@ -617,7 +618,7 @@ it.each([
 
 it("removes old handlers and widgets before reloading disabled configuration", async () => {
   // Arrange
-  await configure({ mode: "live" });
+  await configure({ mode: "widget" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -631,7 +632,7 @@ it("removes old handlers and widgets before reloading disabled configuration", a
   await extension.emit(Events.AgentStart);
 
   // Assert
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
   expect(extension.notify).not.toHaveBeenCalled();
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
   expect(performance.now).not.toHaveBeenCalled();
@@ -653,9 +654,9 @@ it("reloads configuration without duplicating subscriptions", async () => {
   expect(extension.notify.mock.calls).toEqual([["20", "info"]]);
 });
 
-it("stops refreshing and clears the live widget on shutdown", async () => {
+it("stops refreshing and clears the widget on shutdown", async () => {
   // Arrange
-  await configure({ mode: "live" });
+  await configure({ mode: "widget" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -670,7 +671,7 @@ it("stops refreshing and clears the live widget on shutdown", async () => {
   // Assert
   expect(vi.getTimerCount()).toBe(0);
   expect(extension.setWidget).toHaveBeenCalledTimes(2);
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
 });
 
 it("stays inactive when configuration loading fails", async () => {
@@ -683,8 +684,8 @@ it("stays inactive when configuration loading fails", async () => {
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
 });
 
-it.each(["notify", "live"])(
-  "runs a tool-using turn through Pi's real loader and lifecycle in %s mode",
+it.each(["notify", "widget"])(
+  "runs a tool-using run through Pi's real loader and lifecycle in %s mode",
   async (mode) => {
     // Arrange
     await configure({ mode });
@@ -789,7 +790,7 @@ it.each(["notify", "live"])(
         expect(setWidget).not.toHaveBeenCalled();
       } else {
         expect(notify).not.toHaveBeenCalled();
-        expect(setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", expect.any(Function), {
+        expect(setWidget).toHaveBeenLastCalledWith("pi-run-metrics", expect.any(Function), {
           placement: "aboveEditor",
         });
         expect(renderWidget(setWidget.mock.lastCall?.[1])).toEqual([expected.padStart(80)]);
@@ -803,7 +804,7 @@ it.each(["notify", "live"])(
 
 it.each([true, false])("warns about unknown entries even when enabled is %s", async (enabled) => {
   // Arrange
-  await configure({ enabled, mod: "live" });
+  await configure({ enabled, mod: "widget" });
   const extension = harness();
 
   // Act
@@ -811,17 +812,17 @@ it.each([true, false])("warns about unknown entries even when enabled is %s", as
 
   // Assert
   expect(extension.notify.mock.calls).toEqual([
-    [`pi-turn-metrics: ${join(cwd, ".pi", "pi-turn-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
+    [`pi-run-metrics: ${join(cwd, ".pi", "pi-run-metrics.jsonc")}: Unknown configuration entries: "mod".`, "warning"],
   ]);
-  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({ enabled, mode: "live" });
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({ enabled, mode: "widget" });
 });
 
 it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
   "uses global metrics without reading untrusted project configuration %s",
   async (source) => {
     // Arrange
-    await writeFile(join(agentDir, "pi-turn-metrics.jsonc"), '{"mode":"notify","format":"Global metrics"}');
-    await writeFile(join(cwd, ".pi", "pi-turn-metrics.jsonc"), source);
+    await writeFile(join(agentDir, "pi-run-metrics.jsonc"), '{"mode":"notify","format":"Global metrics"}');
+    await writeFile(join(cwd, ".pi", "pi-run-metrics.jsonc"), source);
     const extension = harness();
     extension.isProjectTrusted.mockReturnValue(false);
 
@@ -837,8 +838,8 @@ it.each(['{"enabled":false,"unknown":true}', "{invalid"])(
 
 it("clears trusted project widgets and handlers when reloading untrusted", async () => {
   // Arrange
-  await writeFile(join(agentDir, "pi-turn-metrics.jsonc"), '{"enabled":false}');
-  await configure({ mode: "live" });
+  await writeFile(join(agentDir, "pi-run-metrics.jsonc"), '{"enabled":false}');
+  await configure({ mode: "widget" });
   const extension = harness();
   await extension.emit(Events.SessionStart);
   await extension.emit(Events.AgentStart);
@@ -849,7 +850,7 @@ it("clears trusted project widgets and handlers when reloading untrusted", async
   await extension.emit(Events.AgentStart);
 
   // Assert
-  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
+  expect(extension.setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
   expect(extension.notify).not.toHaveBeenCalled();
 });
@@ -858,13 +859,13 @@ it("validates tokens against the supplied theme rather than a fixed list", async
   // Arrange
   const colors = { ...theme.colors, futureToken: parseColor("#123456") };
   const loadThemeConfig = createMetricsConfigLoader({ colors });
-  await configure({ liveColor: "futureToken" });
+  await configure({ widgetColor: "futureToken" });
 
   // Act / Assert
   await expect(loadThemeConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({
-    liveColor: "futureToken",
+    widgetColor: "futureToken",
   });
   await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
-    "liveColor must be a theme color token or a hex color in #rrggbb format",
+    "widgetColor must be a theme color token or a hex color in #rrggbb format",
   );
 });

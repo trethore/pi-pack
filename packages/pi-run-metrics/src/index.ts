@@ -2,7 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { Events } from "@pi-pack/shared/events";
 import { createMetricsConfigLoader } from "#src/config";
 import { EXTENSION_NAME } from "#src/constants";
-import { TurnMetrics } from "#src/metrics";
+import { RunMetrics } from "#src/metrics";
 import { createMetricsWidget } from "#src/widget";
 
 export default function metrics(pi: ExtensionAPI): void {
@@ -39,19 +39,19 @@ export default function metrics(pi: ExtensionAPI): void {
       return;
     }
 
-    const turn = new TurnMetrics(config.format);
-    const live = config.mode === "live";
+    const run = new RunMetrics(config.format);
+    const widgetMode = config.mode === "widget";
     let lastText: string | undefined;
 
     function updateWidget(context: ExtensionContext): void {
-      if (!live || !turn.active) {
+      if (!widgetMode || !run.active) {
         return;
       }
-      const text = turn.render();
+      const text = run.render();
       if (widgetVisible && text === lastText) {
         return;
       }
-      context.ui.setWidget(EXTENSION_NAME, (_tui, theme) => createMetricsWidget(text, theme, config.liveColor), {
+      context.ui.setWidget(EXTENSION_NAME, (_tui, theme) => createMetricsWidget(text, theme, config.widgetColor), {
         placement: "aboveEditor",
       });
       widgetVisible = true;
@@ -60,47 +60,47 @@ export default function metrics(pi: ExtensionAPI): void {
 
     subscriptions.push(
       pi.on(Events.AgentStart, (_event, context) => {
-        turn.start();
+        run.start();
         updateWidget(context);
-        if (live && turn.needsDuration && refreshTimer === undefined) {
+        if (widgetMode && run.needsDuration && refreshTimer === undefined) {
           refreshTimer = setInterval(() => updateWidget(context), 1000);
           refreshTimer.unref();
         }
       }),
       pi.on(Events.AgentSettled, (_event, context) => {
         stopRefresh();
-        if (!turn.active) {
+        if (!run.active) {
           return;
         }
-        if (live) {
+        if (widgetMode) {
           updateWidget(context);
         } else {
-          context.ui.notify(turn.render(), "info");
+          context.ui.notify(run.render(), "info");
         }
-        turn.active = false;
+        run.active = false;
       }),
     );
 
-    if (turn.needsSpeed) {
-      subscriptions.push(pi.on(Events.BeforeProviderRequest, () => turn.startRequest()));
+    if (run.needsSpeed) {
+      subscriptions.push(pi.on(Events.BeforeProviderRequest, () => run.startRequest()));
     }
-    if (turn.needsUsage || live) {
+    if (run.needsUsage || widgetMode) {
       subscriptions.push(
         pi.on(Events.MessageEnd, (event, context) => {
-          if (event.message.role !== "assistant" || !turn.active) {
+          if (event.message.role !== "assistant" || !run.active) {
             return;
           }
-          turn.completeRequest(event.message);
+          run.completeRequest(event.message);
           updateWidget(context);
         }),
       );
     }
-    if (live) {
+    if (widgetMode) {
       subscriptions.push(
         pi.on(Events.ToolExecutionEnd, (_event, context) => updateWidget(context)),
         pi.on(Events.SessionShutdown, (_event, context) => {
           stopRefresh();
-          turn.active = false;
+          run.active = false;
           clearWidget(context);
         }),
       );
