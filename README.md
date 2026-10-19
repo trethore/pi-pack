@@ -6,13 +6,13 @@ Requires Pi `1.3.0` or a compatible later release.
 
 ## Extensions
 
-### [pi-run-metrics](packages/pi-run-metrics/README.md)
-
-Display run metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
-
 ### [pi-openai](packages/pi-openai/README.md)
 
 Configure OpenAI-compatible request parameters via layered settings, environment variables, and commands.
+
+### [pi-run-metrics](packages/pi-run-metrics/README.md)
+
+Display run metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
 
 ### [pi-script-placeholders](packages/pi-script-placeholders/README.md)
 

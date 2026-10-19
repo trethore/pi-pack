@@ -8,8 +8,8 @@ Here is an overview of the project:
 
 ```text
 packages/
-  pi-run-metrics/
   pi-openai/
+  pi-run-metrics/
   pi-script-placeholders/
   pi-whimsical/
   shared/
