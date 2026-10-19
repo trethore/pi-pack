@@ -24,7 +24,7 @@ export interface ConfigWarningOptions {
   onWarning?: (message: string) => void;
 }
 
-interface ConfigLoadOptions extends ConfigWarningOptions {
+export interface ConfigLoadOptions extends ConfigWarningOptions {
   projectTrusted: boolean;
   agentDir?: string;
 }

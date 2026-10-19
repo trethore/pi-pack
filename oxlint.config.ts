@@ -43,6 +43,14 @@ export default defineConfig({
   },
   overrides: [
     {
+      files: ["packages/monkey-patching/src/template-patch.ts"],
+      rules: {
+        "no-underscore-dangle": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/unbound-method": "off",
+      },
+    },
+    {
       files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
       rules: {
         "no-undef": "off",

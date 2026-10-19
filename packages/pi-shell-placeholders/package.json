@@ -1,0 +1,37 @@
+{
+  "name": "pi-shell-placeholders",
+  "version": "0.1.0",
+  "description": "Expand shell placeholders with their output in system prompts and invoked prompt templates.",
+  "dependencies": {
+    "@pi-pack/monkey-patching": "0.1.0",
+    "@pi-pack/shared": "0.1.0"
+  },
+  "files": [
+    "pi-shell-placeholders.example.jsonc",
+    "src"
+  ],
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "keywords": [
+    "pi-extension",
+    "pi-package"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.3.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "dev": "pi -e ."
+  },
+  "type": "module",
+  "devDependencies": {
+    "@earendil-works/pi-ai": "1.3.0"
+  }
+}

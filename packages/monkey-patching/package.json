@@ -1,0 +1,22 @@
+{
+  "name": "@pi-pack/monkey-patching",
+  "version": "0.1.0",
+  "description": "Isolated, version-checked runtime modifications for Pi extensions.",
+  "exports": {
+    "./prompt-templates": "./src/prompt-templates.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "imports": {
+    "#src/*": "./src/*.ts"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.3.0"
+  },
+  "type": "module",
+  "dependencies": {
+    "@pi-pack/shared": "0.1.0"
+  }
+}
