@@ -1,13 +1,19 @@
 {
+  // Whether the extension is enabled
   "enabled": true,
+  // Prompt surfaces to evaluate.
   "surfaces": {
     "system": true,
     "appendSystem": true,
     "promptTemplates": true
   },
+  // Command execution settings. Limits apply per placeholder.
   "execution": {
+    // Absolute path to a shell that accepts -c.
     "shell": "/bin/sh",
+    // Execution timeout per placeholder, in milliseconds.
     "timeoutMs": 3000,
+    // Limit on stdout per placeholder, counted in Unicode code points. Overflow is treated as failure.
     "maxOutputChars": 1000
   }
 }

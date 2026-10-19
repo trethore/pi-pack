@@ -16,7 +16,9 @@
   },
   "keywords": [
     "pi-extension",
-    "pi-package"
+    "pi-package",
+    "shell",
+    "placeholders"
   ],
   "license": "MIT",
   "peerDependencies": {
