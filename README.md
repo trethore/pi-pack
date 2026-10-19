@@ -14,10 +14,6 @@ Configure OpenAI-compatible request parameters via layered settings, environment
 
 Display run metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
 
-### [pi-script-placeholders](packages/pi-script-placeholders/README.md)
-
-Replace `{{name}}` placeholders with cached script output in system prompts and prompt templates.
-
 ### [pi-whimsical](packages/pi-whimsical/README.md)
 
 Replace Pi's working message with a random whimsical message.
