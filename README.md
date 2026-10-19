@@ -2,7 +2,7 @@
 
 Monorepo for the pi extensions I develop.
 
-Requires Pi `1.3.0` or a compatible later release.
+Requires Pi `1.3.0` or a compatible later release. See each extension's README for compatibility details.
 
 ## Extensions
 
@@ -13,6 +13,10 @@ Configure OpenAI-compatible request parameters via layered settings, environment
 ### [pi-run-metrics](packages/pi-run-metrics/README.md)
 
 Display run metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
+
+### [pi-shell-placeholders](packages/pi-shell-placeholders/README.md)
+
+Expand shell placeholders with their output in system prompts and invoked prompt templates.
 
 ### [pi-whimsical](packages/pi-whimsical/README.md)
 
