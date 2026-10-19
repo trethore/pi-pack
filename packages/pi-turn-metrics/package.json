@@ -1,7 +1,7 @@
 {
   "name": "pi-turn-metrics",
   "version": "0.1.0",
-  "description": "Display turn metrics like token usage, speed, duration, and estimated cost through notifications or live updates.",
+  "description": "Display turn metrics like token usage, speed, duration, and estimated cost through a widget or notifications.",
   "dependencies": {
     "@pi-pack/shared": "0.1.0"
   },
@@ -13,7 +13,8 @@
     "src"
   ],
   "imports": {
-    "#src/*": "./src/*.ts"
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
   },
   "keywords": [
     "metrics",

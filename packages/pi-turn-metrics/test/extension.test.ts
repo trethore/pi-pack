@@ -16,8 +16,12 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { parseColor } from "@earendil-works/pi-tui";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { loadConfig } from "#src/config";
+import { createTestTheme } from "#test/theme";
+import { createMetricsConfigLoader } from "#src/config";
 import metrics from "#src/index";
+
+const theme = createTestTheme();
+const loadConfig = createMetricsConfigLoader(theme);
 
 let root: string;
 let cwd: string;
@@ -78,12 +82,12 @@ type WidgetFactory = Exclude<Parameters<ExtensionUIContext["setWidget"]>[1], und
 function renderWidget(
   factory: WidgetFactory | undefined,
   width = 80,
-  theme: Pick<Theme, "style"> = { style: (text) => text },
+  widgetTheme: Pick<Theme, "style" | "colors"> = { colors: createTestTheme().colors, style: (text) => text },
 ): string[] {
   if (!factory) {
     throw new Error("Missing metrics widget");
   }
-  const component = factory({} as Parameters<WidgetFactory>[0], theme as Theme);
+  const component = factory({} as Parameters<WidgetFactory>[0], widgetTheme as Theme);
   return component.render(width);
 }
 
@@ -93,7 +97,7 @@ function harness(hasUI = true) {
   const notify = vi.fn();
   const setWidget = vi.fn<ExtensionUIContext["setWidget"]>();
   const isProjectTrusted = vi.fn(() => true);
-  const ctx = { cwd, hasUI, isProjectTrusted, ui: { notify, setWidget } } as unknown as ExtensionContext;
+  const ctx = { cwd, hasUI, isProjectTrusted, ui: { notify, setWidget, theme } } as unknown as ExtensionContext;
   const api = {
     on(name: string, handler: Handler) {
       let entries = handlers.get(name);
@@ -195,7 +199,7 @@ it.each([
   await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(reason);
 });
 
-it.each(["accent", "#abcdef", "#ABCDEF", "#aBcDeF", "#000000", "#FFFFFF"])(
+it.each([...Object.keys(theme.colors), "#abcdef", "#ABCDEF", "#aBcDeF", "#000000", "#FFFFFF"])(
   "accepts liveColor %s without warnings",
   async (liveColor) => {
     // Arrange
@@ -211,37 +215,57 @@ it.each(["accent", "#abcdef", "#ABCDEF", "#aBcDeF", "#000000", "#FFFFFF"])(
   },
 );
 
-it.each([null, false, 123456, "", "red", "#abc", "#12345678", "123456", "#gggggg", " #abcdef", "#abcdef\n"])(
-  "rejects invalid liveColor %j",
+it.each([
+  null,
+  false,
+  123456,
+  "",
+  "red",
+  "Accent",
+  "unknownToken",
+  "toString",
+  "constructor",
+  "__proto__",
+  " accent",
+  "accent ",
+  "#abc",
+  "#12345678",
+  "123456",
+  "#gggggg",
+  " #abcdef",
+  "#abcdef\n",
+])("rejects invalid liveColor %j", async (liveColor) => {
+  // Arrange
+  await configure({ liveColor });
+
+  // Act / Assert
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
+    "liveColor must be a theme color token or a hex color in #rrggbb format",
+  );
+});
+
+it.each([undefined, ...Object.keys(theme.colors), "#abcdef", "#ABCDEF"])(
+  "applies liveColor %s to the live widget",
   async (liveColor) => {
     // Arrange
-    await configure({ liveColor });
+    await configure({ mode: "live", format: "metrics", liveColor });
+    const extension = harness();
+    const style = vi.fn<Theme["style"]>((text) => `\u001b[36m${text}\u001b[39m`);
+    await extension.emit(Events.SessionStart);
 
-    // Act / Assert
-    await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
-      'liveColor must be "accent" or a hex color in #rrggbb format',
-    );
+    // Act
+    await extension.emit(Events.AgentStart);
+    const colors = createTestTheme().colors;
+    const lines = renderWidget(extension.setWidget.mock.lastCall?.[1], 10, { style, colors });
+
+    // Assert
+    const color = liveColor ?? "accent";
+    const expectedColor = color.startsWith("#") ? parseColor(color) : colors[color as keyof typeof colors];
+    expect(style).toHaveBeenCalledWith("metrics", { fg: expectedColor });
+    expect(lines).toEqual(["   \u001b[36mmetrics\u001b[39m"]);
+    expect(extension.notify).not.toHaveBeenCalled();
   },
 );
-
-it.each([undefined, "accent", "#abcdef", "#ABCDEF"])("applies liveColor %s to the live widget", async (liveColor) => {
-  // Arrange
-  await configure({ mode: "live", format: "metrics", liveColor });
-  const extension = harness();
-  const style = vi.fn<Theme["style"]>((text) => `\u001b[36m${text}\u001b[39m`);
-  await extension.emit(Events.SessionStart);
-
-  // Act
-  await extension.emit(Events.AgentStart);
-  const lines = renderWidget(extension.setWidget.mock.lastCall?.[1], 10, { style });
-
-  // Assert
-  expect(style).toHaveBeenCalledWith("metrics", {
-    fg: !liveColor || liveColor === "accent" ? "accent" : parseColor(liveColor),
-  });
-  expect(lines).toEqual(["   \u001b[36mmetrics\u001b[39m"]);
-  expect(extension.notify).not.toHaveBeenCalled();
-});
 
 it("does not apply liveColor to notifications", async () => {
   // Arrange
@@ -747,7 +771,7 @@ it.each(["notify", "live"])(
 
     try {
       await session.bindExtensions({
-        uiContext: { notify, setWidget } as unknown as ExtensionUIContext,
+        uiContext: { notify, setWidget, theme } as unknown as ExtensionUIContext,
         onError: errors,
       });
 
@@ -828,4 +852,19 @@ it("clears trusted project widgets and handlers when reloading untrusted", async
   expect(extension.setWidget).toHaveBeenLastCalledWith("pi-turn-metrics", undefined);
   expect([...extension.handlers.keys()]).toEqual(["session_start"]);
   expect(extension.notify).not.toHaveBeenCalled();
+});
+
+it("validates tokens against the supplied theme rather than a fixed list", async () => {
+  // Arrange
+  const colors = { ...theme.colors, futureToken: parseColor("#123456") };
+  const loadThemeConfig = createMetricsConfigLoader({ colors });
+  await configure({ liveColor: "futureToken" });
+
+  // Act / Assert
+  await expect(loadThemeConfig(cwd, { projectTrusted: true, agentDir })).resolves.toMatchObject({
+    liveColor: "futureToken",
+  });
+  await expect(loadConfig(cwd, { projectTrusted: true, agentDir })).rejects.toThrow(
+    "liveColor must be a theme color token or a hex color in #rrggbb format",
+  );
 });

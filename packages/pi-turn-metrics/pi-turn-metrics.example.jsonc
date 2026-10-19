@@ -1,6 +1,6 @@
 {
   "enabled": true,
   "mode": "live", // "notify" or "live"
-  "liveColor": "accent", // Live mode only: current theme accent, or a six-digit hex color like "#aabbcc" or "#AABBCC"
+  "liveColor": "accent", // Live mode only: any theme color token (e.g. "success", "muted"), or an RGB hex color like "#aabbcc"
   "format": "<timetaken> | <tokps> | \u2191 <input_tokens> \u2193 <output_tokens> | <cost>"
 }

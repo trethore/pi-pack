@@ -8,7 +8,7 @@ Requires Pi `1.3.0` or a compatible later release.
 
 ### [pi-turn-metrics](packages/pi-turn-metrics/README.md)
 
-Display turn metrics like token usage, speed, duration, and estimated cost through notifications or live updates.
+Display turn metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
 
 ### [pi-openai](packages/pi-openai/README.md)
 

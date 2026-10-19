@@ -1,6 +1,6 @@
 # pi-turn-metrics
 
-Display turn metrics like token usage, speed, duration, and estimated cost through notifications or live updates.
+Display turn metrics like token usage, speed, duration, and estimated cost through a widget or notifications.
 
 ## Installation
 
@@ -30,8 +30,10 @@ No configuration is required. To customize it, create `.pi/pi-turn-metrics.jsonc
 - `enabled`: defaults to `true`. Set to `false` to disable pi-turn-metrics.
 - `mode`: defaults to `"live"`, which shows metrics above the editor. Use `"notify"` for a summary notification when the
   agent finishes instead.
-- `liveColor`: defaults to `"accent"`, which follows the current theme's accent color. Override it with a six-digit hex
-  color such as `"#aabbcc"` or `"#AABBCC"`. Applies only to `"live"` mode.
+- `liveColor`: defaults to `"accent"`. Accepts any Pi theme color token, such as `"success"`, `"muted"`, `"mdHeading"`,
+  or `"thinkingHigh"`, or a six-digit RGB hex color such as `"#aabbcc"` or `"#AABBCC"`. Theme tokens follow the current
+  theme. Background tokens such as `"selectedBg"` use that color for the widget text, not its background. Applies only
+  to `"live"` mode.
 - `format`: controls the displayed text. The example above uses the default format.
 
 The project configuration replaces the global configuration completely. The global path follows Pi's agent directory if

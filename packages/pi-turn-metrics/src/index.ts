@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/shared/events";
-import { loadConfig } from "#src/config";
+import { createMetricsConfigLoader } from "#src/config";
 import { EXTENSION_NAME } from "#src/constants";
 import { TurnMetrics } from "#src/metrics";
 import { createMetricsWidget } from "#src/widget";
@@ -33,6 +33,7 @@ export default function metrics(pi: ExtensionAPI): void {
     }
     subscriptions = [];
     clearWidget(ctx);
+    const loadConfig = createMetricsConfigLoader(ctx.ui.theme);
     const config = await loadConfig(ctx.cwd, { projectTrusted: ctx.isProjectTrusted(), ui: ctx.ui });
     if (!config.enabled || !ctx.hasUI) {
       return;
