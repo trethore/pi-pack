@@ -2,7 +2,7 @@
 
 Monorepo for the pi extensions I develop.
 
-Requires Pi `1.3.0` or a compatible later release. See each extension's README for compatibility details.
+Requires Pi `1.4.0` or a compatible later release. See each extension's README for compatibility details.
 
 ## Extensions
 

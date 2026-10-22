@@ -4,7 +4,7 @@ Expand shell placeholders with their output in system prompts and invoked prompt
 
 ## Installation
 
-Requires Pi `1.3.0` for full support. Prompt-template expansion uses version-checked runtime patches and is disabled
+Requires Pi `1.4.0` for full support. Prompt-template expansion uses version-checked runtime patches and is disabled
 with a warning on other versions or incompatible runtimes. This compatibility check does not disable system-prompt
 expansion.
 

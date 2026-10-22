@@ -83,7 +83,7 @@ it("rejects unsupported versions and missing private methods without patching", 
   const before = Object.getOwnPropertyDescriptors(TestSession.prototype);
 
   // Act / Assert
-  expect(() => assertCompatible(TestSession.prototype, "1.4.0")).toThrow("unsupported Pi version");
+  expect(() => assertCompatible(TestSession.prototype, "0.0.0")).toThrow("unsupported Pi version");
   expect(() => assertCompatible({}, PI_VERSION)).toThrow("unsupported Pi method");
   expect(Object.getOwnPropertyDescriptors(TestSession.prototype)).toEqual(before);
 });

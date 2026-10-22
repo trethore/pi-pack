@@ -4,7 +4,7 @@ Display run metrics like token usage, speed, duration, and estimated cost throug
 
 ## Installation
 
-Requires Pi `1.3.0` or a compatible later release.
+Requires Pi `1.4.0` or a compatible later release.
 
 From the repository root, install pi-run-metrics globally:
 

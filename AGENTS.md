@@ -44,7 +44,7 @@ Read root and package-level `package.json` files to learn more about available s
   Arrange / Act / Assert test sections.
 - To browse the Pi source code, use the gitignored `pi/` directory. If it doesn't exist, run
   `npm run import:pi -- <tag>` to clone the Pi repository at a specific tag into it, for example
-  `npm run import:pi -- v1.3.0`.
+  `npm run import:pi -- v1.4.0`.
 
 ### NixOS
 
