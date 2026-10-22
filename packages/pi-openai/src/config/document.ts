@@ -1,6 +1,6 @@
-import { errorMessage } from "@pi-pack/shared/errors";
-import { parseConfig, warnUnknownConfig } from "@pi-pack/shared/config";
-import { isObject } from "@pi-pack/shared/validation";
+import { errorMessage } from "@pi-pack/utils/errors";
+import { parseConfig, warnUnknownConfig } from "@pi-pack/config";
+import { isObject } from "@pi-pack/utils/guards";
 import { applyEdits, createScanner, findNodeAtLocation, modify, parseTree, type Edit, type Node } from "jsonc-parser";
 import type { ScopePatch } from "#src/config/changes";
 import { extensionName, type Destination } from "#src/constants";

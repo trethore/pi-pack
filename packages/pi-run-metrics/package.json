@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Display run metrics like token usage, speed, duration, and estimated cost through a widget or notifications.",
   "dependencies": {
-    "@pi-pack/shared": "0.1.0"
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0"
   },
   "devDependencies": {
     "@earendil-works/pi-tui": "1.4.0"

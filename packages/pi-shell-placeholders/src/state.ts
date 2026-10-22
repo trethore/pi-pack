@@ -1,5 +1,5 @@
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
-import { isObject } from "@pi-pack/shared/validation";
+import { isObject } from "@pi-pack/utils/guards";
 import { EXTENSION_NAME } from "#src/constants";
 
 export const STATE_TYPE = `${EXTENSION_NAME}:generation`;

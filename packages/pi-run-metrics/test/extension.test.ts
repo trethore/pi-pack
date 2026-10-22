@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import {
   createAgentSession,
   DefaultResourceLoader,

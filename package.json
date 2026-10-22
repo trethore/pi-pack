@@ -4,6 +4,7 @@
   "description": "Monorepo for pi extensions.",
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^1.4.0",
+    "@pi-pack/utils": "0.1.0",
     "@types/node": "22.19.19",
     "jscpd": "5.3.3",
     "knip": "6.38.0",

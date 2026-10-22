@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import { loadConfig } from "#src/config";
 import { defaultMessages } from "#src/messages";
 

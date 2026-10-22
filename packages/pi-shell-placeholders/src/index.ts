@@ -4,7 +4,7 @@ import type {
   NormalizedBuildSystemPromptOptions,
 } from "@earendil-works/pi-coding-agent";
 import { registerPromptTemplateTransform } from "@pi-pack/monkey-patching/prompt-templates";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import { loadConfig, type ShellConfig } from "#src/config";
 import { expandPlaceholders } from "#src/placeholders";
 import { newGeneration, restoreGeneration, STATE_TYPE, type Generation, type ResolvedGeneration } from "#src/state";

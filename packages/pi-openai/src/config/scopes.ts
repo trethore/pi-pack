@@ -1,4 +1,4 @@
-import { isObject } from "@pi-pack/shared/validation";
+import { isObject } from "@pi-pack/utils/guards";
 import type { Layers, Settings } from "#src/config/settings";
 
 const selectorFields = ["provider", "model", "api"] as const;

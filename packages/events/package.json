@@ -1,0 +1,16 @@
+{
+  "name": "@pi-pack/events",
+  "version": "0.1.0",
+  "description": "Typed Pi extension event names.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.4.0"
+  },
+  "files": [
+    "src"
+  ],
+  "license": "MIT",
+  "type": "module"
+}

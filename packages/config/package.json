@@ -1,0 +1,22 @@
+{
+  "name": "@pi-pack/config",
+  "version": "0.1.0",
+  "description": "JSONC configuration loading and validation for Pi extensions.",
+  "dependencies": {
+    "@pi-pack/files": "0.1.0",
+    "@pi-pack/utils": "0.1.0",
+    "jsonc-parser": "3.3.1"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./validation": "./src/validation.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.4.0"
+  },
+  "files": [
+    "src"
+  ],
+  "license": "MIT",
+  "type": "module"
+}

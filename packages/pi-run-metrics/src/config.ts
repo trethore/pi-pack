@@ -1,6 +1,6 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { createConfigLoader } from "@pi-pack/shared/config";
-import { booleanOption } from "@pi-pack/shared/validation";
+import { createConfigLoader } from "@pi-pack/config";
+import { booleanOption } from "@pi-pack/config/validation";
 import { isWidgetColor, type WidgetColor } from "#src/colors";
 import { DEFAULT_WIDGET_COLOR, EXTENSION_NAME } from "#src/constants";
 

@@ -96,14 +96,5 @@ export default defineConfig({
         "typescript/unbound-method": "off",
       },
     },
-    {
-      files: ["packages/shared/src/unsafe/**/*.ts"],
-      rules: {
-        "typescript/no-unnecessary-condition": "off",
-        "typescript/no-unsafe-type-assertion": "off",
-        "typescript/no-dynamic-delete": "off",
-        "typescript/no-unsafe-return": "off",
-      },
-    },
   ],
 });

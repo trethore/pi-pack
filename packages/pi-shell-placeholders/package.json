@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "description": "Expand shell placeholders with their output in system prompts and invoked prompt templates.",
   "dependencies": {
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0",
     "@pi-pack/monkey-patching": "0.1.0",
-    "@pi-pack/shared": "0.1.0"
+    "@pi-pack/utils": "0.1.0"
   },
   "files": [
     "pi-shell-placeholders.example.jsonc",

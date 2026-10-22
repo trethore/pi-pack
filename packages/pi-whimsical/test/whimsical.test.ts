@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import {
   DefaultResourceLoader,
   SettingsManager,
@@ -200,7 +200,7 @@ it("reloads configuration at session start", async () => {
   expect(extension.setWorkingMessage).not.toHaveBeenCalled();
 });
 
-it("loads the package entry and shared imports through Pi's TypeScript loader", async () => {
+it("loads the package entry and workspace imports through Pi's TypeScript loader", async () => {
   // Arrange
   const loader = new DefaultResourceLoader({
     cwd,

@@ -1,0 +1,13 @@
+{
+  "name": "@pi-pack/files",
+  "version": "0.1.0",
+  "description": "Node.js filesystem helpers.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "license": "MIT",
+  "type": "module"
+}

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 
 it("keeps the Pi event names used by extensions", () => {
   // Act / Assert

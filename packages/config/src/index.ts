@@ -1,9 +1,10 @@
-import { errorMessage } from "@pi-pack/shared/errors";
+import { errorMessage } from "@pi-pack/utils/errors";
 import { join } from "node:path";
 import { getAgentDir, type ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
-import { readOptionalFile } from "@pi-pack/shared/files";
-import { isObject, unknownKeys } from "@pi-pack/shared/validation";
+import { readOptionalFile } from "@pi-pack/files";
+import { isObject } from "@pi-pack/utils/guards";
+import { unknownKeys } from "@pi-pack/config/validation";
 
 interface ConfigLoaderOptions<T> {
   name: string;

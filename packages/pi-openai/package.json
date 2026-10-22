@@ -3,7 +3,10 @@
   "version": "0.2.0",
   "description": "Configure OpenAI-compatible request parameters.",
   "dependencies": {
-    "@pi-pack/shared": "0.1.0",
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0",
+    "@pi-pack/files": "0.1.0",
+    "@pi-pack/utils": "0.1.0",
     "jsonc-parser": "3.3.1"
   },
   "devDependencies": {

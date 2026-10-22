@@ -1,11 +1,7 @@
 import { isAbsolute } from "node:path";
-import {
-  createConfigLoader,
-  createWarningReporter,
-  warnUnknownConfig,
-  type ConfigLoadOptions,
-} from "@pi-pack/shared/config";
-import { booleanOption, isObject } from "@pi-pack/shared/validation";
+import { createConfigLoader, createWarningReporter, warnUnknownConfig, type ConfigLoadOptions } from "@pi-pack/config";
+import { booleanOption } from "@pi-pack/config/validation";
+import { isObject } from "@pi-pack/utils/guards";
 import { EXTENSION_NAME } from "#src/constants";
 
 export interface ExecutionConfig {

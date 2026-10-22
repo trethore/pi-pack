@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { errorMessage } from "@pi-pack/shared/errors";
+import { errorMessage } from "@pi-pack/utils/errors";
 import type { ExecutionConfig } from "#src/config";
 
 type ExecutionResult = { ok: true; stdout: string } | { ok: false; reason: string };

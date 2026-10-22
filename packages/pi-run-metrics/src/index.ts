@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import { createMetricsConfigLoader } from "#src/config";
 import { EXTENSION_NAME } from "#src/constants";
 import { RunMetrics } from "#src/metrics";

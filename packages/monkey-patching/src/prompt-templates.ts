@@ -1,5 +1,5 @@
 import { AgentSession, VERSION, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { errorMessage } from "@pi-pack/shared/errors";
+import { errorMessage } from "@pi-pack/utils/errors";
 import { getTemplatePatch, type TemplateTransform } from "#src/template-patch";
 
 export type { TemplateTransform, TemplateTransformEvent } from "#src/template-patch";

@@ -17,6 +17,6 @@
   },
   "type": "module",
   "dependencies": {
-    "@pi-pack/shared": "0.1.0"
+    "@pi-pack/utils": "0.1.0"
   }
 }

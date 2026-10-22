@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { isMissingFileError, readOptionalFile } from "@pi-pack/shared/files";
+import { isMissingFileError, readOptionalFile } from "@pi-pack/files";
 
 vi.mock("node:fs/promises", () => ({ readFile: vi.fn() }));
 

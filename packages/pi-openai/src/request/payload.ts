@@ -1,4 +1,4 @@
-import { isObject } from "@pi-pack/shared/validation";
+import { isObject } from "@pi-pack/utils/guards";
 import { Feature, RequestFormat, featureDecision, requestFormat, type RequestModel } from "#src/request/compatibility";
 import { ReasoningSummary } from "#src/constants";
 import type { Settings } from "#src/config/settings";

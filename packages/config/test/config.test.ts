@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import * as files from "@pi-pack/shared/files";
-import { configPaths, createConfigLoader, parseConfig, warnUnknownConfig } from "@pi-pack/shared/config";
+import * as files from "@pi-pack/files";
+import { configPaths, createConfigLoader, parseConfig, warnUnknownConfig } from "@pi-pack/config";
 
 let root: string;
 let cwd: string;
@@ -16,7 +16,7 @@ const defaults = vi.fn(() => ({ items: [] as string[] }));
 const load = createConfigLoader({ name: "example", knownKeys: ["items", "globalOnly"], defaults, validate });
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "pi-pack-shared-"));
+  root = await mkdtemp(join(tmpdir(), "pi-pack-config-"));
   cwd = join(root, "project");
   agentDir = join(root, "agent");
   projectFile = join(cwd, ".pi", "example.jsonc");

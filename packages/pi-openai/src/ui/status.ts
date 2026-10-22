@@ -1,6 +1,6 @@
 import { DynamicBorder, getMarkdownTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown } from "@earendil-works/pi-tui";
-import { dedent } from "@pi-pack/shared/dedent";
+import { dedent } from "@pi-pack/utils/text";
 import { featureDecision, type RequestModel } from "#src/request/compatibility";
 import { extensionName, type Destination } from "#src/constants";
 import {

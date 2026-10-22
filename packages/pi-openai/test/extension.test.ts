@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import {
   DefaultResourceLoader,
   ModelRuntime,
@@ -9,8 +9,8 @@ import {
   type ExtensionCommandContext,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import * as files from "@pi-pack/shared/files";
-import { parseConfig } from "@pi-pack/shared/config";
+import * as files from "@pi-pack/files";
+import { parseConfig } from "@pi-pack/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Destination, extensionName } from "#src/constants";
 import openai from "#src/index";

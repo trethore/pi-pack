@@ -1,6 +1,6 @@
-import { errorMessage } from "@pi-pack/shared/errors";
+import { errorMessage } from "@pi-pack/utils/errors";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { Events } from "@pi-pack/shared/events";
+import { Events } from "@pi-pack/events";
 import { Command, completeArguments, parseCommand } from "#src/ui/commands";
 import {
   Destination,

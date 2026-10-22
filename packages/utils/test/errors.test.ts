@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { errorMessage } from "@pi-pack/shared/errors";
+import { errorMessage } from "@pi-pack/utils/errors";
 
 describe("errorMessage", () => {
   it.each(["failure", ""])("preserves Error message %j even with a fallback", (message) => {

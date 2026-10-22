@@ -1,12 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { chmod, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import {
-  configPaths as sharedConfigPaths,
-  createWarningReporter,
-  type ConfigWarningOptions,
-} from "@pi-pack/shared/config";
-import { isMissingFileError, readOptionalFile } from "@pi-pack/shared/files";
+import { configPaths as extensionConfigPaths, createWarningReporter, type ConfigWarningOptions } from "@pi-pack/config";
+import { isMissingFileError, readOptionalFile } from "@pi-pack/files";
 import { Destination, extensionName } from "#src/constants";
 import { readEnvironment, type Layers } from "#src/config/settings";
 import type { ScopePatch } from "#src/config/changes";
@@ -17,7 +13,7 @@ export { Destination } from "#src/constants";
 export type ConfigPaths = Record<Destination, string>;
 
 export function configPaths(cwd: string, agentDir?: string): ConfigPaths {
-  return sharedConfigPaths(extensionName, cwd, agentDir);
+  return extensionConfigPaths(extensionName, cwd, agentDir);
 }
 
 async function readSource(file: string, destination: Destination): Promise<string | undefined> {

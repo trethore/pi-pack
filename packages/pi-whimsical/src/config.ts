@@ -1,5 +1,5 @@
-import { createConfigLoader } from "@pi-pack/shared/config";
-import { booleanOption } from "@pi-pack/shared/validation";
+import { createConfigLoader } from "@pi-pack/config";
+import { booleanOption } from "@pi-pack/config/validation";
 
 interface WhimsicalConfig {
   enabled: boolean;

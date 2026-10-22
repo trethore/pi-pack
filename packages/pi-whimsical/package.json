@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Replace Pi's working message with a random whimsical message.",
   "dependencies": {
-    "@pi-pack/shared": "0.1.0"
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0"
   },
   "files": [
     "pi-whimsical.example.jsonc",

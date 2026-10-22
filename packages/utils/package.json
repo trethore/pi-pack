@@ -1,0 +1,15 @@
+{
+  "name": "@pi-pack/utils",
+  "version": "0.1.0",
+  "description": "Small, pure helpers for errors, text, and type guards.",
+  "exports": {
+    "./errors": "./src/errors.ts",
+    "./guards": "./src/guards.ts",
+    "./text": "./src/text.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "license": "MIT",
+  "type": "module"
+}

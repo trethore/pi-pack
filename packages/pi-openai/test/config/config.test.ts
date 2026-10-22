@@ -1,7 +1,7 @@
 import * as filesystem from "node:fs/promises";
 import { mkdir, readdir, rm, stat } from "node:fs/promises";
-import * as files from "@pi-pack/shared/files";
-import { parseConfig } from "@pi-pack/shared/config";
+import * as files from "@pi-pack/files";
+import { parseConfig } from "@pi-pack/config";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Destination, ServiceTier, Verbosity, ReasoningSummary } from "#src/constants";
 import { loadConfiguration, saveConfiguration, defaultDestination } from "#src/config/files";
