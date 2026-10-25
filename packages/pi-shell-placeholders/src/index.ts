@@ -103,7 +103,7 @@ export default function shellPlaceholders(pi: ExtensionAPI): void {
     applyGeneration(event.systemPromptOptions, active.generation);
   });
 
-  pi.on("session_tree", (_event, ctx) => {
+  pi.on(Events.SessionTree, (_event, ctx) => {
     if (!runtime) {
       return;
     }

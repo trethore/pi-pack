@@ -9,6 +9,7 @@ export const Events = {
   MessageEnd: "message_end",
   SessionStart: "session_start",
   SessionShutdown: "session_shutdown",
+  SessionTree: "session_tree",
   ToolExecutionEnd: "tool_execution_end",
   TurnStart: "turn_start",
   TurnEnd: "turn_end",

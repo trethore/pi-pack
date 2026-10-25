@@ -12,6 +12,7 @@ it("keeps the Pi event names used by extensions", () => {
     MessageEnd: "message_end",
     SessionStart: "session_start",
     SessionShutdown: "session_shutdown",
+    SessionTree: "session_tree",
     ToolExecutionEnd: "tool_execution_end",
     TurnStart: "turn_start",
     TurnEnd: "turn_end",
