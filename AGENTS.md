@@ -7,6 +7,7 @@ pi-pack is a monorepo for the Pi extensions I develop
 Here is an overview of the project:
 
 ```
+packages/
 .gitattributes
 .gitignore
 AGENTS.md
