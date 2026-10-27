@@ -25,6 +25,6 @@
 
 		"skipLibCheck": true
 	},
-	"include": ["packages/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
+	"include": ["packages/**/*.ts", "scripts/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
 	"exclude": ["node_modules", "**/dist"]
 }

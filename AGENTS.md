@@ -8,6 +8,8 @@ Here is an overview of the project:
 
 ```
 packages/
+scripts/
+test/
 .gitattributes
 .gitignore
 .prettierignore
@@ -19,6 +21,12 @@ README.md
 tsconfig.json
 vitest.config.ts
 ```
+
+## Development
+
+- Tests must be easy to scan and understand with clear `Arrange / Act / Assert` sections.
+- To browse the Pi source code, use the gitignored `pi/` directory. If it doesn't exist, run `npm run clone:pi -- <tag>`
+  to clone the Pi repository at a specific tag, for example `npm run clone:pi -- v1.4.0`.
 
 ## Commits & Pull Requests
 

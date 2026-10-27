@@ -13,6 +13,7 @@
 	],
 	"scripts": {
 		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent test",
+		"clone:pi": "node scripts/clone-pi.ts",
 		"format": "prettier --log-level warn --write .",
 		"format:check": "prettier --log-level warn --check .",
 		"test": "vitest run",
