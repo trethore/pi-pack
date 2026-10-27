@@ -1,4 +1,4 @@
-import { readConfig } from "@pi-pack/config";
+import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
 
 const schema = z.strictObject({
@@ -8,5 +8,5 @@ const schema = z.strictObject({
 });
 
 export function loadConfig(): z.infer<typeof schema> {
-	return readConfig("pi-run-metrics.jsonc", { scope: "global" }, schema) ?? schema.parse({});
+	return readConfig("pi-run-metrics.jsonc", { scope: ConfigScope.Global }, schema) ?? schema.parse({});
 }

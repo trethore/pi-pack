@@ -5,18 +5,26 @@ import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 
 import { z } from "zod";
 
-export type ConfigLocation = { scope: "global" } | { scope: "project"; projectDir: string; trusted: boolean };
+export const ConfigScope = {
+	Global: "global",
+	Project: "project",
+} as const;
+
+export type ConfigScope = (typeof ConfigScope)[keyof typeof ConfigScope];
+
+export type ConfigLocation =
+	{ scope: typeof ConfigScope.Global } | { scope: typeof ConfigScope.Project; projectDir: string; trusted: boolean };
 
 /** Read and validate one optional JSONC file. The caller owns the schema, project trust, and merging. */
 export function readConfig<T>(filename: string, location: ConfigLocation, schema: z.ZodType<T>): T | undefined {
 	if (!filename || filename === "." || filename === ".." || /[/\\]/u.test(filename)) {
 		throw new Error("Config filename must be a filename, not a path.");
 	}
-	if (location.scope === "project" && !location.trusted) {
+	if (location.scope === ConfigScope.Project && !location.trusted) {
 		return undefined;
 	}
 
-	const directory = location.scope === "global" ? getAgentDir() : join(location.projectDir, ".pi");
+	const directory = location.scope === ConfigScope.Global ? getAgentDir() : join(location.projectDir, ".pi");
 	const path = join(directory, filename);
 	let source: string;
 	try {

@@ -1,6 +1,6 @@
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readConfig } from "@pi-pack/config";
+import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
 import { afterEach, expect, expectTypeOf, test, vi } from "vitest";
 
@@ -17,7 +17,7 @@ test("reads global JSONC from PI_CODING_AGENT_DIR", () => {
 	writeFileSync(join(globalDir, "example.jsonc"), '{ // comment\n "enabled": true, }');
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: "global" }, z.unknown());
+	const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, z.unknown());
 
 	// Assert
 	expect(value).toEqual({ enabled: true });
@@ -31,7 +31,7 @@ test("uses the default Pi agent directory without an override", () => {
 	writeFileSync(join(globalDir, "example.jsonc"), '{"defaultPath": true}');
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: "global" }, z.unknown());
+	const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, z.unknown());
 
 	// Assert
 	expect(value).toEqual({ defaultPath: true });
@@ -44,7 +44,7 @@ test.each([true, false])("only reads project config with explicit trust: %s", (t
 	writeFileSync(join(projectDir, ".pi", "example.jsonc"), '{"project": true}');
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: "project", projectDir, trusted }, z.unknown());
+	const value = readConfig("example.jsonc", { scope: ConfigScope.Project, projectDir, trusted }, z.unknown());
 
 	// Assert
 	expect(value).toEqual(trusted ? { project: true } : undefined);
@@ -57,7 +57,7 @@ test("does not parse untrusted project config", () => {
 	writeFileSync(join(projectDir, ".pi", "example.jsonc"), "invalid");
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: "project", projectDir, trusted: false }, z.unknown());
+	const value = readConfig("example.jsonc", { scope: ConfigScope.Project, projectDir, trusted: false }, z.unknown());
 
 	// Assert
 	expect(value).toBeUndefined();
@@ -68,7 +68,7 @@ test("returns undefined for a missing file", () => {
 	vi.stubEnv("PI_CODING_AGENT_DIR", directory());
 
 	// Act
-	const value = readConfig("missing.jsonc", { scope: "global" }, z.unknown());
+	const value = readConfig("missing.jsonc", { scope: ConfigScope.Global }, z.unknown());
 
 	// Assert
 	expect(value).toBeUndefined();
@@ -83,7 +83,7 @@ test.each(["", "{", '{"x": nope}', "{} {}"])("reports malformed JSONC with its p
 	writeFileSync(path, source);
 
 	// Act
-	const read = () => readConfig(filename, { scope: "global" }, z.unknown());
+	const read = () => readConfig(filename, { scope: ConfigScope.Global }, z.unknown());
 
 	// Assert
 	expect(read).toThrow(`Invalid JSONC in ${path}`);
@@ -98,7 +98,7 @@ test("reports read failures with the path", () => {
 	mkdirSync(path);
 
 	// Act
-	const read = () => readConfig(filename, { scope: "global" }, z.unknown());
+	const read = () => readConfig(filename, { scope: ConfigScope.Global }, z.unknown());
 
 	// Assert
 	expect(read).toThrow(`Could not read config ${path}.`);
@@ -113,7 +113,7 @@ test.each(["null", "[1, 2]", "false", "42", '"text"'])(
 		writeFileSync(join(globalDir, "example.jsonc"), source);
 
 		// Act
-		const value = readConfig("example.jsonc", { scope: "global" }, z.unknown());
+		const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, z.unknown());
 
 		// Assert
 		expect(value).toEqual(JSON.parse(source));
@@ -127,7 +127,7 @@ test.each(["", ".", "..", "../outside.jsonc", "/tmp/example.jsonc", "nested/exam
 		vi.stubEnv("PI_CODING_AGENT_DIR", directory());
 
 		// Act
-		const read = () => readConfig(filename, { scope: "global" }, z.unknown());
+		const read = () => readConfig(filename, { scope: ConfigScope.Global }, z.unknown());
 
 		// Assert
 		expect(read).toThrow("Config filename must be a filename, not a path.");
@@ -142,7 +142,7 @@ test("applies schema defaults and infers the output type", () => {
 	const schema = z.strictObject({ enabled: z.boolean().default(true) });
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: "global" }, schema);
+	const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, schema);
 
 	// Assert
 	expect(value).toEqual({ enabled: true });
@@ -162,7 +162,7 @@ test.each([
 	const schema = z.strictObject({ enabled: z.boolean().optional(), messages: z.array(z.string()).optional() });
 
 	// Act
-	const read = () => readConfig("example.jsonc", { scope: "global" }, schema);
+	const read = () => readConfig("example.jsonc", { scope: ConfigScope.Global }, schema);
 
 	// Assert
 	expect(read).toThrow(`Invalid config ${path}`);
@@ -175,7 +175,7 @@ test("does not apply schema defaults when the file is missing", () => {
 	const schema = z.strictObject({ enabled: z.boolean().default(true) });
 
 	// Act
-	const value = readConfig("missing.jsonc", { scope: "global" }, schema);
+	const value = readConfig("missing.jsonc", { scope: ConfigScope.Global }, schema);
 
 	// Assert
 	expect(value).toBeUndefined();
