@@ -1,6 +1,6 @@
 # pi-pack
 
-pi-pack is a monorepo for the Pi extensions I develop
+pi-pack is a monorepo for the Pi extensions I develop.
 
 ## Project Structure
 
