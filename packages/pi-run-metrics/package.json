@@ -1,0 +1,35 @@
+{
+	"name": "pi-run-metrics",
+	"version": "0.0.1",
+	"description": "Display metrics about the current run.",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0",
+		"@earendil-works/pi-tui": "1.4.0"
+	},
+	"dependencies": {
+		"@pi-pack/config": "0.0.1",
+		"@pi-pack/events": "0.0.1",
+		"zod": "^4.6.7"
+	},
+	"files": [
+		"pi-run-metrics.example.jsonc",
+		"src"
+	],
+	"keywords": [
+		"pi",
+		"pi-extension",
+		"metrics"
+	],
+	"imports": {
+		"#metrics/*": "./src/*",
+		"#metrics-test/*": "./test/*"
+	}
+}

@@ -1,47 +1,19 @@
+import { createExtensionHarness } from "#test/extension-harness.ts";
 import { Events } from "@pi-pack/events";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, test, vi } from "vitest";
 import { loadConfig } from "#whimsical/config.ts";
 import whimsical from "#whimsical/index.ts";
 import { messages } from "#whimsical/messages.ts";
 
-let directoryNumber = 0;
-function configDirectory(): string {
-	const directory = join(process.env.HOME ?? "", `whimsical-${directoryNumber++}`);
-	mkdirSync(directory, { recursive: true });
-	vi.stubEnv("PI_CODING_AGENT_DIR", directory);
-	return directory;
-}
-
 function setup(source?: string, hasUI = true) {
-	const directory = configDirectory();
-	if (source !== undefined) {
-		writeFileSync(join(directory, "pi-whimsical.jsonc"), source);
-	}
-	const handlers = new Map<string, (event: unknown, ctx: ExtensionContext) => void>();
-	const on = vi.fn<(event: string, handler: (event: unknown, ctx: ExtensionContext) => void) => void>(
-		(event: string, handler: (event: unknown, ctx: ExtensionContext) => void) => {
-			handlers.set(event, handler);
-		},
-	);
 	const setWorkingMessage = vi.fn<ExtensionContext["ui"]["setWorkingMessage"]>();
-	const notify = vi.fn<ExtensionContext["ui"]["notify"]>();
-	// Only the API and context surfaces used by this extension are mocked.
-	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-	const api = { on } as unknown as ExtensionAPI;
-	// oxlint-disable-next-line typescript/no-unsafe-type-assertion
-	const context = { hasUI, ui: { setWorkingMessage, notify } } as unknown as ExtensionContext;
-	whimsical(api);
-	function emit(event: string): void {
-		const handler = handlers.get(event);
-		if (!handler) {
-			throw new Error(`Missing handler: ${event}`);
-		}
-		handler({ type: event }, context);
+	const harness = createExtensionHarness(whimsical, "pi-whimsical.jsonc", { hasUI, ui: { setWorkingMessage } });
+	if (source !== undefined) {
+		harness.writeConfig(source);
 	}
-	return { emit, setWorkingMessage, notify, directory };
+	return { ...harness, setWorkingMessage };
 }
 
 afterEach(() => {
@@ -49,14 +21,14 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test("uses 295 built-in messages without configuration", () => {
+test("uses 295 built-in messages without configuration", async () => {
 	// Arrange
 	const { emit, setWorkingMessage } = setup();
 	vi.spyOn(Math, "random").mockReturnValue(0);
 
 	// Act
-	emit(Events.SessionStart);
-	emit(Events.TurnStart);
+	await emit(Events.SessionStart);
+	await emit(Events.TurnStart);
 
 	// Assert
 	expect(messages).toHaveLength(295);
@@ -64,31 +36,31 @@ test("uses 295 built-in messages without configuration", () => {
 	expect(setWorkingMessage).toHaveBeenCalledExactlyOnceWith("Schlepping...");
 });
 
-test("selects custom JSONC messages each turn and allows repeats", () => {
+test("selects custom JSONC messages each turn and allows repeats", async () => {
 	// Arrange
 	const { emit, setWorkingMessage } = setup('{ // custom\n "messages": ["One", "Two",], }');
 	vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValue(0.999);
 
 	// Act
-	emit(Events.SessionStart);
+	await emit(Events.SessionStart);
 	for (let turn = 0; turn < 3; turn++) {
-		emit(Events.TurnStart);
-		emit(Events.TurnEnd);
+		await emit(Events.TurnStart);
+		await emit(Events.TurnEnd);
 	}
 
 	// Assert
 	expect(setWorkingMessage.mock.calls).toEqual([["One"], [], ["Two"], [], ["Two"], []]);
 });
 
-test.each([Events.TurnEnd, Events.SessionShutdown])("resets the working message on %s", (event) => {
+test.each([Events.TurnEnd, Events.SessionShutdown])("resets the working message on %s", async (event) => {
 	// Arrange
 	const { emit, setWorkingMessage } = setup();
-	emit(Events.SessionStart);
-	emit(Events.TurnStart);
+	await emit(Events.SessionStart);
+	await emit(Events.TurnStart);
 	setWorkingMessage.mockClear();
 
 	// Act
-	emit(event);
+	await emit(event);
 
 	// Assert
 	expect(setWorkingMessage).toHaveBeenCalledExactlyOnceWith();
@@ -97,13 +69,13 @@ test.each([Events.TurnEnd, Events.SessionShutdown])("resets the working message 
 test.each([
 	{ source: '{"enabled": false}', hasUI: true },
 	{ source: undefined, hasUI: false },
-])("does not touch the UI when disabled or unavailable: %j", ({ source, hasUI }) => {
+])("does not touch the UI when disabled or unavailable: %j", async ({ source, hasUI }) => {
 	// Arrange
 	const { emit, setWorkingMessage, notify } = setup(source, hasUI);
 
 	// Act
 	for (const event of [Events.SessionStart, Events.TurnStart, Events.TurnEnd, Events.SessionShutdown]) {
-		emit(event);
+		await emit(event);
 	}
 
 	// Assert
@@ -131,14 +103,14 @@ test.each([
 	'{"messages": null}',
 	'{"enable": false}',
 	'{"enabled": false, "messages": 42}',
-])("reports an error and stays inactive for invalid config: %s", (source) => {
+])("reports an error and stays inactive for invalid config: %s", async (source) => {
 	// Arrange
 	const { emit, setWorkingMessage, notify } = setup(source);
 	vi.spyOn(Math, "random").mockReturnValue(0);
 
 	// Act
-	emit(Events.SessionStart);
-	emit(Events.TurnStart);
+	await emit(Events.SessionStart);
+	await emit(Events.TurnStart);
 
 	// Assert
 	expect(notify).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("Extension inactive"), "error");
@@ -156,23 +128,22 @@ test("uses Pi's default agent directory when no override is set", () => {
 	expect(directory).toBe(join(process.env.HOME ?? "", ".pi", "agent"));
 });
 
-test("clears active config on failure and recovers after a successful reload", () => {
+test("clears active config on failure and recovers after a successful reload", async () => {
 	// Arrange
-	const { emit, setWorkingMessage, notify, directory } = setup('{"messages": ["Custom"]}');
-	const path = join(directory, "pi-whimsical.jsonc");
-	emit(Events.SessionStart);
-	emit(Events.TurnStart);
+	const { emit, setWorkingMessage, notify, writeConfig } = setup('{"messages": ["Custom"]}');
+	await emit(Events.SessionStart);
+	await emit(Events.TurnStart);
 	setWorkingMessage.mockClear();
-	writeFileSync(path, '{"enable": false}');
+	writeConfig('{"enable": false}');
 
 	// Act
-	emit(Events.SessionStart);
-	emit(Events.TurnStart);
-	emit(Events.TurnEnd);
+	await emit(Events.SessionStart);
+	await emit(Events.TurnStart);
+	await emit(Events.TurnEnd);
 	const callsAfterFailure = [...setWorkingMessage.mock.calls];
-	writeFileSync(path, '{"messages": ["Recovered"]}');
-	emit(Events.SessionStart);
-	emit(Events.TurnStart);
+	writeConfig('{"messages": ["Recovered"]}');
+	await emit(Events.SessionStart);
+	await emit(Events.TurnStart);
 
 	// Assert
 	expect(callsAfterFailure).toEqual([[]]);
