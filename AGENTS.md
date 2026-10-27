@@ -12,9 +12,11 @@ scripts/
 test/
 .gitattributes
 .gitignore
+.jscpd.json
 .prettierignore
 .prettierrc.json
 AGENTS.md
+knip.json
 LICENSE
 oxlint.config.ts
 package.json

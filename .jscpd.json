@@ -1,0 +1,10 @@
+{
+	"mode": "strict",
+	"threshold": 3,
+	"minLines": 10,
+	"minTokens": 70,
+	"maxLines": 100000,
+	"maxSize": "10mb",
+	"path": ["."],
+	"ignore": ["package-lock.json"]
+}

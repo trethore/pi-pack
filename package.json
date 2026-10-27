@@ -12,10 +12,12 @@
 		"packages/*"
 	],
 	"scripts": {
-		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent lint && npm run --silent test",
+		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent lint && npm run --silent test && npm run --silent knip && npm run --silent jscpd",
 		"clone:pi": "node scripts/clone-pi.ts",
 		"format": "prettier --log-level warn --write .",
 		"format:check": "prettier --log-level warn --check .",
+		"jscpd": "jscpd --fail-on-empty",
+		"knip": "knip",
 		"lint": "oxlint .",
 		"lint:fix": "oxlint --fix .",
 		"test": "vitest run",
@@ -24,6 +26,8 @@
 	},
 	"devDependencies": {
 		"@types/node": "22.20.5",
+		"jscpd": "5.4.2",
+		"knip": "6.43.0",
 		"oxlint": "1.90.0",
 		"oxlint-tsgolint": "7.0.2005",
 		"prettier": "3.9.10",
