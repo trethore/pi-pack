@@ -16,6 +16,8 @@ AGENTS.md
 LICENSE
 package.json
 README.md
+tsconfig.json
+vitest.config.ts
 ```
 
 ## Commits & Pull Requests
