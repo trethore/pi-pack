@@ -1,9 +1,12 @@
 .idea/
 .vscode/
+
 node_modules/
 dist/
 coverage/
+
 /pi/
+
 *.tgz
 .pi/**
 .env
