@@ -8,6 +8,9 @@ Here is an overview of the project:
 
 ```
 packages/
+  config/
+  events/
+  pi-whimsical/
 scripts/
 test/
 .gitattributes

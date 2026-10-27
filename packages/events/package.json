@@ -1,0 +1,11 @@
+{
+	"name": "@pi-pack/events",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": "./src/index.ts",
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0"
+	}
+}

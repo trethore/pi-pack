@@ -1,0 +1,14 @@
+{
+	"name": "@pi-pack/config",
+	"version": "0.0.1",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"exports": "./src/index.ts",
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0"
+	},
+	"dependencies": {
+		"jsonc-parser": "^3.3.1"
+	}
+}
