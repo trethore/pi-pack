@@ -1,0 +1,13 @@
+{
+  "description": "Monorepo for the Pi extensions I develop.",
+  "name": "pi-pack",
+  "version": "0.0.1",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": "^22.19.0 || ^24.0.0 || >=26.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
