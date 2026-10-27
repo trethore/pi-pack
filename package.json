@@ -12,19 +12,26 @@
 		"packages/*"
 	],
 	"scripts": {
-		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent test",
+		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent lint && npm run --silent test",
 		"clone:pi": "node scripts/clone-pi.ts",
 		"format": "prettier --log-level warn --write .",
 		"format:check": "prettier --log-level warn --check .",
+		"lint": "oxlint .",
+		"lint:fix": "oxlint --fix .",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@types/node": "22.20.5",
+		"oxlint": "1.90.0",
+		"oxlint-tsgolint": "7.0.2005",
 		"prettier": "3.9.10",
 		"typescript": "7.0.2",
 		"vitest": "5.0.5"
 	},
-	"type": "module"
+	"type": "module",
+	"imports": {
+		"#hello-world/*": "./packages/hello-world/src/*"
+	}
 }

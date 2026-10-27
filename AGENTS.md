@@ -16,6 +16,7 @@ test/
 .prettierrc.json
 AGENTS.md
 LICENSE
+oxlint.config.ts
 package.json
 README.md
 tsconfig.json
