@@ -1,0 +1,19 @@
+{
+	"name": "pi-hello-world",
+	"version": "0.0.1",
+	"description": "A Pi extension that displays a hello world notification.",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"imports": {
+		"#hello-world/*": "./src/*"
+	},
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0"
+	}
+}

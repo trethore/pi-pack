@@ -14,8 +14,10 @@
 	"scripts": {
 		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent lint && npm run --silent test && npm run --silent knip && npm run --silent jscpd",
 		"clone:pi": "node scripts/clone-pi.ts",
+		"dev": "pi -e .",
 		"format": "prettier --log-level warn --write .",
 		"format:check": "prettier --log-level warn --check .",
+		"install:pi-hello-world": "pi install ./packages/pi-hello-world",
 		"jscpd": "jscpd --fail-on-empty",
 		"knip": "knip",
 		"lint": "oxlint .",
@@ -25,6 +27,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0",
 		"@types/node": "22.20.5",
 		"jscpd": "5.4.2",
 		"knip": "6.43.0",
@@ -35,7 +38,9 @@
 		"vitest": "5.0.5"
 	},
 	"type": "module",
-	"imports": {
-		"#hello-world/*": "./packages/hello-world/src/*"
+	"pi": {
+		"extensions": [
+			"packages/pi-*/src/index.ts"
+		]
 	}
 }
