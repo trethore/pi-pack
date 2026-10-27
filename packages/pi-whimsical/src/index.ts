@@ -1,10 +1,9 @@
 import { Events } from "@pi-pack/events";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { loadConfig } from "#whimsical/config.ts";
-import { messages } from "#whimsical/messages.ts";
 
 export default function whimsical(pi: ExtensionAPI): void {
-	let config = { enabled: true, messages };
+	let config: ReturnType<typeof loadConfig> | undefined;
 	let workingMessageSet = false;
 
 	function resetWorkingMessage(ctx: ExtensionContext): void {
@@ -19,16 +18,19 @@ export default function whimsical(pi: ExtensionAPI): void {
 		try {
 			config = loadConfig();
 		} catch (error) {
-			config = { enabled: true, messages };
+			config = undefined;
 			if (ctx.hasUI) {
 				const reason = error instanceof Error ? error.message : String(error);
-				ctx.ui.notify(`pi-whimsical: Could not load config. Using defaults. ${reason}`, "warning");
+				ctx.ui.notify(
+					`pi-whimsical: Could not load config. Extension inactive until a successful reload. ${reason}`,
+					"error",
+				);
 			}
 		}
 	});
 
 	pi.on(Events.TurnStart, (_event, ctx) => {
-		if (!ctx.hasUI || !config.enabled) {
+		if (!ctx.hasUI || !config?.enabled) {
 			return;
 		}
 		const message = config.messages[Math.floor(Math.random() * config.messages.length)];

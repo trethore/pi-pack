@@ -18,7 +18,8 @@
 	},
 	"dependencies": {
 		"@pi-pack/config": "0.0.1",
-		"@pi-pack/events": "0.0.1"
+		"@pi-pack/events": "0.0.1",
+		"zod": "^4.6.7"
 	},
 	"files": [
 		"pi-whimsical.example.jsonc",

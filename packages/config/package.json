@@ -9,6 +9,7 @@
 		"@earendil-works/pi-coding-agent": "1.4.0"
 	},
 	"dependencies": {
-		"jsonc-parser": "^3.3.1"
+		"jsonc-parser": "^3.3.1",
+		"zod": "^4.6.7"
 	}
 }

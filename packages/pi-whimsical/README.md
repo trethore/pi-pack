@@ -38,6 +38,10 @@ file. If `PI_CODING_AGENT_DIR` is set, the config file is read from that directo
 
 See [pi-whimsical.example.jsonc](pi-whimsical.example.jsonc) for an example configuration.
 
+Unknown keys, invalid values, malformed JSONC, and unreadable config files are errors. If the configuration cannot be
+loaded, the extension reports an error when a UI is available and remains inactive until a successful reload. Missing
+configuration still uses the defaults.
+
 Run `/reload` or restart Pi after changing the configuration to enable the changes.
 
 ## Behavior

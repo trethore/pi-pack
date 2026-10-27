@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 
+import { z } from "zod";
+
 export type ConfigLocation = { scope: "global" } | { scope: "project"; projectDir: string; trusted: boolean };
 
-/** Read optional JSONC without validation, defaults, or merging. The caller owns project trust. */
-export function readConfig(filename: string, location: ConfigLocation): unknown {
+/** Read and validate one optional JSONC file. The caller owns the schema, project trust, and merging. */
+export function readConfig<T>(filename: string, location: ConfigLocation, schema: z.ZodType<T>): T | undefined {
 	if (!filename || filename === "." || filename === ".." || /[/\\]/u.test(filename)) {
 		throw new Error("Config filename must be a filename, not a path.");
 	}
@@ -25,13 +27,17 @@ export function readConfig(filename: string, location: ConfigLocation): unknown 
 		}
 		throw new Error(`Could not read config ${path}.`, { cause: error });
 	}
-	
+
 	const errors: ParseError[] = [];
 	const value: unknown = parse(source, errors, { allowTrailingComma: true });
 	const error = errors[0];
 	if (error) {
 		throw new Error(`Invalid JSONC in ${path}: ${printParseErrorCode(error.error)} at offset ${error.offset}.`);
 	}
-	
-	return value;
+
+	const result = schema.safeParse(value);
+	if (!result.success) {
+		throw new Error(`Invalid config ${path}: ${z.prettifyError(result.error)}`, { cause: result.error });
+	}
+	return result.data;
 }

@@ -41,7 +41,7 @@ function setup(source?: string, hasUI = true) {
 		}
 		handler({ type: event }, context);
 	}
-	return { emit, setWorkingMessage, notify };
+	return { emit, setWorkingMessage, notify, directory };
 }
 
 afterEach(() => {
@@ -122,22 +122,28 @@ test.each(["{}", '{"messages": []}'])("falls back to built-ins for %s", (source)
 	expect(config).toEqual({ enabled: true, messages });
 });
 
-test.each(["{", "null", "[]", '{"enabled": "yes"}', '{"messages": [42]}', '{"messages": null}'])(
-	"warns and uses defaults for invalid config: %s",
-	(source) => {
-		// Arrange
-		const { emit, setWorkingMessage, notify } = setup(source);
-		vi.spyOn(Math, "random").mockReturnValue(0);
+test.each([
+	"{",
+	"null",
+	"[]",
+	'{"enabled": "yes"}',
+	'{"messages": [42]}',
+	'{"messages": null}',
+	'{"enable": false}',
+	'{"enabled": false, "messages": 42}',
+])("reports an error and stays inactive for invalid config: %s", (source) => {
+	// Arrange
+	const { emit, setWorkingMessage, notify } = setup(source);
+	vi.spyOn(Math, "random").mockReturnValue(0);
 
-		// Act
-		emit(Events.SessionStart);
-		emit(Events.TurnStart);
+	// Act
+	emit(Events.SessionStart);
+	emit(Events.TurnStart);
 
-		// Assert
-		expect(notify).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("Using defaults"), "warning");
-		expect(setWorkingMessage).toHaveBeenCalledExactlyOnceWith(messages[0]);
-	},
-);
+	// Assert
+	expect(notify).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("Extension inactive"), "error");
+	expect(setWorkingMessage).not.toHaveBeenCalled();
+});
 
 test("uses Pi's default agent directory when no override is set", () => {
 	// Arrange
@@ -148,4 +154,28 @@ test("uses Pi's default agent directory when no override is set", () => {
 
 	// Assert
 	expect(directory).toBe(join(process.env.HOME ?? "", ".pi", "agent"));
+});
+
+test("clears active config on failure and recovers after a successful reload", () => {
+	// Arrange
+	const { emit, setWorkingMessage, notify, directory } = setup('{"messages": ["Custom"]}');
+	const path = join(directory, "pi-whimsical.jsonc");
+	emit(Events.SessionStart);
+	emit(Events.TurnStart);
+	setWorkingMessage.mockClear();
+	writeFileSync(path, '{"enable": false}');
+
+	// Act
+	emit(Events.SessionStart);
+	emit(Events.TurnStart);
+	emit(Events.TurnEnd);
+	const callsAfterFailure = [...setWorkingMessage.mock.calls];
+	writeFileSync(path, '{"messages": ["Recovered"]}');
+	emit(Events.SessionStart);
+	emit(Events.TurnStart);
+
+	// Assert
+	expect(callsAfterFailure).toEqual([[]]);
+	expect(notify).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("enable"), "error");
+	expect(setWorkingMessage).toHaveBeenLastCalledWith("Recovered");
 });
