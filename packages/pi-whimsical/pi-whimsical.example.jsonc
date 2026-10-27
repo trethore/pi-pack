@@ -1,5 +1,6 @@
 {
 	// Save as pi-whimsical.jsonc in ~/.pi/agent or $PI_CODING_AGENT_DIR.
+	
 	// Whether the extension is enabled.
 	"enabled": true,
 	// Custom messages. If omitted or empty, the built-in list is used.

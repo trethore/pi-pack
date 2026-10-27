@@ -1,6 +1,6 @@
 # pi-run-metrics
 
-Display metrics about the current run in a right-aligned widget above Pi's prompt.
+Display metrics about the current run in a widget above Pi's prompt.
 
 ```text
 12s | 34.2 tok/s | ↑ 1200 ↓ 410 | $0.0042
@@ -33,7 +33,7 @@ If `PI_CODING_AGENT_DIR` is set, the config file is read from that directory ins
 		},
 		"widgetColor": {
 			"type": "string",
-			"description": "Color of the widget text. Accepts any Pi theme color token or a six-digit RGB hex color such as #aabbcc or #AABBCC.",
+			"description": "Color of the widget. Accepts any Pi theme color token or a six-digit RGB hex color such as #aabbcc or #AABBCC.",
 			"default": "accent",
 		},
 		"format": {
