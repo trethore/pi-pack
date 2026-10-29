@@ -8,18 +8,21 @@ import { model, setup } from "#openai-settings-test/fixtures.ts";
 
 afterEach(() => vi.unstubAllEnvs());
 
-test("defaults register no command and leave requests untouched", async () => {
+test("defaults expose only the master-switch command and leave requests untouched", async () => {
 	// Arrange
 	const { commands, emit } = setup();
 	const payload = { text: { verbosity: "high" } };
 	// Act
 	await emit({ type: Events.BeforeProviderRequest, payload });
 	// Assert
-	expect(commands.size).toBe(0);
+	expect(commands.size).toBe(1);
+	expect(await commands.get("openai-settings")?.getArgumentCompletions?.("")).toEqual([
+		{ value: "enabled", label: "enabled" },
+	]);
 	expect(payload).toEqual({ text: { verbosity: "high" } });
 });
 
-test("skipping config applies only explicit environment settings and registers no commands", async () => {
+test("skipping config applies only explicit environment settings and exposes only the master switch", async () => {
 	// Arrange
 	vi.stubEnv("PI_OPENAI_CONFIG", "false");
 	vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
@@ -28,7 +31,10 @@ test("skipping config applies only explicit environment settings and registers n
 	// Act
 	await emit({ type: Events.BeforeProviderRequest, payload });
 	// Assert
-	expect(commands.size).toBe(0);
+	expect(commands.size).toBe(1);
+	expect(await commands.get("openai-settings")?.getArgumentCompletions?.("")).toEqual([
+		{ value: "enabled", label: "enabled" },
+	]);
 	expect(payload).toEqual({ text: { verbosity: "low" } });
 });
 
@@ -96,30 +102,34 @@ test("commands override environment immediately and preserve comments and unrela
 	expect(notify).toHaveBeenCalledWith("OpenAI verbosity = low. Saved globally.", "info");
 });
 
-test("commands can override an environment-disabled master and persist the master setting", async () => {
-	// Arrange
-	vi.stubEnv("PI_OPENAI_ENABLED", "false");
-	vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
-	const { commands, runCommand, emit } = setup('{"verbosity":{"command":true}}');
-	const disabled = {};
-	const enabled = {};
-	const disabledAgain = {};
-	// Act
-	await emit({ type: Events.BeforeProviderRequest, payload: disabled });
-	await runCommand("openai-settings", "enabled true");
-	await emit({ type: Events.BeforeProviderRequest, payload: enabled });
-	await runCommand("openai-settings", "enabled false");
-	await emit({ type: Events.BeforeProviderRequest, payload: disabledAgain });
-	// Assert
-	expect(commands.has("openai-settings")).toBe(true);
-	expect(disabled).toEqual({});
-	expect(enabled).toEqual({ text: { verbosity: "low" } });
-	expect(disabledAgain).toEqual({});
-	expect(JSON.parse(readFileSync(join(getAgentDir(), "pi-openai-settings.jsonc"), "utf8"))).toEqual({
-		enabled: false,
-		verbosity: { command: true },
-	});
-});
+test.each(["true", "false"])(
+	"master commands override environment values with no feature commands (PI_OPENAI_CONFIG=%s)",
+	async (configFlag) => {
+		// Arrange
+		vi.stubEnv("PI_OPENAI_CONFIG", configFlag);
+		vi.stubEnv("PI_OPENAI_ENABLED", "false");
+		vi.stubEnv("PI_OPENAI_VERBOSITY", "low");
+		const { commands, runCommand, emit } = setup('{"verbosity":{"command":false}}');
+		const disabled = {};
+		const enabled = {};
+		const disabledAgain = {};
+		// Act
+		await emit({ type: Events.BeforeProviderRequest, payload: disabled });
+		await runCommand("openai-settings", "enabled true");
+		await emit({ type: Events.BeforeProviderRequest, payload: enabled });
+		await runCommand("openai-settings", "enabled false");
+		await emit({ type: Events.BeforeProviderRequest, payload: disabledAgain });
+		// Assert
+		expect(commands.has("openai-settings")).toBe(true);
+		expect(disabled).toEqual({});
+		expect(enabled).toEqual({ text: { verbosity: "low" } });
+		expect(disabledAgain).toEqual({});
+		expect(JSON.parse(readFileSync(join(getAgentDir(), "pi-openai-settings.jsonc"), "utf8"))).toEqual({
+			enabled: false,
+			verbosity: { command: false },
+		});
+	},
+);
 
 test("a feature command does not implicitly enable the master switch", async () => {
 	// Arrange
@@ -247,3 +257,56 @@ test("invalid config reports an error and registers neither payload edits nor co
 	expect(notify).toHaveBeenCalledWith(expect.stringContaining("Extension inactive until a successful reload"), "error");
 	await expect(emit({ type: Events.BeforeProviderRequest, payload: {} })).rejects.toThrow("Missing handler");
 });
+
+test("the master command enables a config-disabled extension with every feature command disabled", async () => {
+	// Arrange
+	const { commands, runCommand, emit } = setup(
+		JSON.stringify({
+			enabled: false,
+			verbosity: { value: "low", command: false },
+			reasoningSummary: { command: false },
+			webSearch: { command: false },
+			serviceTier: { command: false },
+		}),
+	);
+	const before = {};
+	const after = {};
+
+	// Act
+	await emit({ type: Events.BeforeProviderRequest, payload: before });
+	await runCommand("openai-settings", "enabled true");
+	await emit({ type: Events.BeforeProviderRequest, payload: after });
+
+	// Assert
+	expect(before).toEqual({});
+	expect(after).toEqual({ text: { verbosity: "low" } });
+	expect(await commands.get("openai-settings")?.getArgumentCompletions?.("")).toEqual([
+		{ value: "enabled", label: "enabled" },
+	]);
+	expect(JSON.parse(readFileSync(join(getAgentDir(), "pi-openai-settings.jsonc"), "utf8"))).toEqual({
+		enabled: true,
+		verbosity: { value: "low", command: false },
+		reasoningSummary: { command: false },
+		webSearch: { command: false },
+		serviceTier: { command: false },
+	});
+});
+
+test.each(["verbosity low", "reasoningSummary none", "webSearch true", "serviceTier priority"])(
+	"disabled feature commands remain unavailable while the master command exists: %s",
+	async (args) => {
+		// Arrange
+		const { commands, runCommand, notify } = setup("{}");
+
+		// Act
+		await runCommand("openai-settings", args);
+
+		// Assert
+		expect(commands.has("openai-settings")).toBe(true);
+		expect(notify).toHaveBeenCalledExactlyOnceWith(
+			"Usage: /openai-settings <setting> <value>\nenabled <true|false>",
+			"info",
+		);
+		expect(readFileSync(join(getAgentDir(), "pi-openai-settings.jsonc"), "utf8")).toBe("{}");
+	},
+);

@@ -31,9 +31,6 @@ export default function openaiSettings(pi: ExtensionAPI): void {
 	const features = Object.keys(settingValues).filter(
 		(name) => isSetting(name) && name !== "enabled" && config[name].command,
 	);
-	if (features.length === 0) {
-		return;
-	}
 	const commands = ["enabled", ...features];
 	const usage = commands
 		.filter(isSetting)
