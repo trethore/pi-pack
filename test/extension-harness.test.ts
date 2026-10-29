@@ -46,3 +46,37 @@ test("isolates global config files between harness instances", () => {
 	expect(readFileSync(join(firstDirectory, "test.jsonc"), "utf8")).toBe('{"enabled":true}');
 	expect(readFileSync(join(secondDirectory, "test.jsonc"), "utf8")).toBe('{"enabled":false}');
 });
+
+test("makes initial config available during extension registration", () => {
+	// Arrange
+	let source: string | undefined;
+	// Act
+	createExtensionHarness(
+		() => {
+			source = readFileSync(join(getAgentDir(), "test.jsonc"), "utf8");
+		},
+		"test.jsonc",
+		{},
+		'{"enabled":true}',
+	);
+	// Assert
+	expect(source).toBe('{"enabled":true}');
+});
+
+test("registers and awaits commands with the configured context", async () => {
+	// Arrange
+	const { commands, runCommand, notify } = createExtensionHarness((pi) => {
+		pi.registerCommand("test", {
+			async handler(args, ctx) {
+				await Promise.resolve();
+				ctx.ui.notify(args, "info");
+			},
+		});
+	}, "test.jsonc");
+	// Act
+	await runCommand("test", "hello");
+	// Assert
+	expect(commands.has("test")).toBe(true);
+	expect(notify).toHaveBeenCalledExactlyOnceWith("hello", "info");
+	await expect(runCommand("missing", "")).rejects.toThrow("Missing command: missing");
+});

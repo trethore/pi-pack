@@ -1,0 +1,27 @@
+{
+	// Save as pi-openai-settings.jsonc in ~/.pi/agent or $PI_CODING_AGENT_DIR.
+	// Missing features default to { "value": null, "command": false }.
+
+	// Whether the extension is enabled.
+	"enabled": true,
+	"verbosity": {
+		// low, medium, high, or null to leave the payload untouched.
+		"value": "medium",
+		"command": true
+	},
+	"reasoningSummary": {
+		// concise, auto, detailed, or "none" (remove reasoning.summary); null to leave the payload untouched
+		"value": "auto",
+		"command": true
+	},
+	"webSearch": {
+		// true adds web_search; false removes web_search and web_search_preview; null leaves tools untouched.
+		"value": true,
+		"command": true
+	},
+	"serviceTier": {
+		// default, priority, ultrafast, or null to leave the payload untouched.
+		"value": "default",
+		"command": true
+	}
+}
