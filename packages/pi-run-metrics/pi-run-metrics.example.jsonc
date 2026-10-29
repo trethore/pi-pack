@@ -1,6 +1,6 @@
 {
 	// Save as pi-run-metrics.jsonc in ~/.pi/agent or $PI_CODING_AGENT_DIR.
-	
+
 	// Whether the extension is enabled.
 	"enabled": true,
 	// Color of the widget. Accepts any Pi theme color token or a six-digit RGB hex color such as "#aabbcc".
