@@ -39,7 +39,7 @@
 		"@earendil-works/pi-tui": "1.4.0",
 		"@types/node": "22.20.5",
 		"jscpd": "5.4.2",
-		"knip": "6.43.0",
+		"knip": "6.44.0",
 		"oxlint": "1.90.0",
 		"oxlint-tsgolint": "7.0.2005",
 		"prettier": "3.9.10",
