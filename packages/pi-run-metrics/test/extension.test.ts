@@ -1,11 +1,11 @@
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { afterEach, expect, test, vi } from "vitest";
-import { createExtensionHarness } from "#test/extension-harness.ts";
-import { createWidgetHarness } from "#test/widget-harness.ts";
-import { response, delta } from "#metrics-test/fixtures.ts";
-import runMetrics from "#metrics/index.ts";
-import { loadConfig } from "#metrics/config.ts";
+import { createExtensionHarness } from "#test/extension-harness";
+import { createWidgetHarness } from "#test/widget-harness";
+import { response, delta } from "#metrics-test/fixtures";
+import runMetrics from "#metrics/index";
+import { loadConfig } from "#metrics/config";
 
 const model: ReturnType<ExtensionContext["modelRegistry"]["find"]> = {
 	id: "test",

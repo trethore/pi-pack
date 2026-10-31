@@ -7,8 +7,8 @@ import {
 	saveSetting,
 	settingValues,
 	updateSetting,
-} from "#openai-settings/config.ts";
-import { applySettings, supportsModel } from "#openai-settings/payload.ts";
+} from "#openai-settings/config";
+import { applySettings, supportsModel } from "#openai-settings/payload";
 
 export default function openaiSettings(pi: ExtensionAPI): void {
 	let config: ReturnType<typeof loadConfig>;

@@ -1,10 +1,10 @@
-import { response, delta } from "#metrics-test/fixtures.ts";
+import { response, delta } from "#metrics-test/fixtures";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { expect, test } from "vitest";
-import { createMetrics, formatDuration } from "#metrics/metrics.ts";
-import { MetricRegistry } from "#metrics/registry.ts";
-import { renderLine } from "#metrics/widget.ts";
+import { createMetrics, formatDuration } from "#metrics/metrics";
+import { MetricRegistry } from "#metrics/registry";
+import { renderLine } from "#metrics/widget";
 
 // Only the model lookup surface is needed by metrics.
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion

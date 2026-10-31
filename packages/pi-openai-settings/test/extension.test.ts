@@ -4,7 +4,7 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { parse } from "jsonc-parser";
 import { afterEach, expect, test, vi } from "vitest";
-import { model, setup } from "#openai-settings-test/fixtures.ts";
+import { model, setup } from "#openai-settings-test/fixtures";
 
 afterEach(() => vi.unstubAllEnvs());
 

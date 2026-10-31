@@ -6,8 +6,8 @@
 	"private": true,
 	"type": "module",
 	"imports": {
-		"#openai-settings/*": "./src/*",
-		"#openai-settings-test/*": "./test/*"
+		"#openai-settings/*": "./src/*.ts",
+		"#openai-settings-test/*": "./test/*.ts"
 	},
 	"pi": {
 		"extensions": [

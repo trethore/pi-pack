@@ -2,8 +2,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, test, vi } from "vitest";
-import { loadConfig, saveSetting } from "#openai-settings/config.ts";
-import { setup } from "#openai-settings-test/fixtures.ts";
+import { loadConfig, saveSetting } from "#openai-settings/config";
+import { setup } from "#openai-settings-test/fixtures";
 
 afterEach(() => vi.unstubAllEnvs());
 

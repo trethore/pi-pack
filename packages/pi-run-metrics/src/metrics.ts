@@ -1,4 +1,4 @@
-import { type Metric, MetricEvent, MetricRegistry } from "#metrics/registry.ts";
+import { type Metric, MetricEvent, MetricRegistry } from "#metrics/registry";
 
 export function formatDuration(milliseconds: number): string {
 	const total = Math.max(0, Math.floor(milliseconds / 1000));

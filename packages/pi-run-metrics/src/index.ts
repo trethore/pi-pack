@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
-import { createRunMetricsController } from "#metrics/controller.ts";
-import { MetricEvent } from "#metrics/registry.ts";
+import { createRunMetricsController } from "#metrics/controller";
+import { MetricEvent } from "#metrics/registry";
 
 export default function runMetrics(pi: ExtensionAPI): void {
 	const controller = createRunMetricsController();

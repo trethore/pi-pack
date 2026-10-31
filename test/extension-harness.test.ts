@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { afterEach, expect, test, vi } from "vitest";
-import { createExtensionHarness } from "#test/extension-harness.ts";
+import { createExtensionHarness } from "#test/extension-harness";
 
 afterEach(() => vi.unstubAllEnvs());
 

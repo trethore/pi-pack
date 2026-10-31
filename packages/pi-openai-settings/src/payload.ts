@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Config } from "#openai-settings/config.ts";
+import type { Config } from "#openai-settings/config";
 
 // Records reject non-plain objects; loose objects preserve provider-specific fields.
 const objectSchema = z.record(z.string(), z.unknown());

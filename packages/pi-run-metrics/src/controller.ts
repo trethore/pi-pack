@@ -1,8 +1,8 @@
 import type { AgentSettledEvent, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { MetricEvent } from "#metrics/registry.ts";
-import { loadConfig } from "#metrics/config.ts";
-import { createMetrics } from "#metrics/metrics.ts";
-import { colorize, renderLine } from "#metrics/widget.ts";
+import type { MetricEvent } from "#metrics/registry";
+import { loadConfig } from "#metrics/config";
+import { createMetrics } from "#metrics/metrics";
+import { colorize, renderLine } from "#metrics/widget";
 
 export function createRunMetricsController() {
 	let config: ReturnType<typeof loadConfig> | undefined;

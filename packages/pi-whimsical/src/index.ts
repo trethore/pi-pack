@@ -1,6 +1,6 @@
 import { Events } from "@pi-pack/events";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { loadConfig } from "#whimsical/config.ts";
+import { loadConfig } from "#whimsical/config";
 
 export default function whimsical(pi: ExtensionAPI): void {
 	let config: ReturnType<typeof loadConfig> | undefined;

@@ -1,6 +1,6 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { createExtensionHarness } from "#test/extension-harness.ts";
-import openaiSettings from "#openai-settings/index.ts";
+import { createExtensionHarness } from "#test/extension-harness";
+import openaiSettings from "#openai-settings/index";
 
 export function model(provider = "openai", api = "openai-responses"): NonNullable<ExtensionContext["model"]> {
 	return {

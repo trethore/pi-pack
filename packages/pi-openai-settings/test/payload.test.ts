@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { loadConfig } from "#openai-settings/config.ts";
-import { applySettings, supportsModel } from "#openai-settings/payload.ts";
-import { setup } from "#openai-settings-test/fixtures.ts";
+import { loadConfig } from "#openai-settings/config";
+import { applySettings, supportsModel } from "#openai-settings/payload";
+import { setup } from "#openai-settings-test/fixtures";
 
 afterEach(() => vi.unstubAllEnvs());
 

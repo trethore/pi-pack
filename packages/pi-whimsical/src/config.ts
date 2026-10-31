@@ -1,6 +1,6 @@
 import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
-import { messages } from "#whimsical/messages.ts";
+import { messages } from "#whimsical/messages";
 
 const configSchema = z.strictObject({
 	enabled: z.boolean().default(true),

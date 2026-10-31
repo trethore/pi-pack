@@ -1,11 +1,11 @@
-import { createExtensionHarness } from "#test/extension-harness.ts";
+import { createExtensionHarness } from "#test/extension-harness";
 import { Events } from "@pi-pack/events";
 import { join } from "node:path";
 import { getAgentDir, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, test, vi } from "vitest";
-import { loadConfig } from "#whimsical/config.ts";
-import whimsical from "#whimsical/index.ts";
-import { messages } from "#whimsical/messages.ts";
+import { loadConfig } from "#whimsical/config";
+import whimsical from "#whimsical/index";
+import { messages } from "#whimsical/messages";
 
 function setup(source?: string, hasUI = true) {
 	const setWorkingMessage = vi.fn<ExtensionContext["ui"]["setWorkingMessage"]>();

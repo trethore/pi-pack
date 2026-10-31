@@ -29,7 +29,7 @@
 		"metrics"
 	],
 	"imports": {
-		"#metrics/*": "./src/*",
-		"#metrics-test/*": "./test/*"
+		"#metrics/*": "./src/*.ts",
+		"#metrics-test/*": "./test/*.ts"
 	}
 }
