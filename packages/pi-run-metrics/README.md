@@ -8,7 +8,7 @@ Display metrics about the current run in a widget above Pi's prompt.
 
 ## Installation
 
-Requires Pi `1.4.0` or a compatible later release.
+Requires Pi `1.5.0` or a compatible later release.
 
 From the repository root, install pi-run-metrics globally:
 
