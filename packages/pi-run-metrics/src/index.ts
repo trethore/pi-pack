@@ -10,6 +10,7 @@ export default function runMetrics(pi: ExtensionAPI): void {
 	pi.on(Events.SessionShutdown, (_event, ctx) => controller.shutdown(ctx));
 	pi.on(Events.AgentStart, (_event, ctx) => controller.startRun(ctx));
 	pi.on(MetricEvent.AgentSettled, controller.settleRun);
+	pi.on(MetricEvent.TurnStart, controller.handleMetricEvent);
 	pi.on(MetricEvent.MessageStart, controller.handleMetricEvent);
 	pi.on(MetricEvent.MessageUpdate, controller.handleMetricEvent);
 	pi.on(MetricEvent.MessageEnd, controller.handleMetricEvent);

@@ -3,6 +3,7 @@ import type { ExtensionEvent, ExtensionContext } from "@earendil-works/pi-coding
 import { Events } from "@pi-pack/events";
 
 export const MetricEvent = {
+	TurnStart: Events.TurnStart,
 	MessageStart: Events.MessageStart,
 	MessageUpdate: Events.MessageUpdate,
 	MessageEnd: Events.MessageEnd,
@@ -41,6 +42,9 @@ export class MetricRegistry {
 		for (const { subscriptions } of this.metrics) {
 			// Narrow the discriminated union before calling each typed subscription.
 			switch (event.type) {
+				case MetricEvent.TurnStart:
+					subscriptions[MetricEvent.TurnStart]?.(event, now, ctx);
+					break;
 				case MetricEvent.MessageStart:
 					subscriptions[MetricEvent.MessageStart]?.(event, now, ctx);
 					break;

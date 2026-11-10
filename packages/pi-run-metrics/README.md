@@ -58,20 +58,20 @@ Run `/reload` or restart Pi after changing the configuration to enable the chang
 
 All metrics describe the current run, not the entire session.
 
-| Placeholder       | Description                                                                                             | Example      |
-| ----------------- | ------------------------------------------------------------------------------------------------------- | ------------ |
-| `<timetaken>`     | End-to-end elapsed time, including time to first token and tool execution.                              | `1m0s`       |
-| `<tokps>`         | Estimated model output throughput, excluding tool execution and the wait for the first streaming delta. | `34.2 tok/s` |
-| `<input_tokens>`  | Sum of reported non-cached input tokens across model responses.                                         | `1200`       |
-| `<output_tokens>` | Sum of reported output tokens across model responses.                                                   | `410`        |
-| `<cost>`          | Pi's estimated run cost in USD, including any reported cache costs, with four decimal places.           | `$0.0042`    |
+| Placeholder       | Description                                                                                   | Example      |
+| ----------------- | --------------------------------------------------------------------------------------------- | ------------ |
+| `<timetaken>`     | End-to-end elapsed time, including time to first token and tool execution.                    | `1m0s`       |
+| `<tokps>`         | Average output tokens per second of model response time.                                      | `34.2 tok/s` |
+| `<input_tokens>`  | Sum of reported non-cached input tokens across model responses.                               | `1200`       |
+| `<output_tokens>` | Sum of reported output tokens across model responses.                                         | `410`        |
+| `<cost>`          | Pi's estimated run cost in USD, including any reported cache costs, with four decimal places. | `$0.0042`    |
 
 Elapsed time is displayed in whole seconds. Leading zero units are omitted, but smaller units are retained: `0s`, `9s`,
 `1m0s`, `2m7s`, `1h0m0s`.
 
-Throughput uses the total reported output tokens divided by the total measured generation time across responses. Each
-response is timed from its first nonempty text, thinking, or tool-call delta until completion. This is an observed
-estimate: providers can batch tokens into chunks. Throughput shows `N/A` when timing data is unavailable.
+Throughput is the total reported output tokens divided by the combined duration of model responses, measured locally
+from turn start to response completion. Response time includes waiting for the model and excludes tool execution.
+Throughput shows `N/A` when timing data is unavailable.
 
 Cost shows `N/A` when the model or its cost estimate is unavailable.
 

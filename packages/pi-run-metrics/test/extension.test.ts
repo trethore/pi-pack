@@ -70,6 +70,7 @@ test("timer ticks update elapsed time without publishing pending usage", async (
 	const { emit, render, requestRender } = setup();
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	vi.advanceTimersByTime(1000);
 	await emit(delta());
 	vi.advanceTimersByTime(1000);
@@ -88,6 +89,7 @@ test("tool completion refreshes usage without counting the response twice", asyn
 	const { emit, render } = setup();
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	vi.advanceTimersByTime(1000);
 	await emit(delta());
 	vi.advanceTimersByTime(2000);
@@ -97,7 +99,7 @@ test("tool completion refreshes usage without counting the response twice", asyn
 	const firstToolDisplay = render();
 	await emit({ ...toolEnd, toolCallId: "tool-2" });
 	// Assert
-	expect(firstToolDisplay[0]?.trim()).toBe("3s | 50.0 tok/s | ↑ 200 ↓ 100 | $0.0042");
+	expect(firstToolDisplay[0]?.trim()).toBe("3s | 33.3 tok/s | ↑ 200 ↓ 100 | $0.0042");
 	expect(render()).toEqual(firstToolDisplay);
 });
 
@@ -109,6 +111,7 @@ test.each([false, true])(
 		const { emit, render, requestRender } = setup();
 		await emit(Events.SessionStart);
 		await emit(Events.AgentStart);
+		await emit(Events.TurnStart);
 		vi.advanceTimersByTime(2000);
 		await emit(delta());
 		vi.advanceTimersByTime(2000);
@@ -119,7 +122,7 @@ test.each([false, true])(
 		requestRender.mockClear();
 		vi.advanceTimersByTime(10000);
 		// Assert
-		expect(finalDisplay[0]?.trim()).toBe("4s | 50.0 tok/s | ↑ 200 ↓ 100 | $0.0042");
+		expect(finalDisplay[0]?.trim()).toBe("4s | 25.0 tok/s | ↑ 200 ↓ 100 | $0.0042");
 		expect(render()).toEqual(finalDisplay);
 		expect(requestRender).not.toHaveBeenCalled();
 		expect(vi.getTimerCount()).toBe(0);
@@ -132,18 +135,21 @@ test("settlement includes the final response after a tool call", async () => {
 	const { emit, render } = setup();
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	await emit(delta());
 	vi.advanceTimersByTime(2000);
 	await emit(response());
+	vi.advanceTimersByTime(8000);
 	await emit(toolEnd);
-	vi.advanceTimersByTime(10000);
+	await emit(Events.TurnStart);
+	vi.advanceTimersByTime(2000);
 	await emit(delta());
 	vi.advanceTimersByTime(4000);
 	await emit(response(200));
 	// Act
 	await emit(settled);
 	// Assert
-	expect(render()[0]?.trim()).toBe("16s | 50.0 tok/s | ↑ 400 ↓ 300 | $0.0084");
+	expect(render()[0]?.trim()).toBe("16s | 37.5 tok/s | ↑ 400 ↓ 300 | $0.0084");
 });
 
 test("a new run resets the completed values", async () => {
@@ -152,12 +158,14 @@ test("a new run resets the completed values", async () => {
 	const { emit, render } = setup();
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	await emit(delta());
 	vi.advanceTimersByTime(2000);
 	await emit(response());
 	await emit(settled);
 	// Act
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	// Assert
 	expect(render()[0]?.trim()).toBe(initialText);
 	expect(vi.getTimerCount()).toBe(1);
@@ -169,6 +177,7 @@ test("shutdown removes the widget and stops refreshes", async () => {
 	const { emit, setWidget, requestRender } = setup();
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	requestRender.mockClear();
 	// Act
 	await emit(Events.SessionShutdown);
@@ -188,6 +197,7 @@ test.each(['{"enabled":false}', '{"widgetColor":"invalid"}', '{"enabled":"yes"}'
 		// Act
 		await emit(Events.SessionStart);
 		await emit(Events.AgentStart);
+		await emit(Events.TurnStart);
 		// Assert
 		expect(setWidget).not.toHaveBeenCalled();
 		expect(vi.getTimerCount()).toBe(0);
@@ -202,6 +212,7 @@ test("does not install UI or timers in headless mode", async () => {
 	// Act
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	// Assert
 	expect(setWidget).not.toHaveBeenCalled();
 	expect(vi.getTimerCount()).toBe(0);
@@ -222,10 +233,12 @@ test("invalid config reload cleans up the active run and a later reload recovers
 	const { emit, writeConfig, setWidget, notify, render } = setup();
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	writeConfig('{"enabled":"yes"}');
 	// Act
 	await emit(Events.SessionStart);
 	await emit(Events.AgentStart);
+	await emit(Events.TurnStart);
 	const timersAfterFailure = vi.getTimerCount();
 	const lastWidgetCallAfterFailure = setWidget.mock.lastCall;
 	writeConfig('{"format":"Cost: <cost>", "widgetColor":"#AABBCC"}');

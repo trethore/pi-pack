@@ -74,14 +74,14 @@ function cost(): Metric {
 }
 
 function throughput(): Metric {
-	let firstDelta: number | undefined;
+	let turnStart: number | undefined;
 	let duration = 0;
 	let output = 0;
 	let measurable = true;
 	return {
 		name: "tokps",
 		reset() {
-			firstDelta = undefined;
+			turnStart = undefined;
 			duration = 0;
 			output = 0;
 			measurable = true;
@@ -90,33 +90,23 @@ function throughput(): Metric {
 			return measurable && duration > 0 ? `${(output / (duration / 1000)).toFixed(1)} tok/s` : "N/A";
 		},
 		subscriptions: {
-			[MetricEvent.MessageStart]({ message }) {
-				if (message.role === "assistant") {
-					firstDelta = undefined;
-				}
-			},
-			[MetricEvent.MessageUpdate]({ assistantMessageEvent: event }, now) {
-				if (
-					(event.type === "text_delta" || event.type === "thinking_delta" || event.type === "toolcall_delta") &&
-					event.delta.length > 0
-				) {
-					firstDelta ??= now;
-				}
+			[MetricEvent.TurnStart](_event, now) {
+				turnStart = now;
 			},
 			[MetricEvent.MessageEnd]({ message }, now) {
 				if (message.role !== "assistant") {
 					return;
 				}
 				if (message.usage.output > 0) {
-					// Missing streaming data must not masquerade as generation-only timing.
-					if (firstDelta === undefined || now <= firstDelta) {
+					// Include first-chunk latency, but never include time spent executing tools.
+					if (turnStart === undefined || now <= turnStart) {
 						measurable = false;
 					} else {
-						duration += now - firstDelta;
+						duration += now - turnStart;
 						output += message.usage.output;
 					}
 				}
-				firstDelta = undefined;
+				turnStart = undefined;
 			},
 		},
 	};

@@ -1,4 +1,4 @@
-import { response, delta } from "#metrics-test/fixtures";
+import { response, delta, turnStart } from "#metrics-test/fixtures";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { expect, test } from "vitest";
@@ -24,19 +24,21 @@ test.each([
 	expect(result).toBe(expected);
 });
 
-test("aggregates generation time excluding initial wait and tools, then freezes and resets", () => {
+test("aggregates client-side response time including initial wait but excluding tools, then freezes and resets", () => {
 	// Arrange
 	const metrics = createMetrics();
 	expect(metrics.format(format, 0)).toBe("0s | N/A | 0 | 0 | $0.0000");
 	metrics.reset(0);
 	// Act
+	metrics.dispatch(turnStart(), 0, context);
 	metrics.dispatch(delta(), 4000, context);
 	metrics.dispatch(response(), 6000, context);
+	metrics.dispatch(turnStart(1), 18000, context);
 	metrics.dispatch(delta(), 20000, context);
 	metrics.dispatch(response(200), 24000, context);
 	metrics.dispatch({ type: "agent_settled", aborted: false }, 25000, context);
 	// Assert
-	expect(metrics.format(format, 90000)).toBe("25s | 50.0 tok/s | 400 | 300 | $0.0084");
+	expect(metrics.format(format, 90000)).toBe("25s | 25.0 tok/s | 400 | 300 | $0.0084");
 	metrics.reset(90000);
 	expect(metrics.format(format, 90000)).toBe("0s | N/A | 0 | 0 | $0.0000");
 });
@@ -47,14 +49,15 @@ test("ticks only elapsed time until a usage refresh", () => {
 	metrics.reset(0);
 	metrics.format(format, 0);
 	// Act
+	metrics.dispatch(turnStart(), 0, context);
 	metrics.dispatch(delta(), 1000, context);
 	metrics.dispatch(response(), 2000, context);
 	// Assert
 	expect(metrics.format(format, 3000, true)).toBe("3s | N/A | 0 | 0 | $0.0000");
-	expect(metrics.format(format, 3000)).toBe("3s | 100.0 tok/s | 200 | 100 | $0.0042");
+	expect(metrics.format(format, 3000)).toBe("3s | 50.0 tok/s | 200 | 100 | $0.0042");
 });
 
-test("reports unavailable throughput when streaming timing is missing", () => {
+test("reports unavailable throughput when turn timing is missing", () => {
 	// Arrange
 	const metrics = createMetrics();
 	metrics.reset(0);
@@ -62,6 +65,32 @@ test("reports unavailable throughput when streaming timing is missing", () => {
 	metrics.dispatch(response(), 2000, context);
 	// Assert
 	expect(metrics.format("<tokps> <unknown>", 2000)).toBe("N/A <unknown>");
+});
+
+test.each([false, true])("times a buffered response from the turn start (delta: %s)", (hasDelta) => {
+	// Arrange
+	const metrics = createMetrics();
+	metrics.reset(0);
+	metrics.dispatch(turnStart(), 1000, context);
+	// Act
+	metrics.dispatch({ type: "message_start", message: response().message }, 5000, context);
+	if (hasDelta) {
+		metrics.dispatch(delta(), 5000, context);
+	}
+	metrics.dispatch(response(1000), 5000, context);
+	// Assert
+	expect(metrics.format("<tokps>", 5000)).toBe("250.0 tok/s");
+});
+
+test("reports unavailable throughput for a zero-duration response", () => {
+	// Arrange
+	const metrics = createMetrics();
+	metrics.reset(0);
+	// Act
+	metrics.dispatch(turnStart(), 1000, context);
+	metrics.dispatch(response(), 1000, context);
+	// Assert
+	expect(metrics.format("<tokps>", 1000)).toBe("N/A");
 });
 
 test("rejects duplicate registrations", () => {

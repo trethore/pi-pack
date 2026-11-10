@@ -32,3 +32,7 @@ export function delta(): MessageUpdateEvent {
 		assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "thinking", partial: message },
 	};
 }
+
+export function turnStart(turnIndex = 0) {
+	return { type: "turn_start", turnIndex, timestamp: 0 } as const;
+}
