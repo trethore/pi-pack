@@ -15,7 +15,7 @@
 		"command": true
 	},
 	"webSearch": {
-		// true adds web_search; false removes web_search and web_search_preview; null leaves tools untouched.
+		// true adds web_search; false removes web-search tools (including dated variants); null leaves tools untouched.
 		"value": true,
 		"command": true,
 		// Persist and replay native output containing web searches for supported providers. Config-only; use /reload after changing.

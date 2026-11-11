@@ -130,8 +130,9 @@ may already have supplied a value. Response capture and replay are controlled se
 `reasoningSummary: { "value": "none" }` removes the summary request; the string `"none"` is never sent to the API. It
 does not disable reasoning itself.
 
-Enabling web search adds `{ "type": "web_search" }` unless a `web_search` or `web_search_preview` tool is already
-present. Disabling it removes all tools of those two types. Other tools are preserved.
+Enabling web search adds `{ "type": "web_search" }` unless a web-search tool is already present. Both `web_search` and
+`web_search_preview`, including their dated variants `web_search_2025_08_26` and `web_search_preview_2025_03_11`, are
+recognized. Disabling web search removes all of these types from the top-level `tools` array. Other tools are preserved.
 
 ## Commands
 

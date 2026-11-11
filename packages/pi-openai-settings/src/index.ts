@@ -32,14 +32,10 @@ export default function openaiSettings(pi: ExtensionAPI): void {
 		}
 	});
 
-	const features = Object.keys(settingValues).filter(
-		(name) => isSetting(name) && name !== "enabled" && config[name].command,
-	);
-	const commands = ["enabled", ...features];
-	const usage = commands
+	const commands = Object.keys(settingValues)
 		.filter(isSetting)
-		.map((name) => `${name} <${settingValues[name].join("|")}>`)
-		.join("\n");
+		.filter((name) => name === "enabled" || config[name].command);
+	const usage = commands.map((name) => `${name} <${settingValues[name].join("|")}>`).join("\n");
 
 	pi.registerCommand("openai-settings", {
 		description: "Apply and save global OpenAI Responses settings",

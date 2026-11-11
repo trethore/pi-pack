@@ -99,7 +99,7 @@ export function createResponseReplay(pi: ExtensionAPI, enabled: () => boolean) {
 			return;
 		}
 		const response = parsed.data.response;
-		pending.set(response.id, {
+		pending.set(responseKey(response.id, event), {
 			sessionId: ctx.sessionManager.getSessionId(),
 			data: {
 				version: 1,
@@ -123,13 +123,13 @@ export function createResponseReplay(pi: ExtensionAPI, enabled: () => boolean) {
 		if (message.role !== "assistant" || !message.responseId) {
 			return;
 		}
-		const capture = pending.get(message.responseId);
-		pending.delete(message.responseId);
+		const key = responseKey(message.responseId, message);
+		const capture = pending.get(key);
+		pending.delete(key);
 		if (
 			!enabled() ||
 			!capture ||
 			capture.sessionId !== ctx.sessionManager.getSessionId() ||
-			!matchesModel(message, capture.data) ||
 			(message.stopReason !== "stop" && message.stopReason !== "toolUse")
 		) {
 			return;
@@ -211,6 +211,11 @@ function restoreCapture(
 
 function isReplayRequest(payload: unknown): payload is z.infer<typeof requestSchema> {
 	return requestSchema.safeParse(payload).success;
+}
+
+/** Response IDs belong to a provider/model, not a global namespace shared by all pending requests. */
+function responseKey(responseId: string, source: Pick<Capture, "provider" | "api" | "model">): string {
+	return JSON.stringify([source.provider, source.api, source.model, responseId]);
 }
 
 function matchesModel(message: AssistantMessage, capture: Pick<Capture, "provider" | "api" | "model">): boolean {

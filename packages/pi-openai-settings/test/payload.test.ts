@@ -115,27 +115,39 @@ test("removing absent summaries and web search does not introduce fields", () =>
 	expect(payload).toEqual({});
 });
 
-test.each(["web_search", "web_search_preview"])("does not duplicate or replace existing %s configuration", (type) => {
-	// Arrange
-	setup('{"webSearch":{"value":true}}');
-	const tools = [
-		{ type, search_context_size: "low" },
-		{ type: "function", name: "read" },
-	];
-	const payload = { tools };
-	// Act
-	applySettings(payload, loadConfig());
-	applySettings(payload, loadConfig());
-	// Assert
-	expect(payload.tools).toBe(tools);
-	expect(payload.tools).toHaveLength(2);
-});
+test.each(["web_search", "web_search_preview", "web_search_2025_08_26", "web_search_preview_2025_03_11"])(
+	"does not duplicate or replace existing %s configuration",
+	(type) => {
+		// Arrange
+		setup('{"webSearch":{"value":true}}');
+		const tools = [
+			{ type, search_context_size: "low" },
+			{ type: "function", name: "read" },
+		];
+		const payload = { tools };
+		// Act
+		applySettings(payload, loadConfig());
+		applySettings(payload, loadConfig());
+		// Assert
+		expect(payload.tools).toBe(tools);
+		expect(payload.tools).toHaveLength(2);
+	},
+);
 
 test("false removes all web search declarations and preserves other tools", () => {
 	// Arrange
 	setup('{"webSearch":{"value":false}}');
 	const tool = { type: "function", name: "read" };
-	const payload = { tools: [{ type: "web_search" }, tool, { type: "web_search_preview" }, { type: "web_search" }] };
+	const payload = {
+		tools: [
+			{ type: "web_search" },
+			tool,
+			{ type: "web_search_preview" },
+			{ type: "web_search_2025_08_26" },
+			{ type: "web_search_preview_2025_03_11" },
+			{ type: "web_search" },
+		],
+	};
 	// Act
 	applySettings(payload, loadConfig());
 	// Assert

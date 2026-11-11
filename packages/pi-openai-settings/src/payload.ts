@@ -19,8 +19,15 @@ export function isResponsesPayload(payload: unknown): payload is ResponsesPayloa
 	return payloadSchema.safeParse(payload).success;
 }
 
+const webSearchTypes = new Set([
+	"web_search",
+	"web_search_preview",
+	"web_search_2025_08_26",
+	"web_search_preview_2025_03_11",
+]);
+
 function isWebSearch(tool: z.infer<typeof toolSchema>): boolean {
-	return tool.type === "web_search" || tool.type === "web_search_preview";
+	return webSearchTypes.has(tool.type);
 }
 
 export function supportsModel(model: { provider: string; api: string } | undefined): boolean {

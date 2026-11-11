@@ -14,14 +14,18 @@ function feature<T extends z.ZodType>(schema: T) {
 	});
 }
 
+const verbositySchema = z.enum(["low", "medium", "high"]);
+const reasoningSummarySchema = z.enum(["concise", "auto", "detailed", "none"]);
+const serviceTierSchema = z.enum(["default", "priority", "ultrafast"]);
+
 const configSchema = z.strictObject({
 	enabled: z.boolean().default(true),
-	verbosity: feature(z.enum(["low", "medium", "high"])).prefault({}),
-	reasoningSummary: feature(z.enum(["concise", "auto", "detailed", "none"])).prefault({}),
+	verbosity: feature(verbositySchema).prefault({}),
+	reasoningSummary: feature(reasoningSummarySchema).prefault({}),
 	webSearch: feature(z.boolean())
 		.extend({ captureResponses: z.boolean().default(true) })
 		.prefault({}),
-	serviceTier: feature(z.enum(["default", "priority", "ultrafast"])).prefault({}),
+	serviceTier: feature(serviceTierSchema).prefault({}),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -29,10 +33,10 @@ export type Setting = keyof Config;
 
 export const settingValues = {
 	enabled: ["true", "false"],
-	verbosity: ["low", "medium", "high", "null"],
-	reasoningSummary: ["concise", "auto", "detailed", "none", "null"],
+	verbosity: [...verbositySchema.options, "null"],
+	reasoningSummary: [...reasoningSummarySchema.options, "null"],
 	webSearch: ["true", "false", "null"],
-	serviceTier: ["default", "priority", "ultrafast", "null"],
+	serviceTier: [...serviceTierSchema.options, "null"],
 } satisfies Record<Setting, string[]>;
 
 const environmentNames: Record<Setting, string> = {

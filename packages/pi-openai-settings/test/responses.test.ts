@@ -311,29 +311,37 @@ test.each([
 	expect(harness.sessionManager.getEntries().map((entry) => entry.type)).toEqual(["message"]);
 });
 
-test.each(supportedModels)("isolates %s/%s captures from other providers with matching IDs", async (provider, api) => {
-	// Arrange
-	const selected = model(provider, api);
-	const harness = setup(undefined, selected);
-	const turns = [];
-	for (const [sourceProvider, sourceApi] of supportedModels) {
-		const turn = searchTurn();
-		turn.assistant.provider = sourceProvider;
-		turn.assistant.api = sourceApi;
-		turn.search.action.queries = [sourceProvider];
-		await finishTurn(harness, turn);
-		turns.push(turn);
-	}
-	const retained = turns.find((turn) => turn.assistant.provider === provider);
-	assert(retained);
-	const payload = { model: "test-model", input: retained.input };
+test.each(supportedModels)(
+	"isolates interleaved %s/%s captures from other providers with matching IDs",
+	async (provider, api) => {
+		// Arrange
+		const selected = model(provider, api);
+		const harness = setup(undefined, selected);
+		const turns = [];
+		for (const [sourceProvider, sourceApi] of supportedModels) {
+			const turn = searchTurn();
+			turn.assistant.provider = sourceProvider;
+			turn.assistant.api = sourceApi;
+			turn.search.action.queries = [sourceProvider];
+			await harness.emit(completion(turn));
+			turns.push(turn);
+		}
+		const retained = turns.find((turn) => turn.assistant.provider === provider);
+		assert(retained);
+		const payload = { model: "test-model", input: retained.input };
 
-	// Act
-	await harness.emit({ type: Events.BeforeProviderRequest, payload });
+		// Act
+		for (const turn of turns) {
+			await harness.emit({ type: Events.MessageEnd, message: turn.assistant });
+			harness.sessionManager.appendMessage(turn.assistant);
+		}
+		await harness.emit({ type: Events.BeforeProviderRequest, payload });
 
-	// Assert
-	expect(payload.input).toEqual(retained.output);
-});
+		// Assert
+		expect(harness.sessionManager.getEntries().filter((entry) => entry.type === "custom")).toHaveLength(turns.length);
+		expect(payload.input).toEqual(retained.output);
+	},
+);
 
 test.each(supportedModels)("does not replay %s/%s captures on a different model or API", async (provider, api) => {
 	// Arrange
