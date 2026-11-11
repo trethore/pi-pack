@@ -24,7 +24,7 @@ Create a global `~/.pi/agent/pi-openai-settings.jsonc` config file. If `PI_CODIN
 read from that directory instead.
 
 All entries are optional. Without configuration or environment overrides, the extension leaves provider settings
-unchanged. Native OpenAI web-search response capture and replay are enabled by default. Only
+unchanged. Native web-search response capture and replay are enabled by default for all supported providers. Only
 `/openai-settings enabled true|false` is available by default.
 
 ```jsonc
@@ -83,7 +83,7 @@ unchanged. Native OpenAI web-search response capture and replay are enabled by d
 				},
 				"captureResponses": {
 					"type": "boolean",
-					"description": "Capture and replay native OpenAI response output containing web searches.",
+					"description": "Capture and replay native response output containing web searches for supported providers.",
 					"default": true,
 				},
 			},
@@ -207,9 +207,16 @@ Only these provider/API combinations are modified:
 
 Other combinations, including Chat Completions and `openai-codex-responses`, are left untouched.
 
-Settings are applied to these providers; native response capture/replay is OpenAI-only. Availability of individual
-settings depends on the model, endpoint, and account. It does not detect those capabilities or guarantee that a provider
-accepts every listed value.
+Settings and native response capture/replay apply to all three combinations. The normal `openai` provider is supported
+with both API-key authentication and ChatGPT subscription sign-in; this does not include the `openai-codex` provider.
+
+Capture requires a valid completed response containing native `web_search_call` output. Replay is limited to the same
+provider, API, and model, and only restores unchanged assistant spans retained in the active session branch. Azure
+request model names may be deployment aliases.
+
+Availability of individual settings depends on the model, endpoint, and account. The extension does not detect those
+capabilities or guarantee that a provider accepts every listed value. Enabling capture does not enable web search
+itself.
 
 ## Behavior
 

@@ -5,7 +5,7 @@ import { Events } from "@pi-pack/events";
 import { toResponseInputItems } from "openai/lib/responses/ResponseInputItems";
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 import { z } from "zod";
-import { isResponsesPayload } from "#openai-settings/payload";
+import { isResponsesPayload, supportsModel } from "#openai-settings/payload";
 
 const ENTRY_TYPE = "pi-openai-settings.responses";
 // Warm requests have no message_end event. Bound their unclaimed captures independently of conversation length.
@@ -64,15 +64,17 @@ const completedSchema = z.object({
 	type: z.literal("response.completed"),
 	response: z.object({ id, status: z.literal("completed"), output: outputSchema }),
 });
-const captureSchema = z.object({
-	version: z.literal(1),
-	provider: z.literal("openai"),
-	api: z.literal("openai-responses"),
-	model: id,
-	responseId: id,
-	contentHash: z.string(),
-	output: outputSchema,
-});
+const captureSchema = z
+	.object({
+		version: z.literal(1),
+		provider: id,
+		api: id,
+		model: id,
+		responseId: id,
+		contentHash: z.string(),
+		output: outputSchema,
+	})
+	.refine(supportsModel);
 const requestSchema = z.looseObject({ model: id, input: z.array(objectSchema) });
 type NativeItem = z.infer<typeof outputItemSchema>;
 type Capture = z.infer<typeof captureSchema>;
@@ -89,7 +91,7 @@ export function createResponseReplay(pi: ExtensionAPI, enabled: () => boolean) {
 	pi.on(Events.AgentSettled, clear);
 
 	pi.on(Events.ProviderStreamEvent, (event, ctx) => {
-		if (!enabled() || event.provider !== "openai" || event.api !== "openai-responses") {
+		if (!enabled() || !supportsModel(event)) {
 			return;
 		}
 		const parsed = completedSchema.safeParse(event.data);
@@ -101,8 +103,8 @@ export function createResponseReplay(pi: ExtensionAPI, enabled: () => boolean) {
 			sessionId: ctx.sessionManager.getSessionId(),
 			data: {
 				version: 1,
-				provider: "openai",
-				api: "openai-responses",
+				provider: event.provider,
+				api: event.api,
 				model: event.model,
 				responseId: response.id,
 				// Zod passthrough fields can still share nested objects with the provider event.
@@ -137,13 +139,15 @@ export function createResponseReplay(pi: ExtensionAPI, enabled: () => boolean) {
 	});
 
 	function restore(payload: unknown, ctx: ExtensionContext): void {
+		const model = ctx.model;
 		if (
 			!enabled() ||
-			ctx.model?.provider !== "openai" ||
-			ctx.model.api !== "openai-responses" ||
+			!model ||
+			!supportsModel(model) ||
 			!isResponsesPayload(payload) ||
 			!isReplayRequest(payload) ||
-			payload.model !== ctx.model.id
+			// Azure's request model can be a deployment alias rather than Pi's model ID.
+			(model.provider !== "azure" && payload.model !== model.id)
 		) {
 			return;
 		}
@@ -152,7 +156,12 @@ export function createResponseReplay(pi: ExtensionAPI, enabled: () => boolean) {
 				return [];
 			}
 			const parsed = captureSchema.safeParse(entry.data);
-			return parsed.success && parsed.data.model === payload.model ? [parsed.data] : [];
+			return parsed.success &&
+				parsed.data.provider === model.provider &&
+				parsed.data.api === model.api &&
+				parsed.data.model === model.id
+				? [parsed.data]
+				: [];
 		});
 		if (captures.length === 0) {
 			return;

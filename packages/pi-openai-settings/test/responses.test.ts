@@ -7,10 +7,18 @@ import { completion, finishTurn, searchTurn } from "#openai-settings-test/respon
 
 afterEach(() => vi.unstubAllEnvs());
 
-test("captures search responses by default and restores native output without changing surrounding input", async () => {
+const supportedModels = [
+	["openai", "openai-responses"],
+	["azure", "azure-openai-responses"],
+	["github-copilot", "openai-responses"],
+] as const;
+
+test.each(supportedModels)("captures and restores native %s/%s output by default", async (provider, api) => {
 	// Arrange
-	const harness = setup();
+	const harness = setup(undefined, model(provider, api));
 	const turn = searchTurn();
+	turn.assistant.provider = provider;
+	turn.assistant.api = api;
 	const user = { role: "user", content: "Search, then read the file." };
 	const result = { type: "function_call_output", call_id: turn.call.call_id, output: "File contents." };
 	await finishTurn(harness, turn);
@@ -28,6 +36,9 @@ test("captures search responses by default and restores native output without ch
 	expect(turn.output).toEqual(originalOutput);
 	expect(harness.sessionManager.buildSessionProjection().messages).toEqual([turn.assistant]);
 	expect(harness.sessionManager.getBranch().map((entry) => entry.type)).toEqual(["custom", "message"]);
+	expect(harness.sessionManager.getEntries()[0]).toMatchObject({
+		data: { version: 1, provider, api, model: "test-model", output: originalOutput },
+	});
 });
 
 test("restores multiple responses in place and remains idempotent", async () => {
@@ -101,14 +112,16 @@ test("disabling the web-search tool does not disable replay of earlier search re
 	expect(payload.input).toEqual(turn.output);
 });
 
-test("replays after reload from persisted custom entries rather than in-memory captures", async () => {
+test.each(supportedModels)("replays persisted %s/%s captures after reload", async (provider, api) => {
 	// Arrange
-	const first = setup();
+	const first = setup(undefined, model(provider, api));
 	const turn = searchTurn();
+	turn.assistant.provider = provider;
+	turn.assistant.api = api;
 	await finishTurn(first, turn);
 	const reloaded = setup(
 		undefined,
-		model(),
+		model(provider, api),
 		SessionManager.inMemory(undefined, undefined, [...structuredClone(first.sessionManager.getEntries())]),
 	);
 	const payload = { model: "test-model", input: turn.input };
@@ -277,10 +290,13 @@ test.each([Events.SessionStart, Events.SessionShutdown, Events.AgentSettled])(
 );
 
 test.each([
-	["azure", "azure-openai-responses"],
-	["github-copilot", "openai-responses"],
 	["openai-codex", "openai-codex-responses"],
+	["openai-codex", "openai-responses"],
+	["openai", "openai-codex-responses"],
 	["openai", "openai-completions"],
+	["azure", "openai-responses"],
+	["github-copilot", "azure-openai-responses"],
+	["openrouter", "openai-responses"],
 ])("does not capture %s/%s responses", async (provider, api) => {
 	// Arrange
 	const harness = setup(undefined, model(provider, api));
@@ -295,23 +311,84 @@ test.each([
 	expect(harness.sessionManager.getEntries().map((entry) => entry.type)).toEqual(["message"]);
 });
 
-test("does not replay on a different model or provider", async () => {
+test.each(supportedModels)("isolates %s/%s captures from other providers with matching IDs", async (provider, api) => {
+	// Arrange
+	const selected = model(provider, api);
+	const harness = setup(undefined, selected);
+	const turns = [];
+	for (const [sourceProvider, sourceApi] of supportedModels) {
+		const turn = searchTurn();
+		turn.assistant.provider = sourceProvider;
+		turn.assistant.api = sourceApi;
+		turn.search.action.queries = [sourceProvider];
+		await finishTurn(harness, turn);
+		turns.push(turn);
+	}
+	const retained = turns.find((turn) => turn.assistant.provider === provider);
+	assert(retained);
+	const payload = { model: "test-model", input: retained.input };
+
+	// Act
+	await harness.emit({ type: Events.BeforeProviderRequest, payload });
+
+	// Assert
+	expect(payload.input).toEqual(retained.output);
+});
+
+test.each(supportedModels)("does not replay %s/%s captures on a different model or API", async (provider, api) => {
+	// Arrange
+	const selected = model(provider, api);
+	const harness = setup(undefined, selected);
+	const turn = searchTurn();
+	turn.assistant.provider = provider;
+	turn.assistant.api = api;
+	await finishTurn(harness, turn);
+	const differentModel = { model: "another-model", input: turn.input };
+	const differentApi = { model: "test-model", input: turn.input };
+
+	// Act
+	selected.id = "another-model";
+	await harness.emit({ type: Events.BeforeProviderRequest, payload: differentModel });
+	selected.id = "test-model";
+	selected.api = "openai-completions";
+	await harness.emit({ type: Events.BeforeProviderRequest, payload: differentApi });
+
+	// Assert
+	expect(differentModel.input).toBe(turn.input);
+	expect(differentApi.input).toBe(turn.input);
+});
+
+test("does not replay an OpenAI capture when switching to Copilot", async () => {
 	// Arrange
 	const selected = model();
 	const harness = setup(undefined, selected);
 	const turn = searchTurn();
 	await finishTurn(harness, turn);
-	const differentModel = { model: "another-model", input: turn.input };
-	const differentProvider = { model: "test-model", input: turn.input };
+	const payload = { model: "test-model", input: turn.input };
 
 	// Act
-	await harness.emit({ type: Events.BeforeProviderRequest, payload: differentModel });
 	selected.provider = "github-copilot";
-	await harness.emit({ type: Events.BeforeProviderRequest, payload: differentProvider });
+	await harness.emit({ type: Events.BeforeProviderRequest, payload });
 
 	// Assert
-	expect(differentModel.input).toBe(turn.input);
-	expect(differentProvider.input).toBe(turn.input);
+	expect(payload.input).toBe(turn.input);
+});
+
+test("restores Azure captures when the request uses a deployment alias", async () => {
+	// Arrange
+	const harness = setup(undefined, model("azure", "azure-openai-responses"));
+	const turn = searchTurn();
+	turn.assistant.provider = "azure";
+	turn.assistant.api = "azure-openai-responses";
+	await finishTurn(harness, turn);
+	const payload = { model: "production-deployment", input: turn.input };
+
+	// Act
+	await harness.emit({ type: Events.BeforeProviderRequest, payload });
+
+	// Assert
+	expect(payload.model).toBe("production-deployment");
+	expect(payload.input).toEqual(turn.output);
 });
 
 test.each([
@@ -501,19 +578,22 @@ test.each([
 	expect(payload.input).toBe(turn.input);
 });
 
-test("ignores a completed response when the assistant identifies a different model", async () => {
-	// Arrange
-	const harness = setup();
-	const turn = searchTurn();
-	await harness.emit(completion(turn));
-	turn.assistant.model = "different-model";
+test.each(["provider", "api", "model"] as const)(
+	"ignores a completed response with a different assistant %s",
+	async (field) => {
+		// Arrange
+		const harness = setup();
+		const turn = searchTurn();
+		await harness.emit(completion(turn));
+		turn.assistant[field] = "different";
 
-	// Act
-	await harness.emit({ type: Events.MessageEnd, message: turn.assistant });
+		// Act
+		await harness.emit({ type: Events.MessageEnd, message: turn.assistant });
 
-	// Assert
-	expect(harness.sessionManager.getEntries()).toEqual([]);
-});
+		// Assert
+		expect(harness.sessionManager.getEntries()).toEqual([]);
+	},
+);
 
 test("does not attach a stale capture to a different session", async () => {
 	// Arrange

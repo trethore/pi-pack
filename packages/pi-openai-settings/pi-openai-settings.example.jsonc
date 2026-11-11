@@ -18,7 +18,7 @@
 		// true adds web_search; false removes web_search and web_search_preview; null leaves tools untouched.
 		"value": true,
 		"command": true,
-		// Persist and replay native OpenAI output containing web searches. Config-only; use /reload after changing.
+		// Persist and replay native output containing web searches for supported providers. Config-only; use /reload after changing.
 		"captureResponses": true
 	},
 	"serviceTier": {
