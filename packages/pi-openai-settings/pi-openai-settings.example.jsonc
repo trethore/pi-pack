@@ -1,6 +1,6 @@
 {
 	// Save as pi-openai-settings.jsonc in ~/.pi/agent or $PI_CODING_AGENT_DIR.
-	// Missing features default to { "value": null, "command": false }.
+	// Missing features default to { "value": null, "command": false }; webSearch.captureResponses defaults to true.
 
 	// Whether the extension is enabled.
 	"enabled": true,
@@ -17,7 +17,9 @@
 	"webSearch": {
 		// true adds web_search; false removes web_search and web_search_preview; null leaves tools untouched.
 		"value": true,
-		"command": true
+		"command": true,
+		// Persist and replay native OpenAI output containing web searches. Config-only; use /reload after changing.
+		"captureResponses": true
 	},
 	"serviceTier": {
 		// default, priority, ultrafast, or null to leave the payload untouched.

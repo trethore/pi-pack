@@ -16,6 +16,7 @@ type MockContext = {
 	model?: ExtensionContext["model"];
 	ui?: MockUI;
 	modelRegistry?: Partial<ExtensionContext["modelRegistry"]>;
+	sessionManager?: ExtensionContext["sessionManager"];
 };
 type Handler = (event: ExtensionEvent | { type: ExtensionEvent["type"] }, ctx: ExtensionContext) => unknown;
 
@@ -25,6 +26,7 @@ export function createExtensionHarness(
 	configFilename: string,
 	context: MockContext = {},
 	initialConfig?: string,
+	apiOverrides: Partial<ExtensionAPI> = {},
 ) {
 	const directory = mkdtempSync(join(process.env.HOME ?? "", "extension-"));
 	vi.stubEnv("PI_CODING_AGENT_DIR", directory);
@@ -47,6 +49,7 @@ export function createExtensionHarness(
 			subscriptions.push(handler);
 			handlers.set(type, subscriptions);
 		},
+		...apiOverrides,
 	} as ExtensionAPI;
 	extension(api);
 

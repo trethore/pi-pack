@@ -8,20 +8,20 @@ import { z } from "zod";
 const filename = "pi-openai-settings.jsonc";
 
 function feature<T extends z.ZodType>(schema: T) {
-	return z
-		.strictObject({
-			value: schema.nullable().default(null),
-			command: z.boolean().default(false),
-		})
-		.prefault({});
+	return z.strictObject({
+		value: schema.nullable().default(null),
+		command: z.boolean().default(false),
+	});
 }
 
 const configSchema = z.strictObject({
 	enabled: z.boolean().default(true),
-	verbosity: feature(z.enum(["low", "medium", "high"])),
-	reasoningSummary: feature(z.enum(["concise", "auto", "detailed", "none"])),
-	webSearch: feature(z.boolean()),
-	serviceTier: feature(z.enum(["default", "priority", "ultrafast"])),
+	verbosity: feature(z.enum(["low", "medium", "high"])).prefault({}),
+	reasoningSummary: feature(z.enum(["concise", "auto", "detailed", "none"])).prefault({}),
+	webSearch: feature(z.boolean())
+		.extend({ captureResponses: z.boolean().default(true) })
+		.prefault({}),
+	serviceTier: feature(z.enum(["default", "priority", "ultrafast"])).prefault({}),
 });
 
 export type Config = z.infer<typeof configSchema>;

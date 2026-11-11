@@ -7,7 +7,7 @@ import { setup } from "#openai-settings-test/fixtures";
 
 afterEach(() => vi.unstubAllEnvs());
 
-test("defaults to an enabled master switch with inert features and no commands", () => {
+test("defaults to enabled capture, no setting overrides, and no feature commands", () => {
 	// Arrange
 	setup();
 	// Act
@@ -17,7 +17,7 @@ test("defaults to an enabled master switch with inert features and no commands",
 		enabled: true,
 		verbosity: { value: null, command: false },
 		reasoningSummary: { value: null, command: false },
-		webSearch: { value: null, command: false },
+		webSearch: { value: null, command: false, captureResponses: true },
 		serviceTier: { value: null, command: false },
 	});
 });
@@ -29,7 +29,7 @@ test("reads global JSONC with comments, trailing commas, and partial feature ent
 	const config = loadConfig();
 	// Assert
 	expect(config.verbosity).toEqual({ value: "high", command: false });
-	expect(config.webSearch).toEqual({ value: null, command: true });
+	expect(config.webSearch).toEqual({ value: null, command: true, captureResponses: true });
 });
 
 test("ignores project config", () => {
@@ -66,7 +66,7 @@ test("environment overrides values without changing command flags", () => {
 		enabled: true,
 		verbosity: { value: "low", command: true },
 		reasoningSummary: { value: "none", command: false },
-		webSearch: { value: false, command: false },
+		webSearch: { value: false, command: false, captureResponses: true },
 		serviceTier: { value: "ultrafast", command: false },
 	});
 });
@@ -95,7 +95,7 @@ test.each(['{"enabled":false,"webSearch":{"value":true,"command":true}}', "{brok
 		// Assert
 		expect(config.enabled).toBe(true);
 		expect(config.verbosity).toEqual({ value: "low", command: false });
-		expect(config.webSearch).toEqual({ value: null, command: false });
+		expect(config.webSearch).toEqual({ value: null, command: false, captureResponses: true });
 	},
 );
 
@@ -138,6 +138,8 @@ test.each([
 	'{"verbosity":{"value":"none"}}',
 	'{"serviceTier":{"value":"none"}}',
 	'{"webSearch":{"value":"true"}}',
+	'{"webSearch":{"captureResponses":"true"}}',
+	'{"webSearch":{"captureResponses":null}}',
 	'{"reasoningSummary":{"value":false}}',
 	'{"verbosity":{"command":"true"}}',
 	'{"unknown":true}',
@@ -182,4 +184,19 @@ test("invalid existing config is never overwritten by a save", () => {
 	// Act / Assert
 	expect(() => saveSetting("verbosity", "low")).toThrow("Invalid JSONC");
 	expect(readFileSync(join(getAgentDir(), "pi-openai-settings.jsonc"), "utf8")).toBe("{broken");
+});
+
+test("captureResponses is optional and independent of web-search value and command overrides", () => {
+	// Arrange
+	setup('{"webSearch":{"value":true,"command":true,"captureResponses":false}}');
+	vi.stubEnv("PI_OPENAI_WEB_SEARCH", "false");
+
+	// Act
+	const config = loadConfig();
+	saveSetting("webSearch", null);
+	const saved = readFileSync(join(getAgentDir(), "pi-openai-settings.jsonc"), "utf8");
+
+	// Assert
+	expect(config.webSearch).toEqual({ value: false, command: true, captureResponses: false });
+	expect(JSON.parse(saved)).toEqual({ webSearch: { value: null, command: true, captureResponses: false } });
 });

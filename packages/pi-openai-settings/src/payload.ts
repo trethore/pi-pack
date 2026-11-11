@@ -14,7 +14,7 @@ const payloadSchema = objectSchema.pipe(
 
 type ResponsesPayload = z.infer<typeof payloadSchema>;
 
-function isResponsesPayload(payload: unknown): payload is ResponsesPayload {
+export function isResponsesPayload(payload: unknown): payload is ResponsesPayload {
 	// Validate without replacing the original payload with Zod's cloned output.
 	return payloadSchema.safeParse(payload).success;
 }

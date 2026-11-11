@@ -9,7 +9,7 @@ Manage advanced OpenAI Responses settings through global config, environment var
 
 ## Installation
 
-Requires Pi `1.5.0` or a compatible later release.
+Requires Pi `1.5.2` or a compatible later release.
 
 From the repository root, install pi-openai-settings globally:
 
@@ -23,7 +23,8 @@ npm run install:pi-openai-settings
 Create a global `~/.pi/agent/pi-openai-settings.jsonc` config file. If `PI_CODING_AGENT_DIR` is set, the config file is
 read from that directory instead.
 
-All entries are optional. Without configuration or environment overrides, the extension makes no payload changes. Only
+All entries are optional. Without configuration or environment overrides, the extension leaves provider settings
+unchanged. Native OpenAI web-search response capture and replay are enabled by default. Only
 `/openai-settings enabled true|false` is available by default.
 
 ```jsonc
@@ -80,6 +81,11 @@ All entries are optional. Without configuration or environment overrides, the ex
 					"description": "Whether /openai-settings webSearch is available.",
 					"default": false,
 				},
+				"captureResponses": {
+					"type": "boolean",
+					"description": "Capture and replay native OpenAI response output containing web searches.",
+					"default": true,
+				},
 			},
 		},
 		"serviceTier": {
@@ -117,8 +123,9 @@ reload.
 | `webSearch`        | `true`, `false`, `null`                       | `true` adds a web-search tool; `false` removes web-search tools.                          |
 | `serviceTier`      | `default`, `priority`, `ultrafast`, `null`    | Sets `service_tier`.                                                                      |
 
-For every feature, `null` means **leave the payload untouched**, not remove the setting. Pi or another extension may
-already have supplied a value.
+For every feature value, `null` means **leave that provider setting untouched**, not remove it. Pi or another extension
+may already have supplied a value. Response capture and replay are controlled separately by
+`webSearch.captureResponses`.
 
 `reasoningSummary: { "value": "none" }` removes the summary request; the string `"none"` is never sent to the API. It
 does not disable reasoning itself.
@@ -200,8 +207,9 @@ Only these provider/API combinations are modified:
 
 Other combinations, including Chat Completions and `openai-codex-responses`, are left untouched.
 
-The extension edits the outgoing request payload. Availability of individual settings depends on the model, endpoint,
-and account. It does not detect those capabilities or guarantee that a provider accepts every listed value.
+Settings are applied to these providers; native response capture/replay is OpenAI-only. Availability of individual
+settings depends on the model, endpoint, and account. It does not detect those capabilities or guarantee that a provider
+accepts every listed value.
 
 ## Behavior
 

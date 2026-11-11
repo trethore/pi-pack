@@ -1,4 +1,4 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { SessionManager, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { createExtensionHarness } from "#test/extension-harness";
 import openaiSettings from "#openai-settings/index";
 
@@ -17,6 +17,21 @@ export function model(provider = "openai", api = "openai-responses"): NonNullabl
 	};
 }
 
-export function setup(source?: string, selectedModel: ExtensionContext["model"] = model()) {
-	return createExtensionHarness(openaiSettings, "pi-openai-settings.jsonc", { model: selectedModel }, source);
+export function setup(
+	source?: string,
+	selectedModel: ExtensionContext["model"] = model(),
+	sessionManager = SessionManager.inMemory(),
+) {
+	const harness = createExtensionHarness(
+		openaiSettings,
+		"pi-openai-settings.jsonc",
+		{ model: selectedModel, sessionManager },
+		source,
+		{
+			appendEntry: (type, data) => {
+				sessionManager.appendCustomEntry(type, data);
+			},
+		},
+	);
+	return { ...harness, sessionManager };
 }

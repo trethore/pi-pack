@@ -8,6 +8,7 @@ import {
 	settingValues,
 	updateSetting,
 } from "#openai-settings/config";
+import { createResponseReplay } from "#openai-settings/responses";
 import { applySettings, supportsModel } from "#openai-settings/payload";
 
 export default function openaiSettings(pi: ExtensionAPI): void {
@@ -22,9 +23,12 @@ export default function openaiSettings(pi: ExtensionAPI): void {
 		return;
 	}
 
+	const replay = createResponseReplay(pi, () => config.enabled && config.webSearch.captureResponses);
+
 	pi.on(Events.BeforeProviderRequest, (event, ctx) => {
 		if (supportsModel(ctx.model)) {
 			applySettings(event.payload, config);
+			replay.restore(event.payload, ctx);
 		}
 	});
 
