@@ -35,7 +35,7 @@ vitest.config.ts
 
 - Tests must be easy to scan and understand with clear `Arrange / Act / Assert` sections.
 - To browse the Pi source code, use the gitignored `pi/` directory. If it doesn't exist, run `npm run clone:pi -- <tag>`
-  to clone the Pi repository at a specific tag, for example `npm run clone:pi -- v1.5.0`.
+  to clone the Pi repository at a specific tag, for example `npm run clone:pi -- v1.5.2`.
 
 ## Commits & Pull Requests
 
