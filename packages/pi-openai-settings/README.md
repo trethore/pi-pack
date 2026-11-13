@@ -228,6 +228,59 @@ Unknown config keys, invalid config or environment values, malformed JSONC, and 
 settings cannot be loaded, the extension reports an error through Pi's notification UI and remains inactive until a
 successful reload. A missing config file uses the defaults.
 
+## Development
+
+The source is organized by feature, with calculations separated from Pi, UI, and filesystem interactions:
+
+```text
+src/
+  index.ts                 Initialization, live config, and request wiring
+  responses-boundary.ts    Shared provider eligibility and payload validation
+  settings/
+    model.ts               Config schema, setting definitions, parsing, and updates
+    config.ts              Environment overrides and global JSONC persistence
+    command.ts             Command arguments, completions, and notifications
+    apply.ts               In-place request setting overrides
+  replay/
+    schema.ts              Native output, persisted captures, and request validation
+    lifecycle.ts           Pi events, pending captures, and session access
+    restore.ts             Retained-message checks, span matching, and replacement
+    pi-projection.ts       Pi-specific reconstruction of native output
+```
+
+### Boundaries and invariants
+
+- `index.ts` owns the current config. The command receives initial command availability and an update callback;
+  successful updates follow **validate → save → publish**. Failed writes leave the live config unchanged.
+- `settings/model.ts` and `settings/apply.ts` do not read files, environment variables, or Pi session state. Applying
+  settings intentionally mutates the provider payload while preserving unrelated fields and references.
+- `replay/lifecycle.ts` owns pending captures and all session access. It supplies validated captures from the active
+  branch and retained messages from the session projection to `restoreResponses`.
+- `replay/restore.ts` calculates replacements without mutating the supplied input, captures, or messages. It returns the
+  original input when no span can safely be restored. Native replacements are cloned and converted using the OpenAI SDK
+  before insertion.
+- `replay/pi-projection.ts` contains the compatibility assumptions about Pi's serializer. Unrecognized projections,
+  changed content, and ambiguous spans must continue to fail closed rather than guessing.
+
+The capture entry type and version in `replay/schema.ts` are persisted session data. Moving code does not change that
+format; changing it requires an explicit compatibility decision.
+
+### Extending the package
+
+- **New setting:** add its schema and command/environment metadata in `settings/model.ts`, implement its payload
+  behavior in `settings/apply.ts`, and update the configuration example, documentation, and tests. Keep setting-specific
+  behavior explicit rather than introducing a generic transformation framework.
+- **Provider support:** update `responses-boundary.ts` and provider integration cases. Request-model alias handling
+  belongs in `replay/lifecycle.ts`.
+- **Pi serializer changes:** update `replay/pi-projection.ts` and its focused tests, then verify the existing
+  real-runtime integration tests in `test/responses-auth.test.ts`.
+
+Tests under `test/settings/` cover the settings model, application, and persistence. Tests under `test/replay/` exercise
+projection and restoration without an event harness. The top-level extension and response tests retain end-to-end
+coverage of command persistence, capture lifecycles, branching, compaction, and context edits.
+
+From the repository root, run `npm run test:pi-openai-settings` for the package or `npm run check` for all checks.
+
 ## License
 
 Licensed under the [MIT License](../../LICENSE) by Titouan Réthoré.

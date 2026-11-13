@@ -1,6 +1,6 @@
 import type { MessageEndEvent, ProviderStreamEvent } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
-import { setup } from "#openai-settings-test/fixtures";
+import type { setup } from "#openai-settings-test/fixtures";
 
 type AssistantMessage = Extract<MessageEndEvent["message"], { role: "assistant" }>;
 

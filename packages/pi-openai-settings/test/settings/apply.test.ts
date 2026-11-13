@@ -1,41 +1,15 @@
-import { afterEach, expect, test, vi } from "vitest";
-import { loadConfig } from "#openai-settings/config";
-import { applySettings, supportsModel } from "#openai-settings/payload";
-import { setup } from "#openai-settings-test/fixtures";
-
-afterEach(() => vi.unstubAllEnvs());
-
-test.each([
-	["openai", "openai-responses", true],
-	["azure", "azure-openai-responses", true],
-	["github-copilot", "openai-responses", true],
-	["openai", "openai-completions", false],
-	["openai", "openai-codex-responses", false],
-	["azure", "openai-responses", false],
-	["github-copilot", "azure-openai-responses", false],
-	["github-copilot", "anthropic-messages", false],
-	["openrouter", "openai-responses", false],
-	["custom", "azure-openai-responses", false],
-])("provider %s with API %s is supported: %s", (provider, api, expected) => {
-	// Arrange
-	const model = { provider, api };
-	// Act
-	const supported = supportsModel(model);
-	// Assert
-	expect(supported).toBe(expected);
-});
-
-test("missing models are unsupported", () => {
-	// Arrange / Act / Assert
-	expect(supportsModel(undefined)).toBe(false);
-});
+import { expect, test } from "vitest";
+import { configSchema } from "#openai-settings/settings/model";
+import { applySettings } from "#openai-settings/settings/apply";
 
 test("sets all fields while preserving format, reasoning effort, tools, and unrelated fields", () => {
 	// Arrange
-	setup(
-		'{"verbosity":{"value":"low"},"reasoningSummary":{"value":"detailed"},"webSearch":{"value":true},"serviceTier":{"value":"priority"}}',
-	);
-	const config = loadConfig();
+	const config = configSchema.parse({
+		verbosity: { value: "low" },
+		reasoningSummary: { value: "detailed" },
+		webSearch: { value: true },
+		serviceTier: { value: "priority" },
+	});
 	const payload = {
 		text: { format: { type: "json_object" }, verbosity: "high" },
 		reasoning: { effort: "high", summary: "auto" },
@@ -62,7 +36,7 @@ test.each([
 	'{"enabled":false,"verbosity":{"value":"low"},"reasoningSummary":{"value":"none"},"webSearch":{"value":false},"serviceTier":{"value":"ultrafast"}}',
 ])("defaults and a disabled master leave every field untouched: %s", (source) => {
 	// Arrange
-	setup(source);
+	const config = configSchema.parse(JSON.parse(source));
 	const payload = {
 		text: { verbosity: "high" },
 		reasoning: { summary: "auto" },
@@ -72,7 +46,7 @@ test.each([
 	const original = structuredClone(payload);
 	const tools = payload.tools;
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 	// Assert
 	expect(payload).toEqual(original);
 	expect(payload.tools).toBe(tools);
@@ -80,12 +54,15 @@ test.each([
 
 test("creates missing nested payload fields", () => {
 	// Arrange
-	setup(
-		'{"verbosity":{"value":"medium"},"reasoningSummary":{"value":"concise"},"webSearch":{"value":true},"serviceTier":{"value":"default"}}',
-	);
+	const config = configSchema.parse({
+		verbosity: { value: "medium" },
+		reasoningSummary: { value: "concise" },
+		webSearch: { value: true },
+		serviceTier: { value: "default" },
+	});
 	const payload = {};
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 	// Assert
 	expect(payload).toEqual({
 		text: { verbosity: "medium" },
@@ -97,20 +74,20 @@ test("creates missing nested payload fields", () => {
 
 test("none deletes only reasoning.summary and never sends the sentinel", () => {
 	// Arrange
-	setup('{"reasoningSummary":{"value":"none"}}');
+	const config = configSchema.parse({ reasoningSummary: { value: "none" } });
 	const payload = { reasoning: { effort: "high", summary: "auto" }, include: ["reasoning.encrypted_content"] };
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 	// Assert
 	expect(payload).toEqual({ reasoning: { effort: "high" }, include: ["reasoning.encrypted_content"] });
 });
 
 test("removing absent summaries and web search does not introduce fields", () => {
 	// Arrange
-	setup('{"reasoningSummary":{"value":"none"},"webSearch":{"value":false}}');
+	const config = configSchema.parse({ reasoningSummary: { value: "none" }, webSearch: { value: false } });
 	const payload = {};
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 	// Assert
 	expect(payload).toEqual({});
 });
@@ -119,15 +96,15 @@ test.each(["web_search", "web_search_preview", "web_search_2025_08_26", "web_sea
 	"does not duplicate or replace existing %s configuration",
 	(type) => {
 		// Arrange
-		setup('{"webSearch":{"value":true}}');
+		const config = configSchema.parse({ webSearch: { value: true } });
 		const tools = [
 			{ type, search_context_size: "low" },
 			{ type: "function", name: "read" },
 		];
 		const payload = { tools };
 		// Act
-		applySettings(payload, loadConfig());
-		applySettings(payload, loadConfig());
+		applySettings(payload, config);
+		applySettings(payload, config);
 		// Assert
 		expect(payload.tools).toBe(tools);
 		expect(payload.tools).toHaveLength(2);
@@ -136,7 +113,7 @@ test.each(["web_search", "web_search_preview", "web_search_2025_08_26", "web_sea
 
 test("false removes all web search declarations and preserves other tools", () => {
 	// Arrange
-	setup('{"webSearch":{"value":false}}');
+	const config = configSchema.parse({ webSearch: { value: false } });
 	const tool = { type: "function", name: "read" };
 	const payload = {
 		tools: [
@@ -149,7 +126,7 @@ test("false removes all web search declarations and preserves other tools", () =
 		],
 	};
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 	// Assert
 	expect(payload.tools).toEqual([tool]);
 	expect(payload.tools[0]).toBe(tool);
@@ -157,9 +134,9 @@ test("false removes all web search declarations and preserves other tools", () =
 
 test.each([null, undefined, [], "payload", 5])("ignores non-object payloads: %j", (payload) => {
 	// Arrange
-	setup('{"verbosity":{"value":"high"}}');
+	const config = configSchema.parse({ verbosity: { value: "high" } });
 	// Act / Assert
-	expect(() => applySettings(payload, loadConfig())).not.toThrow();
+	expect(() => applySettings(payload, config)).not.toThrow();
 });
 
 test.each([
@@ -182,9 +159,12 @@ test.each([
 	{ tools: [{ type: "function" }, { name: "missing_type" }] },
 ])("leaves the entire payload untouched when its structure is invalid: %j", (invalidFields) => {
 	// Arrange
-	setup(
-		'{"verbosity":{"value":"low"},"reasoningSummary":{"value":"none"},"webSearch":{"value":false},"serviceTier":{"value":"priority"}}',
-	);
+	const config = configSchema.parse({
+		verbosity: { value: "low" },
+		reasoningSummary: { value: "none" },
+		webSearch: { value: false },
+		serviceTier: { value: "priority" },
+	});
 	const payload = {
 		text: { verbosity: "high" },
 		reasoning: { effort: "high", summary: "auto" },
@@ -196,7 +176,7 @@ test.each([
 	const { text, reasoning, tools } = payload;
 
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 
 	// Assert
 	expect(payload).toEqual(original);
@@ -207,11 +187,11 @@ test.each([
 
 test.each([new Date(0), new Map(), new Set()])("does not modify non-plain payload objects: %j", (payload) => {
 	// Arrange
-	setup('{"verbosity":{"value":"high"}}');
+	const config = configSchema.parse({ verbosity: { value: "high" } });
 	const original = structuredClone(payload);
 
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 
 	// Assert
 	expect(payload).toEqual(original);
@@ -220,7 +200,11 @@ test.each([new Date(0), new Map(), new Set()])("does not modify non-plain payloa
 
 test("preserves unknown fields, tool types, and nested references while applying settings", () => {
 	// Arrange
-	setup('{"verbosity":{"value":"low"},"reasoningSummary":{"value":"none"},"webSearch":{"value":true}}');
+	const config = configSchema.parse({
+		verbosity: { value: "low" },
+		reasoningSummary: { value: "none" },
+		webSearch: { value: true },
+	});
 	const format = { type: "future_format", options: { custom: true } };
 	const metadata = { custom: ["value"] };
 	const reasoning = { effort: "future_effort", summary: "auto", provider_option: metadata };
@@ -229,7 +213,7 @@ test("preserves unknown fields, tool types, and nested references while applying
 	const payload = { text: { format, provider_option: metadata }, reasoning, tools: [tool], input, metadata };
 
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 
 	// Assert
 	expect(payload).toEqual({
@@ -249,11 +233,15 @@ test("preserves unknown fields, tool types, and nested references while applying
 
 test("accepts explicitly undefined optional payload fields", () => {
 	// Arrange
-	setup('{"verbosity":{"value":"low"},"reasoningSummary":{"value":"auto"},"webSearch":{"value":true}}');
+	const config = configSchema.parse({
+		verbosity: { value: "low" },
+		reasoningSummary: { value: "auto" },
+		webSearch: { value: true },
+	});
 	const payload = { text: undefined, reasoning: undefined, tools: undefined };
 
 	// Act
-	applySettings(payload, loadConfig());
+	applySettings(payload, config);
 
 	// Assert
 	expect(payload).toEqual({

@@ -1,23 +1,5 @@
-import { z } from "zod";
-import type { Config } from "#openai-settings/config";
-
-// Records reject non-plain objects; loose objects preserve provider-specific fields.
-const objectSchema = z.record(z.string(), z.unknown());
-const toolSchema = objectSchema.pipe(z.looseObject({ type: z.string() }));
-const payloadSchema = objectSchema.pipe(
-	z.looseObject({
-		text: objectSchema.optional(),
-		reasoning: objectSchema.optional(),
-		tools: z.array(toolSchema).optional(),
-	}),
-);
-
-type ResponsesPayload = z.infer<typeof payloadSchema>;
-
-export function isResponsesPayload(payload: unknown): payload is ResponsesPayload {
-	// Validate without replacing the original payload with Zod's cloned output.
-	return payloadSchema.safeParse(payload).success;
-}
+import { isResponsesPayload, type ResponsesPayload } from "#openai-settings/responses-boundary";
+import type { Config } from "#openai-settings/settings/model";
 
 const webSearchTypes = new Set([
 	"web_search",
@@ -26,16 +8,8 @@ const webSearchTypes = new Set([
 	"web_search_preview_2025_03_11",
 ]);
 
-function isWebSearch(tool: z.infer<typeof toolSchema>): boolean {
+function isWebSearch(tool: { type: string }): boolean {
 	return webSearchTypes.has(tool.type);
-}
-
-export function supportsModel(model: { provider: string; api: string } | undefined): boolean {
-	return (
-		model !== undefined &&
-		((model.provider === "azure" && model.api === "azure-openai-responses") ||
-			((model.provider === "openai" || model.provider === "github-copilot") && model.api === "openai-responses"))
-	);
 }
 
 /** Modify only configured fields; null deliberately preserves the provider's payload. */
