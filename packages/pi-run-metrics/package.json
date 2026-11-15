@@ -1,0 +1,40 @@
+{
+  "name": "@pi-pack/pi-run-metrics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Display current run metrics.",
+  "keywords": [
+    "pi",
+    "extension",
+    "metrics"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts"
+  },
+  "dependencies": {
+    "@a-box-of-scraps/ts-utils": "^0.1.1",
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "1.5.2",
+    "@earendil-works/pi-coding-agent": "1.5.2",
+    "@earendil-works/pi-tui": "1.5.2"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  }
+}
