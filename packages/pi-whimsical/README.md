@@ -8,7 +8,7 @@ Requires Pi `1.5.2` or a compatible later release.
 
 From the repository root, install pi-whimsical globally:
 
-```sh
+```bash
 npm ci
 npm run install:pi-whimsical
 ```
@@ -20,20 +20,20 @@ No configuration is required, but you can customize the messages via a global `~
 ```jsonc
 // The following schema excerpt describes the available options.
 {
-	"properties": {
-		"enabled": {
-			"type": "boolean",
-			"description": "Whether the extension is enabled.",
-			"default": true,
-		},
-		"messages": {
-			"type": "array",
-			"description": "Custom messages. If omitted or empty, the built-in list is used.",
-			"items": {
-				"type": "string",
-			},
-		},
-	},
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the extension is enabled.",
+      "default": true
+    },
+    "messages": {
+      "type": "array",
+      "description": "Custom messages. If omitted or empty, the built-in list is used.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
 }
 ```
 
