@@ -5,6 +5,9 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": "./src/index.ts",
+	"dependencies": {
+		"@a-box-of-scraps/ts-utils": "^0.1.1"
+	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "1.5.2"
 	}
