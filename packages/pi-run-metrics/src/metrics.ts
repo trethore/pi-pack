@@ -15,6 +15,8 @@ const zero = 0;
 const millisecondsPerSecond = 1000;
 const speedPrecision = 1;
 const costPrecision = 4;
+const speedUnit = "tok/s";
+const currencySymbol = "$";
 
 const Metric = {
 	timetaken(run: RunSnapshot): string {
@@ -25,7 +27,7 @@ const Metric = {
 		if (run.responseMs > zero) {
 			speed = run.outputTokens / (run.responseMs / millisecondsPerSecond);
 		}
-		return `${speed.toFixed(speedPrecision)} tok/s`;
+		return `${speed.toFixed(speedPrecision)} ${speedUnit}`;
 	},
 	input_tokens(run: RunSnapshot): string {
 		return String(run.inputTokens);
@@ -34,7 +36,7 @@ const Metric = {
 		return String(run.outputTokens);
 	},
 	cost(run: RunSnapshot): string {
-		return `$${run.cost.toFixed(costPrecision)}`;
+		return `${currencySymbol}${run.cost.toFixed(costPrecision)}`;
 	},
 } satisfies Record<string, Metric>;
 

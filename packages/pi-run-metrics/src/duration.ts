@@ -2,6 +2,9 @@ const zero = 0;
 const millisecondsPerSecond = 1000;
 const secondsPerMinute = 60;
 const secondsPerHour = 3600;
+const hourSuffix = "h";
+const minuteSuffix = "m";
+const secondSuffix = "s";
 
 const Duration = {
 	format(milliseconds: number): string {
@@ -10,12 +13,12 @@ const Duration = {
 		const minutes = Math.floor(totalSeconds / secondsPerMinute) % secondsPerMinute;
 		const hours = Math.floor(totalSeconds / secondsPerHour);
 		if (hours > zero) {
-			return `${hours}h${minutes}m${seconds}s`;
+			return `${hours}${hourSuffix}${minutes}${minuteSuffix}${seconds}${secondSuffix}`;
 		}
 		if (totalSeconds >= secondsPerMinute) {
-			return `${minutes}m${seconds}s`;
+			return `${minutes}${minuteSuffix}${seconds}${secondSuffix}`;
 		}
-		return `${seconds}s`;
+		return `${seconds}${secondSuffix}`;
 	},
 };
 

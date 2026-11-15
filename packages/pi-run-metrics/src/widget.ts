@@ -1,6 +1,7 @@
 import { type Component, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 const minimumWidth = 0;
+const space = " ";
 
 class RunMetricsWidget implements Component {
 	private readonly text: () => string;
@@ -10,8 +11,8 @@ class RunMetricsWidget implements Component {
 	}
 
 	render(width: number): string[] {
-		const line = truncateToWidth(this.text().replace(/[\r\n]/gu, " "), Math.max(minimumWidth, width));
-		return [" ".repeat(Math.max(minimumWidth, width - visibleWidth(line))) + line];
+		const line = truncateToWidth(this.text().replace(/[\r\n]/gu, space), Math.max(minimumWidth, width));
+		return [space.repeat(Math.max(minimumWidth, width - visibleWidth(line))) + line];
 	}
 
 	invalidate(): void {}

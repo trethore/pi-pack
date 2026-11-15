@@ -5,6 +5,9 @@ import { type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-cod
 import { Events } from "@pi-pack/events";
 
 const widgetKey = "pi-run-metrics";
+const widgetColor = "accent";
+const widgetPlacement = "aboveEditor";
+const assistantRole = "assistant";
 const refreshMs = 1000;
 
 export default function runMetrics(pi: ExtensionAPI): void {
@@ -23,8 +26,8 @@ export default function runMetrics(pi: ExtensionAPI): void {
 			if (ctx.hasUI) {
 				ctx.ui.setWidget(
 					widgetKey,
-					(_tui, theme) => new RunMetricsWidget(() => theme.fg("accent", controller.format(config.format))),
-					{ placement: "aboveEditor" },
+					(_tui, theme) => new RunMetricsWidget(() => theme.fg(widgetColor, controller.format(config.format))),
+					{ placement: widgetPlacement },
 				);
 			}
 		},
@@ -45,7 +48,7 @@ export default function runMetrics(pi: ExtensionAPI): void {
 		}
 	});
 	pi.on(Events.MessageEnd, (event, ctx) => {
-		if (event.message.role === "assistant") {
+		if (event.message.role === assistantRole) {
 			controller.record(event.message);
 			view.show(ctx);
 		}
