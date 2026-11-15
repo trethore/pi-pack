@@ -95,13 +95,28 @@ export default defineConfig({
 	env: {
 		node: true,
 	},
-	ignorePatterns: ["**/dist/**", "**/coverage/**", "packages/configs/**", "packages/rules/test/fixtures/**"],
+	ignorePatterns: ["**/dist/**", "**/coverage/**"],
 	options: {
 		typeAware: true,
 		denyWarnings: true,
 		reportUnusedDisableDirectives: "error",
 	},
-	overrides: [],
+	overrides: [
+		{
+			files: ["*.config.ts"],
+			rules: {
+				"no-magic-numbers": "off",
+			},
+		},
+		{
+			files: ["test/**/*.ts", "packages/*/test/**/*.ts"],
+			rules: {
+				"vitest/require-top-level-describe": "off",
+				"vitest/no-hooks": "off",
+				"vitest/no-importing-vitest-globals": "off",
+			},
+		},
+	],
 	rules: {
 		...maintainabilityRules,
 		...importRules,
