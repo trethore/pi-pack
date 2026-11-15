@@ -12,3 +12,4 @@ if [ "$branch_checkout" != "1" ]; then
 fi
 
 npm ci
+npm run build
