@@ -4,7 +4,13 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts"
+  },
   "dependencies": {
     "@a-box-of-scraps/ts-utils": "^0.1.1"
   },

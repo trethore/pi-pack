@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	resolve: {
 		alias: [{
+			find: /^@pi-pack\/(?<package>[^/]+)$/,
+			replacement: fileURLToPath(new URL("packages/$1/src/index.ts", import.meta.url)),
+		}, {
 			find: /^#shared-test\/(?<helper>.+)$/,
 			replacement: fileURLToPath(new URL("test/$1.ts", import.meta.url)),
 		}],

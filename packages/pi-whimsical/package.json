@@ -14,7 +14,13 @@
     "#src/*": "./src/*.ts",
     "#test/*": "./test/*.ts"
   },
-  "exports": "./src/index.ts",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts"
+  },
   "dependencies": {
     "@pi-pack/config": "0.1.0",
     "@pi-pack/events": "0.1.0",
@@ -25,7 +31,7 @@
   },
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./dist/index.js"
     ]
   }
 }
