@@ -10,6 +10,7 @@ From the repository root, install pi-whimsical globally:
 
 ```bash
 npm ci
+npm run build
 npm run install:pi-whimsical
 ```
 
