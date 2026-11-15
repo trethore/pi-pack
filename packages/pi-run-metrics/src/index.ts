@@ -21,9 +21,11 @@ export default function runMetrics(pi: ExtensionAPI): void {
 		},
 		show(ctx: ExtensionContext): void {
 			if (ctx.hasUI) {
-				ctx.ui.setWidget(widgetKey, () => new RunMetricsWidget(() => controller.format(config.format)), {
-					placement: "aboveEditor",
-				});
+				ctx.ui.setWidget(
+					widgetKey,
+					(_tui, theme) => new RunMetricsWidget(() => theme.fg("accent", controller.format(config.format))),
+					{ placement: "aboveEditor" },
+				);
 			}
 		},
 	};

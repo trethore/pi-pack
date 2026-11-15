@@ -43,6 +43,21 @@ test("shows a widget above the prompt on session start", async () => {
 	expect(harness.text()).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
 });
 
+test("colors widget text with the theme accent", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const harness = Harness.create();
+	harness.fg.mockImplementation((_color, text) => `\u001b[36m${text}\u001b[39m`);
+	await harness.emit({ type: Events.SessionStart, reason: "startup" });
+
+	// Act
+	const text = harness.text();
+
+	// Assert
+	expect(harness.fg).toHaveBeenCalledWith("accent", "0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(text).toBe("\u001b[36m0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000\u001b[39m");
+});
+
 test("refreshes elapsed time even before a response ends", async () => {
 	expect.hasAssertions();
 	// Arrange

@@ -1,6 +1,11 @@
 import runMetrics from "#src/index";
 import { type RunMetricsWidget } from "#src/widget";
-import { type ExtensionAPI, type ExtensionContext, type ExtensionEvent } from "@earendil-works/pi-coding-agent";
+import {
+	type ExtensionAPI,
+	type ExtensionContext,
+	type ExtensionEvent,
+	type Theme,
+} from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
 
 type Handler = (event: ExtensionEvent, ctx: ExtensionContext) => unknown;
@@ -10,6 +15,7 @@ const defaultWidth = 80;
 const Harness = {
 	create(hasUI = true) {
 		const handlers = new Map<string, Handler>();
+		const fg = vi.fn<Theme["fg"]>((_color, text) => text);
 		const setWidget = vi.fn<ExtensionContext["ui"]["setWidget"]>();
 		const on = vi.fn<(event: string, handler: Handler) => () => boolean>((event, handler) => {
 			handlers.set(event, handler);
@@ -23,6 +29,7 @@ const Harness = {
 		runMetrics(api);
 		return {
 			on,
+			fg,
 			setWidget,
 			async emit(event: ExtensionEvent): Promise<void> {
 				await handlers.get(event.type)?.(event, ctx);
@@ -32,10 +39,10 @@ const Harness = {
 				if (content === undefined) {
 					return undefined;
 				}
-				// This factory does not consume Pi's TUI or theme arguments.
+				// Only the theme foreground function is used by the widget factory.
 				// eslint-disable-next-line typescript/no-unsafe-type-assertion
-				const factory = content as () => RunMetricsWidget;
-				const [line] = factory().render(defaultWidth);
+				const factory = content as unknown as (tui: undefined, theme: Pick<Theme, "fg">) => RunMetricsWidget;
+				const [line] = factory(undefined, { fg }).render(defaultWidth);
 				return line?.trim();
 			},
 		};
