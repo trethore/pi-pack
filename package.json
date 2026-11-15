@@ -18,7 +18,6 @@
 	"license": "MIT",
 	"author": "Titouan Réthoré",
 	"type": "module",
-	"main": "index.js",
 	"workspaces": [
 		"packages/*"
 	],
@@ -56,5 +55,10 @@
 	},
 	"allowScripts": {
 		"dprint@0.64.3": true
+	},
+	"pi": {
+		"extensions": [
+			"packages/pi-*/src/index.ts"
+		]
 	}
 }

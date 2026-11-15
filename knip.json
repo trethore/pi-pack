@@ -1,10 +1,16 @@
 {
-	"mode": "strict",
-	"threshold": 3,
-	"minLines": 10,
-	"minTokens": 70,
-	"maxLines": 100000,
-	"maxSize": "10mb",
-	"path": ["."],
-	"ignore": ["package-lock.json"]
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"workspaces": {
+		".": {
+			"project": ["**/*.ts"]
+		},
+		"packages/pi-*": {
+			"entry": ["src/index.ts", "test/**/*.test.ts"],
+			"project": ["**/*.ts"]
+		},
+		"packages/*": {
+			"entry": ["test/**/*.test.ts"],
+			"project": ["**/*.ts"]
+		}
+	}
 }
