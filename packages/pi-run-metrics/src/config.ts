@@ -1,12 +1,17 @@
 import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
 
-const schema = z.strictObject({
+const schema = z.object({
 	enabled: z.boolean().default(true),
-	widgetColor: z.string().default("accent"),
 	format: z.string().default("<timetaken> | <tokps> | ↑ <input_tokens> ↓ <output_tokens> | <cost>"),
 });
 
-export function loadConfig(): z.infer<typeof schema> {
-	return readConfig("pi-run-metrics.jsonc", { scope: ConfigScope.Global }, schema) ?? schema.parse({});
-}
+type RunMetricsConfig = z.infer<typeof schema>;
+
+const RunMetricsConfig = {
+	read(this: void): RunMetricsConfig {
+		return readConfig("pi-run-metrics.jsonc", { scope: ConfigScope.Global }, schema) ?? schema.parse({});
+	},
+};
+
+export { RunMetricsConfig };

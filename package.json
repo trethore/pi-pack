@@ -1,55 +1,72 @@
 {
-	"name": "pi-pack",
-	"version": "0.0.1",
-	"description": "Monorepo for the Pi extensions I develop.",
-	"license": "MIT",
-	"private": true,
-	"engines": {
-		"node": "^22.19.0 || ^24.0.0 || >=26.0.0",
-		"npm": ">=12.0.0"
-	},
-	"workspaces": [
-		"packages/*"
-	],
-	"scripts": {
-		"check": "npm run --silent format && npm run --silent typecheck && npm run --silent lint && npm run --silent test && npm run --silent check:unused && npm run --silent check:duplicates",
-		"check:duplicates": "jscpd --fail-on-empty --no-tips",
-		"check:unused": "knip",
-		"clone:pi": "node scripts/clone-pi.ts",
-		"dev": "pi -e .",
-		"dev:pi-openai-settings": "pi -e ./packages/pi-openai-settings",
-		"dev:pi-run-metrics": "pi -e ./packages/pi-run-metrics",
-		"dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
-		"format": "prettier --log-level warn --write .",
-		"format:check": "prettier --log-level warn --check .",
-		"install:pi-openai-settings": "pi install ./packages/pi-openai-settings",
-		"install:pi-run-metrics": "pi install ./packages/pi-run-metrics",
-		"install:pi-whimsical": "pi install ./packages/pi-whimsical",
-		"lint": "oxlint .",
-		"lint:fix": "oxlint --fix .",
-		"test": "vitest run",
-		"test:pi-openai-settings": "vitest run packages/pi-openai-settings/test",
-		"test:pi-run-metrics": "vitest run packages/pi-run-metrics/test",
-		"test:pi-whimsical": "vitest run packages/pi-whimsical/test",
-		"test:watch": "vitest",
-		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"@earendil-works/pi-coding-agent": "1.5.2",
-		"@earendil-works/pi-tui": "1.5.2",
-		"@types/node": "22.20.5",
-		"jscpd": "5.4.2",
-		"knip": "6.44.0",
-		"oxlint": "1.90.0",
-		"oxlint-tsgolint": "7.0.2005",
-		"prettier": "3.9.10",
-		"typescript": "7.0.2",
-		"vitest": "5.0.5"
-	},
-	"type": "module",
-	"pi": {
-		"extensions": [
-			"packages/pi-*/src/index.ts"
-		]
-	}
+  "name": "pi-pack",
+  "version": "0.1.0",
+  "description": "A pack of pi extensions I develop and maintain.",
+  "keywords": [
+    "pi",
+    "extension",
+    "extension-pack"
+  ],
+  "homepage": "https://github.com/trethore/pi-pack#readme",
+  "bugs": {
+    "url": "https://github.com/trethore/pi-pack/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trethore/pi-pack.git"
+  },
+  "license": "MIT",
+  "author": "Titouan Réthoré",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "check": "npm run --silent build && npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
+    "check:duplicates": "jscpd --fail-on-empty --no-tips",
+    "check:unused": "knip",
+    "clone:pi": "node scripts/clone-pi.ts",
+    "dev": "pi -e .",
+    "dev:pi-run-metrics": "pi -e ./packages/pi-run-metrics",
+    "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
+    "format": "dprint fmt",
+    "format:check": "dprint check",
+    "install:all": "npm run install:pi-run-metrics && npm run install:pi-whimsical",
+    "install:pi-run-metrics": "pi install ./packages/pi-run-metrics",
+    "install:pi-whimsical": "pi install ./packages/pi-whimsical",
+    "lint": "oxlint --config oxlint.config.ts .",
+    "lint:fix": "oxlint --config oxlint.config.ts --fix .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2",
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "^5.1.0",
+    "dprint": "^0.64.3",
+    "jscpd": "^5.4.3",
+    "knip": "^6.45.1",
+    "oxlint": "^1.93.0",
+    "oxlint-tsgolint": "^7.0.2007",
+    "rolldown": "^1.3.2",
+    "rolldown-plugin-dts": "^0.30.2",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "npm": ">=12.0.0"
+  },
+  "allowScripts": {
+    "dprint@0.64.3": true
+  },
+  "pi": {
+    "extensions": [
+      "packages/pi-*/dist/index.js"
+    ]
+  }
 }

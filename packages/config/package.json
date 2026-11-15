@@ -1,15 +1,22 @@
 {
-	"name": "@pi-pack/config",
-	"version": "0.0.1",
-	"private": true,
-	"license": "MIT",
-	"type": "module",
-	"exports": "./src/index.ts",
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "1.5.2"
-	},
-	"dependencies": {
-		"jsonc-parser": "^3.3.1",
-		"zod": "^4.6.7"
-	}
+  "name": "@pi-pack/config",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts"
+  },
+  "dependencies": {
+    "@a-box-of-scraps/ts-utils": "^0.1.1",
+    "jsonc-parser": "^3.3.1",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  }
 }

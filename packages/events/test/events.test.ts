@@ -1,18 +1,22 @@
-import type { ExtensionEvent } from "@earendil-works/pi-coding-agent";
+import { type EnumMember, type EnumValue } from "@a-box-of-scraps/ts-utils";
+import { type ExtensionEvent } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
-import { expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-test("provides unique event names with literal types for every Pi event", () => {
-	// Arrange
-	const values = Object.values(Events);
+type EventIdentity = EnumValue<typeof Events> extends EnumMember<string, infer Identity> ? Identity : never;
 
-	// Act
-	const uniqueValues = new Set(values);
+describe("extension event constants", () => {
+	it("covers all Pi event types without duplicate values", () => {
+		expect.hasAssertions();
+		// Checked by tsc: reject both missing Pi events and extra values.
+		expectTypeOf<EnumValue<typeof Events>>().toEqualTypeOf<EnumMember<ExtensionEvent["type"], EventIdentity>>();
+		const values = Object.values(Events);
+		expect(new Set(values).size).toBe(values.length);
+	});
 
-	// Assert
-	expect(uniqueValues.size).toBe(values.length);
-	expect(Events.TurnStart).toBe("turn_start");
-	expect(Events.SessionShutdown).toBe("session_shutdown");
-	expectTypeOf(Events.TurnStart).toEqualTypeOf<"turn_start">();
-	expectTypeOf<(typeof Events)[keyof typeof Events]>().toEqualTypeOf<ExtensionEvent["type"]>();
+	it.each(Object.entries(Events))("maps %s to its snake_case event name", (key, value) => {
+		expect.hasAssertions();
+		const eventName = key.replaceAll(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`).replace(/^_/, "");
+		expect(value).toBe(eventName);
+	});
 });

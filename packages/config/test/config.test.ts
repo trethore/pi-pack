@@ -1,182 +1,236 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { type ConfigLocation, ConfigScope, readConfig } from "@pi-pack/config";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ConfigScope, readConfig } from "@pi-pack/config";
+import { afterEach, beforeEach, expect, expectTypeOf, test, vi } from "vitest";
 import { z } from "zod";
-import { afterEach, expect, expectTypeOf, test, vi } from "vitest";
 
-function directory(): string {
-	return mkdtempSync(join(process.env.HOME ?? "", "config-"));
-}
+vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
+vi.mock(import("node:fs"), { spy: true });
 
-afterEach(() => vi.unstubAllEnvs());
+const filename = "settings.jsonc";
+const schema = z.object({ enabled: z.boolean() });
+const globalLocation: ConfigLocation = { scope: ConfigScope.Global };
+const fixture: { root: string; globalDirectory: string; projectDirectory: string; projectLocation: ConfigLocation } = {
+	root: "",
+	globalDirectory: "",
+	projectDirectory: "",
+	projectLocation: globalLocation,
+};
 
-test("reads global JSONC from PI_CODING_AGENT_DIR", () => {
-	// Arrange
-	const globalDir = directory();
-	vi.stubEnv("PI_CODING_AGENT_DIR", globalDir);
-	writeFileSync(join(globalDir, "example.jsonc"), '{ // comment\n "enabled": true, }');
-
-	// Act
-	const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, z.unknown());
-
-	// Assert
-	expect(value).toEqual({ enabled: true });
+beforeEach(() => {
+	fixture.root = mkdtempSync(join(tmpdir(), "pi-pack-config-"));
+	fixture.globalDirectory = join(fixture.root, "agent");
+	fixture.projectDirectory = join(fixture.root, "project", ".pi");
+	mkdirSync(fixture.globalDirectory, { recursive: true });
+	mkdirSync(fixture.projectDirectory, { recursive: true });
+	fixture.projectLocation = { scope: ConfigScope.Project, projectDir: join(fixture.root, "project"), trusted: true };
+	vi.mocked(getAgentDir).mockReturnValue(fixture.globalDirectory);
 });
 
-test("uses the default Pi agent directory without an override", () => {
-	// Arrange
-	vi.stubEnv("PI_CODING_AGENT_DIR", undefined);
-	const globalDir = join(process.env.HOME ?? "", ".pi", "agent");
-	mkdirSync(globalDir, { recursive: true });
-	writeFileSync(join(globalDir, "example.jsonc"), '{"defaultPath": true}');
-
-	// Act
-	const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, z.unknown());
-
-	// Assert
-	expect(value).toEqual({ defaultPath: true });
+afterEach(() => {
+	vi.resetAllMocks();
+	rmSync(fixture.root, { recursive: true, force: true });
 });
 
-test.each([true, false])("only reads project config with explicit trust: %s", (trusted) => {
+test("reads JSONC with comments and trailing commas from the global agent directory", () => {
+	expect.hasAssertions();
 	// Arrange
-	const projectDir = directory();
-	mkdirSync(join(projectDir, ".pi"));
-	writeFileSync(join(projectDir, ".pi", "example.jsonc"), '{"project": true}');
+	writeFileSync(join(fixture.globalDirectory, filename), '{ /* comment */ "enabled": true, // comment\n }');
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: ConfigScope.Project, projectDir, trusted }, z.unknown());
+	const config = readConfig(filename, globalLocation, schema);
 
 	// Assert
-	expect(value).toEqual(trusted ? { project: true } : undefined);
+	expect(config).toStrictEqual({ enabled: true });
+	expect(getAgentDir).toHaveBeenCalledExactlyOnceWith();
 });
 
-test("does not parse untrusted project config", () => {
+test("reads only the trusted project's .pi directory without merging global settings", () => {
+	expect.hasAssertions();
 	// Arrange
-	const projectDir = directory();
-	mkdirSync(join(projectDir, ".pi"));
-	writeFileSync(join(projectDir, ".pi", "example.jsonc"), "invalid");
+	writeFileSync(join(fixture.globalDirectory, filename), '{"enabled": false, "globalOnly": true}');
+	writeFileSync(join(fixture.projectDirectory, filename), '{"enabled": true}');
+	const mergeSchema = schema.extend({ globalOnly: z.boolean().optional() });
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: ConfigScope.Project, projectDir, trusted: false }, z.unknown());
+	const config = readConfig(filename, fixture.projectLocation, mergeSchema);
 
 	// Assert
-	expect(value).toBeUndefined();
+	expect(config).toStrictEqual({ enabled: true });
+	expect(getAgentDir).not.toHaveBeenCalled();
 });
 
-test("returns undefined for a missing file", () => {
+test("does not fall back to global config when the project config is missing", () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.stubEnv("PI_CODING_AGENT_DIR", directory());
+	writeFileSync(join(fixture.globalDirectory, filename), '{"enabled": true}');
 
 	// Act
-	const value = readConfig("missing.jsonc", { scope: ConfigScope.Global }, z.unknown());
+	const config = readConfig(filename, fixture.projectLocation, schema);
 
 	// Assert
-	expect(value).toBeUndefined();
+	expect(config).toBeUndefined();
+	expect(getAgentDir).not.toHaveBeenCalled();
 });
 
-test.each(["", "{", '{"x": nope}', "{} {}"])("reports malformed JSONC with its path: %j", (source) => {
+test("does not access files or validate schemas for untrusted projects", () => {
+	expect.hasAssertions();
 	// Arrange
-	const globalDir = directory();
-	vi.stubEnv("PI_CODING_AGENT_DIR", globalDir);
-	const filename = "invalid.jsonc";
-	const path = join(globalDir, filename);
-	writeFileSync(path, source);
+	const location = { scope: ConfigScope.Project, projectDir: fixture.root, trusted: false };
+	const validate = vi.fn<() => undefined>();
+	const untrustedSchema = z.unknown().transform(validate);
 
 	// Act
-	const read = () => readConfig(filename, { scope: ConfigScope.Global }, z.unknown());
+	const config = readConfig(filename, location, untrustedSchema);
 
 	// Assert
-	expect(read).toThrow(`Invalid JSONC in ${path}`);
+	expect(config).toBeUndefined();
+	expect(readFileSync).not.toHaveBeenCalled();
+	expect(getAgentDir).not.toHaveBeenCalled();
+	expect(validate).not.toHaveBeenCalled();
 });
 
-test("reports read failures with the path", () => {
+test.each([ConfigScope.Global, ConfigScope.Project])("returns undefined for a missing %s file", (scope) => {
+	expect.hasAssertions();
 	// Arrange
-	const globalDir = directory();
-	vi.stubEnv("PI_CODING_AGENT_DIR", globalDir);
-	const filename = "directory.jsonc";
-	const path = join(globalDir, filename);
-	mkdirSync(path);
+	let location: ConfigLocation = globalLocation;
+	if (scope === ConfigScope.Project) {
+		location = fixture.projectLocation;
+	}
+	const defaultSchema = z.unknown().default({ enabled: true });
 
 	// Act
-	const read = () => readConfig(filename, { scope: ConfigScope.Global }, z.unknown());
+	const config = readConfig(filename, location, defaultSchema);
 
 	// Assert
-	expect(read).toThrow(`Could not read config ${path}.`);
+	expect(config).toBeUndefined();
 });
 
-test.each(["null", "[1, 2]", "false", "42", '"text"'])(
-	"accepts arbitrary values when the schema allows them: %s",
-	(source) => {
-		// Arrange
-		const globalDir = directory();
-		vi.stubEnv("PI_CODING_AGENT_DIR", globalDir);
-		writeFileSync(join(globalDir, "example.jsonc"), source);
-
-		// Act
-		const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, z.unknown());
-
-		// Assert
-		expect(value).toEqual(JSON.parse(source));
-	},
-);
-
-test.each(["", ".", "..", "../outside.jsonc", "/tmp/example.jsonc", "nested/example.jsonc", "nested\\example.jsonc"])(
-	"rejects config paths: %j",
-	(filename) => {
-		// Arrange
-		vi.stubEnv("PI_CODING_AGENT_DIR", directory());
-
-		// Act
-		const read = () => readConfig(filename, { scope: ConfigScope.Global }, z.unknown());
-
-		// Assert
-		expect(read).toThrow("Config filename must be a filename, not a path.");
-	},
-);
-
-test("applies schema defaults and infers the output type", () => {
+test("returns undefined when the project's .pi directory is missing", () => {
+	expect.hasAssertions();
 	// Arrange
-	const globalDir = directory();
-	vi.stubEnv("PI_CODING_AGENT_DIR", globalDir);
-	writeFileSync(join(globalDir, "example.jsonc"), "{}");
-	const schema = z.strictObject({ enabled: z.boolean().default(true) });
+	rmSync(fixture.projectDirectory, { recursive: true });
 
 	// Act
-	const value = readConfig("example.jsonc", { scope: ConfigScope.Global }, schema);
+	const config = readConfig(filename, fixture.projectLocation, schema);
 
 	// Assert
-	expect(value).toEqual({ enabled: true });
-	expectTypeOf(value).toEqualTypeOf<{ enabled: boolean } | undefined>();
+	expect(config).toBeUndefined();
 });
 
 test.each([
-	{ source: '{"enable": false}', detail: "enable" },
-	{ source: '{"enabled": "yes"}', detail: "enabled" },
-	{ source: '{"messages": [42]}', detail: "messages[0]" },
-])("reports schema errors with the path and field: $source", ({ source, detail }) => {
+	"",
+	".",
+	"..",
+	"../config.json",
+	"nested/config.json",
+	String.raw`nested\config.json`,
+	"/config.json",
+	"a\0b",
+])(
+	"rejects invalid filename %j before accessing files, even for untrusted projects",
+	(invalidFilename) => {
+		expect.hasAssertions();
+		// Arrange
+		const location = { scope: ConfigScope.Project, projectDir: fixture.root, trusted: false };
+
+		// Act
+		function read() {
+			return readConfig(invalidFilename, location, schema);
+		}
+
+		// Assert
+		expect(read).toThrow("Config filename must be a filename, not a path.");
+		expect(readFileSync).not.toHaveBeenCalled();
+		expect(getAgentDir).not.toHaveBeenCalled();
+	},
+);
+
+test.each(["", "// comment only", '{"enabled":}', '{"enabled": true} garbage', '{"enabled": true} {}'])(
+	"rejects malformed JSONC %j with its path and parse error offset",
+	(source) => {
+		expect.hasAssertions();
+		// Arrange
+		const path = join(fixture.globalDirectory, filename);
+		writeFileSync(path, source);
+
+		// Act
+		function read() {
+			return readConfig(filename, globalLocation, z.unknown());
+		}
+
+		// Assert
+		expect(read).toThrow(`Invalid JSONC in ${path}:`);
+		expect(read).toThrow(/at offset \d+\./u);
+	},
+);
+
+test("includes the file path, field details, and original Zod error on validation failure", () => {
+	expect.hasAssertions();
 	// Arrange
-	const globalDir = directory();
-	vi.stubEnv("PI_CODING_AGENT_DIR", globalDir);
-	const path = join(globalDir, "example.jsonc");
-	writeFileSync(path, source);
-	const schema = z.strictObject({ enabled: z.boolean().optional(), messages: z.array(z.string()).optional() });
+	const path = join(fixture.globalDirectory, filename);
+	writeFileSync(path, '{"enabled": "yes"}');
 
 	// Act
-	const read = () => readConfig("example.jsonc", { scope: ConfigScope.Global }, schema);
+	function read() {
+		return readConfig(filename, globalLocation, schema);
+	}
 
 	// Assert
-	expect(read).toThrow(`Invalid config ${path}`);
-	expect(read).toThrow(detail);
+	expect(read).toThrow(`Invalid config ${path}:`);
+	expect(read).toThrow("enabled");
+	expect(read).toThrow(expect.objectContaining({ cause: expect.any(z.ZodError) as unknown }));
 });
 
-test("does not apply schema defaults when the file is missing", () => {
+test("returns schema output including defaults and transforms with the inferred output type", () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.stubEnv("PI_CODING_AGENT_DIR", directory());
-	const schema = z.strictObject({ enabled: z.boolean().default(true) });
+	writeFileSync(join(fixture.globalDirectory, filename), '{"name": "  example  "}');
+	const outputSchema = z.object({
+		name: z.string().transform((name) => name.trim()),
+		enabled: z.boolean().default(true),
+	});
 
 	// Act
-	const value = readConfig("missing.jsonc", { scope: ConfigScope.Global }, schema);
+	const config = readConfig(filename, globalLocation, outputSchema);
 
 	// Assert
-	expect(value).toBeUndefined();
+	expect(config).toStrictEqual({ name: "example", enabled: true });
+	expectTypeOf(config).toEqualTypeOf<{ name: string; enabled: boolean } | undefined>();
 });
+
+test.each(["null", "false", "0", '""', "[]"])("lets the caller's schema accept JSON value %s", (source) => {
+	expect.hasAssertions();
+	// Arrange
+	writeFileSync(join(fixture.globalDirectory, filename), source);
+
+	// Act
+	const config = readConfig(filename, globalLocation, z.unknown());
+
+	// Assert
+	expect(config).toStrictEqual(JSON.parse(source));
+});
+
+test.each([Object.assign(new Error("Permission denied"), { code: "EACCES" }), new Error("Read failed"), "failure"])(
+	"wraps non-ENOENT read failures with the path and original cause: %j",
+	(cause) => {
+		expect.hasAssertions();
+		// Arrange
+		vi.mocked(readFileSync).mockImplementationOnce(() => {
+			throw cause;
+		});
+
+		// Act
+		function read() {
+			return readConfig(filename, globalLocation, schema);
+		}
+
+		// Assert
+		expect(read).toThrow(expect.objectContaining({
+			message: `Could not read config ${join(fixture.globalDirectory, filename)}.`,
+			cause,
+		}));
+	},
+);

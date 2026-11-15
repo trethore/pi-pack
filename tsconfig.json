@@ -1,31 +1,30 @@
 {
-	"compilerOptions": {
-		"target": "ES2024",
-		"lib": ["ES2024"],
-		"module": "Node16",
-		"moduleResolution": "Node16",
-		"types": ["node"],
-		"paths": { "#test/*": ["./test/*.ts"] },
+  "compilerOptions": {
+    "target": "ES2024", // "lib": ["ES2024"]
+    "module": "NodeNext", // "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "paths": { "#shared-test/*": ["./test/*.ts"] },
 
-		"noEmit": true,
-		"allowImportingTsExtensions": true,
-		"resolveJsonModule": true,
-		"erasableSyntaxOnly": true,
-		"verbatimModuleSyntax": true,
-		"esModuleInterop": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
 
-		"strict": true,
-		"exactOptionalPropertyTypes": true,
-		"noUncheckedIndexedAccess": true,
-		"noImplicitOverride": true,
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
 
-		"skipLibCheck": true
-	},
-	"include": ["packages/**/*.ts", "scripts/**/*.ts", "test/**/*.ts", "vitest.config.ts", "oxlint.config.ts"],
-	"exclude": ["node_modules", "**/dist"]
+    "skipLibCheck": true
+  },
+  "include": ["packages/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", "*.config.ts"],
+  "exclude": ["node_modules", "**/dist"]
 }

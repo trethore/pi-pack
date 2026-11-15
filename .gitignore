@@ -1,13 +1,18 @@
+# IDE config dirs
 .idea/
 .vscode/
+.zed/
 
+# Node
 node_modules/
 dist/
 coverage/
 
-/pi/
-
-*.tgz
-.pi/**
+# Env Variables
 .env
+
+# MacOS
 .DS_Store
+
+# Pi
+pi/

@@ -1,123 +1,53 @@
-import { type Metric, MetricEvent, MetricRegistry } from "#metrics/registry";
+import { Duration } from "#src/duration";
 
-export function formatDuration(milliseconds: number): string {
-	const total = Math.max(0, Math.floor(milliseconds / 1000));
-	const hours = Math.floor(total / 3600);
-	const minutes = Math.floor((total % 3600) / 60);
-	return `${hours ? `${hours}h` : ""}${hours || minutes ? `${minutes}m` : ""}${total % 60}s`;
+interface RunSnapshot {
+	readonly elapsedMs: number;
+	readonly responseMs: number;
+	readonly inputTokens: number;
+	readonly outputTokens: number;
+	readonly cost: number;
 }
 
-function elapsed(): Metric {
-	let start: number | undefined;
-	let end: number | undefined;
-	return {
-		name: "timetaken",
-		refreshEverySecond: true,
-		reset(now) {
-			start = now;
-			end = undefined;
-		},
-		format(now) {
-			return formatDuration(start === undefined ? 0 : (end ?? now) - start);
-		},
-		subscriptions: {
-			[MetricEvent.AgentSettled](_event, now) {
-				end = now;
-			},
-		},
-	};
-}
+type Metric = (snapshot: RunSnapshot) => string;
+type MetricRegistry = ReadonlyMap<string, Metric>;
 
-function tokens(name: string, field: "input" | "output"): Metric {
-	let total = 0;
-	return {
-		name,
-		reset() {
-			total = 0;
-		},
-		format() {
-			return String(total);
-		},
-		subscriptions: {
-			[MetricEvent.MessageEnd]({ message }) {
-				if (message.role === "assistant") {
-					total += message.usage[field];
-				}
-			},
-		},
-	};
-}
+const zero = 0;
+const millisecondsPerSecond = 1000;
+const speedPrecision = 1;
+const costPrecision = 4;
 
-function cost(): Metric {
-	let total = 0;
-	let known = true;
-	return {
-		name: "cost",
-		reset() {
-			total = 0;
-			known = true;
-		},
-		format() {
-			return known ? `$${total.toFixed(4)}` : "N/A";
-		},
-		subscriptions: {
-			[MetricEvent.MessageEnd]({ message }, _now, ctx) {
-				if (message.role !== "assistant") {
-					return;
-				}
-				const model = ctx.modelRegistry.find(message.provider, message.model);
-				known &&= model !== undefined && Number.isFinite(message.usage.cost.total);
-				total += message.usage.cost.total;
-			},
-		},
-	};
-}
+const Metric = {
+	timetaken(run: RunSnapshot): string {
+		return Duration.format(run.elapsedMs);
+	},
+	tokps(run: RunSnapshot): string {
+		let speed = zero;
+		if (run.responseMs > zero) {
+			speed = run.outputTokens / (run.responseMs / millisecondsPerSecond);
+		}
+		return `${speed.toFixed(speedPrecision)} tok/s`;
+	},
+	input_tokens(run: RunSnapshot): string {
+		return String(run.inputTokens);
+	},
+	output_tokens(run: RunSnapshot): string {
+		return String(run.outputTokens);
+	},
+	cost(run: RunSnapshot): string {
+		return `$${run.cost.toFixed(costPrecision)}`;
+	},
+} satisfies Record<string, Metric>;
 
-function throughput(): Metric {
-	let turnStart: number | undefined;
-	let duration = 0;
-	let output = 0;
-	let measurable = true;
-	return {
-		name: "tokps",
-		reset() {
-			turnStart = undefined;
-			duration = 0;
-			output = 0;
-			measurable = true;
-		},
-		format() {
-			return measurable && duration > 0 ? `${(output / (duration / 1000)).toFixed(1)} tok/s` : "N/A";
-		},
-		subscriptions: {
-			[MetricEvent.TurnStart](_event, now) {
-				turnStart = now;
-			},
-			[MetricEvent.MessageEnd]({ message }, now) {
-				if (message.role !== "assistant") {
-					return;
-				}
-				if (message.usage.output > 0) {
-					// Include first-chunk latency, but never include time spent executing tools.
-					if (turnStart === undefined || now <= turnStart) {
-						measurable = false;
-					} else {
-						duration += now - turnStart;
-						output += message.usage.output;
-					}
-				}
-				turnStart = undefined;
-			},
-		},
-	};
-}
+const MetricRegistry = {
+	create(): Map<string, Metric> {
+		return new Map(Object.entries(Metric));
+	},
+	format(registry: MetricRegistry, format: string, snapshot: RunSnapshot): string {
+		return format.replace(
+			/<(?<metric>\w+)>/gu,
+			(placeholder: string, name: string) => registry.get(name)?.(snapshot) ?? placeholder,
+		);
+	},
+};
 
-export function createMetrics(): MetricRegistry {
-	return new MetricRegistry([
-		elapsed(),
-		throughput(),
-		tokens("input_tokens", "input"),
-		tokens("output_tokens", "output"),
-		cost(),
-	]);
-}
+export { MetricRegistry, type RunSnapshot };

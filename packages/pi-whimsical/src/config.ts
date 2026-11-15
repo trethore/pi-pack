@@ -1,16 +1,23 @@
+import { messages } from "#src/messages";
 import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
-import { messages } from "#whimsical/messages";
 
-const configSchema = z.strictObject({
+const emptyListLength = 0;
+const schema = z.object({
 	enabled: z.boolean().default(true),
-	messages: z.array(z.string()).default([]),
+	messages: z.array(z.string().trim().nonempty()).default(messages),
 });
 
-type Config = z.infer<typeof configSchema>;
+type WhimsicalConfig = z.infer<typeof schema>;
 
-export function loadConfig(): Config {
-	const config =
-		readConfig("pi-whimsical.jsonc", { scope: ConfigScope.Global }, configSchema) ?? configSchema.parse({});
-	return { ...config, messages: config.messages.length > 0 ? config.messages : messages };
-}
+const WhimsicalConfig = {
+	read(this: void): WhimsicalConfig {
+		const config = readConfig("pi-whimsical.jsonc", { scope: ConfigScope.Global }, schema) ?? schema.parse({});
+		if (config.messages.length === emptyListLength) {
+			config.messages = [...messages];
+		}
+		return config;
+	},
+};
+
+export { WhimsicalConfig };

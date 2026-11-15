@@ -3,32 +3,40 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const repository = "https://github.com/earendil-works/pi.git";
+const argumentOffset = 2;
 const destination = fileURLToPath(new URL("../pi/", import.meta.url));
 
 function git(args: string[]): string {
 	return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
 
-function main(): void {
-	const [tag, ...extraArguments] = process.argv.slice(2);
-	if (!tag || tag.startsWith("-") || extraArguments.length > 0) {
+function parseTag(): string {
+	const [tag, extraArgument] = process.argv.slice(argumentOffset);
+	if (tag === undefined || tag === "" || tag.startsWith("-") || extraArgument !== undefined) {
 		throw new Error("Usage: npm run clone:pi -- <tag>");
 	}
 	git(["check-ref-format", `refs/tags/${tag}`]);
+	return tag;
+}
 
+function validateCheckout(tag: string): void {
+	if (!existsSync(`${destination}/.git`)) {
+		throw new Error("pi/ already exists and is not a Git checkout. It has been left unchanged.");
+	}
+
+	const origin = git(["-C", destination, "config", "--get", "remote.origin.url"]);
+	const status = git(["-C", destination, "status", "--porcelain", "--untracked-files=all"]);
+	const head = git(["-C", destination, "rev-parse", "HEAD"]);
+	const taggedCommit = git(["-C", destination, "rev-parse", "--verify", `refs/tags/${tag}^{commit}`]);
+	if (origin !== repository || status !== "" || head !== taggedCommit) {
+		throw new Error(`pi/ is not a clean Pi checkout at ${tag}. It has been left unchanged.`);
+	}
+}
+
+function main(): void {
+	const tag = parseTag();
 	if (existsSync(destination)) {
-		if (!existsSync(`${destination}/.git`)) {
-			throw new Error("pi/ already exists and is not a Git checkout. It has been left unchanged.");
-		}
-
-		const origin = git(["-C", destination, "config", "--get", "remote.origin.url"]);
-		const status = git(["-C", destination, "status", "--porcelain", "--untracked-files=all"]);
-		const head = git(["-C", destination, "rev-parse", "HEAD"]);
-		const taggedCommit = git(["-C", destination, "rev-parse", "--verify", `refs/tags/${tag}^{commit}`]);
-		if (origin !== repository || status || head !== taggedCommit) {
-			throw new Error(`pi/ is not a clean Pi checkout at ${tag}. It has been left unchanged.`);
-		}
-
+		validateCheckout(tag);
 		console.log(`pi/ already contains Pi ${tag}.`);
 		return;
 	}
@@ -44,6 +52,10 @@ function main(): void {
 try {
 	main();
 } catch (error) {
-	console.error(error instanceof Error ? error.message : String(error));
+	if (error instanceof Error) {
+		console.error(error.message);
+	} else {
+		console.error(String(error));
+	}
 	process.exitCode = 1;
 }

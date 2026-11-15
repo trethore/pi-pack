@@ -1,251 +1,186 @@
-import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
+import { RunMetricsConfig } from "#src/config";
+import { Fixtures } from "#test/fixtures";
+import { Harness } from "#test/harness";
 import { Events } from "@pi-pack/events";
-import { afterEach, expect, test, vi } from "vitest";
-import { createExtensionHarness } from "#test/extension-harness";
-import { createWidgetHarness } from "#test/widget-harness";
-import { response, delta } from "#metrics-test/fixtures";
-import runMetrics from "#metrics/index";
-import { loadConfig } from "#metrics/config";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-const model: ReturnType<ExtensionContext["modelRegistry"]["find"]> = {
-	id: "test",
-	name: "Test model",
-	provider: "openai",
-	api: "openai-completions",
-	baseUrl: "https://example.invalid",
-	input: ["text"],
-	reasoning: false,
-	contextWindow: 10000,
-	maxTokens: 1000,
-	cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 },
-};
-const toolEnd = {
-	type: Events.ToolExecutionEnd,
-	toolCallId: "tool-1",
-	toolName: "read",
-	result: {},
-	isError: false,
-} as const;
-const settled = { type: Events.AgentSettled, aborted: false } as const;
-const initialText = "0s | N/A | ↑ 0 ↓ 0 | $0.0000";
+vi.mock(import("#src/config"), () => ({ RunMetricsConfig: { read: vi.fn<typeof RunMetricsConfig.read>() } }));
 
-function setup(source = "{}", hasUI = true) {
-	const theme: Partial<Theme> = {
-		getFgAnsi(color) {
-			if (color !== "accent") {
-				throw new Error("Unknown theme color");
-			}
-			return "";
-		},
-		fg: (_color, text) => text,
-	};
-	const widget = createWidgetHarness(theme);
-	const harness = createExtensionHarness(runMetrics, "pi-run-metrics.jsonc", {
-		hasUI,
-		ui: { setWidget: widget.setWidget, theme },
-		modelRegistry: { find: () => model },
+const responseMs = 12_000;
+const toolMs = 2000;
+const idleMs = 10_000;
+const noTimers = 0;
+const oneTimer = 1;
+const startAndResponseRenders = 2;
+
+beforeEach(() => {
+	vi.useFakeTimers();
+	vi.mocked(RunMetricsConfig.read).mockReturnValue({
+		enabled: true,
+		format: "<timetaken> | <tokps> | ↑ <input_tokens> ↓ <output_tokens> | <cost>",
 	});
-	harness.writeConfig(source);
-	return { ...harness, ...widget };
-}
+});
 
 afterEach(() => {
 	vi.useRealTimers();
-	vi.unstubAllEnvs();
+	vi.resetAllMocks();
 });
 
-test("renders initial values right aligned before the first run", async () => {
+test("shows a widget above the prompt on session start", async () => {
+	expect.hasAssertions();
 	// Arrange
-	const { emit, render, setWidget } = setup();
+	const harness = Harness.create();
+
 	// Act
-	await emit(Events.SessionStart);
+	await harness.emit({ type: Events.SessionStart, reason: "startup" });
+
 	// Assert
-	expect(setWidget).toHaveBeenCalledWith("pi-run-metrics", expect.any(Function), { placement: "aboveEditor" });
-	expect(render(50)).toEqual([initialText.padStart(50)]);
+	expect(harness.setWidget).toHaveBeenCalledExactlyOnceWith(
+		"pi-run-metrics",
+		expect.any(Function),
+		{ placement: "aboveEditor" },
+	);
+	expect(harness.text()).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
 });
 
-test("timer ticks update elapsed time without publishing pending usage", async () => {
+test("refreshes elapsed time even before a response ends", async () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, render, requestRender } = setup();
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	vi.advanceTimersByTime(1000);
-	await emit(delta());
-	vi.advanceTimersByTime(1000);
-	await emit(response());
-	requestRender.mockClear();
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+	harness.setWidget.mockClear();
+
 	// Act
-	vi.advanceTimersByTime(1000);
+	vi.advanceTimersByTime(responseMs);
+
 	// Assert
-	expect(render()[0]?.trim()).toBe("3s | N/A | ↑ 0 ↓ 0 | $0.0000");
-	expect(requestRender).toHaveBeenCalledOnce();
+	expect(harness.setWidget).toHaveBeenCalledWith("pi-run-metrics", expect.any(Function), { placement: "aboveEditor" });
+	expect(harness.text()).toBe("12s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
 });
 
-test("tool completion refreshes usage without counting the response twice", async () => {
+test("agent_end does not freeze metrics or stop refreshes", async () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, render } = setup();
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	vi.advanceTimersByTime(1000);
-	await emit(delta());
-	vi.advanceTimersByTime(2000);
-	await emit(response());
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+
 	// Act
-	await emit(toolEnd);
-	const firstToolDisplay = render();
-	await emit({ ...toolEnd, toolCallId: "tool-2" });
+	await harness.emit({ type: Events.AgentEnd, messages: [] });
+	vi.advanceTimersByTime(responseMs);
+
 	// Assert
-	expect(firstToolDisplay[0]?.trim()).toBe("3s | 33.3 tok/s | ↑ 200 ↓ 100 | $0.0042");
-	expect(render()).toEqual(firstToolDisplay);
+	expect(harness.text()).toBe("12s | 34.2 tok/s | ↑ 1200 ↓ 410 | $0.0042");
+	expect(vi.getTimerCount()).toBe(oneTimer);
 });
 
-test.each([false, true])(
-	"settlement publishes the final response and freezes the display (aborted: %s)",
-	async (aborted) => {
-		// Arrange
-		vi.useFakeTimers();
-		const { emit, render, requestRender } = setup();
-		await emit(Events.SessionStart);
-		await emit(Events.AgentStart);
-		await emit(Events.TurnStart);
-		vi.advanceTimersByTime(2000);
-		await emit(delta());
-		vi.advanceTimersByTime(2000);
-		await emit(response());
-		// Act
-		await emit({ ...settled, aborted });
-		const finalDisplay = render();
-		requestRender.mockClear();
-		vi.advanceTimersByTime(10000);
-		// Assert
-		expect(finalDisplay[0]?.trim()).toBe("4s | 25.0 tok/s | ↑ 200 ↓ 100 | $0.0042");
-		expect(render()).toEqual(finalDisplay);
-		expect(requestRender).not.toHaveBeenCalled();
-		expect(vi.getTimerCount()).toBe(0);
-	},
-);
-
-test("settlement includes the final response after a tool call", async () => {
+test.each([false, true])("settlement freezes metrics and stops refreshes (aborted=%s)", async (aborted) => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, render } = setup();
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	await emit(delta());
-	vi.advanceTimersByTime(2000);
-	await emit(response());
-	vi.advanceTimersByTime(8000);
-	await emit(toolEnd);
-	await emit(Events.TurnStart);
-	vi.advanceTimersByTime(2000);
-	await emit(delta());
-	vi.advanceTimersByTime(4000);
-	await emit(response(200));
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+	vi.advanceTimersByTime(responseMs);
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+
 	// Act
-	await emit(settled);
+	await harness.emit({ type: Events.AgentSettled, aborted });
+	harness.setWidget.mockClear();
+	vi.advanceTimersByTime(idleMs);
+
 	// Assert
-	expect(render()[0]?.trim()).toBe("16s | 37.5 tok/s | ↑ 400 ↓ 300 | $0.0084");
+	expect(harness.setWidget).not.toHaveBeenCalled();
+	expect(vi.getTimerCount()).toBe(noTimers);
 });
 
-test("a new run resets the completed values", async () => {
+test("keeps repeated agent starts in the same run without duplicating timers", async () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, render } = setup();
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	await emit(delta());
-	vi.advanceTimersByTime(2000);
-	await emit(response());
-	await emit(settled);
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+
 	// Act
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
+	vi.advanceTimersByTime(toolMs);
+	await harness.emit({ type: Events.AgentStart });
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+
 	// Assert
-	expect(render()[0]?.trim()).toBe(initialText);
-	expect(vi.getTimerCount()).toBe(1);
+	expect(harness.text()).toBe("2s | 34.2 tok/s | ↑ 2400 ↓ 820 | $0.0084");
+	expect(vi.getTimerCount()).toBe(oneTimer);
 });
 
-test("shutdown removes the widget and stops refreshes", async () => {
+test("ignores non-assistant messages and honors the custom format", async () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, setWidget, requestRender } = setup();
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	requestRender.mockClear();
+	vi.mocked(RunMetricsConfig.read).mockReturnValue({ enabled: true, format: "<cost> / <output_tokens>" });
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+
 	// Act
-	await emit(Events.SessionShutdown);
-	vi.advanceTimersByTime(5000);
+	await harness.emit({ type: Events.MessageEnd, message: { role: "user", content: "Hi", timestamp: 0 } });
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+
 	// Assert
-	expect(vi.getTimerCount()).toBe(0);
-	expect(setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
-	expect(requestRender).not.toHaveBeenCalled();
+	expect(harness.setWidget).toHaveBeenCalledTimes(startAndResponseRenders);
+	expect(harness.text()).toBe("$0.0042 / 410");
 });
 
-test.each(['{"enabled":false}', '{"widgetColor":"invalid"}', '{"enabled":"yes"}', "{"])(
-	"does not activate with config %s",
-	async (source) => {
-		// Arrange
-		vi.useFakeTimers();
-		const { emit, setWidget, notify } = setup(source);
-		// Act
-		await emit(Events.SessionStart);
-		await emit(Events.AgentStart);
-		await emit(Events.TurnStart);
-		// Assert
-		expect(setWidget).not.toHaveBeenCalled();
-		expect(vi.getTimerCount()).toBe(0);
-		expect(notify).toHaveBeenCalledTimes(source.includes("false") ? 0 : 1);
-	},
-);
-
-test("does not install UI or timers in headless mode", async () => {
+test("resets metrics and timers on session changes", async () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, setWidget } = setup("{}", false);
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+
 	// Act
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
+	await harness.emit({ type: Events.SessionStart, reason: "resume" });
+
 	// Assert
-	expect(setWidget).not.toHaveBeenCalled();
-	expect(vi.getTimerCount()).toBe(0);
+	expect(harness.text()).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(vi.getTimerCount()).toBe(noTimers);
 });
 
-test("reads JSONC from the overridden global directory", () => {
+test("removes the widget and clears timers on shutdown", async () => {
+	expect.hasAssertions();
 	// Arrange
-	setup('{ // settings\n "widgetColor": "#AABBCC", "format": "<cost>", }');
+	const harness = Harness.create();
+	await harness.emit({ type: Events.AgentStart });
+
 	// Act
-	const config = loadConfig();
+	await harness.emit({ type: Events.SessionShutdown, reason: "quit" });
+
 	// Assert
-	expect(config).toEqual({ enabled: true, widgetColor: "#AABBCC", format: "<cost>" });
+	expect(harness.setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
+	expect(harness.text()).toBeUndefined();
+	expect(vi.getTimerCount()).toBe(noTimers);
 });
 
-test("invalid config reload cleans up the active run and a later reload recovers", async () => {
+test("does not register handlers when disabled", () => {
+	expect.hasAssertions();
 	// Arrange
-	vi.useFakeTimers();
-	const { emit, writeConfig, setWidget, notify, render } = setup();
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	writeConfig('{"enabled":"yes"}');
+	vi.mocked(RunMetricsConfig.read).mockReturnValue({ enabled: false, format: "<cost>" });
+
 	// Act
-	await emit(Events.SessionStart);
-	await emit(Events.AgentStart);
-	await emit(Events.TurnStart);
-	const timersAfterFailure = vi.getTimerCount();
-	const lastWidgetCallAfterFailure = setWidget.mock.lastCall;
-	writeConfig('{"format":"Cost: <cost>", "widgetColor":"#AABBCC"}');
-	await emit(Events.SessionStart);
+	const harness = Harness.create();
+
 	// Assert
-	expect(timersAfterFailure).toBe(0);
-	expect(lastWidgetCallAfterFailure).toEqual(["pi-run-metrics", undefined]);
-	expect(notify).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("Extension inactive"), "error");
-	expect(render(13)).toEqual(["\x1b[38;2;170;187;204mCost: $0.0000\x1b[39m"]);
+	expect(harness.on).not.toHaveBeenCalled();
+	expect(harness.setWidget).not.toHaveBeenCalled();
+});
+
+test("does not create widgets or timers in headless sessions", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const harness = Harness.create(false);
+
+	// Act
+	await harness.emit({ type: Events.SessionStart, reason: "startup" });
+	await harness.emit({ type: Events.AgentStart });
+	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
+	await harness.emit({ type: Events.AgentSettled, aborted: false });
+	await harness.emit({ type: Events.SessionShutdown, reason: "quit" });
+
+	// Assert
+	expect(harness.setWidget).not.toHaveBeenCalled();
+	expect(vi.getTimerCount()).toBe(noTimers);
 });
