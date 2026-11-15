@@ -28,6 +28,22 @@ tsconfig.json
 vitest.config.ts
 ```
 
+## Development
+
+- You must write tests that are easy to scan and understand with clear `Arrange / Act / Assert` sections.
+- You must model domain lifecycles as explicit state machines.
+- You must not use string literal unions or string literal discriminants.
+- Prefer the companion object pattern for functions associated with a specific type, rather than standalone functions.
+
+### `@a-box-of-scraps/ts-utils`
+
+This library gives utilities for:
+
+- **Enums**: Create branded enums with `createEnum`.
+- **Brand**: `Brand<Value, Identity>` adds a compile-time identity to a value type.
+- **Result**: `Result<Value, Failure>` represents success or failure as a discriminated union.
+- **Assert Never**: `assertNever` accepts a value of type `never` to enforce exhaustive handling of unions.
+
 ## Commits & Pull Requests
 
 - Follow the Conventional Commits specification for commit messages.
