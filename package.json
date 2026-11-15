@@ -1,7 +1,7 @@
 {
 	"name": "pi-pack",
 	"version": "0.1.0",
-	"description": "Monorepo for the Pi extensions I develop.",
+	"description": "A pack of pi extensions I develop and maintain.",
 	"keywords": [
 		"pi",
 		"extension",

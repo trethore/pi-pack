@@ -1,6 +1,6 @@
 # pi-pack
 
-Monorepo for the pi extensions I develop.
+A pack of pi extensions I develop and maintain.
 
 ## License
 
