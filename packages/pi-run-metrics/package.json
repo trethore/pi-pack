@@ -18,6 +18,11 @@
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "LICENSE",
+    "pi-run-metrics.example.jsonc"
+  ],
   "scripts": {
     "build": "node ../../scripts/build-package.ts"
   },
