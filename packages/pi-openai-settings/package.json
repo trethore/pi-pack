@@ -1,0 +1,45 @@
+{
+  "name": "@pi-pack/pi-openai-settings",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Manage advanced OpenAI Responses settings.",
+  "keywords": [
+    "pi",
+    "extension",
+    "openai",
+    "settings"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "pi-openai-settings.example.jsonc"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts"
+  },
+  "dependencies": {
+    "@a-box-of-scraps/ts-utils": "^0.1.1",
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0",
+    "jsonc-parser": "^3.3.1",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  }
+}
