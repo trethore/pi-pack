@@ -6,5 +6,5 @@
   "maxLines": 100000,
   "maxSize": "10mb",
   "path": ["."],
-  "ignore": ["package-lock.json", "packages/configs/**", "packages/rules/test/fixtures/**"]
+  "ignore": ["package-lock.json"]
 }
