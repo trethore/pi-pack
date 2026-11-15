@@ -1,0 +1,9 @@
+# Normalize text files to LF in the repository and working tree.
+*        text=auto  eol=lf
+
+# Source and config files should always use LF.
+*.json   text       eol=lf
+*.jsonc  text       eol=lf
+*.py     text       eol=lf
+*.ts     text       eol=lf
+*.sh     text       eol=lf

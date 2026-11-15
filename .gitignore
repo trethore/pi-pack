@@ -1,0 +1,15 @@
+# IDE config dirs
+.idea/
+.vscode/
+.zed/
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Env Variables
+.env
+
+# MacOS
+.DS_Store
