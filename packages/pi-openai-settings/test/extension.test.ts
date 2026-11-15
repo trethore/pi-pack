@@ -108,3 +108,20 @@ test("shows settings with no arguments", async () => {
 	// Assert
 	expect(harness.notify).toHaveBeenCalledWith(expect.stringContaining("enabled = true"), "info");
 });
+
+test("registers argument completions for setting names and values", () => {
+	expect.hasAssertions();
+	// Arrange
+	vi.mocked(OpenAISettingsConfig.read).mockReturnValue(Fixtures.config());
+	const harness = Harness.create();
+	const [registration] = harness.registerCommand.mock.calls;
+	const [, command] = registration ?? [];
+
+	// Act
+	const names = command?.getArgumentCompletions?.("ver");
+	const values = command?.getArgumentCompletions?.("verbosity h");
+
+	// Assert
+	expect(names).toStrictEqual([{ value: "verbosity ", label: "verbosity" }]);
+	expect(values).toStrictEqual([{ value: "verbosity high", label: "high" }]);
+});

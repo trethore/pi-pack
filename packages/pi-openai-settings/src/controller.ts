@@ -23,6 +23,22 @@ class OpenAISettingsController {
 		return ResponsesPayload.apply(payload, this.config);
 	}
 
+	complete(prefix: string): { value: string; label: string }[] {
+		const [name = "", value, extra] = prefix.trimStart().split(/\s+/u);
+		const commands = OpenAISettingsConfig.commandValues(this.config);
+		if (extra !== undefined) {
+			return [];
+		}
+		if (value === undefined) {
+			return [...commands.keys()]
+				.filter((setting) => setting.startsWith(name))
+				.map((setting) => ({ value: `${setting} `, label: setting }));
+		}
+		return (commands.get(name) ?? [])
+			.filter((option) => option.startsWith(value))
+			.map((option) => ({ value: `${name} ${option}`, label: option }));
+	}
+
 	command(args: string): string {
 		if (args.trim() === "") {
 			return this.describe();

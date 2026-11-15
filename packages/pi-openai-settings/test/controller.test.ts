@@ -151,3 +151,61 @@ test("ignores unsupported providers even with settings enabled", () => {
 	// Assert
 	expect(result).toBeUndefined();
 });
+
+test.each([
+	["", ["enabled ", "verbosity ", "reasoningSummary ", "webSearch ", "serviceTier "]],
+	["  ver", ["verbosity "]],
+	["enabled ", ["enabled true", "enabled false"]],
+	["verbosity ", ["verbosity low", "verbosity medium", "verbosity high", "verbosity null"]],
+	["reasoningSummary ", [
+		"reasoningSummary concise",
+		"reasoningSummary auto",
+		"reasoningSummary detailed",
+		"reasoningSummary none",
+		"reasoningSummary null",
+	]],
+	["webSearch ", ["webSearch true", "webSearch false", "webSearch null"]],
+	["serviceTier ", ["serviceTier default", "serviceTier priority", "serviceTier ultrafast", "serviceTier null"]],
+	["  verbosity\t h", ["verbosity high"]],
+	["reasoningSummary n", ["reasoningSummary none", "reasoningSummary null"]],
+	["webSearch true", ["webSearch true"]],
+	["unknown ", []],
+	["constructor ", []],
+	["enabled n", []],
+	["verbosity invalid", []],
+	["verbosity low extra", []],
+	["verbosity low ", []],
+])("completes argument prefix %j", (prefix, expected) => {
+	expect.hasAssertions();
+	// Arrange
+	const controller = new OpenAISettingsController(Fixtures.config());
+	const before = controller.command("");
+
+	// Act
+	const items = controller.complete(prefix);
+
+	// Assert
+	expect(items.map((item) => item.value)).toStrictEqual(expected);
+	expect(controller.command("")).toBe(before);
+	expect(OpenAISettingsConfig.save).not.toHaveBeenCalled();
+});
+
+test("completion respects feature permissions but remains available while disabled", () => {
+	expect.hasAssertions();
+	// Arrange
+	const config = OpenAISettingsConfig.defaults();
+	config.enabled = false;
+	config.webSearch.command = true;
+	const controller = new OpenAISettingsController(config);
+
+	// Act
+	const completions = ["", "verbosity ", "webSearch f", "enabled t"].map((prefix) => controller.complete(prefix));
+
+	// Assert
+	expect(completions).toStrictEqual([
+		[{ value: "enabled ", label: "enabled" }, { value: "webSearch ", label: "webSearch" }],
+		[],
+		[{ value: "webSearch false", label: "false" }],
+		[{ value: "enabled true", label: "true" }],
+	]);
+});

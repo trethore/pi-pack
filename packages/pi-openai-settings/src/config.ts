@@ -96,6 +96,22 @@ const Environment = {
 };
 
 const OpenAISettingsConfig = {
+	commandValues(config: OpenAISettingsConfig): Map<string, string[]> {
+		const booleans = [InputLiteral.True, InputLiteral.False];
+		const values = new Map<string, string[]>([[SettingName.Enabled, booleans]]);
+		const features = [
+			[SettingName.Verbosity, config.verbosity, Object.values(Verbosity)],
+			[SettingName.ReasoningSummary, config.reasoningSummary, Object.values(ReasoningSummary)],
+			[SettingName.WebSearch, config.webSearch, booleans],
+			[SettingName.ServiceTier, config.serviceTier, Object.values(ServiceTier)],
+		] as const;
+		for (const [name, feature, options] of features) {
+			if (feature.command) {
+				values.set(name, [...options, InputLiteral.Null]);
+			}
+		}
+		return values;
+	},
 	feature(config: OpenAISettingsConfig, name: string) {
 		const [, feature] = Object.entries(config).find(([key]) => key === name) ?? [];
 		if (feature === undefined || typeof feature === "boolean") {
