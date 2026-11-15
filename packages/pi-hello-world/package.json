@@ -1,21 +1,21 @@
 {
-	"name": "@pi-pack/hello-world",
-	"version": "0.1.0",
-	"private": true,
-	"license": "MIT",
-	"type": "module",
-	"imports": {
-		"#src/*": "./src/*.ts"
-	},
-	"dependencies": {
-		"@pi-pack/events": "0.1.0"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "1.5.2"
-	},
-	"pi": {
-		"extensions": [
-			"./src/index.ts"
-		]
-	}
+  "name": "@pi-pack/hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@pi-pack/events": "0.1.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
 }

@@ -1,25 +1,26 @@
 {
-	"$schema": "https://dprint.dev/schemas/v0.json",
-	"lineWidth": 120,
-	"useTabs": true,
-	"indentWidth": 2,
-	"typescript": {
-		"arrowFunction.useParentheses": "force",
-		"quoteStyle": "preferDouble",
-		"trailingCommas": "onlyMultiLine"
-	},
-	"json": {
-		"trailingCommas": "never"
-	},
-	"markdown": {
-		"textWrap": "always"
-	},
-	"excludes": [
-		"**/*-lock.json"
-	],
-	"plugins": [
-		"npm:@dprint/json@0.26.0",
-		"npm:@dprint/markdown@0.29.0",
-		"npm:@dprint/typescript@0.101.0"
-	]
+  "$schema": "https://dprint.dev/schemas/v0.json",
+  "lineWidth": 120,
+  "useTabs": false,
+  "indentWidth": 2,
+  "typescript": {
+    "useTabs": true,
+    "arrowFunction.useParentheses": "force",
+    "quoteStyle": "preferDouble",
+    "trailingCommas": "onlyMultiLine"
+  },
+  "json": {
+    "trailingCommas": "never"
+  },
+  "markdown": {
+    "textWrap": "always"
+  },
+  "excludes": [
+    "**/*-lock.json"
+  ],
+  "plugins": [
+    "npm:@dprint/json@0.26.0",
+    "npm:@dprint/markdown@0.29.0",
+    "npm:@dprint/typescript@0.101.0"
+  ]
 }
