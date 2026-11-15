@@ -1,0 +1,31 @@
+{
+  "name": "@pi-pack/pi-whimsical",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Replace Pi's working message with a random whimsical message on each turn.",
+  "keywords": [
+    "pi",
+    "extension",
+    "whimsical"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@pi-pack/config": "0.1.0",
+    "@pi-pack/events": "0.1.0",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

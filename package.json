@@ -16,7 +16,7 @@
     "url": "git+https://github.com/trethore/pi-pack.git"
   },
   "license": "MIT",
-  "author": "Titouan Réthoré",
+  "author": "Titouan R\u00e9thor\u00e9",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -27,8 +27,11 @@
     "check:unused": "knip",
     "clone:pi": "node scripts/clone-pi.ts",
     "dev": "pi -e .",
+    "dev:pi-whimsical": "pi -e ./packages/pi-whimsical",
     "format": "dprint fmt",
     "format:check": "dprint check",
+    "install:all": "npm run install:pi-whimsical",
+    "install:pi-whimsical": "pi install ./packages/pi-whimsical",
     "lint": "oxlint --config oxlint.config.ts .",
     "lint:fix": "oxlint --config oxlint.config.ts --fix .",
     "test": "vitest run",
