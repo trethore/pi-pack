@@ -6,5 +6,5 @@
   "maxLines": 100000,
   "maxSize": "10mb",
   "path": ["."],
-  "ignore": ["package-lock.json"]
+  "ignore": ["package-lock.json", "packages/*/tsconfig.build.json"]
 }
