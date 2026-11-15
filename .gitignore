@@ -13,3 +13,6 @@ coverage/
 
 # MacOS
 .DS_Store
+
+# Pi
+pi/

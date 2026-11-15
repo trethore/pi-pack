@@ -26,6 +26,8 @@
 		"check": "npm run --silent format:check && npm run --silent typecheck && npm run --silent lint && npm run --silent test:coverage && npm run --silent check:unused && npm run --silent check:duplicates",
 		"check:duplicates": "jscpd --fail-on-empty --no-tips",
 		"check:unused": "knip",
+		"clone:pi": "node scripts/clone-pi.ts",
+		"dev": "pi -e .",
 		"format": "dprint fmt",
 		"format:check": "dprint check",
 		"lint": "oxlint --config oxlint.config.ts .",
@@ -36,7 +38,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@earendil-works/pi-coding-agent": "1.5.2",
 		"@types/node": "^22.20.5",
+		"@vitest/coverage-v8": "^5.1.0",
 		"dprint": "^0.64.3",
 		"jscpd": "^5.4.3",
 		"knip": "^6.45.1",
