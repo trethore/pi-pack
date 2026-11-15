@@ -1,7 +1,8 @@
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Events } from "@pi-pack/events";
 
 export default function helloWorld(pi: ExtensionAPI) {
-	pi.on("session_start", (_event, ctx) => {
+	pi.on(Events.SessionStart, (_event, ctx) => {
 		ctx.ui.notify("Hello, world!", "info");
 	});
 }
