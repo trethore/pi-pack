@@ -40,6 +40,9 @@ const Feature = {
 			feature.value = value;
 		}
 	},
+	valueSchema<Value extends z.ZodType>(feature: { unwrap: () => { shape: { value: Value } } }): Value {
+		return feature.unwrap().shape.value;
+	},
 	schema<Value extends z.ZodType>(value: Value) {
 		return z.object({ value: value.nullable().default(null), command: z.boolean().default(false) }).prefault({});
 	},
@@ -126,28 +129,28 @@ const OpenAISettingsConfig = {
 		return schema.parse({});
 	},
 	read(this: void, env: NodeJS.ProcessEnv = process.env): OpenAISettingsConfig {
-		const readGlobal = Environment.read(env, EnvironmentVariable.Config, z.boolean()) ?? true;
 		let config = OpenAISettingsConfig.defaults();
-		if (readGlobal) {
+		if (Environment.read(env, EnvironmentVariable.Config, z.boolean()) ?? true) {
 			config = readConfig(configFilename, { scope: ConfigScope.Global }, schema) ?? config;
 		}
 		config.enabled = Environment.read(env, EnvironmentVariable.Enabled, z.boolean()) ?? config.enabled;
+		const { shape } = schema;
 		// Null is an explicit override, not a fallback to the file's value.
 		Feature.override(
 			config.verbosity,
-			Environment.read(env, EnvironmentVariable.Verbosity, schema.shape.verbosity.unwrap().shape.value),
+			Environment.read(env, EnvironmentVariable.Verbosity, Feature.valueSchema(shape.verbosity)),
 		);
 		Feature.override(
 			config.reasoningSummary,
-			Environment.read(env, EnvironmentVariable.ReasoningSummary, schema.shape.reasoningSummary.unwrap().shape.value),
+			Environment.read(env, EnvironmentVariable.ReasoningSummary, Feature.valueSchema(shape.reasoningSummary)),
 		);
 		Feature.override(
 			config.webSearch,
-			Environment.read(env, EnvironmentVariable.WebSearch, schema.shape.webSearch.unwrap().shape.value),
+			Environment.read(env, EnvironmentVariable.WebSearch, Feature.valueSchema(shape.webSearch)),
 		);
 		Feature.override(
 			config.serviceTier,
-			Environment.read(env, EnvironmentVariable.ServiceTier, schema.shape.serviceTier.unwrap().shape.value),
+			Environment.read(env, EnvironmentVariable.ServiceTier, Feature.valueSchema(shape.serviceTier)),
 		);
 		return config;
 	},
