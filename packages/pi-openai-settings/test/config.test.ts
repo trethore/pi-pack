@@ -1,23 +1,21 @@
 /* eslint-disable unicorn/no-null -- Null is a supported configuration value. */
+import { ConfigFixture } from "#shared-test/config-fixture";
 import { OpenAISettingsConfig } from "#src/config";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
 
-const fixture = { directory: "", path: "" };
+const fixture: ConfigFixture = { directory: "", path: "" };
 
 beforeEach(() => {
-	fixture.directory = mkdtempSync(join(tmpdir(), "pi-openai-settings-"));
-	fixture.path = join(fixture.directory, "pi-openai-settings.jsonc");
+	Object.assign(fixture, ConfigFixture.create("pi-openai-settings.jsonc"));
 	vi.mocked(getAgentDir).mockReturnValue(fixture.directory);
 });
 
 afterEach(() => {
-	rmSync(fixture.directory, { recursive: true, force: true });
+	ConfigFixture.remove(fixture);
 	vi.resetAllMocks();
 	vi.unstubAllEnvs();
 });
