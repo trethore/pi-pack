@@ -1,0 +1,42 @@
+{
+  "name": "@pi-pack/pi-codemode",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Run JavaScript against Pi tools in a local sandbox.",
+  "keywords": [
+    "pi",
+    "extension",
+    "codemode"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#sandbox-script": "./src/sandbox/script.js",
+    "#src/*": "./src/*.ts",
+    "#test/*": "./test/*.ts"
+  },
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-codemode": "1.5.2",
+    "dedent": "^1.7.2",
+    "typebox": "1.3.27"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  }
+}
