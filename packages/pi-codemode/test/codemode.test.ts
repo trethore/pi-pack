@@ -57,7 +57,7 @@ test("text and return keep real whitespace distinct from literal backslash escap
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: textType,
-		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\n[0].file:\n  first\n  \tsecond\n[0].literal: \\t",
+		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\n[0].file:\nfirst\n\tsecond\n[0].literal: \\t",
 	}]);
 });
 
@@ -73,7 +73,7 @@ test("prints leaf paths without adding indentation for each ancestor", async () 
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: textType,
-		text: "output.details.stderr:\n  one\n  \ttwo\noutput.details.files[0]: a\noutput.details.files[1]: b",
+		text: "output.details.stderr:\none\n\ttwo\noutput.details.files[0]: a\noutput.details.files[1]: b",
 	}]);
 });
 
@@ -191,7 +191,7 @@ test("successful text tools print actual tabs and newlines inside an object", as
 	const result = await run('text({ source: await tools.read({path:"example"}) });');
 
 	// Assert
-	expect(result.content).toStrictEqual([{ type: textType, text: "source:\n  a\n  \tb" }]);
+	expect(result.content).toStrictEqual([{ type: textType, text: "source:\na\n\tb" }]);
 });
 
 test("an aborted call cannot save a value", async () => {

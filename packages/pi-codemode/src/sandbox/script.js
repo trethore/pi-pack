@@ -19,7 +19,7 @@ function leaf(path, value) {
 		return value;
 	}
 	if (value.includes("\n")) {
-		return `${path}:\n  ${value.replaceAll("\n", "\n  ")}`;
+		return `${path}:\n${value}`;
 	}
 	return `${path}: ${value}`;
 }
