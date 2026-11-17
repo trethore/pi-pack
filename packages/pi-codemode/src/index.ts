@@ -4,8 +4,10 @@ import { Store } from "#src/store";
 import { Tools } from "#src/tools";
 import { CODEMODE_SOURCE_GRAMMAR, CodemodeSandbox, parseCodemodeSource } from "@earendil-works/pi-codemode";
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
+const noPadding = 0;
 const onlyMode = "only";
 const memoryLimitBytes = 134_217_728; // 128 MiB
 const parameters = Type.Object({ code: Type.String() });
@@ -33,6 +35,17 @@ export default function codemode(pi: ExtensionAPI): void {
 		constrainedSampling: { type: "grammar", variants: { openai_lark: CODEMODE_SOURCE_GRAMMAR } },
 		reachesTools: () => "all",
 		prepareLoadout: (loadout) => Tools.loadout(loadout, pi.getSettings().codemode?.mode === onlyMode),
+		renderCall({ code }, theme, { lastComponent }) {
+			let label = theme.fg("toolTitle", theme.bold(Tools.name));
+			if (code) {
+				label += `\n${theme.fg("text", code)}`;
+			}
+			if (lastComponent instanceof Text) {
+				lastComponent.setText(label);
+				return lastComponent;
+			}
+			return new Text(label, noPadding, noPadding);
+		},
 		// Pi supplies the execution context as the fifth tool argument.
 		// eslint-disable-next-line max-params
 		async execute(_id, { code }, signal, _onUpdate, ctx) {
