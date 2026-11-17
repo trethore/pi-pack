@@ -44,11 +44,12 @@ export default function codemode(pi: ExtensionAPI): void {
 					...abortOptions(signal),
 					...source.options,
 				});
-				const persist = result.ok && Store.changed(result.storeWrites);
+				const output = await Output.result(result, source.options.maxOutputTokens);
+				const persist = result.ok && !output.isError && Store.changed(result.storeWrites);
 				if (persist) {
 					pi.appendEntry(Store.entryType, result.storeWrites);
 				}
-				return Output.result(result, source.options.maxOutputTokens);
+				return output;
 			} finally {
 				await sandbox.close();
 			}

@@ -11,7 +11,7 @@ const description = dedent`
 	To limit output or runtime, put either or both options on the first line, for example:
 	// @options: {"max_output_tokens": 2000, "timeout_ms": 30000}
 	Use text(value), console.log(...) or return and top-level return add output; exit() ends the script.
-	Use image(await tools.read({ path })) to show a local image.
+	Use image(await tools.read({ path })) to show a local image. image() takes image data, not a file path.
 	Use store(key, value) and load(key) to keep JSON values across codemode calls.
 	Filter ALL_TOOLS by name to discover other callable tools and their signatures.
 `;

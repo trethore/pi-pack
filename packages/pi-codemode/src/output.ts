@@ -1,4 +1,6 @@
 import { type CodemodeOutputItem, type CodemodeResult } from "@earendil-works/pi-codemode";
+import { resizeImage } from "@earendil-works/pi-coding-agent";
+import { Buffer } from "node:buffer";
 
 const maxChars = 32_000;
 const charsPerTokenEstimate = 4;
@@ -42,16 +44,45 @@ function* boundedBlocks(items: readonly CodemodeOutputItem[], limit: number): Ge
 	}
 }
 
+async function checkedImage(block: Extract<CodemodeOutputItem, { type: "image" }>): Promise<CodemodeOutputItem> {
+	// The sandbox checks image signatures, not whether the pixels can be decoded.
+	const image = await resizeImage(Buffer.from(block.data, "base64"), block.mimeType);
+	if (image === null) {
+		return {
+			type: textType,
+			text: "Cannot decode or resize image. For a local file, use image(await tools.read({ path })).",
+		};
+	}
+	return { type: imageType, data: image.data, mimeType: image.mimeType };
+}
+
+async function checkedContent(blocksToCheck: Iterable<CodemodeOutputItem>) {
+	const content: CodemodeOutputItem[] = [];
+	let invalidImage = false;
+	for (const block of blocksToCheck) {
+		if (block.type === textType) {
+			content.push(block);
+		} else {
+			// Decode one image at a time to bound worker memory.
+			// eslint-disable-next-line no-await-in-loop
+			const checked = await checkedImage(block);
+			invalidImage ||= checked.type === textType;
+			content.push(checked);
+		}
+	}
+	return { content, invalidImage };
+}
+
 export const Output = {
-	result(run: CodemodeResult, maxTokens?: number) {
+	async result(run: CodemodeResult, maxTokens?: number) {
 		const limit = Math.min(maxChars, (maxTokens ?? Infinity) * charsPerTokenEstimate);
-		const content = [...boundedBlocks(run.output, limit)];
+		const { content, invalidImage } = await checkedContent(boundedBlocks(run.output, limit));
 		if (content.length === start) {
 			content.push({ type: textType, text: "" });
 		}
 		if (!run.ok) {
 			content.push({ type: textType, text: run.error.message.slice(start, maxChars) });
 		}
-		return { content, details: {}, isError: !run.ok };
+		return { content, details: {}, isError: !run.ok || invalidImage };
 	},
 };

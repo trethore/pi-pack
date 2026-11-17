@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 const png = {
 	type: "image" as const,
 	mimeType: "image/png",
-	data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+	data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==",
 };
 const imageCall = `image("data:image/png;base64,${png.data}");`;
 
@@ -53,4 +53,23 @@ test("keeps an emitted image before a later script error", async () => {
 
 	// Assert
 	expect(result).toMatchObject({ isError: true, content: [png, { type: "text", text: "stop" }] });
+});
+
+test("returns text instead of persisting an undecodable image", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const { run } = Harness.create();
+	const signatureOnly = "data:image/png;base64,iVBORw0KGgo=";
+
+	// Act
+	const result = await run(`text("before"); store("seen", true); image("${signatureOnly}");`);
+	const saved = await run('return typeof load("seen");');
+
+	// Assert
+	expect(result).toMatchObject({ isError: true });
+	expect(result.content).toStrictEqual([
+		{ type: "text", text: "before" },
+		{ type: "text", text: "Cannot decode or resize image. For a local file, use image(await tools.read({ path }))." },
+	]);
+	expect(saved.content).toStrictEqual([{ type: "text", text: "undefined" }]);
 });
