@@ -5,13 +5,15 @@ import { Buffer } from "node:buffer";
 const maxChars = 32_000;
 const charsPerTokenEstimate = 4;
 const start = 0;
+const firstSection = 1;
 const textType = "text";
 const imageType = "image";
 
 function textBlock(lines: string[]): CodemodeOutputItem {
-	const sections = lines.length > 1
-		? lines.map((line, index) => `==> ${index + 1}/${lines.length} <==\n${line}`)
-		: lines;
+	if (lines.length <= firstSection) {
+		return { type: textType, text: lines.join("\n") };
+	}
+	const sections = lines.map((line, index) => `==> ${index + firstSection}/${lines.length} <==\n${line}`);
 	return { type: textType, text: sections.join("\n") };
 }
 
