@@ -17,7 +17,8 @@ class OpenAISettingsController {
 	}
 
 	apply(payload: unknown, model: { provider: string; api: string } | undefined): unknown {
-		if (this.state === SettingsState.Disabled || !ResponsesPayload.supports(model)) {
+		const shouldApply = this.state === SettingsState.Enabled && ResponsesPayload.supports(model);
+		if (!shouldApply) {
 			return undefined;
 		}
 		return ResponsesPayload.apply(payload, this.config);
@@ -45,7 +46,8 @@ class OpenAISettingsController {
 		}
 		const parts = args.trim().split(/\s+/u);
 		const [name, value] = parts;
-		if (parts.length !== commandArgumentCount || name === undefined || value === undefined) {
+		const invalidArguments = parts.length !== commandArgumentCount || name === undefined || value === undefined;
+		if (invalidArguments) {
 			throw new Error(`Usage: /${commandName} <${Object.values(SettingName).join("|")}> <value>`);
 		}
 		this.update(name, value);

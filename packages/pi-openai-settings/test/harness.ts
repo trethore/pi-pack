@@ -1,3 +1,4 @@
+import { commandName } from "#src/constants";
 import openAISettings from "#src/index";
 import { Fixtures } from "#test/fixtures";
 import {
@@ -32,7 +33,7 @@ const Harness = {
 				return handler?.({ type: Events.BeforeProviderRequest, payload }, ctx);
 			},
 			async command(args: string): Promise<void> {
-				const [, command] = registerCommand.mock.calls.find(([name]) => name === "openai-settings") ?? [];
+				const [, command] = registerCommand.mock.calls.find(([name]) => name === commandName) ?? [];
 				if (command === undefined) {
 					throw new Error("Expected openai-settings to be registered.");
 				}

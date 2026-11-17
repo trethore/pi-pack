@@ -119,7 +119,8 @@ const OpenAISettingsConfig = {
 	},
 	feature(config: OpenAISettingsConfig, name: string) {
 		const [, feature] = Object.entries(config).find(([key]) => key === name) ?? [];
-		if (feature === undefined || typeof feature === "boolean") {
+		const isFeature = feature !== undefined && typeof feature !== "boolean";
+		if (!isFeature) {
 			throw new Error(`Unknown setting: ${name}.`);
 		}
 		if (!feature.command) {

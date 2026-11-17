@@ -12,7 +12,8 @@ function git(args: string[]): string {
 
 function parseTag(): string {
 	const [tag, extraArgument] = process.argv.slice(argumentOffset);
-	if (tag === undefined || tag === "" || tag.startsWith("-") || extraArgument !== undefined) {
+	const validArguments = tag !== undefined && tag !== "" && !tag.startsWith("-") && extraArgument === undefined;
+	if (!validArguments) {
 		throw new Error("Usage: npm run clone:pi -- <tag>");
 	}
 	git(["check-ref-format", `refs/tags/${tag}`]);
@@ -28,7 +29,8 @@ function validateCheckout(tag: string): void {
 	const status = git(["-C", destination, "status", "--porcelain", "--untracked-files=all"]);
 	const head = git(["-C", destination, "rev-parse", "HEAD"]);
 	const taggedCommit = git(["-C", destination, "rev-parse", "--verify", `refs/tags/${tag}^{commit}`]);
-	if (origin !== repository || status !== "" || head !== taggedCommit) {
+	const cleanTaggedCheckout = origin === repository && status === "" && head === taggedCommit;
+	if (!cleanTaggedCheckout) {
 		throw new Error(`pi/ is not a clean Pi checkout at ${tag}. It has been left unchanged.`);
 	}
 }

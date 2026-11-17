@@ -3,15 +3,20 @@ import { ResponsesPayload } from "#src/payload";
 import { Fixtures } from "#test/fixtures";
 import { expect, test } from "vitest";
 
+const jsonObjectFormat = "json_object";
+const webSearch = "web_search";
+const webSearchPreview = "web_search_preview";
+const webSearchTypes = [webSearch, webSearchPreview, "web_search_preview_2025_03_11", "web_search_2025_08_26"];
+
 test.each([
-	["openai", "openai-responses", true],
-	["github-copilot", "openai-responses", true],
+	["openai", Fixtures.model.api, true],
+	["github-copilot", Fixtures.model.api, true],
 	["azure", "azure-openai-responses", true],
 	["openai", "openai-completions", false],
-	["azure", "openai-responses", false],
+	["azure", Fixtures.model.api, false],
 	["github-copilot", "azure-openai-responses", false],
 	["openai-codex", "openai-codex-responses", false],
-	["custom", "openai-responses", false],
+	["custom", Fixtures.model.api, false],
 ])("checks the exact provider/API pair %s/%s", (provider, api, expected) => {
 	expect.hasAssertions();
 	// Arrange
@@ -54,9 +59,9 @@ test("null settings leave all payload fields unchanged", () => {
 	// Arrange
 	const config = Fixtures.config();
 	const payload = {
-		text: { verbosity: "medium", format: { type: "json_object" } },
+		text: { verbosity: "medium", format: { type: jsonObjectFormat } },
 		reasoning: { summary: "auto", effort: "high" },
-		tools: [{ type: "web_search_preview" }],
+		tools: [{ type: webSearchPreview }],
 		service_tier: "flex",
 		input: [],
 	};
@@ -79,7 +84,7 @@ test("sets all four fields without losing siblings or mutating the original payl
 		PI_OPENAI_SERVICE_TIER: "priority",
 	});
 	const payload = Object.freeze({
-		text: Object.freeze({ format: { type: "json_object" }, verbosity: "high" }),
+		text: Object.freeze({ format: { type: jsonObjectFormat }, verbosity: "high" }),
 		reasoning: Object.freeze({ effort: "medium", summary: "auto" }),
 		tools: Object.freeze([{ type: "function", name: "read" }]),
 		service_tier: "default",
@@ -91,9 +96,9 @@ test("sets all four fields without losing siblings or mutating the original payl
 
 	// Assert
 	expect(result).toStrictEqual({
-		text: { format: { type: "json_object" }, verbosity: "low" },
+		text: { format: { type: jsonObjectFormat }, verbosity: "low" },
 		reasoning: { effort: "medium", summary: "concise" },
-		tools: [{ type: "function", name: "read" }, { type: "web_search" }],
+		tools: [{ type: "function", name: "read" }, { type: webSearch }],
 		service_tier: "priority",
 		input: [],
 	});
@@ -138,7 +143,7 @@ test.each([
 	expect(payload).toStrictEqual(original);
 });
 
-test.each(["web_search", "web_search_preview", "web_search_preview_2025_03_11", "web_search_2025_08_26"])(
+test.each(webSearchTypes)(
 	"preserves existing %s tools and their options when enabled",
 	(type) => {
 		expect.hasAssertions();
@@ -164,7 +169,7 @@ test("adds web search only once when tools are absent", () => {
 	const repeated = ResponsesPayload.apply(result, config);
 
 	// Assert
-	expect(result).toStrictEqual({ tools: [{ type: "web_search" }] });
+	expect(result).toStrictEqual({ tools: [{ type: webSearch }] });
 	expect(repeated).toStrictEqual(result);
 });
 
@@ -172,11 +177,11 @@ test("false removes hosted web-search variants but preserves functions and other
 	expect.hasAssertions();
 	// Arrange
 	const config = Fixtures.config({ PI_OPENAI_WEB_SEARCH: "false" });
-	const keep = [{ type: "function", name: "web_search" }, { type: "file_search" }, { type: 1 }, null];
+	const keep = [{ type: "function", name: webSearch }, { type: "file_search" }, { type: 1 }, null];
 	const payload = {
 		tools: [
 			...keep,
-			...["web_search", "web_search_preview", "web_search_preview_2025_03_11", "web_search_2025_08_26"].map((type) => ({
+			...webSearchTypes.map((type) => ({
 				type,
 			})),
 		],

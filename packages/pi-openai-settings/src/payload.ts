@@ -34,9 +34,10 @@ const ResponsesPayload = {
 		if (model === undefined) {
 			return false;
 		}
-		return ((model.provider === Provider.OpenAI || model.provider === Provider.GitHubCopilot)
-			&& model.api === Api.OpenAIResponses)
-			|| (model.provider === Provider.Azure && model.api === Api.AzureOpenAIResponses);
+		if (model.api === Api.OpenAIResponses) {
+			return model.provider === Provider.OpenAI || model.provider === Provider.GitHubCopilot;
+		}
+		return model.api === Api.AzureOpenAIResponses && model.provider === Provider.Azure;
 	},
 	isWebSearch(tool: unknown): boolean {
 		if (!ResponsesPayload.isObject(tool)) {

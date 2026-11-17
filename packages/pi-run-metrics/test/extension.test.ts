@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 vi.mock(import("#src/config"), () => ({ RunMetricsConfig: { read: vi.fn<typeof RunMetricsConfig.read>() } }));
 
+const widgetId = "pi-run-metrics";
 const responseMs = 12_000;
 const toolMs = 2000;
 const idleMs = 10_000;
@@ -36,11 +37,11 @@ test("shows a widget above the prompt on session start", async () => {
 
 	// Assert
 	expect(harness.setWidget).toHaveBeenCalledExactlyOnceWith(
-		"pi-run-metrics",
+		widgetId,
 		expect.any(Function),
 		{ placement: "aboveEditor" },
 	);
-	expect(harness.text()).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(harness.text()).toBe(Fixtures.emptyMetricsText);
 });
 
 test("colors widget text with the theme accent", async () => {
@@ -54,8 +55,8 @@ test("colors widget text with the theme accent", async () => {
 	const text = harness.text();
 
 	// Assert
-	expect(harness.fg).toHaveBeenCalledWith("accent", "0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
-	expect(text).toBe("\u001b[36m0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000\u001b[39m");
+	expect(harness.fg).toHaveBeenCalledWith("accent", Fixtures.emptyMetricsText);
+	expect(text).toBe(`\u001b[36m${Fixtures.emptyMetricsText}\u001b[39m`);
 });
 
 test("refreshes elapsed time even before a response ends", async () => {
@@ -69,7 +70,7 @@ test("refreshes elapsed time even before a response ends", async () => {
 	vi.advanceTimersByTime(responseMs);
 
 	// Assert
-	expect(harness.setWidget).toHaveBeenCalledWith("pi-run-metrics", expect.any(Function), { placement: "aboveEditor" });
+	expect(harness.setWidget).toHaveBeenCalledWith(widgetId, expect.any(Function), { placement: "aboveEditor" });
 	expect(harness.text()).toBe("12s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
 });
 
@@ -151,7 +152,7 @@ test("resets metrics and timers on session changes", async () => {
 	await harness.emit({ type: Events.SessionStart, reason: "resume" });
 
 	// Assert
-	expect(harness.text()).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(harness.text()).toBe(Fixtures.emptyMetricsText);
 	expect(vi.getTimerCount()).toBe(noTimers);
 });
 
@@ -165,7 +166,7 @@ test("removes the widget and clears timers on shutdown", async () => {
 	await harness.emit({ type: Events.SessionShutdown, reason: "quit" });
 
 	// Assert
-	expect(harness.setWidget).toHaveBeenLastCalledWith("pi-run-metrics", undefined);
+	expect(harness.setWidget).toHaveBeenLastCalledWith(widgetId, undefined);
 	expect(harness.text()).toBeUndefined();
 	expect(vi.getTimerCount()).toBe(noTimers);
 });

@@ -37,9 +37,13 @@ const ConfigLocation = {
 	},
 };
 
+const directoryEntries = new Set([".", ".."]);
+const fileNotFoundCode = "ENOENT";
+
 const ConfigFile = {
 	validateFilename(filename: string): void {
-		if (filename === "" || filename === "." || filename === ".." || /[/\\\0]/u.test(filename)) {
+		const invalidFilename = filename === "" || directoryEntries.has(filename) || /[/\\\0]/u.test(filename);
+		if (invalidFilename) {
 			throw new Error("Config filename must be a filename, not a path.");
 		}
 	},
@@ -48,7 +52,8 @@ const ConfigFile = {
 		try {
 			return readFileSync(path, "utf8");
 		} catch (error) {
-			if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+			const fileNotFound = error instanceof Error && "code" in error && error.code === fileNotFoundCode;
+			if (fileNotFound) {
 				return undefined;
 			}
 			throw new Error(`Could not read config ${path}.`, { cause: error });

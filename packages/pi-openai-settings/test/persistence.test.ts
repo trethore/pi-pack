@@ -1,7 +1,8 @@
 /* eslint-disable unicorn/no-null -- Null is a supported setting value. */
 import { OpenAISettingsConfig } from "#src/config";
+import { configFilename } from "#src/constants";
 import { OpenAISettingsController } from "#src/controller";
-import { Fixtures } from "#test/fixtures";
+import { Fixtures, TestCommand } from "#test/fixtures";
 import { Harness } from "#test/harness";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -28,7 +29,7 @@ const fixture = {
 beforeEach(() => {
 	fixture.root = mkdtempSync(join(tmpdir(), "pi-openai-persistence-"));
 	fixture.directory = join(fixture.root, "agent");
-	fixture.path = join(fixture.directory, "pi-openai-settings.jsonc");
+	fixture.path = join(fixture.directory, configFilename);
 	vi.mocked(getAgentDir).mockReturnValue(fixture.directory);
 	for (const name of ["CONFIG", "ENABLED", "VERBOSITY", "REASONING_SUMMARY", "WEB_SEARCH", "SERVICE_TIER"]) {
 		vi.stubEnv(`PI_OPENAI_${name}`, undefined);
@@ -44,9 +45,9 @@ afterEach(() => {
 test.each([
 	["verbosity low", "verbosity", { value: "low" }],
 	["reasoningSummary none", "reasoningSummary", { value: "none" }],
-	["webSearch true", "webSearch", { value: true }],
+	[TestCommand.EnableWebSearch, "webSearch", { value: true }],
 	["serviceTier priority", "serviceTier", { value: "priority" }],
-	["enabled false", "enabled", false],
+	[TestCommand.Disable, "enabled", false],
 ])("persists %s while creating a missing global directory and config", (command, name, expected) => {
 	expect.hasAssertions();
 	// Arrange
@@ -59,7 +60,7 @@ test.each([
 	// Assert
 	expect(saved).toStrictEqual({ [name]: expected });
 	expect(message).toContain("saved to global config");
-	expect(readdirSync(fixture.directory)).toStrictEqual(["pi-openai-settings.jsonc"]);
+	expect(readdirSync(fixture.directory)).toStrictEqual([configFilename]);
 });
 
 test("preserves comments, permissions, unknown fields, and unrelated file values", () => {
@@ -71,7 +72,7 @@ test("preserves comments, permissions, unknown fields, and unrelated file values
 	const controller = new OpenAISettingsController(OpenAISettingsConfig.read({ PI_OPENAI_SERVICE_TIER: "priority" }));
 
 	// Act
-	controller.command("verbosity high");
+	controller.command(TestCommand.HighVerbosity);
 
 	// Assert
 	expect(readFileSync(fixture.path, "utf8")).toBe(original.replace('"low"', '"high"'));
@@ -98,7 +99,7 @@ test("commands update requests immediately and survive extension reload", async 
 	const harness = Harness.create();
 
 	// Act
-	await harness.command("verbosity high");
+	await harness.command(TestCommand.HighVerbosity);
 	const reloaded = Harness.create();
 
 	// Assert
@@ -114,7 +115,7 @@ test("persists commands even when global config reading is disabled", () => {
 	const controller = new OpenAISettingsController(OpenAISettingsConfig.read({ PI_OPENAI_CONFIG: "false" }));
 
 	// Act
-	controller.command("enabled false");
+	controller.command(TestCommand.Disable);
 
 	// Assert
 	expect(controller.apply({}, Fixtures.model)).toBeUndefined();
@@ -128,7 +129,7 @@ test("environment overrides persisted values only on reload", () => {
 	const controller = new OpenAISettingsController(OpenAISettingsConfig.read(env));
 
 	// Act
-	controller.command("enabled true");
+	controller.command(TestCommand.Enable);
 	const reloaded = new OpenAISettingsController(OpenAISettingsConfig.read(env));
 
 	// Assert
@@ -159,7 +160,7 @@ test.each(['{"enabled":', "null", "[]", '"text"', "// empty"])("refuses to overw
 
 	// Act
 	function command(): string {
-		return controller.command("enabled false");
+		return controller.command(TestCommand.Disable);
 	}
 
 	// Assert
@@ -176,7 +177,7 @@ test("reports read failures without changing runtime settings", () => {
 
 	// Act
 	function command(): string {
-		return controller.command("enabled false");
+		return controller.command(TestCommand.Disable);
 	}
 
 	// Assert
@@ -184,7 +185,7 @@ test("reports read failures without changing runtime settings", () => {
 	expect(controller.apply({}, Fixtures.model)).toStrictEqual({});
 });
 
-test.each(["verbosity high", "enabled false"])(
+test.each([TestCommand.HighVerbosity, TestCommand.Disable])(
 	"failed save of %s leaves disk and runtime unchanged and removes the temporary file",
 	async (command) => {
 		expect.hasAssertions();
@@ -202,7 +203,7 @@ test.each(["verbosity high", "enabled false"])(
 		// Assert
 		expect(harness.notify).toHaveBeenCalledWith("Error: write denied", "error");
 		expect(readFileSync(fixture.path, "utf8")).toBe(source);
-		expect(readdirSync(fixture.directory)).toStrictEqual(["pi-openai-settings.jsonc"]);
+		expect(readdirSync(fixture.directory)).toStrictEqual([configFilename]);
 		await expect(harness.request({})).resolves.toStrictEqual({ text: { verbosity: "low" } });
 	},
 );

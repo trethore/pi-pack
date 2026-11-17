@@ -25,7 +25,7 @@ test("reports zero metrics before a run and ignores out-of-run responses", () =>
 	controller.settle();
 
 	// Assert
-	expect(controller.format(format)).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(controller.format(format)).toBe(Fixtures.emptyMetricsText);
 });
 
 test("sums response usage and duration but includes tool time only in elapsed time", () => {
@@ -75,7 +75,7 @@ test("freezes at settlement and ignores later responses and settlements", () => 
 	controller.settle();
 
 	// Assert
-	expect(controller.format(format)).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(controller.format(format)).toBe(Fixtures.emptyMetricsText);
 });
 
 test("clears totals when the next run starts", () => {
@@ -90,7 +90,7 @@ test("clears totals when the next run starts", () => {
 	controller.start();
 
 	// Assert
-	expect(controller.format(format)).toBe("0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000");
+	expect(controller.format(format)).toBe(Fixtures.emptyMetricsText);
 });
 
 test("uses request timestamps when response duration is unavailable", () => {

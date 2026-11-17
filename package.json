@@ -45,6 +45,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@a-box-of-scraps/ts-rules": "^0.2.0",
     "@earendil-works/pi-coding-agent": "1.5.2",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "^5.1.0",

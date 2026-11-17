@@ -1,5 +1,12 @@
 import { OpenAISettingsConfig } from "#src/config";
 
+const TestCommand = {
+	Enable: "enabled true",
+	Disable: "enabled false",
+	HighVerbosity: "verbosity high",
+	EnableWebSearch: "webSearch true",
+} as const;
+
 const Fixtures = {
 	config(env: NodeJS.ProcessEnv = {}): OpenAISettingsConfig {
 		const config = OpenAISettingsConfig.read({ ...env, PI_OPENAI_CONFIG: "false" });
@@ -13,4 +20,4 @@ const Fixtures = {
 	model: { provider: "openai", api: "openai-responses" },
 };
 
-export { Fixtures };
+export { Fixtures, TestCommand };

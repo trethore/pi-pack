@@ -1,6 +1,7 @@
 import { type AssistantMessage } from "@earendil-works/pi-ai";
 
 const Fixtures = {
+	emptyMetricsText: "0s | 0.0 tok/s | ↑ 0 ↓ 0 | $0.0000",
 	message(overrides: Partial<AssistantMessage> = {}): AssistantMessage {
 		return {
 			role: "assistant",

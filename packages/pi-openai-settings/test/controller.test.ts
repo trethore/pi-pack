@@ -1,7 +1,11 @@
 import { OpenAISettingsConfig } from "#src/config";
+import { SettingName } from "#src/constants";
 import { OpenAISettingsController } from "#src/controller";
-import { Fixtures } from "#test/fixtures";
+import { Fixtures, TestCommand } from "#test/fixtures";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
+const verbosityPrefix = `${SettingName.Verbosity} `;
+const webSearchPrefix = `${SettingName.WebSearch} `;
 
 beforeEach(() => {
 	vi.spyOn(OpenAISettingsConfig, "save").mockImplementation(() => {});
@@ -12,18 +16,18 @@ afterEach(() => {
 });
 
 test.each([
-	["verbosity", "low", { text: { verbosity: "low" } }],
-	["verbosity", "medium", { text: { verbosity: "medium" } }],
-	["verbosity", "high", { text: { verbosity: "high" } }],
-	["reasoningSummary", "none", {}],
-	["reasoningSummary", "auto", { reasoning: { summary: "auto" } }],
-	["reasoningSummary", "concise", { reasoning: { summary: "concise" } }],
-	["reasoningSummary", "detailed", { reasoning: { summary: "detailed" } }],
-	["webSearch", "true", { tools: [{ type: "web_search" }] }],
-	["webSearch", "false", {}],
-	["serviceTier", "default", { service_tier: "default" }],
-	["serviceTier", "priority", { service_tier: "priority" }],
-	["serviceTier", "ultrafast", { service_tier: "ultrafast" }],
+	[SettingName.Verbosity, "low", { text: { verbosity: "low" } }],
+	[SettingName.Verbosity, "medium", { text: { verbosity: "medium" } }],
+	[SettingName.Verbosity, "high", { text: { verbosity: "high" } }],
+	[SettingName.ReasoningSummary, "none", {}],
+	[SettingName.ReasoningSummary, "auto", { reasoning: { summary: "auto" } }],
+	[SettingName.ReasoningSummary, "concise", { reasoning: { summary: "concise" } }],
+	[SettingName.ReasoningSummary, "detailed", { reasoning: { summary: "detailed" } }],
+	[SettingName.WebSearch, "true", { tools: [{ type: "web_search" }] }],
+	[SettingName.WebSearch, "false", {}],
+	[SettingName.ServiceTier, "default", { service_tier: "default" }],
+	[SettingName.ServiceTier, "priority", { service_tier: "priority" }],
+	[SettingName.ServiceTier, "ultrafast", { service_tier: "ultrafast" }],
 ])("command %s %s overrides startup settings", (name, value, expected) => {
 	expect.hasAssertions();
 	// Arrange
@@ -38,7 +42,7 @@ test.each([
 	expect(payload).toStrictEqual(expected);
 });
 
-test.each(["verbosity", "reasoningSummary", "webSearch", "serviceTier"])(
+test.each([SettingName.Verbosity, SettingName.ReasoningSummary, SettingName.WebSearch, SettingName.ServiceTier])(
 	"null restores pass-through behavior for %s",
 	(name) => {
 		expect.hasAssertions();
@@ -60,7 +64,7 @@ test.each(["verbosity", "reasoningSummary", "webSearch", "serviceTier"])(
 	},
 );
 
-test.each(["verbosity low", "reasoningSummary auto", "webSearch true", "serviceTier priority"])(
+test.each(["verbosity low", "reasoningSummary auto", TestCommand.EnableWebSearch, "serviceTier priority"])(
 	"rejects disabled feature command %s",
 	(command) => {
 		expect.hasAssertions();
@@ -88,10 +92,10 @@ test("the master switch remains available and preserves values across disable/en
 
 	// Act
 	const disabled = controller.apply({}, Fixtures.model);
-	controller.command("verbosity high");
-	controller.command("enabled true");
+	controller.command(TestCommand.HighVerbosity);
+	controller.command(TestCommand.Enable);
 	const enabled = controller.apply({}, Fixtures.model);
-	controller.command("enabled false");
+	controller.command(TestCommand.Disable);
 
 	// Assert
 	expect(disabled).toBeUndefined();
@@ -105,8 +109,8 @@ test("master switch works when every feature command is disabled", () => {
 	const controller = new OpenAISettingsController(OpenAISettingsConfig.defaults());
 
 	// Act
-	controller.command("enabled false");
-	controller.command("enabled true");
+	controller.command(TestCommand.Disable);
+	controller.command(TestCommand.Enable);
 
 	// Assert
 	expect(controller.command("")).toContain("enabled = true");
@@ -116,7 +120,7 @@ test("master switch works when every feature command is disabled", () => {
 test.each([
 	"unknown true",
 	"constructor true",
-	"verbosity",
+	SettingName.Verbosity,
 	"verbosity low extra",
 	"verbosity false",
 	"reasoningSummary off",
@@ -153,10 +157,10 @@ test("ignores unsupported providers even with settings enabled", () => {
 });
 
 test.each([
-	["", ["enabled ", "verbosity ", "reasoningSummary ", "webSearch ", "serviceTier "]],
-	["  ver", ["verbosity "]],
-	["enabled ", ["enabled true", "enabled false"]],
-	["verbosity ", ["verbosity low", "verbosity medium", "verbosity high", "verbosity null"]],
+	["", ["enabled ", verbosityPrefix, "reasoningSummary ", webSearchPrefix, "serviceTier "]],
+	["  ver", [verbosityPrefix]],
+	["enabled ", [TestCommand.Enable, TestCommand.Disable]],
+	[verbosityPrefix, ["verbosity low", "verbosity medium", TestCommand.HighVerbosity, "verbosity null"]],
 	["reasoningSummary ", [
 		"reasoningSummary concise",
 		"reasoningSummary auto",
@@ -164,11 +168,11 @@ test.each([
 		"reasoningSummary none",
 		"reasoningSummary null",
 	]],
-	["webSearch ", ["webSearch true", "webSearch false", "webSearch null"]],
+	[webSearchPrefix, [TestCommand.EnableWebSearch, "webSearch false", "webSearch null"]],
 	["serviceTier ", ["serviceTier default", "serviceTier priority", "serviceTier ultrafast", "serviceTier null"]],
-	["  verbosity\t h", ["verbosity high"]],
+	["  verbosity\t h", [TestCommand.HighVerbosity]],
 	["reasoningSummary n", ["reasoningSummary none", "reasoningSummary null"]],
-	["webSearch true", ["webSearch true"]],
+	[TestCommand.EnableWebSearch, [TestCommand.EnableWebSearch]],
 	["unknown ", []],
 	["constructor ", []],
 	["enabled n", []],
@@ -199,13 +203,13 @@ test("completion respects feature permissions but remains available while disabl
 	const controller = new OpenAISettingsController(config);
 
 	// Act
-	const completions = ["", "verbosity ", "webSearch f", "enabled t"].map((prefix) => controller.complete(prefix));
+	const completions = ["", verbosityPrefix, "webSearch f", "enabled t"].map((prefix) => controller.complete(prefix));
 
 	// Assert
 	expect(completions).toStrictEqual([
-		[{ value: "enabled ", label: "enabled" }, { value: "webSearch ", label: "webSearch" }],
+		[{ value: "enabled ", label: SettingName.Enabled }, { value: webSearchPrefix, label: SettingName.WebSearch }],
 		[],
 		[{ value: "webSearch false", label: "false" }],
-		[{ value: "enabled true", label: "true" }],
+		[{ value: TestCommand.Enable, label: "true" }],
 	]);
 });

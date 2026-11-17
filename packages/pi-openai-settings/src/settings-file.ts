@@ -16,7 +16,8 @@ const SettingsFile = {
 		try {
 			return readFileSync(path, "utf8");
 		} catch (error) {
-			if (error instanceof Error && "code" in error && error.code === fileNotFoundCode) {
+			const fileNotFound = error instanceof Error && "code" in error && error.code === fileNotFoundCode;
+			if (fileNotFound) {
 				return emptyConfigSource;
 			}
 			throw error;
@@ -25,7 +26,9 @@ const SettingsFile = {
 	edit(source: string, name: string, value: unknown): string {
 		const errors: ParseError[] = [];
 		const parsed: unknown = parse(source, errors, { allowTrailingComma: true });
-		if (errors.length !== noErrors || typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+		const validConfig = errors.length === noErrors && typeof parsed === "object" && parsed !== null
+			&& !Array.isArray(parsed);
+		if (!validConfig) {
 			throw new Error("Cannot save settings: the global config must be a valid JSONC object.");
 		}
 		const path = [name];

@@ -3,14 +3,18 @@ import { isBuiltin } from "node:module";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
+function isManifestObject(value: unknown): value is object {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // Workspace build scripts run with the package directory as their working directory.
 const manifest: unknown = JSON.parse(readFileSync(resolve("package.json"), "utf8"));
-if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
+if (!isManifestObject(manifest)) {
 	throw new TypeError("Expected a package.json object");
 }
 const dependencies = ["dependencies", "peerDependencies", "optionalDependencies"].flatMap((group) => {
 	const entries: unknown = Reflect.get(manifest, group);
-	if (typeof entries === "object" && entries !== null && !Array.isArray(entries)) {
+	if (isManifestObject(entries)) {
 		return Object.keys(entries);
 	}
 	return [];

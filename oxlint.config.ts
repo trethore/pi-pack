@@ -1,6 +1,12 @@
 import { defineConfig, type OxlintConfig } from "oxlint";
 
 const maintainabilityRules = {
+	"abos/expression-complexity": "error",
+	"abos/named-conditions": "error",
+	"abos/no-duplicate-strings": "error",
+	"abos/no-magic-strings": "error",
+	"abos/no-shallow-type-predicate": "error",
+
 	"func-style": ["error", "declaration"],
 	"one-var": ["error", "never"],
 	// Object order can be meaningful; dprint handles import ordering.
@@ -85,6 +91,7 @@ const typeSafetyRules = {
 } satisfies NonNullable<OxlintConfig["rules"]>;
 
 export default defineConfig({
+	jsPlugins: [{ name: "abos", specifier: "@a-box-of-scraps/ts-rules" }],
 	plugins: ["import", "oxc", "typescript", "unicorn", "vitest"],
 	categories: {
 		correctness: "error",
