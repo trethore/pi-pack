@@ -1,18 +1,18 @@
-import { defineEnum, type EnumValue } from "@a-box-of-scraps/ts-utils";
+import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 
-const scopeBrand = Symbol("ConfigScope");
+const ConfigScope = Object.freeze(
+	{
+		Global: "global",
+		Project: "project",
+	} as const,
+);
 
-const ConfigScope = defineEnum(scopeBrand, {
-	Global: "global",
-	Project: "project",
-});
-
-type ConfigScope = EnumValue<typeof ConfigScope>;
+type ConfigScope = ValueOf<typeof ConfigScope>;
 
 type ConfigLocation =
 	| { readonly scope: typeof ConfigScope.Global }

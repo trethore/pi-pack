@@ -1,16 +1,15 @@
 import { type OpenAISettingsConfig, ReasoningSummary } from "#src/config";
-import { defineEnum } from "@a-box-of-scraps/ts-utils";
 
-const Provider = defineEnum(Symbol("Provider"), {
+const Provider = {
 	OpenAI: "openai",
 	Azure: "azure",
 	GitHubCopilot: "github-copilot",
-});
+} as const;
 
-const Api = defineEnum(Symbol("Api"), {
+const Api = {
 	OpenAIResponses: "openai-responses",
 	AzureOpenAIResponses: "azure-openai-responses",
-});
+} as const;
 
 const webSearchToolType = "web_search";
 

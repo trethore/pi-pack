@@ -1,38 +1,40 @@
 /* eslint-disable unicorn/no-null -- Null explicitly leaves provider settings unchanged. */
 import { configFilename, SettingName } from "#src/constants";
 import { SettingsFile } from "#src/settings-file";
-import { defineEnum, type EnumValue } from "@a-box-of-scraps/ts-utils";
+import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
 
-const EnvironmentVariable = defineEnum(Symbol("EnvironmentVariable"), {
+const EnvironmentVariable = {
 	Config: "PI_OPENAI_CONFIG",
 	Enabled: "PI_OPENAI_ENABLED",
 	Verbosity: "PI_OPENAI_VERBOSITY",
 	ReasoningSummary: "PI_OPENAI_REASONING_SUMMARY",
 	WebSearch: "PI_OPENAI_WEB_SEARCH",
 	ServiceTier: "PI_OPENAI_SERVICE_TIER",
-});
-type EnvironmentVariable = EnumValue<typeof EnvironmentVariable>;
+} as const;
+type EnvironmentVariable = ValueOf<typeof EnvironmentVariable>;
 
-const InputLiteral = defineEnum(Symbol("InputLiteral"), {
+const InputLiteral = {
 	True: "true",
 	False: "false",
 	Null: "null",
-});
+} as const;
 
-const Verbosity = defineEnum(Symbol("Verbosity"), { Low: "low", Medium: "medium", High: "high" });
-const ReasoningSummary = defineEnum(Symbol("ReasoningSummary"), {
-	Concise: "concise",
-	Auto: "auto",
-	Detailed: "detailed",
-	None: "none",
-});
-const ServiceTier = defineEnum(Symbol("ServiceTier"), {
+const Verbosity = { Low: "low", Medium: "medium", High: "high" } as const;
+const ReasoningSummary = Object.freeze(
+	{
+		Concise: "concise",
+		Auto: "auto",
+		Detailed: "detailed",
+		None: "none",
+	} as const,
+);
+const ServiceTier = {
 	Default: "default",
 	Priority: "priority",
 	Ultrafast: "ultrafast",
-});
+} as const;
 
 const Feature = {
 	override<Value>(feature: { value: Value }, value: Value | undefined): void {

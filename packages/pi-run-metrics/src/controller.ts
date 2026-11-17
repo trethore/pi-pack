@@ -1,11 +1,10 @@
 import { MetricRegistry, type RunSnapshot } from "#src/metrics";
-import { defineEnum, type EnumValue } from "@a-box-of-scraps/ts-utils";
+import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 import { type AssistantMessage } from "@earendil-works/pi-ai";
 
 const zero = 0;
-const stateBrand = Symbol("RunState");
-const RunState = defineEnum(stateBrand, { Idle: "idle", Running: "running", Settled: "settled" });
-type RunState = EnumValue<typeof RunState>;
+const RunState = { Idle: "idle", Running: "running", Settled: "settled" } as const;
+type RunState = ValueOf<typeof RunState>;
 
 class RunMetricsController {
 	private readonly registry: MetricRegistry;

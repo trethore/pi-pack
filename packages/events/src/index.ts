@@ -1,10 +1,6 @@
-import { defineEnum } from "@a-box-of-scraps/ts-utils";
 import { type ExtensionEvent } from "@earendil-works/pi-coding-agent";
 
-const eventBrand = Symbol("Events");
-
-export const Events = defineEnum(
-	eventBrand,
+export const Events = Object.freeze(
 	{
 		ProjectTrust: "project_trust",
 		ResourcesDiscover: "resources_discover",

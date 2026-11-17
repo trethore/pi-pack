@@ -1,11 +1,10 @@
 import { OpenAISettingsConfig } from "#src/config";
 import { commandName } from "#src/constants";
 import { OpenAISettingsController } from "#src/controller";
-import { defineEnum } from "@a-box-of-scraps/ts-utils";
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 
-const NotificationLevel = defineEnum(Symbol("NotificationLevel"), { Info: "info", Error: "error" });
+const NotificationLevel = { Info: "info", Error: "error" } as const;
 
 export default function openAISettings(pi: ExtensionAPI): void {
 	const controller = new OpenAISettingsController(OpenAISettingsConfig.read());

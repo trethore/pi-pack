@@ -1,15 +1,15 @@
-import { defineEnum } from "@a-box-of-scraps/ts-utils";
-
 const commandName = "openai-settings";
 const configFilename = "pi-openai-settings.jsonc";
 const featureValueKey = "value";
 
-const SettingName = defineEnum(Symbol("SettingName"), {
-	Enabled: "enabled",
-	Verbosity: "verbosity",
-	ReasoningSummary: "reasoningSummary",
-	WebSearch: "webSearch",
-	ServiceTier: "serviceTier",
-});
+const SettingName = Object.freeze(
+	{
+		Enabled: "enabled",
+		Verbosity: "verbosity",
+		ReasoningSummary: "reasoningSummary",
+		WebSearch: "webSearch",
+		ServiceTier: "serviceTier",
+	} as const,
+);
 
 export { commandName, configFilename, featureValueKey, SettingName };

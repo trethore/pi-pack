@@ -1,10 +1,10 @@
 import { OpenAISettingsConfig } from "#src/config";
 import { commandName, SettingName } from "#src/constants";
 import { ResponsesPayload } from "#src/payload";
-import { defineEnum, type EnumValue } from "@a-box-of-scraps/ts-utils";
+import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 
-const SettingsState = defineEnum(Symbol("SettingsState"), { Enabled: "enabled", Disabled: "disabled" });
-type SettingsState = EnumValue<typeof SettingsState>;
+const SettingsState = { Enabled: "enabled", Disabled: "disabled" } as const;
+type SettingsState = ValueOf<typeof SettingsState>;
 const commandArgumentCount = 2;
 
 class OpenAISettingsController {
