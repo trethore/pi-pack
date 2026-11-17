@@ -8,6 +8,13 @@ const start = 0;
 const textType = "text";
 const imageType = "image";
 
+function textBlock(lines: string[]): CodemodeOutputItem {
+	const sections = lines.length > 1
+		? lines.map((line, index) => `==> ${index + 1}/${lines.length} <==\n${line}`)
+		: lines;
+	return { type: textType, text: sections.join("\n") };
+}
+
 function* blocks(items: readonly CodemodeOutputItem[]): Generator<CodemodeOutputItem> {
 	let lines: string[] = [];
 	for (const item of items) {
@@ -15,14 +22,14 @@ function* blocks(items: readonly CodemodeOutputItem[]): Generator<CodemodeOutput
 			lines.push(item.text);
 		} else {
 			if (lines.length > start) {
-				yield { type: textType, text: lines.join("\n") };
+				yield textBlock(lines);
 				lines = [];
 			}
 			yield item;
 		}
 	}
 	if (lines.length > start) {
-		yield { type: textType, text: lines.join("\n") };
+		yield textBlock(lines);
 	}
 }
 

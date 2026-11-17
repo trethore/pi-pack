@@ -57,7 +57,7 @@ test("text and return keep real whitespace distinct from literal backslash escap
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: textType,
-		text: "raw\n\tline\n[0].file:\n  first\n  \tsecond\n[0].literal: \\t",
+		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\n[0].file:\n  first\n  \tsecond\n[0].literal: \\t",
 	}]);
 });
 
@@ -87,7 +87,10 @@ test("keeps empty containers and distinguishes literal dots from nested paths", 
 	const result = await run(code);
 
 	// Assert
-	expect(result.content).toStrictEqual([{ type: textType, text: '[]\n{}\n["a.b"]: {}\na.b: []\n[""]: null' }]);
+	expect(result.content).toStrictEqual([{
+		type: textType,
+		text: '==> 1/3 <==\n[]\n==> 2/3 <==\n{}\n==> 3/3 <==\n["a.b"]: {}\na.b: []\n[""]: null',
+	}]);
 });
 
 test("wrapping preserves indentation inside the model's multiline string literal", async () => {
