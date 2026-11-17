@@ -3,20 +3,13 @@ import { ConfigFixture } from "#shared-test/config-fixture";
 import { OpenAISettingsConfig } from "#src/config";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { readFileSync, writeFileSync } from "node:fs";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
 
-const fixture: ConfigFixture = { directory: "", path: "" };
-
-beforeEach(() => {
-	Object.assign(fixture, ConfigFixture.create("pi-openai-settings.jsonc"));
-	vi.mocked(getAgentDir).mockReturnValue(fixture.directory);
-});
+const fixture = ConfigFixture.use("pi-openai-settings.jsonc");
 
 afterEach(() => {
-	ConfigFixture.remove(fixture);
-	vi.resetAllMocks();
 	vi.unstubAllEnvs();
 });
 

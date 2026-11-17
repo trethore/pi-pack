@@ -3,21 +3,11 @@ import { WhimsicalConfig } from "#src/config";
 import { messages } from "#src/messages";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { readFileSync, writeFileSync } from "node:fs";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
 
-const fixture: ConfigFixture = { directory: "", path: "" };
-
-beforeEach(() => {
-	Object.assign(fixture, ConfigFixture.create("pi-whimsical.jsonc"));
-	vi.mocked(getAgentDir).mockReturnValue(fixture.directory);
-});
-
-afterEach(() => {
-	ConfigFixture.remove(fixture);
-	vi.resetAllMocks();
-});
+const fixture = ConfigFixture.use("pi-whimsical.jsonc");
 
 test("enables built-in messages when the config file is missing", () => {
 	expect.hasAssertions();
