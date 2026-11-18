@@ -1,7 +1,7 @@
 import { Run } from "#src/run";
 import { Tools } from "#src/runtime/tools";
 import { CODEMODE_SOURCE_GRAMMAR } from "@earendil-works/pi-codemode";
-import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI, highlightCode } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
@@ -28,7 +28,7 @@ export default function codemode(pi: ExtensionAPI): void {
 		renderCall({ code }, theme, { lastComponent }) {
 			let label = theme.fg("toolTitle", theme.bold(Tools.name));
 			if (code) {
-				label += `\n${theme.fg("text", code)}`;
+				label += `\n${highlightCode(code, "javascript").join("\n")}`;
 			}
 			if (lastComponent instanceof Text) {
 				lastComponent.setText(label);

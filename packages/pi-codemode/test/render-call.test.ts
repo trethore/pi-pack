@@ -1,8 +1,9 @@
 import { Harness } from "#test/harness";
-import { initTheme, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
+import { highlightCode, initTheme, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
 import { ProcessTerminal, stripTerminalSequences, TuiMainScreen } from "@earendil-works/pi-tui";
 import { expect, test } from "vitest";
 
+const RETURN_STATEMENT = "return 42;";
 const WRAPPED_LINES = 6;
 
 test.each([false, true])("renders the full script below the title (expanded: %s)", (expanded) => {
@@ -11,7 +12,7 @@ test.each([false, true])("renders the full script below the title (expanded: %s)
 	initTheme("dark");
 	const { definition } = Harness.create();
 	const chunk = "//xxxxxxxxxxxxxxxxxx";
-	const code = [chunk.repeat(WRAPPED_LINES), "", "return 42;"].join("\n");
+	const code = [chunk.repeat(WRAPPED_LINES), "", RETURN_STATEMENT].join("\n");
 	const ui = new TuiMainScreen(new ProcessTerminal());
 	const call = new ToolExecutionComponent("codemode", "call", { code }, { outputPad: 0 }, definition, ui, ".");
 
@@ -21,7 +22,7 @@ test.each([false, true])("renders the full script below the title (expanded: %s)
 
 	// Assert
 	expect(lines.join("\n").trim()).toBe(
-		["codemode", ...Array<string>(WRAPPED_LINES).fill(chunk), "", "return 42;"].join("\n"),
+		["codemode", ...Array<string>(WRAPPED_LINES).fill(chunk), "", RETURN_STATEMENT].join("\n"),
 	);
 });
 
@@ -38,4 +39,27 @@ test("renders only the title when no code has arrived", () => {
 
 	// Assert
 	expect(lines.join("\n").trim()).toBe("codemode");
+});
+
+test("renders JavaScript with Pi's syntax colors", () => {
+	expect.hasAssertions();
+	// Arrange
+	initTheme("dark");
+	const { definition } = Harness.create();
+	const ui = new TuiMainScreen(new ProcessTerminal());
+	const call = new ToolExecutionComponent(
+		"codemode",
+		"call",
+		{ code: RETURN_STATEMENT },
+		{ outputPad: 0 },
+		definition,
+		ui,
+		".",
+	);
+
+	// Act
+	const lines = call.render(RETURN_STATEMENT.length);
+
+	// Assert
+	expect(lines.join("\n")).toContain(highlightCode(RETURN_STATEMENT, "javascript").join("\n"));
 });
