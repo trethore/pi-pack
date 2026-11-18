@@ -24,3 +24,18 @@ test.each([false, true])("renders the full script below the title (expanded: %s)
 		["codemode", ...Array<string>(wrappedLines).fill(chunk), "", "return 42;"].join("\n"),
 	);
 });
+
+test("renders only the title when no code has arrived", () => {
+	expect.hasAssertions();
+	// Arrange
+	initTheme("dark");
+	const { definition } = Harness.create();
+	const ui = new TuiMainScreen(new ProcessTerminal());
+	const call = new ToolExecutionComponent("codemode", "call", {}, { outputPad: 0 }, definition, ui, ".");
+
+	// Act
+	const lines = call.render("codemode".length).map((line) => stripTerminalSequences(line).trimEnd());
+
+	// Assert
+	expect(lines.join("\n").trim()).toBe("codemode");
+});
