@@ -6,9 +6,9 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 vi.mock(import("#src/config"), () => ({ WhimsicalConfig: { read: vi.fn<typeof WhimsicalConfig.read>() } }));
 
-const firstRandom = 0;
-const middleRandom = 0.5;
-const lastRandom = 0.999999;
+const FIRST_RANDOM = 0;
+const MIDDLE_RANDOM = 0.5;
+const LAST_RANDOM = 0.999999;
 
 beforeEach(() => {
 	vi.mocked(WhimsicalConfig.read).mockReturnValue({ enabled: true, messages: [...messages] });
@@ -32,7 +32,7 @@ test("registers one turn_start handler without changing the UI at load time", ()
 	expect(setWorkingMessage).not.toHaveBeenCalled();
 });
 
-test.each([firstRandom, middleRandom, lastRandom])(
+test.each([FIRST_RANDOM, MIDDLE_RANDOM, LAST_RANDOM])(
 	"selects a built-in message with random value %s",
 	async (random) => {
 		expect.hasAssertions();
@@ -52,7 +52,7 @@ test("selects a fresh custom message on every turn without rereading config", as
 	expect.hasAssertions();
 	// Arrange
 	vi.mocked(WhimsicalConfig.read).mockReturnValue({ enabled: true, messages: ["First...", "Last..."] });
-	vi.spyOn(Math, "random").mockReturnValueOnce(firstRandom).mockReturnValueOnce(lastRandom);
+	vi.spyOn(Math, "random").mockReturnValueOnce(FIRST_RANDOM).mockReturnValueOnce(LAST_RANDOM);
 	Harness.load();
 
 	// Act

@@ -5,8 +5,8 @@ import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
-const noPadding = 0;
-const onlyMode = "only";
+const NO_PADDING = 0;
+const ONLY_MODE = "only";
 const parameters = Type.Object({ code: Type.String() });
 
 export default function codemode(pi: ExtensionAPI): void {
@@ -24,7 +24,7 @@ export default function codemode(pi: ExtensionAPI): void {
 		executionMode: "sequential",
 		constrainedSampling: { type: "grammar", variants: { openai_lark: CODEMODE_SOURCE_GRAMMAR } },
 		reachesTools: () => "all",
-		prepareLoadout: (loadout) => Tools.loadout(loadout, pi.getSettings().codemode?.mode === onlyMode),
+		prepareLoadout: (loadout) => Tools.loadout(loadout, pi.getSettings().codemode?.mode === ONLY_MODE),
 		renderCall({ code }, theme, { lastComponent }) {
 			let label = theme.fg("toolTitle", theme.bold(Tools.name));
 			if (code) {
@@ -34,7 +34,7 @@ export default function codemode(pi: ExtensionAPI): void {
 				lastComponent.setText(label);
 				return lastComponent;
 			}
-			return new Text(label, noPadding, noPadding);
+			return new Text(label, NO_PADDING, NO_PADDING);
 		},
 		// Pi supplies the execution context as the fifth tool argument.
 		// eslint-disable-next-line max-params

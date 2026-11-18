@@ -2,10 +2,10 @@ import { type CodemodeTool, renderToolSignature } from "@earendil-works/pi-codem
 import { type ExtensionToolContext, type ToolLoadout, type ToolLoadoutChanges } from "@earendil-works/pi-coding-agent";
 import dedent from "dedent";
 
-const name = "codemode";
-const direct = "direct";
+const NAME = "codemode";
+const DIRECT = "direct";
 
-const textType = "text";
+const TEXT_TYPE = "text";
 const description = dedent`
 	Run an async JavaScript body. Call await tools.<name>({ ...args }); QuickJS, no Node, filesystem or network globals.
 	To limit output or runtime, put either or both options on the first line, for example:
@@ -27,18 +27,18 @@ function signature(tool: Callable): string {
 }
 
 function shouldList(exposure: string, hideDirect: boolean): boolean {
-	return exposure === name || hideDirect;
+	return exposure === NAME || hideDirect;
 }
 
 export const Tools = {
-	name,
+	name: NAME,
 	description,
 	loadout(loadout: ToolLoadout, only: boolean): ToolLoadoutChanges {
 		const hiddenDeclarations: string[] = [];
 		const lines = [description];
 		for (const tool of loadout.callable) {
 			const exposure = loadout.getExposure(tool.name);
-			const hideDirect = only && exposure === direct;
+			const hideDirect = only && exposure === DIRECT;
 			if (hideDirect) {
 				hiddenDeclarations.push(tool.name);
 			}
@@ -46,7 +46,7 @@ export const Tools = {
 				lines.push(signature(tool), ...loadout.getPromptGuidelines(tool.name));
 			}
 		}
-		return { descriptions: { [name]: lines.join("\n") }, hiddenDeclarations };
+		return { descriptions: { [NAME]: lines.join("\n") }, hiddenDeclarations };
 	},
 	bind(ctx: ExtensionToolContext): CodemodeTool[] {
 		return ctx.tools.map((tool) => ({
@@ -58,7 +58,7 @@ export const Tools = {
 				if (hasStructuredValue) {
 					return result.structuredContent;
 				}
-				const text = result.content.filter((item) => item.type === textType).map((item) => item.text).join("\n");
+				const text = result.content.filter((item) => item.type === TEXT_TYPE).map((item) => item.text).join("\n");
 				if (isError) {
 					throw new Error(text || `Tool ${tool.name} failed`);
 				}

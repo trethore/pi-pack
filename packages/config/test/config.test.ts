@@ -9,7 +9,7 @@ import { z } from "zod";
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
 vi.mock(import("node:fs"), { spy: true });
 
-const filename = "settings.jsonc";
+const FILENAME = "settings.jsonc";
 const schema = z.object({ enabled: z.boolean() });
 const globalLocation: ConfigLocation = { scope: ConfigScope.Global };
 const fixture: { root: string; globalDirectory: string; projectDirectory: string; projectLocation: ConfigLocation } = {
@@ -37,10 +37,10 @@ afterEach(() => {
 test("reads JSONC with comments and trailing commas from the global agent directory", () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, filename), '{ /* comment */ "enabled": true, // comment\n }');
+	writeFileSync(join(fixture.globalDirectory, FILENAME), '{ /* comment */ "enabled": true, // comment\n }');
 
 	// Act
-	const config = readConfig(filename, globalLocation, schema);
+	const config = readConfig(FILENAME, globalLocation, schema);
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true });
@@ -50,12 +50,12 @@ test("reads JSONC with comments and trailing commas from the global agent direct
 test("reads only the trusted project's .pi directory without merging global settings", () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, filename), '{"enabled": false, "globalOnly": true}');
-	writeFileSync(join(fixture.projectDirectory, filename), '{"enabled": true}');
+	writeFileSync(join(fixture.globalDirectory, FILENAME), '{"enabled": false, "globalOnly": true}');
+	writeFileSync(join(fixture.projectDirectory, FILENAME), '{"enabled": true}');
 	const mergeSchema = schema.extend({ globalOnly: z.boolean().optional() });
 
 	// Act
-	const config = readConfig(filename, fixture.projectLocation, mergeSchema);
+	const config = readConfig(FILENAME, fixture.projectLocation, mergeSchema);
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true });
@@ -65,10 +65,10 @@ test("reads only the trusted project's .pi directory without merging global sett
 test("does not fall back to global config when the project config is missing", () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, filename), '{"enabled": true}');
+	writeFileSync(join(fixture.globalDirectory, FILENAME), '{"enabled": true}');
 
 	// Act
-	const config = readConfig(filename, fixture.projectLocation, schema);
+	const config = readConfig(FILENAME, fixture.projectLocation, schema);
 
 	// Assert
 	expect(config).toBeUndefined();
@@ -83,7 +83,7 @@ test("does not access files or validate schemas for untrusted projects", () => {
 	const untrustedSchema = z.unknown().transform(validate);
 
 	// Act
-	const config = readConfig(filename, location, untrustedSchema);
+	const config = readConfig(FILENAME, location, untrustedSchema);
 
 	// Assert
 	expect(config).toBeUndefined();
@@ -102,7 +102,7 @@ test.each([ConfigScope.Global, ConfigScope.Project])("returns undefined for a mi
 	const defaultSchema = z.unknown().default({ enabled: true });
 
 	// Act
-	const config = readConfig(filename, location, defaultSchema);
+	const config = readConfig(FILENAME, location, defaultSchema);
 
 	// Assert
 	expect(config).toBeUndefined();
@@ -114,7 +114,7 @@ test("returns undefined when the project's .pi directory is missing", () => {
 	rmSync(fixture.projectDirectory, { recursive: true });
 
 	// Act
-	const config = readConfig(filename, fixture.projectLocation, schema);
+	const config = readConfig(FILENAME, fixture.projectLocation, schema);
 
 	// Assert
 	expect(config).toBeUndefined();
@@ -153,12 +153,12 @@ test.each(["", "// comment only", '{"enabled":}', '{"enabled": true} garbage', '
 	(source) => {
 		expect.hasAssertions();
 		// Arrange
-		const path = join(fixture.globalDirectory, filename);
+		const path = join(fixture.globalDirectory, FILENAME);
 		writeFileSync(path, source);
 
 		// Act
 		function read() {
-			return readConfig(filename, globalLocation, z.unknown());
+			return readConfig(FILENAME, globalLocation, z.unknown());
 		}
 
 		// Assert
@@ -170,12 +170,12 @@ test.each(["", "// comment only", '{"enabled":}', '{"enabled": true} garbage', '
 test("includes the file path, field details, and original Zod error on validation failure", () => {
 	expect.hasAssertions();
 	// Arrange
-	const path = join(fixture.globalDirectory, filename);
+	const path = join(fixture.globalDirectory, FILENAME);
 	writeFileSync(path, '{"enabled": "yes"}');
 
 	// Act
 	function read() {
-		return readConfig(filename, globalLocation, schema);
+		return readConfig(FILENAME, globalLocation, schema);
 	}
 
 	// Assert
@@ -187,14 +187,14 @@ test("includes the file path, field details, and original Zod error on validatio
 test("returns schema output including defaults and transforms with the inferred output type", () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, filename), '{"name": "  example  "}');
+	writeFileSync(join(fixture.globalDirectory, FILENAME), '{"name": "  example  "}');
 	const outputSchema = z.object({
 		name: z.string().transform((name) => name.trim()),
 		enabled: z.boolean().default(true),
 	});
 
 	// Act
-	const config = readConfig(filename, globalLocation, outputSchema);
+	const config = readConfig(FILENAME, globalLocation, outputSchema);
 
 	// Assert
 	expect(config).toStrictEqual({ name: "example", enabled: true });
@@ -204,10 +204,10 @@ test("returns schema output including defaults and transforms with the inferred 
 test.each(["null", "false", "0", '""', "[]"])("lets the caller's schema accept JSON value %s", (source) => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, filename), source);
+	writeFileSync(join(fixture.globalDirectory, FILENAME), source);
 
 	// Act
-	const config = readConfig(filename, globalLocation, z.unknown());
+	const config = readConfig(FILENAME, globalLocation, z.unknown());
 
 	// Assert
 	expect(config).toStrictEqual(JSON.parse(source));
@@ -224,12 +224,12 @@ test.each([Object.assign(new Error("Permission denied"), { code: "EACCES" }), ne
 
 		// Act
 		function read() {
-			return readConfig(filename, globalLocation, schema);
+			return readConfig(FILENAME, globalLocation, schema);
 		}
 
 		// Assert
 		expect(read).toThrow(expect.objectContaining({
-			message: `Could not read config ${join(fixture.globalDirectory, filename)}.`,
+			message: `Could not read config ${join(fixture.globalDirectory, FILENAME)}.`,
 			cause,
 		}));
 	},

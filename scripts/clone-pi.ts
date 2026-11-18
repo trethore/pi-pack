@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const repository = "https://github.com/earendil-works/pi.git";
-const argumentOffset = 2;
+const REPOSITORY = "https://github.com/earendil-works/pi.git";
+const ARGUMENT_OFFSET = 2;
 const destination = fileURLToPath(new URL("../pi/", import.meta.url));
 
 function git(args: string[]): string {
@@ -11,7 +11,7 @@ function git(args: string[]): string {
 }
 
 function parseTag(): string {
-	const [tag, extraArgument] = process.argv.slice(argumentOffset);
+	const [tag, extraArgument] = process.argv.slice(ARGUMENT_OFFSET);
 	const validArguments = tag !== undefined && tag !== "" && !tag.startsWith("-") && extraArgument === undefined;
 	if (!validArguments) {
 		throw new Error("Usage: npm run clone:pi -- <tag>");
@@ -29,7 +29,7 @@ function validateCheckout(tag: string): void {
 	const status = git(["-C", destination, "status", "--porcelain", "--untracked-files=all"]);
 	const head = git(["-C", destination, "rev-parse", "HEAD"]);
 	const taggedCommit = git(["-C", destination, "rev-parse", "--verify", `refs/tags/${tag}^{commit}`]);
-	const cleanTaggedCheckout = origin === repository && status === "" && head === taggedCommit;
+	const cleanTaggedCheckout = origin === REPOSITORY && status === "" && head === taggedCommit;
 	if (!cleanTaggedCheckout) {
 		throw new Error(`pi/ is not a clean Pi checkout at ${tag}. It has been left unchanged.`);
 	}
@@ -44,8 +44,8 @@ function main(): void {
 	}
 
 	// --branch also accepts branch names; verify that the requested tag exists first.
-	git(["ls-remote", "--exit-code", "--refs", repository, `refs/tags/${tag}`]);
-	execFileSync("git", ["clone", "--depth", "1", "--branch", tag, repository, destination], {
+	git(["ls-remote", "--exit-code", "--refs", REPOSITORY, `refs/tags/${tag}`]);
+	execFileSync("git", ["clone", "--depth", "1", "--branch", tag, REPOSITORY, destination], {
 		stdio: "inherit",
 	});
 	console.log(`Cloned Pi ${tag} into pi/.`);

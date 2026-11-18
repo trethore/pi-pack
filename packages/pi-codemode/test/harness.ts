@@ -7,10 +7,10 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
 
-const read = "read";
-const bash = "bash";
-const hiddenSearch = "mcp__docs__search";
-const callId = "call-1";
+const READ = "read";
+const BASH = "bash";
+const HIDDEN_SEARCH = "mcp__docs__search";
+const CALL_ID = "call-1";
 
 function tool(name: string): ExtensionToolContext["tools"][number] {
 	return {
@@ -43,10 +43,10 @@ function createLoadout(tools: ExtensionToolContext["tools"]): ToolLoadout {
 	return {
 		callable: tools,
 		registered: tools,
-		declared: tools.filter((candidate) => candidate.name !== hiddenSearch),
+		declared: tools.filter((candidate) => candidate.name !== HIDDEN_SEARCH),
 		getNamespace: () => undefined,
 		getExposure(name) {
-			if (name === hiddenSearch) {
+			if (name === HIDDEN_SEARCH) {
 				return "deferred";
 			}
 			return "direct";
@@ -59,7 +59,7 @@ export const Harness = {
 		const sessionManager = SessionManager.inMemory();
 		const definition = registration(mode, sessionManager);
 		const executeTool = vi.fn<ExtensionToolContext["executeTool"]>();
-		const tools = [{ ...tool(read), outputSchema: {} }, { ...tool(bash), outputSchema: {} }, tool(hiddenSearch)];
+		const tools = [{ ...tool(READ), outputSchema: {} }, { ...tool(BASH), outputSchema: {} }, tool(HIDDEN_SEARCH)];
 		// These are the only session services available to the tool bridge.
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion
 		const ctx = { tools, sessionManager, executeTool } as unknown as ExtensionToolContext;
@@ -70,7 +70,7 @@ export const Harness = {
 			sessionManager,
 			executeTool,
 			run(this: void, code: string, signal?: AbortSignal) {
-				return definition.execute(callId, { code }, signal, undefined, ctx);
+				return definition.execute(CALL_ID, { code }, signal, undefined, ctx);
 			},
 		};
 	},

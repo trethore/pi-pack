@@ -6,6 +6,7 @@ const maintainabilityRules = {
 	"abos/no-duplicate-strings": "error",
 	"abos/no-magic-strings": "error",
 	"abos/no-shallow-type-predicate": "error",
+	"abos/uppercase-primitive-const": "error",
 
 	"func-style": ["error", "declaration"],
 	"one-var": ["error", "never"],

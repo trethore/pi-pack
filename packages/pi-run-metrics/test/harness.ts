@@ -10,7 +10,7 @@ import { vi } from "vitest";
 
 type Handler = (event: ExtensionEvent, ctx: ExtensionContext) => unknown;
 
-const defaultWidth = 80;
+const DEFAULT_WIDTH = 80;
 
 const Harness = {
 	create(hasUI = true) {
@@ -42,7 +42,7 @@ const Harness = {
 				// Only the theme foreground function is used by the widget factory.
 				// eslint-disable-next-line typescript/no-unsafe-type-assertion
 				const factory = content as unknown as (tui: undefined, theme: Pick<Theme, "fg">) => RunMetricsWidget;
-				const [line] = factory(undefined, { fg }).render(defaultWidth);
+				const [line] = factory(undefined, { fg }).render(DEFAULT_WIDTH);
 				return line?.trim();
 			},
 		};

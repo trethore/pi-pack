@@ -38,7 +38,7 @@ const ConfigLocation = {
 };
 
 const directoryEntries = new Set([".", ".."]);
-const fileNotFoundCode = "ENOENT";
+const FILE_NOT_FOUND_CODE = "ENOENT";
 
 const ConfigFile = {
 	validateFilename(filename: string): void {
@@ -52,7 +52,7 @@ const ConfigFile = {
 		try {
 			return readFileSync(path, "utf8");
 		} catch (error) {
-			const fileNotFound = error instanceof Error && "code" in error && error.code === fileNotFoundCode;
+			const fileNotFound = error instanceof Error && "code" in error && error.code === FILE_NOT_FOUND_CODE;
 			if (fileNotFound) {
 				return undefined;
 			}

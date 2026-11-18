@@ -11,7 +11,7 @@ const Api = {
 	AzureOpenAIResponses: "azure-openai-responses",
 } as const;
 
-const webSearchToolType = "web_search";
+const WEB_SEARCH_TOOL_TYPE = "web_search";
 
 interface ResponsesPayload extends Record<string, unknown> {
 	text?: unknown;
@@ -44,7 +44,7 @@ const ResponsesPayload = {
 			return false;
 		}
 		const { type } = tool;
-		return typeof type === "string" && (type === webSearchToolType || type.startsWith(`${webSearchToolType}_`));
+		return typeof type === "string" && (type === WEB_SEARCH_TOOL_TYPE || type.startsWith(`${WEB_SEARCH_TOOL_TYPE}_`));
 	},
 	apply(payload: unknown, config: OpenAISettingsConfig): unknown {
 		if (!ResponsesPayload.isObject(payload)) {
@@ -81,7 +81,7 @@ const ResponsesPayload = {
 		}
 		if (!Array.isArray(payload.tools)) {
 			if (enabled) {
-				payload.tools = [{ type: webSearchToolType }];
+				payload.tools = [{ type: WEB_SEARCH_TOOL_TYPE }];
 			}
 			return;
 		}
@@ -93,7 +93,7 @@ const ResponsesPayload = {
 		}
 		// Preserve configured search options and avoid duplicate hosted tools on repeated requests.
 		if (!existing.some((tool) => ResponsesPayload.isWebSearch(tool))) {
-			return [...existing, { type: webSearchToolType }];
+			return [...existing, { type: WEB_SEARCH_TOOL_TYPE }];
 		}
 		return existing;
 	},

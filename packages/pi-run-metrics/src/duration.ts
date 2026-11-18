@@ -1,24 +1,24 @@
-const zero = 0;
-const millisecondsPerSecond = 1000;
-const secondsPerMinute = 60;
-const secondsPerHour = 3600;
-const hourSuffix = "h";
-const minuteSuffix = "m";
-const secondSuffix = "s";
+const ZERO = 0;
+const MILLISECONDS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const SECONDS_PER_HOUR = 3600;
+const HOUR_SUFFIX = "h";
+const MINUTE_SUFFIX = "m";
+const SECOND_SUFFIX = "s";
 
 const Duration = {
 	format(milliseconds: number): string {
-		const totalSeconds = Math.floor(Math.max(zero, milliseconds) / millisecondsPerSecond);
-		const seconds = totalSeconds % secondsPerMinute;
-		const minutes = Math.floor(totalSeconds / secondsPerMinute) % secondsPerMinute;
-		const hours = Math.floor(totalSeconds / secondsPerHour);
-		if (hours > zero) {
-			return `${hours}${hourSuffix}${minutes}${minuteSuffix}${seconds}${secondSuffix}`;
+		const totalSeconds = Math.floor(Math.max(ZERO, milliseconds) / MILLISECONDS_PER_SECOND);
+		const seconds = totalSeconds % SECONDS_PER_MINUTE;
+		const minutes = Math.floor(totalSeconds / SECONDS_PER_MINUTE) % SECONDS_PER_MINUTE;
+		const hours = Math.floor(totalSeconds / SECONDS_PER_HOUR);
+		if (hours > ZERO) {
+			return `${hours}${HOUR_SUFFIX}${minutes}${MINUTE_SUFFIX}${seconds}${SECOND_SUFFIX}`;
 		}
-		if (totalSeconds >= secondsPerMinute) {
-			return `${minutes}${minuteSuffix}${seconds}${secondSuffix}`;
+		if (totalSeconds >= SECONDS_PER_MINUTE) {
+			return `${minutes}${MINUTE_SUFFIX}${seconds}${SECOND_SUFFIX}`;
 		}
-		return `${seconds}${secondSuffix}`;
+		return `${seconds}${SECOND_SUFFIX}`;
 	},
 };
 

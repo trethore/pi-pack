@@ -1,8 +1,8 @@
 import { messages } from "#src/messages";
 import { expect, test } from "vitest";
 
-const firstIndex = 0;
-const lastIndex = -1;
+const FIRST_INDEX = 0;
+const LAST_INDEX = -1;
 
 test("contains the complete built-in list without duplicates or blank entries", () => {
 	expect.hasAssertions();
@@ -17,6 +17,6 @@ test("contains the complete built-in list without duplicates or blank entries", 
 	expect(messages).toHaveLength(expectedCount);
 	expect(uniqueMessages.size).toBe(messages.length);
 	expect(invalidMessages).toStrictEqual([]);
-	expect(messages.at(firstIndex)).toBe("Schlepping...");
-	expect(messages.at(lastIndex)).toBe("Wondering...");
+	expect(messages.at(FIRST_INDEX)).toBe("Schlepping...");
+	expect(messages.at(LAST_INDEX)).toBe("Wondering...");
 });

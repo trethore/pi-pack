@@ -1,9 +1,9 @@
 import { Harness } from "#test/harness";
 import { expect, test } from "vitest";
 
-const textType = "text";
+const TEXT_TYPE = "text";
 const toolCall = { type: "toolCall" as const, id: "child", name: "read", arguments: {} };
-const runRead = 'return await tools.read({ path: "example" });';
+const RUN_READ = 'return await tools.read({ path: "example" });';
 
 test("only mode moves direct declarations into codemode", () => {
 	expect.hasAssertions();
@@ -56,7 +56,7 @@ test("text and return keep real whitespace distinct from literal backslash escap
 
 	// Assert
 	expect(result.content).toStrictEqual([{
-		type: textType,
+		type: TEXT_TYPE,
 		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\n[0].file:\nfirst\n\tsecond\n[0].literal: \\t",
 	}]);
 });
@@ -72,7 +72,7 @@ test("prints leaf paths without adding indentation for each ancestor", async () 
 
 	// Assert
 	expect(result.content).toStrictEqual([{
-		type: textType,
+		type: TEXT_TYPE,
 		text: "output.details.stderr:\none\n\ttwo\noutput.details.files[0]: a\noutput.details.files[1]: b",
 	}]);
 });
@@ -88,7 +88,7 @@ test("keeps empty containers and distinguishes literal dots from nested paths", 
 
 	// Assert
 	expect(result.content).toStrictEqual([{
-		type: textType,
+		type: TEXT_TYPE,
 		text: '==> 1/3 <==\n[]\n==> 2/3 <==\n{}\n==> 3/3 <==\n["a.b"]: {}\na.b: []\n[""]: null',
 	}]);
 });
@@ -103,7 +103,7 @@ test("wrapping preserves indentation inside the model's multiline string literal
 	const result = await run(code);
 
 	// Assert
-	expect(result.content).toStrictEqual([{ type: textType, text: "start\n  middle\n    end" }]);
+	expect(result.content).toStrictEqual([{ type: TEXT_TYPE, text: "start\n  middle\n    end" }]);
 });
 
 test("failed scripts emit partial output but do not commit writes", async () => {
@@ -118,7 +118,7 @@ test("failed scripts emit partial output but do not commit writes", async () => 
 
 	// Assert
 	expect(failed).toMatchObject({ isError: true, content: [{ text: "wrong" }, { text: "stop" }] });
-	expect(saved.content).toStrictEqual([{ type: textType, text: "updated" }]);
+	expect(saved.content).toStrictEqual([{ type: TEXT_TYPE, text: "updated" }]);
 });
 
 test("deletion and branch navigation replay Pi's existing store entries", async () => {
@@ -134,8 +134,8 @@ test("deletion and branch navigation replay Pi's existing store entries", async 
 	const branched = await run('return load("version");');
 
 	// Assert
-	expect(deleted.content).toStrictEqual([{ type: textType, text: "undefined" }]);
-	expect(branched.content).toStrictEqual([{ type: textType, text: "original" }]);
+	expect(deleted.content).toStrictEqual([{ type: TEXT_TYPE, text: "undefined" }]);
+	expect(branched.content).toStrictEqual([{ type: TEXT_TYPE, text: "original" }]);
 });
 
 test("uses the session's checked nested call and propagates a blocked result", async () => {
@@ -145,11 +145,11 @@ test("uses the session's checked nested call and propagates a blocked result", a
 	executeTool.mockResolvedValue({
 		toolCall,
 		isError: true,
-		result: { details: {}, content: [{ type: textType, text: "blocked" }] },
+		result: { details: {}, content: [{ type: TEXT_TYPE, text: "blocked" }] },
 	});
 
 	// Act
-	const result = await run(runRead);
+	const result = await run(RUN_READ);
 
 	// Assert
 	expect(executeTool).toHaveBeenCalledExactlyOnceWith(
@@ -184,14 +184,14 @@ test("successful text tools print actual tabs and newlines inside an object", as
 	executeTool.mockResolvedValue({
 		toolCall,
 		isError: false,
-		result: { details: {}, content: [{ type: textType, text: "a\n\tb" }] },
+		result: { details: {}, content: [{ type: TEXT_TYPE, text: "a\n\tb" }] },
 	});
 
 	// Act
 	const result = await run('text({ source: await tools.read({path:"example"}) });');
 
 	// Assert
-	expect(result.content).toStrictEqual([{ type: textType, text: "source:\na\n\tb" }]);
+	expect(result.content).toStrictEqual([{ type: TEXT_TYPE, text: "source:\na\n\tb" }]);
 });
 
 test("an aborted call cannot save a value", async () => {
@@ -219,5 +219,5 @@ test("ignores unrelated and malformed session entries", async () => {
 	const result = await run('return typeof load("key");');
 
 	// Assert
-	expect(result.content).toStrictEqual([{ type: textType, text: "undefined" }]);
+	expect(result.content).toStrictEqual([{ type: TEXT_TYPE, text: "undefined" }]);
 });

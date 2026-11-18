@@ -5,7 +5,7 @@ import { Tools } from "#src/runtime/tools";
 import { CodemodeSandbox, parseCodemodeSource } from "@earendil-works/pi-codemode";
 import { type ExtensionAPI, type ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
-const memoryLimitBytes = 134_217_728; // 128 MiB
+const MEMORY_LIMIT_BYTES = 134_217_728; // 128 MiB
 
 interface RunRequest {
 	code: string;
@@ -24,7 +24,7 @@ function abortOptions(signal?: AbortSignal): { signal?: AbortSignal } {
 export const Run = {
 	async execute({ code, signal, ctx, pi }: RunRequest) {
 		const source = parseCodemodeSource(code);
-		const sandbox = new CodemodeSandbox({ tools: Tools.bind(ctx), memoryLimitBytes });
+		const sandbox = new CodemodeSandbox({ tools: Tools.bind(ctx), memoryLimitBytes: MEMORY_LIMIT_BYTES });
 		try {
 			const result = await sandbox.execute(Script.wrap(source.code), {
 				store: Store.read(ctx.sessionManager.getBranch()),

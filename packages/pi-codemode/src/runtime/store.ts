@@ -3,8 +3,8 @@ import { type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { Check as check } from "typebox/value";
 
-const customEntryType = "custom";
-const empty = 0;
+const CUSTOM_ENTRY_TYPE = "custom";
+const EMPTY = 0;
 const { Object: object, Record: record, String: string, Unknown: unknown, Array: array } = Type;
 const writesSchema = object({
 	set: record(string(), unknown()),
@@ -12,7 +12,7 @@ const writesSchema = object({
 });
 
 function storeWrites(entry: SessionEntry): CodemodeStoreWrites | undefined {
-	const isStoreEntry = entry.type === customEntryType && entry.customType === Store.entryType;
+	const isStoreEntry = entry.type === CUSTOM_ENTRY_TYPE && entry.customType === Store.entryType;
 	if (isStoreEntry) {
 		const { data } = entry;
 		if (check(writesSchema, data)) {
@@ -41,6 +41,6 @@ export const Store = {
 		return Object.fromEntries(values);
 	},
 	changed(writes: CodemodeStoreWrites): boolean {
-		return writes.delete.length > empty || Object.keys(writes.set).length > empty;
+		return writes.delete.length > EMPTY || Object.keys(writes.set).length > EMPTY;
 	},
 };

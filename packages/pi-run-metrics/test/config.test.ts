@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
 
 const fixture = ConfigFixture.use("pi-run-metrics.jsonc");
-const defaultFormat = "<timetaken> | <tokps> | ↑ <input_tokens> ↓ <output_tokens> | <cost>";
+const DEFAULT_FORMAT = "<timetaken> | <tokps> | ↑ <input_tokens> ↓ <output_tokens> | <cost>";
 
 test("uses defaults without a config file", () => {
 	expect.hasAssertions();
@@ -17,7 +17,7 @@ test("uses defaults without a config file", () => {
 	const config = RunMetricsConfig.read();
 
 	// Assert
-	expect(config).toStrictEqual({ enabled: true, format: defaultFormat });
+	expect(config).toStrictEqual({ enabled: true, format: DEFAULT_FORMAT });
 });
 
 test("reads custom formatting and enabled setting from JSONC", () => {
@@ -58,6 +58,6 @@ test.each(["{}", readFileSync(new URL("../pi-run-metrics.example.jsonc", import.
 		const config = RunMetricsConfig.read();
 
 		// Assert
-		expect(config).toStrictEqual({ enabled: true, format: defaultFormat });
+		expect(config).toStrictEqual({ enabled: true, format: DEFAULT_FORMAT });
 	},
 );

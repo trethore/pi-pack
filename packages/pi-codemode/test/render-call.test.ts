@@ -3,7 +3,7 @@ import { initTheme, ToolExecutionComponent } from "@earendil-works/pi-coding-age
 import { ProcessTerminal, stripTerminalSequences, TuiMainScreen } from "@earendil-works/pi-tui";
 import { expect, test } from "vitest";
 
-const wrappedLines = 6;
+const WRAPPED_LINES = 6;
 
 test.each([false, true])("renders the full script below the title (expanded: %s)", (expanded) => {
 	expect.hasAssertions();
@@ -11,7 +11,7 @@ test.each([false, true])("renders the full script below the title (expanded: %s)
 	initTheme("dark");
 	const { definition } = Harness.create();
 	const chunk = "//xxxxxxxxxxxxxxxxxx";
-	const code = [chunk.repeat(wrappedLines), "", "return 42;"].join("\n");
+	const code = [chunk.repeat(WRAPPED_LINES), "", "return 42;"].join("\n");
 	const ui = new TuiMainScreen(new ProcessTerminal());
 	const call = new ToolExecutionComponent("codemode", "call", { code }, { outputPad: 0 }, definition, ui, ".");
 
@@ -21,7 +21,7 @@ test.each([false, true])("renders the full script below the title (expanded: %s)
 
 	// Assert
 	expect(lines.join("\n").trim()).toBe(
-		["codemode", ...Array<string>(wrappedLines).fill(chunk), "", "return 42;"].join("\n"),
+		["codemode", ...Array<string>(WRAPPED_LINES).fill(chunk), "", "return 42;"].join("\n"),
 	);
 });
 

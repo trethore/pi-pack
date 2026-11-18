@@ -5,11 +5,11 @@ import { Fixtures } from "#test/fixtures";
 import { afterEach, expect, test, vi } from "vitest";
 
 const { format } = RunMetricsConfig.read();
-const initialTime = 0;
-const firstResponseEnd = 12_000;
-const runEnd = 66_000;
-const later = 120_000;
-const fallbackEnd = 20_000;
+const INITIAL_TIME = 0;
+const FIRST_RESPONSE_END = 12_000;
+const RUN_END = 66_000;
+const LATER = 120_000;
+const FALLBACK_END = 20_000;
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -37,7 +37,7 @@ test("sums response usage and duration but includes tool time only in elapsed ti
 
 	// Act
 	controller.record(Fixtures.message());
-	now = runEnd;
+	now = RUN_END;
 	controller.record(Fixtures.message({ durationMs: 6000 }));
 	controller.settle();
 
@@ -54,7 +54,7 @@ test("updates elapsed time live without resetting on repeated starts", () => {
 	controller.record(Fixtures.message());
 
 	// Act
-	now = firstResponseEnd;
+	now = FIRST_RESPONSE_END;
 	controller.start();
 
 	// Assert
@@ -64,13 +64,13 @@ test("updates elapsed time live without resetting on repeated starts", () => {
 test("freezes at settlement and ignores later responses and settlements", () => {
 	expect.hasAssertions();
 	// Arrange
-	const clock = vi.fn<() => number>().mockReturnValue(initialTime);
+	const clock = vi.fn<() => number>().mockReturnValue(INITIAL_TIME);
 	const controller = new RunMetricsController(undefined, clock);
 	controller.start();
 	controller.settle();
 
 	// Act
-	clock.mockReturnValue(later);
+	clock.mockReturnValue(LATER);
 	controller.record(Fixtures.message());
 	controller.settle();
 
@@ -96,7 +96,7 @@ test("clears totals when the next run starts", () => {
 test("uses request timestamps when response duration is unavailable", () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.spyOn(Date, "now").mockReturnValue(fallbackEnd);
+	vi.spyOn(Date, "now").mockReturnValue(FALLBACK_END);
 	const message = Fixtures.message({ timestamp: 8000 });
 	Reflect.deleteProperty(message, "durationMs");
 	const controller = new RunMetricsController();

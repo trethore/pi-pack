@@ -4,11 +4,11 @@ import { RunMetricsWidget } from "#src/widget";
 import { type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 
-const widgetKey = "pi-run-metrics";
-const widgetColor = "accent";
-const widgetPlacement = "aboveEditor";
-const assistantRole = "assistant";
-const refreshMs = 1000;
+const WIDGET_KEY = "pi-run-metrics";
+const WIDGET_COLOR = "accent";
+const WIDGET_PLACEMENT = "aboveEditor";
+const ASSISTANT_ROLE = "assistant";
+const REFRESH_MS = 1000;
 
 export default function runMetrics(pi: ExtensionAPI): void {
 	const config = RunMetricsConfig.read();
@@ -25,9 +25,9 @@ export default function runMetrics(pi: ExtensionAPI): void {
 		show(ctx: ExtensionContext): void {
 			if (ctx.hasUI) {
 				ctx.ui.setWidget(
-					widgetKey,
-					(_tui, theme) => new RunMetricsWidget(() => theme.fg(widgetColor, controller.format(config.format))),
-					{ placement: widgetPlacement },
+					WIDGET_KEY,
+					(_tui, theme) => new RunMetricsWidget(() => theme.fg(WIDGET_COLOR, controller.format(config.format))),
+					{ placement: WIDGET_PLACEMENT },
 				);
 			}
 		},
@@ -43,12 +43,12 @@ export default function runMetrics(pi: ExtensionAPI): void {
 		view.stop();
 		view.show(ctx);
 		if (ctx.hasUI) {
-			view.timer = setInterval(() => view.show(ctx), refreshMs);
+			view.timer = setInterval(() => view.show(ctx), REFRESH_MS);
 			view.timer.unref();
 		}
 	});
 	pi.on(Events.MessageEnd, (event, ctx) => {
-		if (event.message.role === assistantRole) {
+		if (event.message.role === ASSISTANT_ROLE) {
 			controller.record(event.message);
 			view.show(ctx);
 		}
@@ -62,7 +62,7 @@ export default function runMetrics(pi: ExtensionAPI): void {
 		view.stop();
 		controller.reset();
 		if (ctx.hasUI) {
-			ctx.ui.setWidget(widgetKey, undefined);
+			ctx.ui.setWidget(WIDGET_KEY, undefined);
 		}
 	});
 }

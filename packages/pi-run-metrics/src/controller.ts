@@ -2,7 +2,7 @@ import { MetricRegistry, type RunSnapshot } from "#src/metrics";
 import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 import { type AssistantMessage } from "@earendil-works/pi-ai";
 
-const zero = 0;
+const ZERO = 0;
 const RunState = { Idle: "idle", Running: "running", Settled: "settled" } as const;
 type RunState = ValueOf<typeof RunState>;
 
@@ -10,12 +10,12 @@ class RunMetricsController {
 	private readonly registry: MetricRegistry;
 	private readonly now: () => number;
 	private state: RunState = RunState.Idle;
-	private startedAt = zero;
-	private elapsedMs = zero;
-	private responseMs = zero;
-	private inputTokens = zero;
-	private outputTokens = zero;
-	private cost = zero;
+	private startedAt = ZERO;
+	private elapsedMs = ZERO;
+	private responseMs = ZERO;
+	private inputTokens = ZERO;
+	private outputTokens = ZERO;
+	private cost = ZERO;
 
 	constructor(
 		registry: MetricRegistry = MetricRegistry.create(),
@@ -43,7 +43,7 @@ class RunMetricsController {
 		this.outputTokens += message.usage.output;
 		this.cost += message.usage.cost.total;
 		// Legacy/custom streams may omit Pi's monotonic response duration.
-		this.responseMs += Math.max(zero, message.durationMs ?? Date.now() - message.timestamp);
+		this.responseMs += Math.max(ZERO, message.durationMs ?? Date.now() - message.timestamp);
 	}
 
 	settle(): void {
@@ -56,12 +56,12 @@ class RunMetricsController {
 
 	reset(): void {
 		this.state = RunState.Idle;
-		this.startedAt = zero;
-		this.elapsedMs = zero;
-		this.responseMs = zero;
-		this.inputTokens = zero;
-		this.outputTokens = zero;
-		this.cost = zero;
+		this.startedAt = ZERO;
+		this.elapsedMs = ZERO;
+		this.responseMs = ZERO;
+		this.inputTokens = ZERO;
+		this.outputTokens = ZERO;
+		this.cost = ZERO;
 	}
 
 	format(template: string): string {

@@ -11,23 +11,23 @@ interface RunSnapshot {
 type Metric = (snapshot: RunSnapshot) => string;
 type MetricRegistry = ReadonlyMap<string, Metric>;
 
-const zero = 0;
-const millisecondsPerSecond = 1000;
-const speedPrecision = 1;
-const costPrecision = 4;
-const speedUnit = "tok/s";
-const currencySymbol = "$";
+const ZERO = 0;
+const MILLISECONDS_PER_SECOND = 1000;
+const SPEED_PRECISION = 1;
+const COST_PRECISION = 4;
+const SPEED_UNIT = "tok/s";
+const CURRENCY_SYMBOL = "$";
 
 const Metric = {
 	timetaken(run: RunSnapshot): string {
 		return Duration.format(run.elapsedMs);
 	},
 	tokps(run: RunSnapshot): string {
-		let speed = zero;
-		if (run.responseMs > zero) {
-			speed = run.outputTokens / (run.responseMs / millisecondsPerSecond);
+		let speed = ZERO;
+		if (run.responseMs > ZERO) {
+			speed = run.outputTokens / (run.responseMs / MILLISECONDS_PER_SECOND);
 		}
-		return `${speed.toFixed(speedPrecision)} ${speedUnit}`;
+		return `${speed.toFixed(SPEED_PRECISION)} ${SPEED_UNIT}`;
 	},
 	input_tokens(run: RunSnapshot): string {
 		return String(run.inputTokens);
@@ -36,7 +36,7 @@ const Metric = {
 		return String(run.outputTokens);
 	},
 	cost(run: RunSnapshot): string {
-		return `${currencySymbol}${run.cost.toFixed(costPrecision)}`;
+		return `${CURRENCY_SYMBOL}${run.cost.toFixed(COST_PRECISION)}`;
 	},
 } satisfies Record<string, Metric>;
 

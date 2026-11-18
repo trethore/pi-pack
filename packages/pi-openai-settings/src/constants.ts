@@ -1,6 +1,6 @@
-const commandName = "openai-settings";
-const configFilename = "pi-openai-settings.jsonc";
-const featureValueKey = "value";
+const COMMAND_NAME = "openai-settings";
+const CONFIG_FILENAME = "pi-openai-settings.jsonc";
+const FEATURE_VALUE_KEY = "value";
 
 const SettingName = Object.freeze(
 	{
@@ -12,4 +12,9 @@ const SettingName = Object.freeze(
 	} as const,
 );
 
-export { commandName, configFilename, featureValueKey, SettingName };
+export {
+	COMMAND_NAME as commandName,
+	CONFIG_FILENAME as configFilename,
+	FEATURE_VALUE_KEY as featureValueKey,
+	SettingName,
+};

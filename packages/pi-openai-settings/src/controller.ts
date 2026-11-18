@@ -5,7 +5,7 @@ import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 
 const SettingsState = { Enabled: "enabled", Disabled: "disabled" } as const;
 type SettingsState = ValueOf<typeof SettingsState>;
-const commandArgumentCount = 2;
+const COMMAND_ARGUMENT_COUNT = 2;
 
 class OpenAISettingsController {
 	private state: SettingsState = SettingsState.Disabled;
@@ -46,7 +46,7 @@ class OpenAISettingsController {
 		}
 		const parts = args.trim().split(/\s+/u);
 		const [name, value] = parts;
-		const invalidArguments = parts.length !== commandArgumentCount || name === undefined || value === undefined;
+		const invalidArguments = parts.length !== COMMAND_ARGUMENT_COUNT || name === undefined || value === undefined;
 		if (invalidArguments) {
 			throw new Error(`Usage: /${commandName} <${Object.values(SettingName).join("|")}> <value>`);
 		}
