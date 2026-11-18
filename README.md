@@ -4,6 +4,10 @@ A pack of pi extensions I develop and maintain.
 
 ## Extensions
 
+### [pi-codemode](packages/pi-codemode/README.md)
+
+Run JavaScript against Pi tools in a local sandbox.
+
 ### [pi-openai-settings](packages/pi-openai-settings/README.md)
 
 Manage advanced OpenAI Responses settings
