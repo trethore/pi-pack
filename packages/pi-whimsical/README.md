@@ -18,26 +18,6 @@ npm run install:pi-whimsical
 
 No configuration is required, but you can customize the messages via a global `~/.pi/agent/pi-whimsical.jsonc`.
 
-```jsonc
-// The following schema excerpt describes the available options.
-{
-  "properties": {
-    "enabled": {
-      "type": "boolean",
-      "description": "Whether the extension is enabled.",
-      "default": true
-    },
-    "messages": {
-      "type": "array",
-      "description": "Custom messages. If omitted or empty, the built-in list is used.",
-      "items": {
-        "type": "string"
-      }
-    }
-  }
-}
-```
-
 See [pi-whimsical.example.jsonc](./pi-whimsical.example.jsonc) for an example configuration.
 
 Run `/reload` or restart Pi after changing the configuration to enable the changes.
