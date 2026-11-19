@@ -2,6 +2,8 @@
 /** @typedef {{ label: string, value: unknown } | { label: string, literal: string }} Entry */
 /** @typedef {{ header?: string, entries: Iterable<Entry> }} Group */
 
+/** @typedef {Map<object | symbol, string>} KeyLabels */
+
 const LINE_BREAK = /\r\n|[\r\n\u2028\u2029]/u;
 const INDENT = "  ";
 const FIRST_FENCE = '"""';
@@ -52,10 +54,10 @@ function isReference(value) {
 	return value !== null && (typeof value === "object" || typeof value === "function");
 }
 
-/** @param {string | symbol} key */
-function fieldLabel(key) {
+/** @param {string | symbol} key @param {KeyLabels} labels */
+function fieldLabel(key, labels) {
 	if (typeof key === "symbol") {
-		return `[${labelText(String(key))}]`;
+		return `[${identityLabel(key, labels)}]`;
 	}
 	if (/^[A-Za-z_$][\w$]*$/u.test(key)) {
 		return key;
@@ -73,22 +75,22 @@ function singleLine(label) {
 	return label.replaceAll("\u2028", String.raw`\u2028`).replaceAll("\u2029", String.raw`\u2029`);
 }
 
-/** @param {object} value @param {string | symbol} key */
-function propertyLabel(value, key) {
+/** @param {object} value @param {string | symbol} key @param {KeyLabels} labels */
+function propertyLabel(value, key, labels) {
 	const arrayIndex = Array.isArray(value) && typeof key === "string" && /^(?:0|[1-9]\d*)$/u.test(key)
 		&& Number(key) < value.length;
 	if (arrayIndex) {
 		return key;
 	}
-	return fieldLabel(key);
+	return fieldLabel(key, labels);
 }
 
-/** @param {object} value @returns {Generator<Entry>} */
-function* fields(value) {
+/** @param {object} value @param {KeyLabels} labels @returns {Generator<Entry>} */
+function* fields(value, labels) {
 	for (const key of Reflect.ownKeys(value)) {
 		const descriptor = Object.getOwnPropertyDescriptor(value, key);
 		if (descriptor?.enumerable === true) {
-			const label = propertyLabel(value, key);
+			const label = propertyLabel(value, key, labels);
 			yield fieldEntry(label, descriptor);
 		}
 	}
@@ -222,11 +224,11 @@ function boxedLabel(value, type) {
 	return undefined;
 }
 
-/** @param {unknown} key @param {Map<object, string>} labels */
+/** @param {unknown} key @param {KeyLabels} labels */
 function mapKey(key, labels) {
 	const property = typeof key === "string" || typeof key === "symbol";
 	if (property) {
-		return fieldLabel(key);
+		return fieldLabel(key, labels);
 	}
 	if (!isReference(key)) {
 		return `[${scalar(key)}]`;
@@ -234,25 +236,32 @@ function mapKey(key, labels) {
 	return identityLabel(key, labels);
 }
 
-/** @param {object} key @param {Map<object, string>} labels */
+/** @param {object | symbol} key @param {KeyLabels} labels */
 function identityLabel(key, labels) {
 	const prior = labels.get(key);
 	if (prior !== undefined) {
 		return prior;
 	}
-	// Identity is still useful when the key is a revoked proxy.
-	let type = OBJECT_TYPE;
-	try {
-		type = labelText(typeName(key));
-	} catch {
-		// The key itself cannot be inspected.
-	}
+	const type = identityType(key);
 	const label = `${type}#${labels.size + FIRST_ID}`;
 	labels.set(key, label);
 	return label;
 }
 
-/** @param {Map<unknown, unknown>} map @param {Map<object, string>} labels @returns {Generator<Entry>} */
+/** @param {object | symbol} key */
+function identityType(key) {
+	if (typeof key === "symbol") {
+		return labelText(String(key));
+	}
+	try {
+		return labelText(typeName(key));
+	} catch {
+		// A revoked proxy still needs an identity label.
+		return OBJECT_TYPE;
+	}
+}
+
+/** @param {Map<unknown, unknown>} map @param {KeyLabels} labels @returns {Generator<Entry>} */
 function* mapEntries(map, labels) {
 	for (const [key, value] of Map.prototype.entries.call(map)) {
 		yield { label: mapKey(key, labels), value };
@@ -265,10 +274,10 @@ function builtinSize(prototype, key, receiver) {
 	return String(Reflect.get(prototype, key, receiver));
 }
 
-/** @param {object} value @param {Map<object, string>} labels @returns {Group | string} */
+/** @param {object} value @param {KeyLabels} labels @returns {Group | string} */
 function describe(value, labels) {
 	if (Array.isArray(value)) {
-		return { header: `Array(${value.length})`, entries: fields(value) };
+		return { header: `Array(${value.length})`, entries: fields(value, labels) };
 	}
 	if (value instanceof Map) {
 		return { header: `Map(${builtinSize(Map.prototype, "size", value)})`, entries: mapEntries(value, labels) };
@@ -279,7 +288,7 @@ function describe(value, labels) {
 			entries: indexed(Set.prototype.values.call(value)),
 		};
 	}
-	return describeObject(value);
+	return describeObject(value, labels);
 }
 
 /** @param {object} value @returns {value is { length: number } & Iterable<number | bigint>} */
@@ -287,8 +296,8 @@ function isTypedArray(value) {
 	return ArrayBuffer.isView(value) && !(value instanceof DataView);
 }
 
-/** @param {object} value @returns {Group | string} */
-function describeObject(value) {
+/** @param {object} value @param {KeyLabels} labels @returns {Group | string} */
+function describeObject(value, labels) {
 	const type = typeName(value);
 	if (isTypedArray(value)) {
 		const length = builtinSize(Uint8Array.prototype, "length", value);
@@ -298,7 +307,7 @@ function describeObject(value) {
 		return functionLabel(value, type);
 	}
 	if (type === OBJECT_TYPE) {
-		return { entries: fields(value) };
+		return { entries: fields(value, labels) };
 	}
 	return builtinLabel(value, type);
 }
@@ -323,7 +332,7 @@ function prefix(path, indent) {
 class Formatter {
 	/** @type {Set<object>} */
 	ancestors = new Set();
-	/** @type {Map<object, string>} */
+	/** @type {KeyLabels} */
 	keyLabels = new Map();
 	/** @type {string[]} */
 	lines = [];

@@ -114,7 +114,7 @@ test.each([
 			["a.b"]: 1
 			a.b: 2
 			[""]: 3
-			[Symbol(id)]: 4
+			[Symbol(id)#1]: 4
 		`,
 	},
 	{
@@ -160,6 +160,21 @@ test.each([
 			  Object#2: "B"
 			again: Map(1)
 			  Object#1: "same key"
+		`,
+	},
+	{
+		name: "Same-description symbol keys keep their identity across maps and fields",
+		code: dedent`
+			const first = Symbol("tag");
+			const second = Symbol("tag");
+			text({ map: new Map([[first, 1], [second, 2]]), fields: { [second]: 3, [first]: 4 } });
+		`,
+		expected: dedent`
+			map: Map(2)
+			  [Symbol(tag)#1]: 1
+			  [Symbol(tag)#2]: 2
+			fields[Symbol(tag)#2]: 3
+			fields[Symbol(tag)#1]: 4
 		`,
 	},
 	{
@@ -312,7 +327,7 @@ test.each([
 	{
 		name: "getter used as a type tag is not invoked",
 		code: 'text({ get [Symbol.toStringTag]() { throw Error("not called"); } })',
-		expected: "[Symbol(Symbol.toStringTag)]: [Getter]",
+		expected: "[Symbol(Symbol.toStringTag)#1]: [Getter]",
 	},
 	{
 		name: "collection headers and typed array contents ignore shadowing accessors",
