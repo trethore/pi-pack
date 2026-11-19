@@ -29,16 +29,16 @@ test("keeps image order and one text budget across images", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const { run } = Harness.create();
-	const code = `// @options: {"max_output_tokens": 1}\ntext("ab"); ${imageCall} text("cdef"); ${imageCall} text("g");`;
+	const code = `// @options: {"max_output_tokens": 2}\ntext("ab"); ${imageCall} text("cdef"); ${imageCall} text("g");`;
 
 	// Act
 	const result = await run(code);
 
 	// Assert
 	expect(result.content).toStrictEqual([
-		{ type: "text", text: "ab" },
+		{ type: "text", text: '"ab"' },
 		png,
-		{ type: "text", text: "cd\n[output truncated]" },
+		{ type: "text", text: '"cde\n[output truncated]' },
 		png,
 	]);
 });
@@ -68,8 +68,8 @@ test("returns text instead of persisting an undecodable image", async () => {
 	// Assert
 	expect(result).toMatchObject({ isError: true });
 	expect(result.content).toStrictEqual([
-		{ type: "text", text: "before" },
+		{ type: "text", text: '"before"' },
 		{ type: "text", text: "Cannot decode or resize image. For a local file, use image(await tools.read({ path }))." },
 	]);
-	expect(saved.content).toStrictEqual([{ type: "text", text: "undefined" }]);
+	expect(saved.content).toStrictEqual([{ type: "text", text: '"undefined"' }]);
 });

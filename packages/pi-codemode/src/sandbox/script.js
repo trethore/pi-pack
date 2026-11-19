@@ -1,239 +1,414 @@
-/** @param {string} path @param {string} key */
-function fieldPath(path, key) {
-	if (!/^[A-Za-z_$][\w$]*$/u.test(key)) {
-		return `${path}[${JSON.stringify(key)}]`;
+// Evaluated inside QuickJS, alongside the text and console wrappers.
+/** @typedef {{ label: string, value: unknown } | { label: string, literal: string }} Entry */
+/** @typedef {{ header?: string, entries: Iterable<Entry> }} Group */
+
+const LINE_BREAK = /\r\n|[\r\n\u2028\u2029]/u;
+const INDENT = "  ";
+const FIRST_FENCE = '"""';
+const UNINSPECTABLE = "[Uninspectable]";
+const OBJECT_TYPE = "Object";
+const NEGATIVE_ZERO = -0;
+const FIRST_ID = 1;
+
+/** @param {string} value @param {string} path @param {string} indent */
+function stringLiteral(value, path = "", indent = "") {
+	if (!LINE_BREAK.test(value)) {
+		return `${prefix(path, indent)}"${value}"`;
 	}
+	const fence = blockFence(value, indent);
+	const block = `${indent}${fence}\n${value}\n${indent}${fence}`;
 	if (path === "") {
-		return key;
+		return block;
 	}
-	return `${path}.${key}`;
+	return `${indent}${path}:\n${block}`;
 }
 
-/** @param {string | undefined} path @param {string} value */
-function leaf(path, value) {
-	const standalone = path === "" || path === undefined;
-	if (standalone) {
-		return value;
+/** @param {string} value @param {string} indent */
+function blockFence(value, indent) {
+	const lines = new Set(value.split(LINE_BREAK));
+	let fence = FIRST_FENCE;
+	function collides() {
+		return lines.has(fence) || lines.has(indent + fence);
 	}
-	if (value.includes("\n")) {
-		return `${path}:\n${value}`;
+	while (collides()) {
+		fence += '"';
 	}
-	return `${path}: ${value}`;
+	return fence;
 }
 
-/** @param {string[]} entries */
-function braces(entries) {
-	if (!entries.length) {
-		return "{}";
-	}
-	return `{ ${entries.join(", ")} }`;
-}
-
-/** @param {string} path @param {string} header @param {string[]} entries */
-function listing(path, header, entries) {
-	return [leaf(path, header), ...entries].join("\n");
-}
-
-/** @param {string} path @param {string | number} index */
-function indexPath(path, index) {
-	if (path === "") {
-		return String(index);
-	}
-	return `${path}[${index}]`;
-}
-
-/** @param {unknown[]} array @param {string} path @param {Set<object>} ancestors */
-function formatArray(array, path, ancestors) {
-	const entries = Object.entries(array).map(([key, item]) => {
-		const index = /^(?:0|[1-9]\d*)$/u.test(key) && Number(key) < array.length;
-		if (index) {
-			return render(item, indexPath(path, key), ancestors);
-		}
-		return render(item, fieldPath(path, key), ancestors);
-	});
-	return listing(path, `Array(${array.length})`, entries);
-}
-
-/** @param {string} path @param {unknown} key @param {Set<object>} ancestors */
-function mapPath(path, key, ancestors) {
-	if (typeof key === "string") {
-		return fieldPath(path, key);
-	}
-	return indexPath(path, render(key, undefined, ancestors));
-}
-
-/** @param {Map<unknown, unknown>} map @param {string | undefined} path @param {Set<object>} ancestors */
-function formatMap(map, path, ancestors) {
-	const header = `Map(${map.size})`;
-	if (path === undefined) {
-		const entries = Array.from(
-			map,
-			([key, item]) => `${render(key, undefined, ancestors)} => ${render(item, undefined, ancestors)}`,
-		);
-		return `${header} ${braces(entries)}`;
-	}
-	const entries = Array.from(map, ([key, item]) => render(item, mapPath(path, key, ancestors), ancestors));
-	return listing(path, header, entries);
-}
-
-/** @param {Iterable<unknown>} value @param {string | undefined} path @param {Set<object>} ancestors */
-function formatIndexed(value, path, ancestors) {
-	const type = Object.prototype.toString.call(value).replace(/^\[object |\]$/gu, "");
-	if (path !== undefined) {
-		const entries = Array.from(value, (item, index) => render(item, indexPath(path, index), ancestors));
-		return listing(path, `${type}(${entries.length})`, entries);
-	}
-	const items = Array.from(value, (item) => render(item, undefined, ancestors));
-	const header = `${type}(${items.length})`;
-	if (value instanceof Set) {
-		return `${header} ${braces(items)}`;
-	}
-	return `${header} [${items.join(", ")}]`;
-}
-
-/** @param {object} value @param {string | undefined} path @param {Set<object>} ancestors */
-function formatCollection(value, path, ancestors) {
-	const listArray = Array.isArray(value) && path !== undefined;
-	if (listArray) {
-		return formatArray(value, path, ancestors);
-	}
-	if (value instanceof Map) {
-		return formatMap(value, path, ancestors);
-	}
-	const indexed = value instanceof Set || (ArrayBuffer.isView(value) && !(value instanceof DataView));
-	if (indexed) {
-		return formatIndexed(value, path, ancestors);
-	}
-	return undefined;
-}
-
-/** @param {object} value */
-function formatBuiltin(value) {
-	if (value instanceof RegExp) {
-		return value.toString();
-	}
-	if (value instanceof Promise) {
-		return "Promise { <state unknown> }";
-	}
-	if (value instanceof Date) {
-		if (Number.isNaN(value.getTime())) {
-			return "Invalid Date";
-		}
-		return value.toISOString();
-	}
-	return formatOpaque(value) ?? formatBoxed(value);
-}
-
-/** @param {object} value */
-function formatOpaque(value) {
-	if (value instanceof WeakMap) {
-		return "WeakMap { <entries unknown> }";
-	}
-	if (value instanceof WeakSet) {
-		return "WeakSet { <entries unknown> }";
-	}
-	if (value instanceof ArrayBuffer) {
-		return `ArrayBuffer(${value.byteLength})`;
-	}
-	if (value instanceof DataView) {
-		return `DataView { byteLength: ${value.byteLength}, byteOffset: ${value.byteOffset} }`;
-	}
-	return undefined;
-}
-
-/** @param {object} value */
-function formatBoxed(value) {
-	for (const wrapper of [Boolean, Number, String, BigInt, Symbol]) {
-		if (value instanceof wrapper) {
-			return `${wrapper.name}(${render(wrapper.prototype.valueOf.call(value), undefined, new Set())})`;
-		}
-	}
-	return undefined;
-}
-
-/** @param {object} value @param {Set<object>} ancestors */
-function formatInline(value, ancestors) {
-	const entries = Object.entries(value);
-	const dense = Array.isArray(value) && entries.length === value.length
-		&& entries.every(([key], index) => key === String(index));
-	if (dense) {
-		return `[${entries.map(([, item]) => render(item, undefined, ancestors)).join(", ")}]`;
-	}
-	const fields = braces(entries.map(([key, item]) => `${JSON.stringify(key)}: ${render(item, undefined, ancestors)}`));
-	if (Array.isArray(value)) {
-		return `Array(${value.length}) ${fields}`;
-	}
-	return fields;
-}
-
-/** @param {object} value @param {string | undefined} path @param {Set<object>} ancestors */
-function formatObject(value, path, ancestors) {
-	const collection = formatCollection(value, path, ancestors);
-	if (collection !== undefined) {
-		return collection;
-	}
-	const builtin = formatBuiltin(value);
-	if (builtin !== undefined) {
-		return leaf(path, builtin);
-	}
-	if (path === undefined) {
-		return formatInline(value, ancestors);
-	}
-	return formatFields(value, path, ancestors);
-}
-
-/** @param {object} value @param {string} path @param {Set<object>} ancestors */
-function formatFields(value, path, ancestors) {
-	const entries = Object.entries(value);
-	if (!entries.length) {
-		return leaf(path, "{}");
-	}
-	return entries.map(([key, item]) => render(item, fieldPath(path, key), ancestors)).join("\n");
-}
-
-/** @param {unknown} value @param {boolean} inline */
-function formatScalar(value, inline) {
-	const NEGATIVE_ZERO = -0;
+/** @param {unknown} value */
+function scalar(value) {
 	if (typeof value === "bigint") {
 		return `${value}n`;
 	}
 	if (Object.is(value, NEGATIVE_ZERO)) {
 		return "-0";
 	}
-	const quoteString = inline && typeof value === "string";
-	if (quoteString) {
-		return JSON.stringify(value);
-	}
-	// Only primitives and Error instances use their native string representation.
 	return String(value);
 }
 
-/**
- * An undefined path renders a collection member inline; an empty path starts a flat listing.
- * @param {unknown} value
- * @param {string | undefined} path
- * @param {Set<object>} ancestors
- * @returns {string}
- */
-function render(value, path, ancestors) {
-	const isScalar = value === null || typeof value !== "object" || value instanceof Error;
-	if (isScalar) {
-		return leaf(path, formatScalar(value, path === undefined));
+/** @param {unknown} value @returns {value is object} */
+function isReference(value) {
+	return value !== null && (typeof value === "object" || typeof value === "function");
+}
+
+/** @param {string | symbol} key */
+function fieldLabel(key) {
+	if (typeof key === "symbol") {
+		return `[${labelText(String(key))}]`;
 	}
-	if (ancestors.has(value)) {
-		return leaf(path, "[Circular]");
+	if (/^[A-Za-z_$][\w$]*$/u.test(key)) {
+		return key;
+	}
+	return `[${singleLine(JSON.stringify(key))}]`;
+}
+
+/** @param {string} label */
+function labelText(label) {
+	return singleLine(JSON.stringify(label).replace(/^"|"$/gu, ""));
+}
+
+/** @param {string} label */
+function singleLine(label) {
+	return label.replaceAll("\u2028", String.raw`\u2028`).replaceAll("\u2029", String.raw`\u2029`);
+}
+
+/** @param {object} value @param {string | symbol} key */
+function propertyLabel(value, key) {
+	const arrayIndex = Array.isArray(value) && typeof key === "string" && /^(?:0|[1-9]\d*)$/u.test(key)
+		&& Number(key) < value.length;
+	if (arrayIndex) {
+		return key;
+	}
+	return fieldLabel(key);
+}
+
+/** @param {object} value @returns {Generator<Entry>} */
+function* fields(value) {
+	for (const key of Reflect.ownKeys(value)) {
+		const descriptor = Object.getOwnPropertyDescriptor(value, key);
+		if (descriptor?.enumerable === true) {
+			const label = propertyLabel(value, key);
+			yield fieldEntry(label, descriptor);
+		}
+	}
+}
+
+/** @param {string} label @param {PropertyDescriptor} descriptor @returns {Entry} */
+function fieldEntry(label, descriptor) {
+	if ("value" in descriptor) {
+		return { label, value: /** @type {unknown} */ (descriptor.value) };
+	}
+	if (descriptor.get === undefined) {
+		return { label, literal: "[Setter]" };
+	}
+	if (descriptor.set === undefined) {
+		return { label, literal: "[Getter]" };
+	}
+	return { label, literal: "[Getter/Setter]" };
+}
+
+/** @param {Iterable<unknown>} values @returns {Generator<Entry>} */
+function* indexed(values) {
+	let index = 0;
+	for (const value of values) {
+		yield { label: String(index++), value };
+	}
+}
+
+/** @param {object} value */
+function typeName(value) {
+	// Use data tags directly; never invoke a user-defined toStringTag getter.
+	for (let owner = /** @type {unknown} */ (value); isReference(owner); owner = Reflect.getPrototypeOf(owner)) {
+		const tag = Object.getOwnPropertyDescriptor(owner, Symbol.toStringTag);
+		if (tag !== undefined) {
+			if (owner === Object.getPrototypeOf(Uint8Array.prototype)) {
+				break;
+			}
+			return dataTag(tag);
+		}
+	}
+	return Object.prototype.toString.call(value).replace(/^\[object |\]$/gu, "");
+}
+
+/** @param {PropertyDescriptor} tag */
+function dataTag(tag) {
+	const name = /** @type {unknown} */ (tag.value);
+	const named = tag.enumerable !== true && typeof name === "string";
+	if (named) {
+		return name;
+	}
+	return OBJECT_TYPE;
+}
+
+/** @param {Function} value @param {string} type */
+function functionLabel(value, type) {
+	if (/^class\b/u.test(Function.prototype.toString.call(value))) {
+		type = "Class";
+	}
+	/** @type {unknown} */
+	const name = Object.getOwnPropertyDescriptor(value, "name")?.value;
+	const named = typeof name === "string" && name !== "";
+	if (named) {
+		return `[${type}: ${name}]`;
+	}
+	return `[${type}]`;
+}
+
+/** @param {object} value @param {string} type */
+function bufferLabel(value, type) {
+	if (value instanceof DataView) {
+		if (Reflect.get(value.buffer, "detached") === true) {
+			return "DataView { <detached> }";
+		}
+		return `DataView { byteLength: ${value.byteLength}, byteOffset: ${value.byteOffset} }`;
+	}
+	const buffer = value instanceof ArrayBuffer || value instanceof SharedArrayBuffer;
+	if (buffer) {
+		if (Reflect.get(value, "detached") === true) {
+			return `${type} { <detached> }`;
+		}
+		return `${type}(${value.byteLength})`;
+	}
+	return undefined;
+}
+
+const UNKNOWN_ENTRIES = "<entries unknown>";
+const opaqueStates = new Map([
+	["WeakMap", UNKNOWN_ENTRIES],
+	["WeakSet", UNKNOWN_ENTRIES],
+	["FinalizationRegistry", UNKNOWN_ENTRIES],
+	["WeakRef", "<state unknown>"],
+	["Promise", "<state unknown>"],
+]);
+
+/** @param {object} value @param {string} type */
+function builtinLabel(value, type) {
+	const state = opaqueStates.get(type);
+	if (state !== undefined) {
+		return `${type} { ${state} }`;
+	}
+	if (value instanceof Date) {
+		return dateLabel(value);
+	}
+	if (value instanceof RegExp) {
+		return RegExp.prototype.toString.call(value);
+	}
+	if (value instanceof Error) {
+		return Error.prototype.toString.call(value);
+	}
+	return boxedLabel(value, type) ?? bufferLabel(value, type) ?? `[${type}]`;
+}
+
+/** @param {Date} value */
+function dateLabel(value) {
+	if (Number.isNaN(Date.prototype.getTime.call(value))) {
+		return "Invalid Date";
+	}
+	return Date.prototype.toISOString.call(value);
+}
+
+/** @param {object} value @param {string} type */
+function boxedLabel(value, type) {
+	for (const wrapper of [Boolean, Number, String, BigInt, Symbol]) {
+		if (value instanceof wrapper) {
+			const primitive = wrapper.prototype.valueOf.call(value);
+			if (typeof primitive === "string") {
+				return `${type}(${stringLiteral(primitive)})`;
+			}
+			return `${type}(${scalar(primitive)})`;
+		}
+	}
+	return undefined;
+}
+
+/** @param {unknown} key @param {Map<object, string>} labels */
+function mapKey(key, labels) {
+	const property = typeof key === "string" || typeof key === "symbol";
+	if (property) {
+		return fieldLabel(key);
+	}
+	if (!isReference(key)) {
+		return `[${scalar(key)}]`;
+	}
+	return identityLabel(key, labels);
+}
+
+/** @param {object} key @param {Map<object, string>} labels */
+function identityLabel(key, labels) {
+	const prior = labels.get(key);
+	if (prior !== undefined) {
+		return prior;
+	}
+	// Identity is still useful when the key is a revoked proxy.
+	let type = OBJECT_TYPE;
+	try {
+		type = labelText(typeName(key));
+	} catch {
+		// The key itself cannot be inspected.
+	}
+	const label = `${type}#${labels.size + FIRST_ID}`;
+	labels.set(key, label);
+	return label;
+}
+
+/** @param {Map<unknown, unknown>} map @param {Map<object, string>} labels @returns {Generator<Entry>} */
+function* mapEntries(map, labels) {
+	for (const [key, value] of Map.prototype.entries.call(map)) {
+		yield { label: mapKey(key, labels), value };
+	}
+}
+
+// Read built-in metadata from its prototype, not from potentially shadowing accessors.
+/** @param {object} prototype @param {string} key @param {object} receiver */
+function builtinSize(prototype, key, receiver) {
+	return String(Reflect.get(prototype, key, receiver));
+}
+
+/** @param {object} value @param {Map<object, string>} labels @returns {Group | string} */
+function describe(value, labels) {
+	if (Array.isArray(value)) {
+		return { header: `Array(${value.length})`, entries: fields(value) };
+	}
+	if (value instanceof Map) {
+		return { header: `Map(${builtinSize(Map.prototype, "size", value)})`, entries: mapEntries(value, labels) };
+	}
+	if (value instanceof Set) {
+		return {
+			header: `Set(${builtinSize(Set.prototype, "size", value)})`,
+			entries: indexed(Set.prototype.values.call(value)),
+		};
+	}
+	return describeObject(value);
+}
+
+/** @param {object} value @returns {value is { length: number } & Iterable<number | bigint>} */
+function isTypedArray(value) {
+	return ArrayBuffer.isView(value) && !(value instanceof DataView);
+}
+
+/** @param {object} value @returns {Group | string} */
+function describeObject(value) {
+	const type = typeName(value);
+	if (isTypedArray(value)) {
+		const length = builtinSize(Uint8Array.prototype, "length", value);
+		return { header: `${type}(${length})`, entries: indexed(Uint8Array.prototype.values.call(value)) };
+	}
+	if (typeof value === "function") {
+		return functionLabel(value, type);
+	}
+	if (type === OBJECT_TYPE) {
+		return { entries: fields(value) };
+	}
+	return builtinLabel(value, type);
+}
+
+/** @param {string} path @param {string} label */
+function childPath(path, label) {
+	const field = path !== "" && !label.startsWith("[");
+	if (field) {
+		return `${path}.${label}`;
+	}
+	return path + label;
+}
+
+/** @param {string} path @param {string} indent */
+function prefix(path, indent) {
+	if (path === "") {
+		return indent;
+	}
+	return `${indent}${path}: `;
+}
+
+class Formatter {
+	/** @type {Set<object>} */
+	ancestors = new Set();
+	/** @type {Map<object, string>} */
+	keyLabels = new Map();
+	/** @type {string[]} */
+	lines = [];
+
+	/** @param {unknown} value @param {string} path @param {string} indent */
+	visit(value, path, indent) {
+		if (typeof value === "string") {
+			this.lines.push(stringLiteral(value, path, indent));
+		} else if (!isReference(value)) {
+			this.lines.push(prefix(path, indent) + scalar(value));
+		} else if (this.ancestors.has(value)) {
+			this.lines.push(`${prefix(path, indent)}[Circular]`);
+		} else {
+			this.inspect(value, path, indent);
+		}
 	}
 
-	// Only ancestors are circular; sibling paths can share the same object.
-	ancestors.add(value);
-	const formatted = formatObject(value, path, ancestors);
-	ancestors.delete(value);
-	return formatted;
+	/** @param {object} value @param {string} path @param {string} indent */
+	inspect(value, path, indent) {
+		const start = this.lines.length;
+		this.ancestors.add(value);
+		try {
+			this.writeShape(describe(value, this.keyLabels), path, indent);
+		} catch {
+			// A revoked proxy (or throwing inspection trap) should not hide sibling values.
+			this.lines.length = start;
+			this.lines.push(prefix(path, indent) + UNINSPECTABLE);
+		} finally {
+			this.ancestors.delete(value);
+		}
+	}
+
+	/** @param {Group | string} shape @param {string} path @param {string} indent */
+	writeShape(shape, path, indent) {
+		if (typeof shape === "string") {
+			this.lines.push(prefix(path, indent) + shape);
+		} else if (shape.header !== undefined) {
+			this.lines.push(prefix(path, indent) + shape.header);
+			if (path !== "") {
+				indent += INDENT;
+			}
+			this.writeEntries(shape.entries, "", indent);
+		} else {
+			this.writeFields(shape.entries, path, indent);
+		}
+	}
+
+	/** @param {Iterable<Entry>} entries @param {string} path @param {string} indent */
+	writeFields(entries, path, indent) {
+		const start = this.lines.length;
+		this.writeEntries(entries, path, indent);
+		if (start === this.lines.length) {
+			this.lines.push(`${prefix(path, indent)}{}`);
+		}
+	}
+
+	/** @param {Iterable<Entry>} entries @param {string} path @param {string} indent */
+	writeEntries(entries, path, indent) {
+		for (const entry of entries) {
+			const child = childPath(path, entry.label);
+			if ("literal" in entry) {
+				this.lines.push(`${indent}${child}: ${entry.literal}`);
+			} else {
+				this.visit(entry.value, child, indent);
+			}
+		}
+	}
+}
+
+// The wrapper invokes these entry points from the same sandbox scope.
+// oxlint-disable-next-line no-unused-vars
+function formatConsoleArgument(/** @type {unknown} */ value) {
+	try {
+		if (value instanceof Error) {
+			return value; // Let QuickJS's console include the stack frames.
+		}
+	} catch {
+		return UNINSPECTABLE;
+	}
+	return format(value);
 }
 
 /** @param {unknown} value */
-// The runtime wrapper calls this entry point from the same sandbox scope.
-// oxlint-disable-next-line no-unused-vars
 function format(value) {
-	return render(value, "", new Set());
+	const formatter = new Formatter();
+	formatter.visit(value, "", "");
+	return formatter.lines.join("\n");
 }
