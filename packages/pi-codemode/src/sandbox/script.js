@@ -29,39 +29,80 @@ function braces(entries) {
 	return `{ ${entries.join(", ")} }`;
 }
 
-/** @param {object} value @param {Set<object>} ancestors */
-function formatCollection(value, ancestors) {
-	/** @param {unknown} part */
-	function inline(part) {
-		return render(part, undefined, ancestors);
-	}
-	if (value instanceof Map) {
-		return `Map(${value.size}) ${braces(Array.from(value, ([key, item]) => `${inline(key)} => ${inline(item)}`))}`;
-	}
-	if (value instanceof Set) {
-		return `Set(${value.size}) ${braces(Array.from(value, inline))}`;
-	}
-	if (value instanceof WeakMap) {
-		return "WeakMap { <entries unknown> }";
-	}
-	if (value instanceof WeakSet) {
-		return "WeakSet { <entries unknown> }";
-	}
-	return undefined;
+/** @param {string} path @param {string} header @param {string[]} entries */
+function listing(path, header, entries) {
+	return [leaf(path, header), ...entries].join("\n");
 }
 
-/** @param {object} value */
-function formatBinary(value) {
-	if (value instanceof ArrayBuffer) {
-		return `ArrayBuffer(${value.byteLength})`;
+/** @param {string} path @param {string | number} index */
+function indexPath(path, index) {
+	if (path === "") {
+		return String(index);
 	}
-	if (value instanceof DataView) {
-		return `DataView { byteLength: ${value.byteLength}, byteOffset: ${value.byteOffset} }`;
+	return `${path}[${index}]`;
+}
+
+/** @param {unknown[]} array @param {string} path @param {Set<object>} ancestors */
+function formatArray(array, path, ancestors) {
+	const entries = Object.entries(array).map(([key, item]) => {
+		const index = /^(?:0|[1-9]\d*)$/u.test(key) && Number(key) < array.length;
+		if (index) {
+			return render(item, indexPath(path, key), ancestors);
+		}
+		return render(item, fieldPath(path, key), ancestors);
+	});
+	return listing(path, `Array(${array.length})`, entries);
+}
+
+/** @param {string} path @param {unknown} key @param {Set<object>} ancestors */
+function mapPath(path, key, ancestors) {
+	if (typeof key === "string") {
+		return fieldPath(path, key);
 	}
-	if (ArrayBuffer.isView(value)) {
-		const type = Object.prototype.toString.call(value).replace(/^\[object |\]$/gu, "");
-		const items = Array.from(value, (item) => format(item));
-		return `${type}(${items.length}) [${items.join(", ")}]`;
+	return indexPath(path, render(key, undefined, ancestors));
+}
+
+/** @param {Map<unknown, unknown>} map @param {string | undefined} path @param {Set<object>} ancestors */
+function formatMap(map, path, ancestors) {
+	const header = `Map(${map.size})`;
+	if (path === undefined) {
+		const entries = Array.from(
+			map,
+			([key, item]) => `${render(key, undefined, ancestors)} => ${render(item, undefined, ancestors)}`,
+		);
+		return `${header} ${braces(entries)}`;
+	}
+	const entries = Array.from(map, ([key, item]) => render(item, mapPath(path, key, ancestors), ancestors));
+	return listing(path, header, entries);
+}
+
+/** @param {Iterable<unknown>} value @param {string | undefined} path @param {Set<object>} ancestors */
+function formatIndexed(value, path, ancestors) {
+	const type = Object.prototype.toString.call(value).replace(/^\[object |\]$/gu, "");
+	if (path !== undefined) {
+		const entries = Array.from(value, (item, index) => render(item, indexPath(path, index), ancestors));
+		return listing(path, `${type}(${entries.length})`, entries);
+	}
+	const items = Array.from(value, (item) => render(item, undefined, ancestors));
+	const header = `${type}(${items.length})`;
+	if (value instanceof Set) {
+		return `${header} ${braces(items)}`;
+	}
+	return `${header} [${items.join(", ")}]`;
+}
+
+/** @param {object} value @param {string | undefined} path @param {Set<object>} ancestors */
+function formatCollection(value, path, ancestors) {
+	const listArray = Array.isArray(value) && path !== undefined;
+	if (listArray) {
+		return formatArray(value, path, ancestors);
+	}
+	if (value instanceof Map) {
+		return formatMap(value, path, ancestors);
+	}
+	const indexed = value instanceof Set || (ArrayBuffer.isView(value) && !(value instanceof DataView));
+	if (indexed) {
+		return formatIndexed(value, path, ancestors);
 	}
 	return undefined;
 }
@@ -80,7 +121,24 @@ function formatBuiltin(value) {
 		}
 		return value.toISOString();
 	}
-	return formatBoxed(value) ?? formatBinary(value);
+	return formatOpaque(value) ?? formatBoxed(value);
+}
+
+/** @param {object} value */
+function formatOpaque(value) {
+	if (value instanceof WeakMap) {
+		return "WeakMap { <entries unknown> }";
+	}
+	if (value instanceof WeakSet) {
+		return "WeakSet { <entries unknown> }";
+	}
+	if (value instanceof ArrayBuffer) {
+		return `ArrayBuffer(${value.byteLength})`;
+	}
+	if (value instanceof DataView) {
+		return `DataView { byteLength: ${value.byteLength}, byteOffset: ${value.byteOffset} }`;
+	}
+	return undefined;
 }
 
 /** @param {object} value */
@@ -110,7 +168,11 @@ function formatInline(value, ancestors) {
 
 /** @param {object} value @param {string | undefined} path @param {Set<object>} ancestors */
 function formatObject(value, path, ancestors) {
-	const builtin = formatCollection(value, ancestors) ?? formatBuiltin(value);
+	const collection = formatCollection(value, path, ancestors);
+	if (collection !== undefined) {
+		return collection;
+	}
+	const builtin = formatBuiltin(value);
 	if (builtin !== undefined) {
 		return leaf(path, builtin);
 	}
@@ -120,26 +182,8 @@ function formatObject(value, path, ancestors) {
 	return formatFields(value, path, ancestors);
 }
 
-/** @param {unknown[]} array @param {string} path @param {Set<object>} ancestors */
-function formatArray(array, path, ancestors) {
-	const lines = [leaf(path, `Array(${array.length})`)];
-	for (const [key, item] of Object.entries(array)) {
-		const index = /^(?:0|[1-9]\d*)$/u.test(key) && Number(key) < array.length;
-		let entryPath = key;
-		if (!index) {
-			entryPath = fieldPath("", key);
-		}
-		const entry = render(item, entryPath, ancestors);
-		lines.push(`  ${entry.replaceAll("\n", "\n  ")}`);
-	}
-	return lines.join("\n");
-}
-
 /** @param {object} value @param {string} path @param {Set<object>} ancestors */
 function formatFields(value, path, ancestors) {
-	if (Array.isArray(value)) {
-		return formatArray(value, path, ancestors);
-	}
 	const entries = Object.entries(value);
 	if (!entries.length) {
 		return leaf(path, "{}");
@@ -188,6 +232,8 @@ function render(value, path, ancestors) {
 }
 
 /** @param {unknown} value */
+// The runtime wrapper calls this entry point from the same sandbox scope.
+// oxlint-disable-next-line no-unused-vars
 function format(value) {
 	return render(value, "", new Set());
 }

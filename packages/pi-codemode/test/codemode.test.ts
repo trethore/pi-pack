@@ -58,7 +58,7 @@ test("text and return keep real whitespace distinct from literal backslash escap
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: TEXT_TYPE,
-		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\nArray(1)\n  0.file:\n  first\n  \tsecond\n  0.literal: \\t",
+		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\nArray(1)\n0.file:\nfirst\n\tsecond\n0.literal: \\t",
 	}]);
 });
 
@@ -74,7 +74,8 @@ test("prints leaf paths without adding indentation for each ancestor", async () 
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: TEXT_TYPE,
-		text: "output.details.stderr:\none\n\ttwo\noutput.details.files: Array(2)\n  0: a\n  1: b",
+		text:
+			"output.details.stderr:\none\n\ttwo\noutput.details.files: Array(2)\noutput.details.files[0]: a\noutput.details.files[1]: b",
 	}]);
 });
 
@@ -96,14 +97,20 @@ test("keeps empty containers and distinguishes literal dots from nested paths", 
 
 test.each([
 	{
-		name: "mixed array entries relative to a single header",
+		name: "console array values with real line breaks and dotted object fields",
+		code: String.raw`console.log(["first\nsecond", { done: true }]);`,
+		expected: "Array(2)\n0:\nfirst\nsecond\n1.done: true",
+	},
+	{
+		name: "mixed array entries with leaf paths",
 		code: 'return { values: [1, "two", false, null, { nested: "value" }], next: true };',
-		expected: "values: Array(5)\n  0: 1\n  1: two\n  2: false\n  3: null\n  4.nested: value\nnext: true",
+		expected:
+			"values: Array(5)\nvalues[0]: 1\nvalues[1]: two\nvalues[2]: false\nvalues[3]: null\nvalues[4].nested: value\nnext: true",
 	},
 	{
 		name: "nested sparse arrays with their original indices and extra properties",
 		code: 'const row = []; row[3] = row; row["a.b"] = 1; return [row, Array(2)];',
-		expected: 'Array(2)\n  0: Array(4)\n    3: [Circular]\n    ["a.b"]: 1\n  1: Array(2)',
+		expected: 'Array(2)\n0: Array(4)\n0[3]: [Circular]\n0["a.b"]: 1\n1: Array(2)',
 	},
 	{
 		name: "valid and invalid dates",
@@ -113,17 +120,23 @@ test.each([
 	{
 		name: "map entries in insertion order",
 		code: 'text(new Map([["retries", 3], ["mode", "auto"]]));',
-		expected: 'Map(2) { "retries" => 3, "mode" => "auto" }',
+		expected: "Map(2)\nretries: 3\nmode: auto",
 	},
 	{
-		name: "inline collection entries retain their type and boundaries",
+		name: "escaped map keys and verbatim multiline values",
+		code: String.raw`console.log(new Map([["first\nkey", "two\r\nlines"], ["next", { nested: "a\u2028b" }]]));`,
+		expected: 'Map(2)\n["first\\nkey"]:\ntwo\r\nlines\nnext.nested: a\u2028b',
+	},
+	{
+		name: "nested collection paths with a non-string map key",
 		code: 'return new Map([[{ id: 1 }, new Set([123n, ["two", -0]])]]);',
-		expected: 'Map(1) { { "id": 1 } => Set(2) { 123n, ["two", -0] } }',
+		expected:
+			'Map(1)\n{ "id": 1 }: Set(2)\n{ "id": 1 }[0]: 123n\n{ "id": 1 }[1]: Array(2)\n{ "id": 1 }[1][0]: two\n{ "id": 1 }[1][1]: -0',
 	},
 	{
 		name: "empty and cyclic sets",
 		code: "const set = new Set(); set.add(set); return { set, empty: new Set() };",
-		expected: "set: Set(1) { [Circular] }\nempty: Set(0) {}",
+		expected: "set: Set(1)\nset[0]: [Circular]\nempty: Set(0)",
 	},
 	{
 		name: "opaque built-ins without implying they are empty",
@@ -135,7 +148,8 @@ test.each([
 		name: "typed arrays, buffers and views",
 		code:
 			"const bytes = new Uint8Array([1, 2, 3]); return { bytes, buffer: bytes.buffer, view: new DataView(bytes.buffer, 1) };",
-		expected: "bytes: Uint8Array(3) [1, 2, 3]\nbuffer: ArrayBuffer(3)\nview: DataView { byteLength: 2, byteOffset: 1 }",
+		expected:
+			"bytes: Uint8Array(3)\nbytes[0]: 1\nbytes[1]: 2\nbytes[2]: 3\nbuffer: ArrayBuffer(3)\nview: DataView { byteLength: 2, byteOffset: 1 }",
 	},
 	{
 		name: "regular expressions and boxed primitives",
@@ -147,12 +161,12 @@ test.each([
 	{
 		name: "a cycle back to a containing object",
 		code: 'const root = { name: "root" }; root.children = [root]; text(root);',
-		expected: "name: root\nchildren: Array(1)\n  0: [Circular]",
+		expected: "name: root\nchildren: Array(1)\nchildren[0]: [Circular]",
 	},
 	{
 		name: "a map containing itself as a key and value",
 		code: "const map = new Map(); map.set(map, map); return map;",
-		expected: "Map(1) { [Circular] => [Circular] }",
+		expected: "Map(1)\n[Circular]: [Circular]",
 	},
 	{
 		name: "a shared object on separate branches",
@@ -179,7 +193,8 @@ test.each(["log", "info", "warn", "error", "debug"])(
 		// Arrange
 		const { run } = Harness.create();
 		const code = Fixtures.consoleFormatting(level);
-		const formatted = 'at: 1970-01-01T00:00:00.000Z\ncounts: Map(1) { "ok" => Set(1) { 2n } }\nself: [Circular]';
+		const formatted =
+			"at: 1970-01-01T00:00:00.000Z\ncounts: Map(1)\ncounts.ok: Set(1)\ncounts.ok[0]: 2n\nself: [Circular]";
 
 		// Act
 		const result = await run(code);
