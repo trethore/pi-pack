@@ -1,9 +1,5 @@
-/** @param {string} path @param {string} key @param {boolean} array */
-function fieldPath(path, key, array) {
-	const isIndex = array && /^(?:0|[1-9]\d*)$/u.test(key);
-	if (isIndex) {
-		return `${path}[${key}]`;
-	}
+/** @param {string} path @param {string} key */
+function fieldPath(path, key) {
 	if (!/^[A-Za-z_$][\w$]*$/u.test(key)) {
 		return `${path}[${JSON.stringify(key)}]`;
 	}
@@ -124,17 +120,31 @@ function formatObject(value, path, ancestors) {
 	return formatFields(value, path, ancestors);
 }
 
+/** @param {unknown[]} array @param {string} path @param {Set<object>} ancestors */
+function formatArray(array, path, ancestors) {
+	const lines = [leaf(path, `Array(${array.length})`)];
+	for (const [key, item] of Object.entries(array)) {
+		const index = /^(?:0|[1-9]\d*)$/u.test(key) && Number(key) < array.length;
+		let entryPath = key;
+		if (!index) {
+			entryPath = fieldPath("", key);
+		}
+		const entry = render(item, entryPath, ancestors);
+		lines.push(`  ${entry.replaceAll("\n", "\n  ")}`);
+	}
+	return lines.join("\n");
+}
+
 /** @param {object} value @param {string} path @param {Set<object>} ancestors */
 function formatFields(value, path, ancestors) {
-	const array = Array.isArray(value);
+	if (Array.isArray(value)) {
+		return formatArray(value, path, ancestors);
+	}
 	const entries = Object.entries(value);
 	if (!entries.length) {
-		if (array) {
-			return leaf(path, "[]");
-		}
 		return leaf(path, "{}");
 	}
-	return entries.map(([key, item]) => render(item, fieldPath(path, key, array), ancestors)).join("\n");
+	return entries.map(([key, item]) => render(item, fieldPath(path, key), ancestors)).join("\n");
 }
 
 /** @param {unknown} value @param {boolean} inline */

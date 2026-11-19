@@ -58,7 +58,7 @@ test("text and return keep real whitespace distinct from literal backslash escap
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: TEXT_TYPE,
-		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\n[0].file:\nfirst\n\tsecond\n[0].literal: \\t",
+		text: "==> 1/2 <==\nraw\n\tline\n==> 2/2 <==\nArray(1)\n  0.file:\n  first\n  \tsecond\n  0.literal: \\t",
 	}]);
 });
 
@@ -74,7 +74,7 @@ test("prints leaf paths without adding indentation for each ancestor", async () 
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: TEXT_TYPE,
-		text: "output.details.stderr:\none\n\ttwo\noutput.details.files[0]: a\noutput.details.files[1]: b",
+		text: "output.details.stderr:\none\n\ttwo\noutput.details.files: Array(2)\n  0: a\n  1: b",
 	}]);
 });
 
@@ -90,11 +90,21 @@ test("keeps empty containers and distinguishes literal dots from nested paths", 
 	// Assert
 	expect(result.content).toStrictEqual([{
 		type: TEXT_TYPE,
-		text: '==> 1/3 <==\n[]\n==> 2/3 <==\n{}\n==> 3/3 <==\n["a.b"]: {}\na.b: []\n[""]: null',
+		text: '==> 1/3 <==\nArray(0)\n==> 2/3 <==\n{}\n==> 3/3 <==\n["a.b"]: {}\na.b: Array(0)\n[""]: null',
 	}]);
 });
 
 test.each([
+	{
+		name: "mixed array entries relative to a single header",
+		code: 'return { values: [1, "two", false, null, { nested: "value" }], next: true };',
+		expected: "values: Array(5)\n  0: 1\n  1: two\n  2: false\n  3: null\n  4.nested: value\nnext: true",
+	},
+	{
+		name: "nested sparse arrays with their original indices and extra properties",
+		code: 'const row = []; row[3] = row; row["a.b"] = 1; return [row, Array(2)];',
+		expected: 'Array(2)\n  0: Array(4)\n    3: [Circular]\n    ["a.b"]: 1\n  1: Array(2)',
+	},
 	{
 		name: "valid and invalid dates",
 		code: 'return { at: new Date("2025-01-02T03:04:05Z"), invalid: new Date(NaN) };',
@@ -137,7 +147,7 @@ test.each([
 	{
 		name: "a cycle back to a containing object",
 		code: 'const root = { name: "root" }; root.children = [root]; text(root);',
-		expected: "name: root\nchildren[0]: [Circular]",
+		expected: "name: root\nchildren: Array(1)\n  0: [Circular]",
 	},
 	{
 		name: "a map containing itself as a key and value",
