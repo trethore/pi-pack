@@ -1,3 +1,4 @@
+import { Fixtures } from "#test/fixtures";
 import { Harness } from "#test/harness";
 import { expect, test } from "vitest";
 
@@ -130,6 +131,40 @@ test.each([
 	// Assert
 	expect(result).toMatchObject({ isError: false });
 	expect(result.content).toStrictEqual([{ type: TEXT_TYPE, text: expected }]);
+});
+
+test.each(["log", "info", "warn", "error", "debug"])(
+	"console.%s formats values like text and return",
+	async (level) => {
+		expect.hasAssertions();
+		// Arrange
+		const { run } = Harness.create();
+		const code = Fixtures.consoleFormatting(level);
+		const formatted = 'at: 1970-01-01T00:00:00.000Z\ncounts: Map(1) { "ok" => 2 }\nself: [Circular]';
+
+		// Act
+		const result = await run(code);
+
+		// Assert
+		expect(result.content).toStrictEqual([{
+			type: TEXT_TYPE,
+			text: `==> 1/3 <==\nresult ${formatted}\n==> 2/3 <==\n${formatted}\n==> 3/3 <==\n${formatted}`,
+		}]);
+	},
+);
+
+test("console preserves stack frames on error arguments", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const { run } = Harness.create();
+	const code = 'function reportFailure() { console.error("failed:", new Error("oops")); } reportFailure();';
+
+	// Act
+	const result = await run(code);
+
+	// Assert
+	const [item] = result.content;
+	expect(item?.type === TEXT_TYPE && item.text).toMatch(/failed: Error: oops\n.*reportFailure/u);
 });
 
 test("wrapping preserves indentation inside the model's multiline string literal", async () => {
