@@ -93,6 +93,45 @@ test("keeps empty containers and distinguishes literal dots from nested paths", 
 	}]);
 });
 
+test.each([
+	{
+		name: "valid and invalid dates",
+		code: 'return { at: new Date("2025-01-02T03:04:05Z"), invalid: new Date(NaN) };',
+		expected: "at: 2025-01-02T03:04:05.000Z\ninvalid: Invalid Date",
+	},
+	{
+		name: "map entries in insertion order",
+		code: 'text(new Map([["retries", 3], ["mode", "auto"]]));',
+		expected: 'Map(2) { "retries" => 3, "mode" => "auto" }',
+	},
+	{
+		name: "a cycle back to a containing object",
+		code: 'const root = { name: "root" }; root.children = [root]; text(root);',
+		expected: "name: root\nchildren[0]: [Circular]",
+	},
+	{
+		name: "a map containing itself as a key and value",
+		code: "const map = new Map(); map.set(map, map); return map;",
+		expected: "Map(1) { [Circular] => [Circular] }",
+	},
+	{
+		name: "a shared object on separate branches",
+		code: "const shared = { count: 2 }; return { left: shared, right: shared };",
+		expected: "left.count: 2\nright.count: 2",
+	},
+])("formats $name", async ({ code, expected }) => {
+	expect.hasAssertions();
+	// Arrange
+	const { run } = Harness.create();
+
+	// Act
+	const result = await run(code);
+
+	// Assert
+	expect(result).toMatchObject({ isError: false });
+	expect(result.content).toStrictEqual([{ type: TEXT_TYPE, text: expected }]);
+});
+
 test("wrapping preserves indentation inside the model's multiline string literal", async () => {
 	expect.hasAssertions();
 	// Arrange
