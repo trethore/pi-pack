@@ -13,9 +13,10 @@ function fieldPath(path, key, array) {
 	return `${path}.${key}`;
 }
 
-/** @param {string} path @param {string} value */
+/** @param {string | undefined} path @param {string} value */
 function leaf(path, value) {
-	if (path === "") {
+	const standalone = path === "" || path === undefined;
+	if (standalone) {
 		return value;
 	}
 	if (value.includes("\n")) {
@@ -24,31 +25,107 @@ function leaf(path, value) {
 	return `${path}: ${value}`;
 }
 
-/** @param {unknown} value @param {Set<object>} ancestors */
-function mapPart(value, ancestors) {
-	if (typeof value === "string") {
-		return JSON.stringify(value);
+/** @param {string[]} entries */
+function braces(entries) {
+	if (!entries.length) {
+		return "{}";
 	}
-	return format(value, "", ancestors);
+	return `{ ${entries.join(", ")} }`;
 }
 
-/** @param {Map<unknown, unknown>} map @param {Set<object>} ancestors */
-function formatMap(map, ancestors) {
-	const entries = [];
-	for (const [key, value] of map) {
-		entries.push(`${mapPart(key, ancestors)} => ${mapPart(value, ancestors)}`);
+/** @param {object} value @param {Set<object>} ancestors */
+function formatCollection(value, ancestors) {
+	/** @param {unknown} part */
+	function inline(part) {
+		return render(part, undefined, ancestors);
 	}
-	if (!entries.length) {
-		return "Map(0) {}";
+	if (value instanceof Map) {
+		return `Map(${value.size}) ${braces(Array.from(value, ([key, item]) => `${inline(key)} => ${inline(item)}`))}`;
 	}
-	return `Map(${map.size}) { ${entries.join(", ")} }`;
+	if (value instanceof Set) {
+		return `Set(${value.size}) ${braces(Array.from(value, inline))}`;
+	}
+	if (value instanceof WeakMap) {
+		return "WeakMap { <entries unknown> }";
+	}
+	if (value instanceof WeakSet) {
+		return "WeakSet { <entries unknown> }";
+	}
+	return undefined;
+}
+
+/** @param {object} value */
+function formatBinary(value) {
+	if (value instanceof ArrayBuffer) {
+		return `ArrayBuffer(${value.byteLength})`;
+	}
+	if (value instanceof DataView) {
+		return `DataView { byteLength: ${value.byteLength}, byteOffset: ${value.byteOffset} }`;
+	}
+	if (ArrayBuffer.isView(value)) {
+		const type = Object.prototype.toString.call(value).replace(/^\[object |\]$/gu, "");
+		const items = Array.from(value, (item) => format(item));
+		return `${type}(${items.length}) [${items.join(", ")}]`;
+	}
+	return undefined;
+}
+
+/** @param {object} value */
+function formatBuiltin(value) {
+	if (value instanceof RegExp) {
+		return value.toString();
+	}
+	if (value instanceof Promise) {
+		return "Promise { <state unknown> }";
+	}
+	if (value instanceof Date) {
+		if (Number.isNaN(value.getTime())) {
+			return "Invalid Date";
+		}
+		return value.toISOString();
+	}
+	return formatBoxed(value) ?? formatBinary(value);
+}
+
+/** @param {object} value */
+function formatBoxed(value) {
+	for (const wrapper of [Boolean, Number, String, BigInt, Symbol]) {
+		if (value instanceof wrapper) {
+			return `${wrapper.name}(${render(wrapper.prototype.valueOf.call(value), undefined, new Set())})`;
+		}
+	}
+	return undefined;
+}
+
+/** @param {object} value @param {Set<object>} ancestors */
+function formatInline(value, ancestors) {
+	const entries = Object.entries(value);
+	const dense = Array.isArray(value) && entries.length === value.length
+		&& entries.every(([key], index) => key === String(index));
+	if (dense) {
+		return `[${entries.map(([, item]) => render(item, undefined, ancestors)).join(", ")}]`;
+	}
+	const fields = braces(entries.map(([key, item]) => `${JSON.stringify(key)}: ${render(item, undefined, ancestors)}`));
+	if (Array.isArray(value)) {
+		return `Array(${value.length}) ${fields}`;
+	}
+	return fields;
+}
+
+/** @param {object} value @param {string | undefined} path @param {Set<object>} ancestors */
+function formatObject(value, path, ancestors) {
+	const builtin = formatCollection(value, ancestors) ?? formatBuiltin(value);
+	if (builtin !== undefined) {
+		return leaf(path, builtin);
+	}
+	if (path === undefined) {
+		return formatInline(value, ancestors);
+	}
+	return formatFields(value, path, ancestors);
 }
 
 /** @param {object} value @param {string} path @param {Set<object>} ancestors */
-function formatObject(value, path, ancestors) {
-	if (value instanceof Map) {
-		return leaf(path, formatMap(value, ancestors));
-	}
+function formatFields(value, path, ancestors) {
 	const array = Array.isArray(value);
 	const entries = Object.entries(value);
 	if (!entries.length) {
@@ -57,11 +134,38 @@ function formatObject(value, path, ancestors) {
 		}
 		return leaf(path, "{}");
 	}
-	return entries.map(([key, item]) => format(item, fieldPath(path, key, array), ancestors)).join("\n");
+	return entries.map(([key, item]) => render(item, fieldPath(path, key, array), ancestors)).join("\n");
 }
 
-/** @param {object} value @param {string} path @param {Set<object>} ancestors */
-function formatBranch(value, path, ancestors) {
+/** @param {unknown} value @param {boolean} inline */
+function formatScalar(value, inline) {
+	const NEGATIVE_ZERO = -0;
+	if (typeof value === "bigint") {
+		return `${value}n`;
+	}
+	if (Object.is(value, NEGATIVE_ZERO)) {
+		return "-0";
+	}
+	const quoteString = inline && typeof value === "string";
+	if (quoteString) {
+		return JSON.stringify(value);
+	}
+	// Only primitives and Error instances use their native string representation.
+	return String(value);
+}
+
+/**
+ * An undefined path renders a collection member inline; an empty path starts a flat listing.
+ * @param {unknown} value
+ * @param {string | undefined} path
+ * @param {Set<object>} ancestors
+ * @returns {string}
+ */
+function render(value, path, ancestors) {
+	const isScalar = value === null || typeof value !== "object" || value instanceof Error;
+	if (isScalar) {
+		return leaf(path, formatScalar(value, path === undefined));
+	}
 	if (ancestors.has(value)) {
 		return leaf(path, "[Circular]");
 	}
@@ -73,25 +177,7 @@ function formatBranch(value, path, ancestors) {
 	return formatted;
 }
 
-/**
- * Called by the QuickJS wrapper before text() can escape nested strings.
- * @param {unknown} value
- * @param {string} path
- * @param {Set<object>} ancestors
- * @returns {string}
- */
-function format(value, path = "", ancestors = new Set()) {
-	const isScalar = value === null || typeof value !== "object" || value instanceof Error;
-	if (isScalar) {
-		// Only primitives and Error instances use their native string representation.
-		// eslint-disable-next-line typescript/no-base-to-string
-		return leaf(path, String(value));
-	}
-	if (value instanceof Date) {
-		if (Number.isNaN(value.getTime())) {
-			return leaf(path, "Invalid Date");
-		}
-		return leaf(path, value.toISOString());
-	}
-	return formatBranch(value, path, ancestors);
+/** @param {unknown} value */
+function format(value) {
+	return render(value, "", new Set());
 }

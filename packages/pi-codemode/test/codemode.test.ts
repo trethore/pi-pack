@@ -106,6 +106,35 @@ test.each([
 		expected: 'Map(2) { "retries" => 3, "mode" => "auto" }',
 	},
 	{
+		name: "inline collection entries retain their type and boundaries",
+		code: 'return new Map([[{ id: 1 }, new Set([123n, ["two", -0]])]]);',
+		expected: 'Map(1) { { "id": 1 } => Set(2) { 123n, ["two", -0] } }',
+	},
+	{
+		name: "empty and cyclic sets",
+		code: "const set = new Set(); set.add(set); return { set, empty: new Set() };",
+		expected: "set: Set(1) { [Circular] }\nempty: Set(0) {}",
+	},
+	{
+		name: "opaque built-ins without implying they are empty",
+		code: "return { keys: new WeakMap(), members: new WeakSet(), task: Promise.resolve(1) };",
+		expected:
+			"keys: WeakMap { <entries unknown> }\nmembers: WeakSet { <entries unknown> }\ntask: Promise { <state unknown> }",
+	},
+	{
+		name: "typed arrays, buffers and views",
+		code:
+			"const bytes = new Uint8Array([1, 2, 3]); return { bytes, buffer: bytes.buffer, view: new DataView(bytes.buffer, 1) };",
+		expected: "bytes: Uint8Array(3) [1, 2, 3]\nbuffer: ArrayBuffer(3)\nview: DataView { byteLength: 2, byteOffset: 1 }",
+	},
+	{
+		name: "regular expressions and boxed primitives",
+		code:
+			'return { re: /test/gi, flag: Object(false), count: Object(-0), label: Object("abc"), big: Object(2n), sym: Object(Symbol("id")) };',
+		expected:
+			're: /test/gi\nflag: Boolean(false)\ncount: Number(-0)\nlabel: String("abc")\nbig: BigInt(2n)\nsym: Symbol(Symbol(id))',
+	},
+	{
 		name: "a cycle back to a containing object",
 		code: 'const root = { name: "root" }; root.children = [root]; text(root);',
 		expected: "name: root\nchildren[0]: [Circular]",
@@ -140,7 +169,7 @@ test.each(["log", "info", "warn", "error", "debug"])(
 		// Arrange
 		const { run } = Harness.create();
 		const code = Fixtures.consoleFormatting(level);
-		const formatted = 'at: 1970-01-01T00:00:00.000Z\ncounts: Map(1) { "ok" => 2 }\nself: [Circular]';
+		const formatted = 'at: 1970-01-01T00:00:00.000Z\ncounts: Map(1) { "ok" => Set(1) { 2n } }\nself: [Circular]';
 
 		// Act
 		const result = await run(code);
