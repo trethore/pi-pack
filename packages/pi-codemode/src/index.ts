@@ -29,7 +29,7 @@ export default function codemode(pi: ExtensionAPI): void {
 			const duration = row.duration(context);
 			let label = theme.fg("toolTitle", theme.bold(Tools.name));
 			if (code) {
-				label += `\n${highlightCode(code, "javascript").join("\n")}`;
+				label += `\n${highlightCode(code.trimEnd(), "javascript").join("\n")}`;
 			}
 			if (duration !== undefined) {
 				label += theme.fg("muted", ` ${duration}`);

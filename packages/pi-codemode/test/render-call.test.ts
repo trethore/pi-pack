@@ -73,14 +73,14 @@ const QUEUED_MS = 5000;
 const RUN_MS = 90_000;
 const FINAL_MS = 90_123;
 
-function timedCall() {
+function timedCall(code = RETURN_STATEMENT) {
 	initTheme("dark");
 	const { definition } = Harness.create();
 	const ui = new TuiMainScreen(new ProcessTerminal());
 	const call = new ToolExecutionComponent(
 		"codemode",
 		"call",
-		{ code: RETURN_STATEMENT },
+		{ code },
 		{ outputPad: 0 },
 		definition,
 		ui,
@@ -110,6 +110,19 @@ test("starts timing only when execution begins and refreshes without tool output
 	// Assert
 	expect(started).toBe(`codemode\n${RETURN_STATEMENT} 0.0s`);
 	expect(display()).toBe(`codemode\n${RETURN_STATEMENT} 90.0s`);
+});
+
+test("renders the timer beside the last script line despite trailing whitespace", () => {
+	expect.hasAssertions();
+	// Arrange
+	vi.useFakeTimers();
+	const { call, display } = timedCall(`// example\n\n${RETURN_STATEMENT}  \n\n`);
+
+	// Act
+	call.markExecutionStarted();
+
+	// Assert
+	expect(display()).toBe(`codemode\n// example\n\n${RETURN_STATEMENT} 0.0s`);
 });
 
 test.each([false, true])("freezes at the recorded duration on a final result (error: %s)", (isError) => {
