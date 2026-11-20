@@ -4,7 +4,7 @@ Replace Pi's working message with a random whimsical message on each turn.
 
 ## Installation
 
-Requires Pi `1.5.2` or a compatible later release.
+Requires Pi `1.6.0` or a compatible later release.
 
 From the repository root, install pi-whimsical globally:
 
