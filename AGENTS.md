@@ -39,6 +39,10 @@ vitest.config.ts
 - You must model domain lifecycles as explicit state machines.
 - Prefer the companion object pattern for functions associated with a specific type, rather than standalone functions.
 
+## Verification
+
+`npm run check` must pass to validate changes.
+
 ## Commits & Pull Requests
 
 - Follow the Conventional Commits specification for commit messages.
