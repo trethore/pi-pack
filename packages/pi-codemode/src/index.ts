@@ -28,11 +28,11 @@ export default function codemode(pi: ExtensionAPI): void {
 			const row = CallTimer.forRow(context.lastComponent);
 			const duration = row.duration(context);
 			let label = theme.fg("toolTitle", theme.bold(Tools.name));
-			if (code) {
-				label += `\n${highlightCode(code.trimEnd(), "javascript").join("\n")}`;
-			}
 			if (duration !== undefined) {
 				label += theme.fg("muted", ` ${duration}`);
+			}
+			if (code) {
+				label += `\n${highlightCode(code.trimEnd(), "javascript").join("\n")}`;
 			}
 			row.setText(label);
 			return row;

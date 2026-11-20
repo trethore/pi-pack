@@ -3,6 +3,7 @@ import { type Component, Text } from "@earendil-works/pi-tui";
 const NO_PADDING = 0;
 const MS_PER_SECOND = 1000;
 const DECIMAL_PLACES = 1;
+const ZERO_SECONDS = 0;
 
 interface TimingContext {
 	executionStarted: boolean;
@@ -53,11 +54,18 @@ export class CallTimer extends Text {
 			this.clock = { phase: Phase.Running, start: performance.now(), invalidate: context.invalidate };
 		}
 
-		const ms = this.elapsedMs();
+		return CallTimer.formatDuration(this.elapsedMs());
+	}
+
+	private static formatDuration(ms: number | undefined): string | undefined {
 		if (ms === undefined) {
 			return undefined;
 		}
-		return `${(ms / MS_PER_SECOND).toFixed(DECIMAL_PLACES)}s`;
+		const seconds = (ms / MS_PER_SECOND).toFixed(DECIMAL_PLACES);
+		if (Number(seconds) === ZERO_SECONDS) {
+			return undefined;
+		}
+		return `${seconds}s`;
 	}
 
 	override render(width: number): readonly string[] {
