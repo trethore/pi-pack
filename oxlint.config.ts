@@ -40,9 +40,9 @@ const importRules = {
 	"import/prefer-default-export": "off",
 	"import/no-nodejs-modules": "off",
 	"import/consistent-type-specifier-style": ["error", "prefer-top-level-if-only-type-imports"],
-	"no-duplicate-imports": "off",
 
 	"import/no-cycle": "error",
+	"no-duplicate-imports": "off",
 	"import/no-duplicates": ["error", { preferInline: true }],
 
 	"no-restricted-imports": [
