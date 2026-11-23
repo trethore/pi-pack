@@ -2,8 +2,8 @@ import { WhimsicalConfig } from "#src/config";
 import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 
-export default function whimsical(pi: ExtensionAPI): void {
-	const config = WhimsicalConfig.read();
+export default async function whimsical(pi: ExtensionAPI): Promise<void> {
+	const config = await WhimsicalConfig.read();
 	if (!config.enabled) {
 		return;
 	}

@@ -8,6 +8,8 @@ type SettingsState = ValueOf<typeof SettingsState>;
 const COMMAND_ARGUMENT_COUNT = 2;
 
 class OpenAISettingsController {
+	// Controllers in the same process write the same global config file.
+	private static pendingUpdate = Promise.resolve();
 	private state: SettingsState = SettingsState.Disabled;
 	private config: OpenAISettingsConfig;
 
@@ -40,7 +42,7 @@ class OpenAISettingsController {
 			.map((option) => ({ value: `${name} ${option}`, label: option }));
 	}
 
-	command(args: string): string {
+	async command(args: string): Promise<string> {
 		if (args.trim() === "") {
 			return this.describe();
 		}
@@ -50,14 +52,26 @@ class OpenAISettingsController {
 		if (invalidArguments) {
 			throw new Error(`Usage: /${commandName} <${Object.values(SettingName).join("|")}> <value>`);
 		}
-		this.update(name, value);
+		await this.updateInOrder(name, value);
 		return `${name} = ${value} (saved to global config)`;
 	}
 
-	private update(name: string, value: string): void {
+	private async updateInOrder(name: string, value: string): Promise<void> {
+		const previous = OpenAISettingsController.pendingUpdate;
+		const turn = Promise.withResolvers<void>();
+		OpenAISettingsController.pendingUpdate = turn.promise;
+		await previous;
+		try {
+			await this.update(name, value);
+		} finally {
+			turn.resolve();
+		}
+	}
+
+	private async update(name: string, value: string): Promise<void> {
 		const config = OpenAISettingsConfig.update(this.config, name, value);
 		// Persist only this command's value, never unrelated environment overrides.
-		OpenAISettingsConfig.save(name, value);
+		await OpenAISettingsConfig.save(name, value);
 		this.config = config;
 		this.setEnabled(config.enabled);
 	}

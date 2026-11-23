@@ -1,10 +1,12 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
+const execute = promisify(execFile);
 const fixture = { directory: "" };
 const script = fileURLToPath(new URL("../scripts/bundle-types.ts", import.meta.url));
 const files = {
@@ -14,26 +16,24 @@ const files = {
 	"dist/types/options.d.ts": 'import type { Stats } from "node:fs"; export interface Options { stats: Stats; }',
 };
 
-beforeEach(() => {
-	fixture.directory = mkdtempSync(join(tmpdir(), "pi-pack-dts-test-"));
-	mkdirSync(join(fixture.directory, "dist/types"), { recursive: true });
-	for (const [path, source] of Object.entries(files)) {
-		writeFileSync(join(fixture.directory, path), source);
-	}
+beforeEach(async () => {
+	fixture.directory = await mkdtemp(join(tmpdir(), "pi-pack-dts-test-"));
+	await mkdir(join(fixture.directory, "dist/types"), { recursive: true });
+	await Promise.all(Object.entries(files).map(([path, source]) => writeFile(join(fixture.directory, path), source)));
 });
 
-afterEach(() => {
-	rmSync(fixture.directory, { recursive: true, force: true });
+afterEach(async () => {
+	await rm(fixture.directory, { recursive: true, force: true });
 });
 
-test("bundles emitted declarations without source files and preserves external imports", () => {
+test("bundles emitted declarations without source files and preserves external imports", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const output = join(fixture.directory, "dist/index.d.ts");
 
 	// Act
-	execFileSync(process.execPath, [script], { cwd: fixture.directory, stdio: "pipe" });
-	const declaration = readFileSync(output, "utf8");
+	await execute(process.execPath, [script], { cwd: fixture.directory });
+	const declaration = await readFile(output, "utf8");
 
 	// Assert
 	expect(declaration).toContain("interface Options");

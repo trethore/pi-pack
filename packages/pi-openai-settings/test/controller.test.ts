@@ -8,7 +8,7 @@ const verbosityPrefix = `${SettingName.Verbosity} `;
 const webSearchPrefix = `${SettingName.WebSearch} `;
 
 beforeEach(() => {
-	vi.spyOn(OpenAISettingsConfig, "save").mockImplementation(() => {});
+	vi.spyOn(OpenAISettingsConfig, "save").mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -28,13 +28,13 @@ test.each([
 	[SettingName.ServiceTier, "default", { service_tier: "default" }],
 	[SettingName.ServiceTier, "priority", { service_tier: "priority" }],
 	[SettingName.ServiceTier, "ultrafast", { service_tier: "ultrafast" }],
-])("command %s %s overrides startup settings", (name, value, expected) => {
+])("command %s %s overrides startup settings", async (name, value, expected) => {
 	expect.hasAssertions();
 	// Arrange
-	const controller = new OpenAISettingsController(Fixtures.config());
+	const controller = new OpenAISettingsController(await Fixtures.config());
 
 	// Act
-	const message = controller.command(`  ${name}\t${value}  `);
+	const message = await controller.command(`  ${name}\t${value}  `);
 	const payload = controller.apply({}, Fixtures.model);
 
 	// Assert
@@ -44,11 +44,11 @@ test.each([
 
 test.each([SettingName.Verbosity, SettingName.ReasoningSummary, SettingName.WebSearch, SettingName.ServiceTier])(
 	"null restores pass-through behavior for %s",
-	(name) => {
+	async (name) => {
 		expect.hasAssertions();
 		// Arrange
 		const controller = new OpenAISettingsController(
-			Fixtures.config({
+			await Fixtures.config({
 				PI_OPENAI_VERBOSITY: "low",
 				PI_OPENAI_REASONING_SUMMARY: "none",
 				PI_OPENAI_WEB_SEARCH: "true",
@@ -57,45 +57,45 @@ test.each([SettingName.Verbosity, SettingName.ReasoningSummary, SettingName.WebS
 		);
 
 		// Act
-		controller.command(`${name} null`);
+		await controller.command(`${name} null`);
 
 		// Assert
-		expect(controller.command("")).toContain(`${name} = null`);
+		await expect(controller.command("")).resolves.toContain(`${name} = null`);
 	},
 );
 
 test.each(["verbosity low", "reasoningSummary auto", TestCommand.EnableWebSearch, "serviceTier priority"])(
 	"rejects disabled feature command %s",
-	(command) => {
+	async (command) => {
 		expect.hasAssertions();
 		// Arrange
 		const controller = new OpenAISettingsController(OpenAISettingsConfig.defaults());
 
 		// Act
-		function execute(): string {
+		function execute(): Promise<string> {
 			return controller.command(command);
 		}
 
 		// Assert
-		expect(execute).toThrow("command is disabled in the global config");
+		await expect(execute()).rejects.toThrow("command is disabled in the global config");
 		expect(controller.apply({}, Fixtures.model)).toStrictEqual({});
 		expect(OpenAISettingsConfig.save).not.toHaveBeenCalled();
 	},
 );
 
-test("the master switch remains available and preserves values across disable/enable transitions", () => {
+test("the master switch remains available and preserves values across disable/enable transitions", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const controller = new OpenAISettingsController(
-		Fixtures.config({ PI_OPENAI_ENABLED: "false", PI_OPENAI_VERBOSITY: "low" }),
+		await Fixtures.config({ PI_OPENAI_ENABLED: "false", PI_OPENAI_VERBOSITY: "low" }),
 	);
 
 	// Act
 	const disabled = controller.apply({}, Fixtures.model);
-	controller.command(TestCommand.HighVerbosity);
-	controller.command(TestCommand.Enable);
+	await controller.command(TestCommand.HighVerbosity);
+	await controller.command(TestCommand.Enable);
 	const enabled = controller.apply({}, Fixtures.model);
-	controller.command(TestCommand.Disable);
+	await controller.command(TestCommand.Disable);
 
 	// Assert
 	expect(disabled).toBeUndefined();
@@ -103,18 +103,18 @@ test("the master switch remains available and preserves values across disable/en
 	expect(controller.apply({}, Fixtures.model)).toBeUndefined();
 });
 
-test("master switch works when every feature command is disabled", () => {
+test("master switch works when every feature command is disabled", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const controller = new OpenAISettingsController(OpenAISettingsConfig.defaults());
 
 	// Act
-	controller.command(TestCommand.Disable);
-	controller.command(TestCommand.Enable);
+	await controller.command(TestCommand.Disable);
+	await controller.command(TestCommand.Enable);
 
 	// Assert
-	expect(controller.command("")).toContain("enabled = true");
-	expect(controller.command("")).toContain("verbosity = null (command false)");
+	await expect(controller.command("")).resolves.toContain("enabled = true");
+	await expect(controller.command("")).resolves.toContain("verbosity = null (command false)");
 });
 
 test.each([
@@ -127,27 +127,27 @@ test.each([
 	"webSearch 1",
 	"serviceTier auto",
 	"enabled null",
-])("rejects invalid command %s without changing settings", (command) => {
+])("rejects invalid command %s without changing settings", async (command) => {
 	expect.hasAssertions();
 	// Arrange
-	const controller = new OpenAISettingsController(Fixtures.config());
-	const before = controller.command("");
+	const controller = new OpenAISettingsController(await Fixtures.config());
+	const before = await controller.command("");
 
 	// Act
-	function execute(): string {
+	function execute(): Promise<string> {
 		return controller.command(command);
 	}
 
 	// Assert
-	expect(execute).toThrow(/Unknown setting|Usage:|Invalid/u);
-	expect(controller.command("")).toBe(before);
+	await expect(execute()).rejects.toThrow(/Unknown setting|Usage:|Invalid/u);
+	await expect(controller.command("")).resolves.toBe(before);
 	expect(OpenAISettingsConfig.save).not.toHaveBeenCalled();
 });
 
-test("ignores unsupported providers even with settings enabled", () => {
+test("ignores unsupported providers even with settings enabled", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const controller = new OpenAISettingsController(Fixtures.config({ PI_OPENAI_VERBOSITY: "low" }));
+	const controller = new OpenAISettingsController(await Fixtures.config({ PI_OPENAI_VERBOSITY: "low" }));
 
 	// Act
 	const result = controller.apply({}, { provider: "custom", api: "openai-responses" });
@@ -179,18 +179,18 @@ test.each([
 	["verbosity invalid", []],
 	["verbosity low extra", []],
 	["verbosity low ", []],
-])("completes argument prefix %j", (prefix, expected) => {
+])("completes argument prefix %j", async (prefix, expected) => {
 	expect.hasAssertions();
 	// Arrange
-	const controller = new OpenAISettingsController(Fixtures.config());
-	const before = controller.command("");
+	const controller = new OpenAISettingsController(await Fixtures.config());
+	const before = await controller.command("");
 
 	// Act
 	const items = controller.complete(prefix);
 
 	// Assert
 	expect(items.map((item) => item.value)).toStrictEqual(expected);
-	expect(controller.command("")).toBe(before);
+	await expect(controller.command("")).resolves.toBe(before);
 	expect(OpenAISettingsConfig.save).not.toHaveBeenCalled();
 });
 

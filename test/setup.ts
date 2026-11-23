@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll } from "vitest";
 
-const testHome = mkdtempSync(path.join(tmpdir(), "pi-pack-test-home-"));
+const testHome = await mkdtemp(path.join(tmpdir(), "pi-pack-test-home-"));
 const environment = {
 	HOME: testHome,
 	USERPROFILE: testHome,
@@ -19,7 +19,7 @@ const originalEnvironment = new Map(
 );
 
 // Redirect home-based configuration without changing the working directory.
-afterAll(() => {
+afterAll(async () => {
 	for (const [name, value] of originalEnvironment) {
 		if (value === undefined) {
 			Reflect.deleteProperty(process.env, name);
@@ -28,7 +28,7 @@ afterAll(() => {
 		}
 	}
 
-	rmSync(testHome, { recursive: true, force: true });
+	await rm(testHome, { recursive: true, force: true });
 });
 
 // Prepare platform-specific directories for libraries that use native paths.
@@ -38,9 +38,7 @@ const directories = [
 	"Library/Application Support",
 	"Library/Caches",
 ];
-for (const directory of directories) {
-	mkdirSync(path.resolve(testHome, directory), { recursive: true });
-}
+await Promise.all(directories.map((directory) => mkdir(path.resolve(testHome, directory), { recursive: true })));
 
 for (const [name, directory] of Object.entries(environment)) {
 	process.env[name] = directory;

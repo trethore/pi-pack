@@ -11,7 +11,7 @@ const MIDDLE_RANDOM = 0.5;
 const LAST_RANDOM = 0.999999;
 
 beforeEach(() => {
-	vi.mocked(WhimsicalConfig.read).mockReturnValue({ enabled: true, messages: [...messages] });
+	vi.mocked(WhimsicalConfig.read).mockResolvedValue({ enabled: true, messages: [...messages] });
 });
 
 afterEach(() => {
@@ -19,12 +19,12 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-test("registers one turn_start handler without changing the UI at load time", () => {
+test("registers one turn_start handler without changing the UI at load time", async () => {
 	expect.hasAssertions();
 	// Arrange: config is enabled by default.
 
 	// Act
-	Harness.load();
+	await Harness.load();
 
 	// Assert
 	expect(on).toHaveBeenCalledExactlyOnceWith(Events.TurnStart, expect.any(Function));
@@ -38,7 +38,7 @@ test.each([FIRST_RANDOM, MIDDLE_RANDOM, LAST_RANDOM])(
 		expect.hasAssertions();
 		// Arrange
 		vi.spyOn(Math, "random").mockReturnValue(random);
-		Harness.load();
+		await Harness.load();
 
 		// Act
 		await Harness.turn();
@@ -51,9 +51,9 @@ test.each([FIRST_RANDOM, MIDDLE_RANDOM, LAST_RANDOM])(
 test("selects a fresh custom message on every turn without rereading config", async () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.mocked(WhimsicalConfig.read).mockReturnValue({ enabled: true, messages: ["First...", "Last..."] });
+	vi.mocked(WhimsicalConfig.read).mockResolvedValue({ enabled: true, messages: ["First...", "Last..."] });
 	vi.spyOn(Math, "random").mockReturnValueOnce(FIRST_RANDOM).mockReturnValueOnce(LAST_RANDOM);
-	Harness.load();
+	await Harness.load();
 
 	// Act
 	await Harness.turn();
@@ -67,8 +67,8 @@ test("selects a fresh custom message on every turn without rereading config", as
 test("supports a single custom message on every turn", async () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.mocked(WhimsicalConfig.read).mockReturnValue({ enabled: true, messages: ["Only..."] });
-	Harness.load();
+	vi.mocked(WhimsicalConfig.read).mockResolvedValue({ enabled: true, messages: ["Only..."] });
+	await Harness.load();
 
 	// Act
 	await Harness.turn();
@@ -78,13 +78,13 @@ test("supports a single custom message on every turn", async () => {
 	expect(setWorkingMessage.mock.calls).toStrictEqual([["Only..."], ["Only..."]]);
 });
 
-test("does not register a handler when disabled", () => {
+test("does not register a handler when disabled", async () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.mocked(WhimsicalConfig.read).mockReturnValue({ enabled: false, messages });
+	vi.mocked(WhimsicalConfig.read).mockResolvedValue({ enabled: false, messages });
 
 	// Act
-	Harness.load();
+	await Harness.load();
 
 	// Assert
 	expect(on).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ test("does not change the working message without UI support", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const random = vi.spyOn(Math, "random");
-	Harness.load();
+	await Harness.load();
 
 	// Act
 	await Harness.turn(false);
@@ -105,7 +105,7 @@ test("does not change the working message without UI support", async () => {
 	expect(random).not.toHaveBeenCalled();
 });
 
-test("propagates config errors without registering a handler", () => {
+test("propagates config errors without registering a handler", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const error = new Error("Invalid whimsical config");
@@ -117,6 +117,6 @@ test("propagates config errors without registering a handler", () => {
 	const { load } = Harness;
 
 	// Assert
-	expect(load).toThrow(error);
+	await expect(load()).rejects.toThrow(error);
 	expect(on).not.toHaveBeenCalled();
 });

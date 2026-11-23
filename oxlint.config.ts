@@ -93,7 +93,7 @@ const typeSafetyRules = {
 
 export default defineConfig({
 	jsPlugins: [{ name: "abos", specifier: "@a-box-of-scraps/ts-rules" }],
-	plugins: ["import", "oxc", "typescript", "unicorn", "vitest"],
+	plugins: ["import", "node", "oxc", "promise", "typescript", "unicorn", "vitest"],
 	categories: {
 		correctness: "error",
 		suspicious: "error",

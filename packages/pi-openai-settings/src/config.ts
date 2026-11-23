@@ -131,10 +131,10 @@ const OpenAISettingsConfig = {
 	defaults(): OpenAISettingsConfig {
 		return schema.parse({});
 	},
-	read(this: void, env: NodeJS.ProcessEnv = process.env): OpenAISettingsConfig {
+	async read(this: void, env: NodeJS.ProcessEnv = process.env): Promise<OpenAISettingsConfig> {
 		let config = OpenAISettingsConfig.defaults();
 		if (Environment.read(env, EnvironmentVariable.Config, z.boolean()) ?? true) {
-			config = readConfig(configFilename, { scope: ConfigScope.Global }, schema) ?? config;
+			config = await readConfig(configFilename, { scope: ConfigScope.Global }, schema) ?? config;
 		}
 		config.enabled = Environment.read(env, EnvironmentVariable.Enabled, z.boolean()) ?? config.enabled;
 		const { shape } = schema;
@@ -157,8 +157,8 @@ const OpenAISettingsConfig = {
 		);
 		return config;
 	},
-	save(this: void, name: string, raw: string): void {
-		SettingsFile.save(name, SettingValue.parse(raw));
+	save(this: void, name: string, raw: string): Promise<void> {
+		return SettingsFile.save(name, SettingValue.parse(raw));
 	},
 	update(config: OpenAISettingsConfig, name: string, raw: string): OpenAISettingsConfig {
 		if (name === SettingName.Enabled) {

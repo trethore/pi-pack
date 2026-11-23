@@ -6,15 +6,15 @@ import { Events } from "@pi-pack/events";
 
 const NotificationLevel = { Info: "info", Error: "error" } as const;
 
-export default function openAISettings(pi: ExtensionAPI): void {
-	const controller = new OpenAISettingsController(OpenAISettingsConfig.read());
+export default async function openAISettings(pi: ExtensionAPI): Promise<void> {
+	const controller = new OpenAISettingsController(await OpenAISettingsConfig.read());
 	pi.on(Events.BeforeProviderRequest, (event, ctx) => controller.apply(event.payload, ctx.model));
 	pi.registerCommand(commandName, {
 		description: "Inspect or change OpenAI Responses settings and save them to the global config",
 		getArgumentCompletions: (prefix) => controller.complete(prefix),
 		async handler(args, ctx) {
 			try {
-				ctx.ui.notify(controller.command(args), NotificationLevel.Info);
+				ctx.ui.notify(await controller.command(args), NotificationLevel.Info);
 			} catch (error) {
 				ctx.ui.notify(String(error), NotificationLevel.Error);
 			}

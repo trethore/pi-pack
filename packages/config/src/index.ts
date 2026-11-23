@@ -1,7 +1,7 @@
 import { type ValueOf } from "@a-box-of-scraps/ts-utils";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser";
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 
@@ -48,9 +48,9 @@ const ConfigFile = {
 		}
 	},
 
-	read(path: string): string | undefined {
+	async read(path: string): Promise<string | undefined> {
 		try {
-			return readFileSync(path, "utf8");
+			return await readFile(path, "utf8");
 		} catch (error) {
 			const fileNotFound = error instanceof Error && "code" in error && error.code === FILE_NOT_FOUND_CODE;
 			if (fileNotFound) {
@@ -77,14 +77,18 @@ const ConfigFile = {
 };
 
 /** Read one optional JSONC file. The caller owns the schema, project trust, and merging. */
-function readConfig<Output>(filename: string, location: ConfigLocation, schema: z.ZodType<Output>): Output | undefined {
+async function readConfig<Output>(
+	filename: string,
+	location: ConfigLocation,
+	schema: z.ZodType<Output>,
+): Promise<Output | undefined> {
 	ConfigFile.validateFilename(filename);
 	const directory = ConfigLocation.directory(location);
 	if (directory === undefined) {
 		return undefined;
 	}
 	const path = join(directory, filename);
-	const source = ConfigFile.read(path);
+	const source = await ConfigFile.read(path);
 	if (source === undefined) {
 		return undefined;
 	}

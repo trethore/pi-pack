@@ -4,7 +4,7 @@ import { MetricRegistry } from "#src/metrics";
 import { Fixtures } from "#test/fixtures";
 import { afterEach, expect, test, vi } from "vitest";
 
-const { format } = RunMetricsConfig.read();
+const { format } = await RunMetricsConfig.read();
 const INITIAL_TIME = 0;
 const FIRST_RESPONSE_END = 12_000;
 const RUN_END = 66_000;

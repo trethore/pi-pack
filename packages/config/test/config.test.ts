@@ -1,13 +1,13 @@
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { type ConfigLocation, ConfigScope, readConfig } from "@pi-pack/config";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, expectTypeOf, test, vi } from "vitest";
 import { z } from "zod";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
-vi.mock(import("node:fs"), { spy: true });
+vi.mock(import("node:fs/promises"), { spy: true });
 
 const FILENAME = "settings.jsonc";
 const schema = z.object({ enabled: z.boolean() });
@@ -19,63 +19,63 @@ const fixture: { root: string; globalDirectory: string; projectDirectory: string
 	projectLocation: globalLocation,
 };
 
-beforeEach(() => {
-	fixture.root = mkdtempSync(join(tmpdir(), "pi-pack-config-"));
+beforeEach(async () => {
+	fixture.root = await mkdtemp(join(tmpdir(), "pi-pack-config-"));
 	fixture.globalDirectory = join(fixture.root, "agent");
 	fixture.projectDirectory = join(fixture.root, "project", ".pi");
-	mkdirSync(fixture.globalDirectory, { recursive: true });
-	mkdirSync(fixture.projectDirectory, { recursive: true });
+	await mkdir(fixture.globalDirectory, { recursive: true });
+	await mkdir(fixture.projectDirectory, { recursive: true });
 	fixture.projectLocation = { scope: ConfigScope.Project, projectDir: join(fixture.root, "project"), trusted: true };
 	vi.mocked(getAgentDir).mockReturnValue(fixture.globalDirectory);
 });
 
-afterEach(() => {
+afterEach(async () => {
 	vi.resetAllMocks();
-	rmSync(fixture.root, { recursive: true, force: true });
+	await rm(fixture.root, { recursive: true, force: true });
 });
 
-test("reads JSONC with comments and trailing commas from the global agent directory", () => {
+test("reads JSONC with comments and trailing commas from the global agent directory", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, FILENAME), '{ /* comment */ "enabled": true, // comment\n }');
+	await writeFile(join(fixture.globalDirectory, FILENAME), '{ /* comment */ "enabled": true, // comment\n }');
 
 	// Act
-	const config = readConfig(FILENAME, globalLocation, schema);
+	const config = await readConfig(FILENAME, globalLocation, schema);
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true });
 	expect(getAgentDir).toHaveBeenCalledExactlyOnceWith();
 });
 
-test("reads only the trusted project's .pi directory without merging global settings", () => {
+test("reads only the trusted project's .pi directory without merging global settings", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, FILENAME), '{"enabled": false, "globalOnly": true}');
-	writeFileSync(join(fixture.projectDirectory, FILENAME), '{"enabled": true}');
+	await writeFile(join(fixture.globalDirectory, FILENAME), '{"enabled": false, "globalOnly": true}');
+	await writeFile(join(fixture.projectDirectory, FILENAME), '{"enabled": true}');
 	const mergeSchema = schema.extend({ globalOnly: z.boolean().optional() });
 
 	// Act
-	const config = readConfig(FILENAME, fixture.projectLocation, mergeSchema);
+	const config = await readConfig(FILENAME, fixture.projectLocation, mergeSchema);
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true });
 	expect(getAgentDir).not.toHaveBeenCalled();
 });
 
-test("does not fall back to global config when the project config is missing", () => {
+test("does not fall back to global config when the project config is missing", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, FILENAME), '{"enabled": true}');
+	await writeFile(join(fixture.globalDirectory, FILENAME), '{"enabled": true}');
 
 	// Act
-	const config = readConfig(FILENAME, fixture.projectLocation, schema);
+	const config = await readConfig(FILENAME, fixture.projectLocation, schema);
 
 	// Assert
 	expect(config).toBeUndefined();
 	expect(getAgentDir).not.toHaveBeenCalled();
 });
 
-test("does not access files or validate schemas for untrusted projects", () => {
+test("does not access files or validate schemas for untrusted projects", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const location = { scope: ConfigScope.Project, projectDir: fixture.root, trusted: false };
@@ -83,16 +83,16 @@ test("does not access files or validate schemas for untrusted projects", () => {
 	const untrustedSchema = z.unknown().transform(validate);
 
 	// Act
-	const config = readConfig(FILENAME, location, untrustedSchema);
+	const config = await readConfig(FILENAME, location, untrustedSchema);
 
 	// Assert
 	expect(config).toBeUndefined();
-	expect(readFileSync).not.toHaveBeenCalled();
+	expect(readFile).not.toHaveBeenCalled();
 	expect(getAgentDir).not.toHaveBeenCalled();
 	expect(validate).not.toHaveBeenCalled();
 });
 
-test.each([ConfigScope.Global, ConfigScope.Project])("returns undefined for a missing %s file", (scope) => {
+test.each([ConfigScope.Global, ConfigScope.Project])("returns undefined for a missing %s file", async (scope) => {
 	expect.hasAssertions();
 	// Arrange
 	let location: ConfigLocation = globalLocation;
@@ -102,19 +102,19 @@ test.each([ConfigScope.Global, ConfigScope.Project])("returns undefined for a mi
 	const defaultSchema = z.unknown().default({ enabled: true });
 
 	// Act
-	const config = readConfig(FILENAME, location, defaultSchema);
+	const config = await readConfig(FILENAME, location, defaultSchema);
 
 	// Assert
 	expect(config).toBeUndefined();
 });
 
-test("returns undefined when the project's .pi directory is missing", () => {
+test("returns undefined when the project's .pi directory is missing", async () => {
 	expect.hasAssertions();
 	// Arrange
-	rmSync(fixture.projectDirectory, { recursive: true });
+	await rm(fixture.projectDirectory, { recursive: true });
 
 	// Act
-	const config = readConfig(FILENAME, fixture.projectLocation, schema);
+	const config = await readConfig(FILENAME, fixture.projectLocation, schema);
 
 	// Assert
 	expect(config).toBeUndefined();
@@ -131,7 +131,7 @@ test.each([
 	"a\0b",
 ])(
 	"rejects invalid filename %j before accessing files, even for untrusted projects",
-	(invalidFilename) => {
+	async (invalidFilename) => {
 		expect.hasAssertions();
 		// Arrange
 		const location = { scope: ConfigScope.Project, projectDir: fixture.root, trusted: false };
@@ -142,19 +142,19 @@ test.each([
 		}
 
 		// Assert
-		expect(read).toThrow("Config filename must be a filename, not a path.");
-		expect(readFileSync).not.toHaveBeenCalled();
+		await expect(read()).rejects.toThrow("Config filename must be a filename, not a path.");
+		expect(readFile).not.toHaveBeenCalled();
 		expect(getAgentDir).not.toHaveBeenCalled();
 	},
 );
 
 test.each(["", "// comment only", '{"enabled":}', '{"enabled": true} garbage', '{"enabled": true} {}'])(
 	"rejects malformed JSONC %j with its path and parse error offset",
-	(source) => {
+	async (source) => {
 		expect.hasAssertions();
 		// Arrange
 		const path = join(fixture.globalDirectory, FILENAME);
-		writeFileSync(path, source);
+		await writeFile(path, source);
 
 		// Act
 		function read() {
@@ -162,16 +162,16 @@ test.each(["", "// comment only", '{"enabled":}', '{"enabled": true} garbage', '
 		}
 
 		// Assert
-		expect(read).toThrow(`Invalid JSONC in ${path}:`);
-		expect(read).toThrow(/at offset \d+\./u);
+		await expect(read()).rejects.toThrow(`Invalid JSONC in ${path}:`);
+		await expect(read()).rejects.toThrow(/at offset \d+\./u);
 	},
 );
 
-test("includes the file path, field details, and original Zod error on validation failure", () => {
+test("includes the file path, field details, and original Zod error on validation failure", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const path = join(fixture.globalDirectory, FILENAME);
-	writeFileSync(path, '{"enabled": "yes"}');
+	await writeFile(path, '{"enabled": "yes"}');
 
 	// Act
 	function read() {
@@ -179,35 +179,35 @@ test("includes the file path, field details, and original Zod error on validatio
 	}
 
 	// Assert
-	expect(read).toThrow(`Invalid config ${path}:`);
-	expect(read).toThrow("enabled");
-	expect(read).toThrow(expect.objectContaining({ cause: expect.any(z.ZodError) as unknown }));
+	await expect(read()).rejects.toThrow(`Invalid config ${path}:`);
+	await expect(read()).rejects.toThrow("enabled");
+	await expect(read()).rejects.toThrow(expect.objectContaining({ cause: expect.any(z.ZodError) as unknown }));
 });
 
-test("returns schema output including defaults and transforms with the inferred output type", () => {
+test("returns schema output including defaults and transforms with the inferred output type", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, FILENAME), '{"name": "  example  "}');
+	await writeFile(join(fixture.globalDirectory, FILENAME), '{"name": "  example  "}');
 	const outputSchema = z.object({
 		name: z.string().transform((name) => name.trim()),
 		enabled: z.boolean().default(true),
 	});
 
 	// Act
-	const config = readConfig(FILENAME, globalLocation, outputSchema);
+	const config = await readConfig(FILENAME, globalLocation, outputSchema);
 
 	// Assert
 	expect(config).toStrictEqual({ name: "example", enabled: true });
 	expectTypeOf(config).toEqualTypeOf<{ name: string; enabled: boolean } | undefined>();
 });
 
-test.each(["null", "false", "0", '""', "[]"])("lets the caller's schema accept JSON value %s", (source) => {
+test.each(["null", "false", "0", '""', "[]"])("lets the caller's schema accept JSON value %s", async (source) => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(join(fixture.globalDirectory, FILENAME), source);
+	await writeFile(join(fixture.globalDirectory, FILENAME), source);
 
 	// Act
-	const config = readConfig(FILENAME, globalLocation, z.unknown());
+	const config = await readConfig(FILENAME, globalLocation, z.unknown());
 
 	// Assert
 	expect(config).toStrictEqual(JSON.parse(source));
@@ -215,10 +215,10 @@ test.each(["null", "false", "0", '""', "[]"])("lets the caller's schema accept J
 
 test.each([Object.assign(new Error("Permission denied"), { code: "EACCES" }), new Error("Read failed"), "failure"])(
 	"wraps non-ENOENT read failures with the path and original cause: %j",
-	(cause) => {
+	async (cause) => {
 		expect.hasAssertions();
 		// Arrange
-		vi.mocked(readFileSync).mockImplementationOnce(() => {
+		vi.mocked(readFile).mockImplementationOnce(() => {
 			throw cause;
 		});
 
@@ -228,7 +228,7 @@ test.each([Object.assign(new Error("Permission denied"), { code: "EACCES" }), ne
 		}
 
 		// Assert
-		expect(read).toThrow(expect.objectContaining({
+		await expect(read()).rejects.toThrow(expect.objectContaining({
 			message: `Could not read config ${join(fixture.globalDirectory, FILENAME)}.`,
 			cause,
 		}));

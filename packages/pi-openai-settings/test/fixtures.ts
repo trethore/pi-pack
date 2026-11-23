@@ -8,8 +8,8 @@ const TestCommand = {
 } as const;
 
 const Fixtures = {
-	config(env: NodeJS.ProcessEnv = {}): OpenAISettingsConfig {
-		const config = OpenAISettingsConfig.read({ ...env, PI_OPENAI_CONFIG: "false" });
+	async config(env: NodeJS.ProcessEnv = {}): Promise<OpenAISettingsConfig> {
+		const config = await OpenAISettingsConfig.read({ ...env, PI_OPENAI_CONFIG: "false" });
 		for (const feature of Object.values(config)) {
 			if (typeof feature !== "boolean") {
 				feature.command = true;

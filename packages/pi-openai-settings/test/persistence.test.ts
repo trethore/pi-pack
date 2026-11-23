@@ -5,29 +5,29 @@ import { OpenAISettingsController } from "#src/controller";
 import { Fixtures, TestCommand } from "#test/fixtures";
 import { Harness } from "#test/harness";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
-vi.mock(import("node:fs"), async (importOriginal) => {
+vi.mock(import("node:fs/promises"), async (importOriginal) => {
 	const original = await importOriginal();
-	return { ...original, renameSync: vi.fn<typeof renameSync>(original.renameSync) };
+	return { ...original, rename: vi.fn<typeof rename>(original.rename) };
 });
 
 const fixture = {
 	root: "",
 	directory: "",
 	path: "",
-	write(source: string): void {
-		mkdirSync(fixture.directory, { recursive: true });
-		writeFileSync(fixture.path, source);
+	async write(source: string): Promise<void> {
+		await mkdir(fixture.directory, { recursive: true });
+		await writeFile(fixture.path, source);
 	},
 };
 
-beforeEach(() => {
-	fixture.root = mkdtempSync(join(tmpdir(), "pi-openai-persistence-"));
+beforeEach(async () => {
+	fixture.root = await mkdtemp(join(tmpdir(), "pi-openai-persistence-"));
 	fixture.directory = join(fixture.root, "agent");
 	fixture.path = join(fixture.directory, configFilename);
 	vi.mocked(getAgentDir).mockReturnValue(fixture.directory);
@@ -36,8 +36,8 @@ beforeEach(() => {
 	}
 });
 
-afterEach(() => {
-	rmSync(fixture.root, { recursive: true, force: true });
+afterEach(async () => {
+	await rm(fixture.root, { recursive: true, force: true });
 	vi.resetAllMocks();
 	vi.unstubAllEnvs();
 });
@@ -48,59 +48,64 @@ test.each([
 	[TestCommand.EnableWebSearch, "webSearch", { value: true }],
 	["serviceTier priority", "serviceTier", { value: "priority" }],
 	[TestCommand.Disable, "enabled", false],
-])("persists %s while creating a missing global directory and config", (command, name, expected) => {
+])("persists %s while creating a missing global directory and config", async (command, name, expected) => {
 	expect.hasAssertions();
 	// Arrange
-	const controller = new OpenAISettingsController(Fixtures.config());
+	const controller = new OpenAISettingsController(await Fixtures.config());
 
 	// Act
-	const message = controller.command(command);
-	const saved: unknown = JSON.parse(readFileSync(fixture.path, "utf8"));
+	const message = await controller.command(command);
+	const saved: unknown = JSON.parse(await readFile(fixture.path, "utf8"));
 
 	// Assert
 	expect(saved).toStrictEqual({ [name]: expected });
 	expect(message).toContain("saved to global config");
-	expect(readdirSync(fixture.directory)).toStrictEqual([configFilename]);
+	await expect(readdir(fixture.directory)).resolves.toStrictEqual([configFilename]);
 });
 
-test("preserves comments, permissions, unknown fields, and unrelated file values", () => {
+test("preserves comments, permissions, unknown fields, and unrelated file values", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const original =
 		'{\n\t// keep this comment\n\t"verbosity": { "value": "low", "command": true },\n\t"serviceTier": { "value": "default" },\n\t"custom": { "keep": true },\n}\n';
-	fixture.write(original);
-	const controller = new OpenAISettingsController(OpenAISettingsConfig.read({ PI_OPENAI_SERVICE_TIER: "priority" }));
+	await fixture.write(original);
+	const controller = new OpenAISettingsController(
+		await OpenAISettingsConfig.read({ PI_OPENAI_SERVICE_TIER: "priority" }),
+	);
 
 	// Act
-	controller.command(TestCommand.HighVerbosity);
+	await controller.command(TestCommand.HighVerbosity);
 
 	// Assert
-	expect(readFileSync(fixture.path, "utf8")).toBe(original.replace('"low"', '"high"'));
+	await expect(readFile(fixture.path, "utf8")).resolves.toBe(original.replace('"low"', '"high"'));
 	expect(controller.apply({}, Fixtures.model)).toStrictEqual({ text: { verbosity: "high" }, service_tier: "priority" });
 });
 
-test.each(["verbosity", "reasoningSummary", "webSearch", "serviceTier"])("persists explicit null for %s", (name) => {
-	expect.hasAssertions();
-	// Arrange
-	fixture.write(readFileSync(new URL("../pi-openai-settings.example.jsonc", import.meta.url), "utf8"));
-	const controller = new OpenAISettingsController(OpenAISettingsConfig.read({}));
+test.each(["verbosity", "reasoningSummary", "webSearch", "serviceTier"])(
+	"persists explicit null for %s",
+	async (name) => {
+		expect.hasAssertions();
+		// Arrange
+		await fixture.write(await readFile(new URL("../pi-openai-settings.example.jsonc", import.meta.url), "utf8"));
+		const controller = new OpenAISettingsController(await OpenAISettingsConfig.read({}));
 
-	// Act
-	controller.command(`${name} null`);
+		// Act
+		await controller.command(`${name} null`);
 
-	// Assert
-	expect(OpenAISettingsConfig.read({})).toMatchObject({ [name]: { value: null, command: true } });
-});
+		// Assert
+		await expect(OpenAISettingsConfig.read({})).resolves.toMatchObject({ [name]: { value: null, command: true } });
+	},
+);
 
 test("commands update requests immediately and survive extension reload", async () => {
 	expect.hasAssertions();
 	// Arrange
-	fixture.write('{"verbosity": {"command": true}}');
-	const harness = Harness.create();
+	await fixture.write('{"verbosity": {"command": true}}');
+	const harness = await Harness.create();
 
 	// Act
 	await harness.command(TestCommand.HighVerbosity);
-	const reloaded = Harness.create();
+	const reloaded = await Harness.create();
 
 	// Assert
 	await expect(harness.request({})).resolves.toStrictEqual({ text: { verbosity: "high" } });
@@ -108,80 +113,86 @@ test("commands update requests immediately and survive extension reload", async 
 	expect(harness.notify).toHaveBeenCalledWith("verbosity = high (saved to global config)", "info");
 });
 
-test("persists commands even when global config reading is disabled", () => {
+test("persists commands even when global config reading is disabled", async () => {
 	expect.hasAssertions();
 	// Arrange
-	fixture.write('{"verbosity": {"value": "low", "command": true}}');
-	const controller = new OpenAISettingsController(OpenAISettingsConfig.read({ PI_OPENAI_CONFIG: "false" }));
+	await fixture.write('{"verbosity": {"value": "low", "command": true}}');
+	const controller = new OpenAISettingsController(await OpenAISettingsConfig.read({ PI_OPENAI_CONFIG: "false" }));
 
 	// Act
-	controller.command(TestCommand.Disable);
+	await controller.command(TestCommand.Disable);
 
 	// Assert
 	expect(controller.apply({}, Fixtures.model)).toBeUndefined();
-	expect(OpenAISettingsConfig.read({})).toMatchObject({ enabled: false, verbosity: { value: "low", command: true } });
+	await expect(OpenAISettingsConfig.read({})).resolves.toMatchObject({
+		enabled: false,
+		verbosity: { value: "low", command: true },
+	});
 });
 
-test("environment overrides persisted values only on reload", () => {
+test("environment overrides persisted values only on reload", async () => {
 	expect.hasAssertions();
 	// Arrange
 	const env = { PI_OPENAI_ENABLED: "false" };
-	const controller = new OpenAISettingsController(OpenAISettingsConfig.read(env));
+	const controller = new OpenAISettingsController(await OpenAISettingsConfig.read(env));
 
 	// Act
-	controller.command(TestCommand.Enable);
-	const reloaded = new OpenAISettingsController(OpenAISettingsConfig.read(env));
+	await controller.command(TestCommand.Enable);
+	const reloaded = new OpenAISettingsController(await OpenAISettingsConfig.read(env));
 
 	// Assert
 	expect(controller.apply({}, Fixtures.model)).toStrictEqual({});
-	expect(OpenAISettingsConfig.read({})).toMatchObject({ enabled: true });
+	await expect(OpenAISettingsConfig.read({})).resolves.toMatchObject({ enabled: true });
 	expect(reloaded.apply({}, Fixtures.model)).toBeUndefined();
 });
 
-test("edits the latest file without overwriting unrelated external changes", () => {
+test("edits the latest file without overwriting unrelated external changes", async () => {
 	expect.hasAssertions();
 	// Arrange
-	fixture.write('{"verbosity": {"command": true}}');
-	const controller = new OpenAISettingsController(OpenAISettingsConfig.read({}));
-	fixture.write('{"verbosity": {"command": true}, "custom": 42}');
+	await fixture.write('{"verbosity": {"command": true}}');
+	const controller = new OpenAISettingsController(await OpenAISettingsConfig.read({}));
+	await fixture.write('{"verbosity": {"command": true}, "custom": 42}');
 
 	// Act
-	controller.command("verbosity low");
+	await controller.command("verbosity low");
 
 	// Assert
-	expect(readFileSync(fixture.path, "utf8")).toContain('"custom": 42');
+	await expect(readFile(fixture.path, "utf8")).resolves.toContain('"custom": 42');
 });
 
-test.each(['{"enabled":', "null", "[]", '"text"', "// empty"])("refuses to overwrite invalid config %s", (source) => {
+test.each(['{"enabled":', "null", "[]", '"text"', "// empty"])(
+	"refuses to overwrite invalid config %s",
+	async (source) => {
+		expect.hasAssertions();
+		// Arrange
+		await fixture.write(source);
+		const controller = new OpenAISettingsController(await Fixtures.config());
+
+		// Act
+		function command(): Promise<string> {
+			return controller.command(TestCommand.Disable);
+		}
+
+		// Assert
+		await expect(command()).rejects.toThrow("valid JSONC object");
+		await expect(readFile(fixture.path, "utf8")).resolves.toBe(source);
+		expect(controller.apply({}, Fixtures.model)).toStrictEqual({});
+	},
+);
+
+test("reports read failures without changing runtime settings", async () => {
 	expect.hasAssertions();
 	// Arrange
-	fixture.write(source);
-	const controller = new OpenAISettingsController(Fixtures.config());
+	await mkdir(fixture.path, { recursive: true });
+	const controller = new OpenAISettingsController(await Fixtures.config());
 
 	// Act
-	function command(): string {
+	function command(): Promise<string> {
 		return controller.command(TestCommand.Disable);
 	}
 
 	// Assert
-	expect(command).toThrow("valid JSONC object");
-	expect(readFileSync(fixture.path, "utf8")).toBe(source);
-	expect(controller.apply({}, Fixtures.model)).toStrictEqual({});
-});
-
-test("reports read failures without changing runtime settings", () => {
-	expect.hasAssertions();
-	// Arrange
-	mkdirSync(fixture.path, { recursive: true });
-	const controller = new OpenAISettingsController(Fixtures.config());
-
-	// Act
-	function command(): string {
-		return controller.command(TestCommand.Disable);
-	}
-
-	// Assert
-	expect(command).toThrow(/EISDIR/u);
+	await expect(command()).rejects.toThrow(/EISDIR/u);
 	expect(controller.apply({}, Fixtures.model)).toStrictEqual({});
 });
 
@@ -191,9 +202,9 @@ test.each([TestCommand.HighVerbosity, TestCommand.Disable])(
 		expect.hasAssertions();
 		// Arrange
 		const source = '{"verbosity": {"value": "low", "command": true}}';
-		fixture.write(source);
-		const harness = Harness.create();
-		vi.mocked(renameSync).mockImplementationOnce(() => {
+		await fixture.write(source);
+		const harness = await Harness.create();
+		vi.mocked(rename).mockImplementationOnce(() => {
 			throw new Error("write denied");
 		});
 
@@ -202,8 +213,30 @@ test.each([TestCommand.HighVerbosity, TestCommand.Disable])(
 
 		// Assert
 		expect(harness.notify).toHaveBeenCalledWith("Error: write denied", "error");
-		expect(readFileSync(fixture.path, "utf8")).toBe(source);
-		expect(readdirSync(fixture.directory)).toStrictEqual([configFilename]);
+		await expect(readFile(fixture.path, "utf8")).resolves.toBe(source);
+		await expect(readdir(fixture.directory)).resolves.toStrictEqual([configFilename]);
 		await expect(harness.request({})).resolves.toStrictEqual({ text: { verbosity: "low" } });
 	},
 );
+
+test("overlapping commands preserve both disk and runtime updates", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const controller = new OpenAISettingsController(await Fixtures.config());
+
+	// Act
+	await Promise.all([
+		controller.command(TestCommand.HighVerbosity),
+		controller.command(TestCommand.EnableWebSearch),
+	]);
+
+	// Assert
+	await expect(OpenAISettingsConfig.read({})).resolves.toMatchObject({
+		verbosity: { value: "high" },
+		webSearch: { value: true },
+	});
+	expect(controller.apply({}, Fixtures.model)).toStrictEqual({
+		text: { verbosity: "high" },
+		tools: [{ type: "web_search" }],
+	});
+});

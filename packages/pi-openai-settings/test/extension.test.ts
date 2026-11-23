@@ -17,7 +17,7 @@ vi.mock(import("#src/config"), async (importOriginal) => {
 });
 
 beforeEach(() => {
-	vi.mocked(OpenAISettingsConfig.read).mockReturnValue(OpenAISettingsConfig.defaults());
+	vi.mocked(OpenAISettingsConfig.read).mockResolvedValue(OpenAISettingsConfig.defaults());
 });
 
 afterEach(() => {
@@ -28,10 +28,10 @@ test("registers the request hook and command even when initially disabled", asyn
 	expect.hasAssertions();
 	// Arrange
 	const config = { ...OpenAISettingsConfig.defaults(), enabled: false };
-	vi.mocked(OpenAISettingsConfig.read).mockReturnValue(config);
+	vi.mocked(OpenAISettingsConfig.read).mockResolvedValue(config);
 
 	// Act
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	const result = await harness.request({});
 	await harness.command("enabled true");
 
@@ -54,8 +54,8 @@ test.each([
 	// Arrange
 	const config = OpenAISettingsConfig.defaults();
 	config.verbosity.command = true;
-	vi.mocked(OpenAISettingsConfig.read).mockReturnValue(config);
-	const harness = Harness.create();
+	vi.mocked(OpenAISettingsConfig.read).mockResolvedValue(config);
+	const harness = await Harness.create();
 
 	// Act
 	await harness.command("verbosity high");
@@ -70,7 +70,7 @@ test.each([
 test("uses the current model on every request", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 
 	// Act
 	const supported = await harness.request({});
@@ -84,7 +84,7 @@ test("uses the current model on every request", async () => {
 test("reports command errors without throwing or modifying settings", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 
 	// Act
 	await harness.command("webSearch true");
@@ -100,7 +100,7 @@ test("reports command errors without throwing or modifying settings", async () =
 test("shows settings with no arguments", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 
 	// Act
 	await harness.command("");
@@ -109,11 +109,11 @@ test("shows settings with no arguments", async () => {
 	expect(harness.notify).toHaveBeenCalledWith(expect.stringContaining("enabled = true"), "info");
 });
 
-test("registers argument completions for setting names and values", () => {
+test("registers argument completions for setting names and values", async () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.mocked(OpenAISettingsConfig.read).mockReturnValue(Fixtures.config());
-	const harness = Harness.create();
+	vi.mocked(OpenAISettingsConfig.read).mockResolvedValue(await Fixtures.config());
+	const harness = await Harness.create();
 	const [registration] = harness.registerCommand.mock.calls;
 	const [, command] = registration ?? [];
 

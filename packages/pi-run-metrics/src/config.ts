@@ -12,8 +12,8 @@ const schema = z.object({
 type RunMetricsConfig = z.infer<typeof schema>;
 
 const RunMetricsConfig = {
-	read(this: void): RunMetricsConfig {
-		return readConfig(CONFIG_FILENAME, { scope: ConfigScope.Global }, schema) ?? schema.parse({});
+	async read(this: void): Promise<RunMetricsConfig> {
+		return await readConfig(CONFIG_FILENAME, { scope: ConfigScope.Global }, schema) ?? schema.parse({});
 	},
 };
 

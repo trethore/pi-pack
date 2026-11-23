@@ -12,13 +12,13 @@ import { Events } from "@pi-pack/events";
 import { vi } from "vitest";
 
 const Harness = {
-	create() {
+	async create() {
 		const on = vi.fn<(event: string, handler: ExtensionHandler<BeforeProviderRequestEvent, unknown>) => () => void>();
 		const registerCommand = vi.fn<ExtensionAPI["registerCommand"]>();
 		const notify = vi.fn<ExtensionContext["ui"]["notify"]>();
 		// The extension uses request registration, command registration, the current model, and notifications.
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion
-		openAISettings({ on, registerCommand } as unknown as ExtensionAPI);
+		await openAISettings({ on, registerCommand } as unknown as ExtensionAPI);
 		return {
 			on,
 			registerCommand,

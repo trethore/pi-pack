@@ -2,56 +2,56 @@ import { ConfigFixture } from "#shared-test/config-fixture";
 import { WhimsicalConfig } from "#src/config";
 import { messages } from "#src/messages";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import { expect, test, vi } from "vitest";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
 
 const fixture = ConfigFixture.use("pi-whimsical.jsonc");
 
-test("enables built-in messages when the config file is missing", () => {
+test("enables built-in messages when the config file is missing", async () => {
 	expect.hasAssertions();
 	// Arrange: the agent directory has no config file.
 
 	// Act
-	const config = WhimsicalConfig.read();
+	const config = await WhimsicalConfig.read();
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true, messages });
 	expect(getAgentDir).toHaveBeenCalledExactlyOnceWith();
 });
 
-test.each([{}, { messages: [] }])("uses built-in messages for config %j", (value) => {
+test.each([{}, { messages: [] }])("uses built-in messages for config %j", async (value) => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, JSON.stringify(value));
+	await writeFile(fixture.path, JSON.stringify(value));
 
 	// Act
-	const config = WhimsicalConfig.read();
+	const config = await WhimsicalConfig.read();
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true, messages });
 });
 
-test("preserves an explicit disabled setting", () => {
+test("preserves an explicit disabled setting", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, '{"enabled": false}');
+	await writeFile(fixture.path, '{"enabled": false}');
 
 	// Act
-	const config = WhimsicalConfig.read();
+	const config = await WhimsicalConfig.read();
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: false, messages });
 });
 
-test("reads and trims custom messages without appending the built-in list", () => {
+test("reads and trims custom messages without appending the built-in list", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, '{ /* custom */ "messages": ["  Brewing...  ", "Pondering...",], }');
+	await writeFile(fixture.path, '{ /* custom */ "messages": ["  Brewing...  ", "Pondering...",], }');
 
 	// Act
-	const config = WhimsicalConfig.read();
+	const config = await WhimsicalConfig.read();
 
 	// Assert
 	expect(config).toStrictEqual({ enabled: true, messages: ["Brewing...", "Pondering..."] });
@@ -67,38 +67,38 @@ test.each([
 	'{"messages": ["  "]}',
 	"null",
 	"[]",
-])("rejects invalid config %s", (source) => {
+])("rejects invalid config %s", async (source) => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, source);
+	await writeFile(fixture.path, source);
 
 	// Act
 	const { read } = WhimsicalConfig;
 
 	// Assert
-	expect(read).toThrow(`Invalid config ${fixture.path}:`);
+	await expect(read()).rejects.toThrow(`Invalid config ${fixture.path}:`);
 });
 
-test("reports malformed JSONC rather than silently using defaults", () => {
+test("reports malformed JSONC rather than silently using defaults", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, '{"enabled":');
+	await writeFile(fixture.path, '{"enabled":');
 
 	// Act
 	const { read } = WhimsicalConfig;
 
 	// Assert
-	expect(read).toThrow(`Invalid JSONC in ${fixture.path}:`);
+	await expect(read()).rejects.toThrow(`Invalid JSONC in ${fixture.path}:`);
 });
 
-test("loads the shipped example as a valid config", () => {
+test("loads the shipped example as a valid config", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const source = readFileSync(new URL("../pi-whimsical.example.jsonc", import.meta.url), "utf8");
-	writeFileSync(fixture.path, source);
+	const source = await readFile(new URL("../pi-whimsical.example.jsonc", import.meta.url), "utf8");
+	await writeFile(fixture.path, source);
 
 	// Act
-	const config = WhimsicalConfig.read();
+	const config = await WhimsicalConfig.read();
 
 	// Assert
 	expect(config).toStrictEqual({

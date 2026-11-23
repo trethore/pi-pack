@@ -42,10 +42,10 @@ test("does not support a missing model", () => {
 	expect(supported).toBe(false);
 });
 
-test.each([undefined, null, [], "payload", true])("ignores non-object payload %j", (payload) => {
+test.each([undefined, null, [], "payload", true])("ignores non-object payload %j", async (payload) => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({ PI_OPENAI_VERBOSITY: "high" });
+	const config = await Fixtures.config({ PI_OPENAI_VERBOSITY: "high" });
 
 	// Act
 	const result = ResponsesPayload.apply(payload, config);
@@ -54,10 +54,10 @@ test.each([undefined, null, [], "payload", true])("ignores non-object payload %j
 	expect(result).toBe(payload);
 });
 
-test("null settings leave all payload fields unchanged", () => {
+test("null settings leave all payload fields unchanged", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config();
+	const config = await Fixtures.config();
 	const payload = {
 		text: { verbosity: "medium", format: { type: JSON_OBJECT_FORMAT } },
 		reasoning: { summary: "auto", effort: "high" },
@@ -74,10 +74,10 @@ test("null settings leave all payload fields unchanged", () => {
 	expect(ResponsesPayload.apply({}, config)).toStrictEqual({});
 });
 
-test("sets all four fields without losing siblings or mutating the original payload", () => {
+test("sets all four fields without losing siblings or mutating the original payload", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({
+	const config = await Fixtures.config({
 		PI_OPENAI_VERBOSITY: "low",
 		PI_OPENAI_REASONING_SUMMARY: "concise",
 		PI_OPENAI_WEB_SEARCH: "true",
@@ -105,10 +105,10 @@ test("sets all four fields without losing siblings or mutating the original payl
 	expect(payload.reasoning.summary).toBe("auto");
 });
 
-test.each([{}, { text: null, reasoning: [] }])("creates missing nested objects for %j", (payload) => {
+test.each([{}, { text: null, reasoning: [] }])("creates missing nested objects for %j", async (payload) => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({
+	const config = await Fixtures.config({
 		PI_OPENAI_VERBOSITY: "medium",
 		PI_OPENAI_REASONING_SUMMARY: "detailed",
 		PI_OPENAI_SERVICE_TIER: "ultrafast",
@@ -129,10 +129,10 @@ test.each([
 	[{}, {}],
 	[{ reasoning: null }, { reasoning: null }],
 	[{ reasoning: { effort: "high", summary: "auto", other: true } }, { reasoning: { effort: "high", other: true } }],
-])("none removes only reasoning.summary in %j", (payload, expected) => {
+])("none removes only reasoning.summary in %j", async (payload, expected) => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({ PI_OPENAI_REASONING_SUMMARY: "none" });
+	const config = await Fixtures.config({ PI_OPENAI_REASONING_SUMMARY: "none" });
 	const original = structuredClone(payload);
 
 	// Act
@@ -145,10 +145,10 @@ test.each([
 
 test.each(webSearchTypes)(
 	"preserves existing %s tools and their options when enabled",
-	(type) => {
+	async (type) => {
 		expect.hasAssertions();
 		// Arrange
-		const config = Fixtures.config({ PI_OPENAI_WEB_SEARCH: "true" });
+		const config = await Fixtures.config({ PI_OPENAI_WEB_SEARCH: "true" });
 		const payload = { tools: [{ type, search_context_size: "low" }] };
 
 		// Act
@@ -159,10 +159,10 @@ test.each(webSearchTypes)(
 	},
 );
 
-test("adds web search only once when tools are absent", () => {
+test("adds web search only once when tools are absent", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({ PI_OPENAI_WEB_SEARCH: "true" });
+	const config = await Fixtures.config({ PI_OPENAI_WEB_SEARCH: "true" });
 
 	// Act
 	const result = ResponsesPayload.apply({}, config);
@@ -173,10 +173,10 @@ test("adds web search only once when tools are absent", () => {
 	expect(repeated).toStrictEqual(result);
 });
 
-test("false removes hosted web-search variants but preserves functions and other tools", () => {
+test("false removes hosted web-search variants but preserves functions and other tools", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({ PI_OPENAI_WEB_SEARCH: "false" });
+	const config = await Fixtures.config({ PI_OPENAI_WEB_SEARCH: "false" });
 	const keep = [{ type: "function", name: WEB_SEARCH }, { type: "file_search" }, { type: 1 }, null];
 	const payload = {
 		tools: [
@@ -196,10 +196,10 @@ test("false removes hosted web-search variants but preserves functions and other
 	expect(payload).toStrictEqual(original);
 });
 
-test.each([{}, { tools: null }, { tools: [] }])("false does not invent tools for %j", (payload) => {
+test.each([{}, { tools: null }, { tools: [] }])("false does not invent tools for %j", async (payload) => {
 	expect.hasAssertions();
 	// Arrange
-	const config = Fixtures.config({ PI_OPENAI_WEB_SEARCH: "false" });
+	const config = await Fixtures.config({ PI_OPENAI_WEB_SEARCH: "false" });
 
 	// Act
 	const result = ResponsesPayload.apply(payload, config);

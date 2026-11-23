@@ -2,7 +2,7 @@
 import { ConfigFixture } from "#shared-test/config-fixture";
 import { OpenAISettingsConfig } from "#src/config";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import { afterEach, expect, test, vi } from "vitest";
 
 vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
@@ -13,12 +13,12 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test("defaults to enabled with unchanged values and disabled feature commands", () => {
+test("defaults to enabled with unchanged values and disabled feature commands", async () => {
 	expect.hasAssertions();
 	// Arrange: no global config exists.
 
 	// Act
-	const config = OpenAISettingsConfig.read({});
+	const config = await OpenAISettingsConfig.read({});
 
 	// Assert
 	expect(config).toStrictEqual({
@@ -31,13 +31,16 @@ test("defaults to enabled with unchanged values and disabled feature commands", 
 	expect(getAgentDir).toHaveBeenCalledExactlyOnceWith();
 });
 
-test("reads the shipped JSONC example from the global agent directory", () => {
+test("reads the shipped JSONC example from the global agent directory", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, readFileSync(new URL("../pi-openai-settings.example.jsonc", import.meta.url), "utf8"));
+	await writeFile(
+		fixture.path,
+		await readFile(new URL("../pi-openai-settings.example.jsonc", import.meta.url), "utf8"),
+	);
 
 	// Act
-	const config = OpenAISettingsConfig.read({});
+	const config = await OpenAISettingsConfig.read({});
 
 	// Assert
 	expect(config).toStrictEqual({
@@ -49,16 +52,16 @@ test("reads the shipped JSONC example from the global agent directory", () => {
 	});
 });
 
-test("fills partial features and preserves the disabled master switch", () => {
+test("fills partial features and preserves the disabled master switch", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(
+	await writeFile(
 		fixture.path,
 		JSON.stringify({ enabled: false, verbosity: { command: true }, webSearch: { value: false } }),
 	);
 
 	// Act
-	const config = OpenAISettingsConfig.read({});
+	const config = await OpenAISettingsConfig.read({});
 
 	// Assert
 	expect(config).toMatchObject({ enabled: false });
@@ -66,13 +69,13 @@ test("fills partial features and preserves the disabled master switch", () => {
 	expect(config.webSearch).toStrictEqual({ value: false, command: false });
 });
 
-test("environment overrides file values without changing command permissions", () => {
+test("environment overrides file values without changing command permissions", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, JSON.stringify({ enabled: false, verbosity: { value: "high", command: true } }));
+	await writeFile(fixture.path, JSON.stringify({ enabled: false, verbosity: { value: "high", command: true } }));
 
 	// Act
-	const config = OpenAISettingsConfig.read({
+	const config = await OpenAISettingsConfig.read({
 		PI_OPENAI_CONFIG: "true",
 		PI_OPENAI_ENABLED: "true",
 		PI_OPENAI_VERBOSITY: "low",
@@ -91,13 +94,16 @@ test("environment overrides file values without changing command permissions", (
 	});
 });
 
-test("explicit null environment values override configured settings", () => {
+test("explicit null environment values override configured settings", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, readFileSync(new URL("../pi-openai-settings.example.jsonc", import.meta.url), "utf8"));
+	await writeFile(
+		fixture.path,
+		await readFile(new URL("../pi-openai-settings.example.jsonc", import.meta.url), "utf8"),
+	);
 
 	// Act
-	const config = OpenAISettingsConfig.read({
+	const config = await OpenAISettingsConfig.read({
 		PI_OPENAI_VERBOSITY: "null",
 		PI_OPENAI_REASONING_SUMMARY: "null",
 		PI_OPENAI_WEB_SEARCH: "null",
@@ -110,13 +116,13 @@ test("explicit null environment values override configured settings", () => {
 	}
 });
 
-test("disabling PI_OPENAI_CONFIG skips even malformed global config while applying environment", () => {
+test("disabling PI_OPENAI_CONFIG skips even malformed global config while applying environment", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, "invalid json");
+	await writeFile(fixture.path, "invalid json");
 
 	// Act
-	const config = OpenAISettingsConfig.read({
+	const config = await OpenAISettingsConfig.read({
 		PI_OPENAI_CONFIG: "false",
 		PI_OPENAI_ENABLED: "false",
 		PI_OPENAI_WEB_SEARCH: "true",
@@ -128,14 +134,14 @@ test("disabling PI_OPENAI_CONFIG skips even malformed global config while applyi
 	expect(config.webSearch).toStrictEqual({ value: true, command: false });
 });
 
-test("reads process environment by default", () => {
+test("reads process environment by default", async () => {
 	expect.hasAssertions();
 	// Arrange
 	vi.stubEnv("PI_OPENAI_CONFIG", "false");
 	vi.stubEnv("PI_OPENAI_ENABLED", "false");
 
 	// Act
-	const config = OpenAISettingsConfig.read();
+	const config = await OpenAISettingsConfig.read();
 
 	// Assert
 	expect(config).toMatchObject({ enabled: false });
@@ -149,18 +155,18 @@ test.each([
 	["PI_OPENAI_WEB_SEARCH", "yes"],
 	["PI_OPENAI_SERVICE_TIER", "auto"],
 	["PI_OPENAI_VERBOSITY", ""],
-])("rejects invalid environment %s=%s", (name, value) => {
+])("rejects invalid environment %s=%s", async (name, value) => {
 	expect.hasAssertions();
 	// Arrange
 	const env = { [name]: value };
 
 	// Act
-	function read(): OpenAISettingsConfig {
+	function read(): Promise<OpenAISettingsConfig> {
 		return OpenAISettingsConfig.read(env);
 	}
 
 	// Assert
-	expect(read).toThrow(`Invalid ${name}:`);
+	await expect(read()).rejects.toThrow(`Invalid ${name}:`);
 });
 
 test.each([
@@ -173,26 +179,26 @@ test.each([
 	{ webSearch: { command: null } },
 	[],
 	null,
-])("rejects invalid config %j", (value) => {
+])("rejects invalid config %j", async (value) => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, JSON.stringify(value));
+	await writeFile(fixture.path, JSON.stringify(value));
 
 	// Act
 	const { read } = OpenAISettingsConfig;
 
 	// Assert
-	expect(read).toThrow(`Invalid config ${fixture.path}:`);
+	await expect(read()).rejects.toThrow(`Invalid config ${fixture.path}:`);
 });
 
-test("reports malformed JSONC", () => {
+test("reports malformed JSONC", async () => {
 	expect.hasAssertions();
 	// Arrange
-	writeFileSync(fixture.path, '{"enabled":');
+	await writeFile(fixture.path, '{"enabled":');
 
 	// Act
 	const { read } = OpenAISettingsConfig;
 
 	// Assert
-	expect(read).toThrow(`Invalid JSONC in ${fixture.path}:`);
+	await expect(read()).rejects.toThrow(`Invalid JSONC in ${fixture.path}:`);
 });

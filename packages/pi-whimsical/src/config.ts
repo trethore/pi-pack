@@ -12,8 +12,8 @@ const schema = z.object({
 type WhimsicalConfig = z.infer<typeof schema>;
 
 const WhimsicalConfig = {
-	read(this: void): WhimsicalConfig {
-		const config = readConfig(CONFIG_FILENAME, { scope: ConfigScope.Global }, schema) ?? schema.parse({});
+	async read(this: void): Promise<WhimsicalConfig> {
+		const config = await readConfig(CONFIG_FILENAME, { scope: ConfigScope.Global }, schema) ?? schema.parse({});
 		if (config.messages.length === EMPTY_LIST_LENGTH) {
 			config.messages = [...messages];
 		}

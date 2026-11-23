@@ -13,10 +13,10 @@ const setWorkingMessage = vi.fn<ExtensionContext["ui"]["setWorkingMessage"]>();
 const turn: TurnStartEvent = { type: Events.TurnStart, turnIndex: 0, timestamp: 0 };
 
 const Harness = {
-	load(this: void): void {
+	async load(this: void): Promise<void> {
 		// Only event registration is used by this extension factory.
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion
-		whimsical({ on } as unknown as ExtensionAPI);
+		await whimsical({ on } as unknown as ExtensionAPI);
 	},
 	async turn(hasUI = true): Promise<void> {
 		const [registration] = on.mock.calls;

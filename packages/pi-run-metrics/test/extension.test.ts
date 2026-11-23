@@ -16,7 +16,7 @@ const START_AND_RESPONSE_RENDERS = 2;
 
 beforeEach(() => {
 	vi.useFakeTimers();
-	vi.mocked(RunMetricsConfig.read).mockReturnValue({
+	vi.mocked(RunMetricsConfig.read).mockResolvedValue({
 		enabled: true,
 		format: "<timetaken> | <tokps> | ↑ <input_tokens> ↓ <output_tokens> | <cost>",
 	});
@@ -30,7 +30,7 @@ afterEach(() => {
 test("shows a widget above the prompt on session start", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 
 	// Act
 	await harness.emit({ type: Events.SessionStart, reason: "startup" });
@@ -47,7 +47,7 @@ test("shows a widget above the prompt on session start", async () => {
 test("colors widget text with the theme accent", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	harness.fg.mockImplementation((_color, text) => `\u001b[36m${text}\u001b[39m`);
 	await harness.emit({ type: Events.SessionStart, reason: "startup" });
 
@@ -62,7 +62,7 @@ test("colors widget text with the theme accent", async () => {
 test("refreshes elapsed time even before a response ends", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 	harness.setWidget.mockClear();
 
@@ -77,7 +77,7 @@ test("refreshes elapsed time even before a response ends", async () => {
 test("agent_end does not freeze metrics or stop refreshes", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
 
@@ -93,7 +93,7 @@ test("agent_end does not freeze metrics or stop refreshes", async () => {
 test.each([false, true])("settlement freezes metrics and stops refreshes (aborted=%s)", async (aborted) => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 	vi.advanceTimersByTime(RESPONSE_MS);
 	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
@@ -111,7 +111,7 @@ test.each([false, true])("settlement freezes metrics and stops refreshes (aborte
 test("keeps repeated agent starts in the same run without duplicating timers", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
 
@@ -128,8 +128,8 @@ test("keeps repeated agent starts in the same run without duplicating timers", a
 test("ignores non-assistant messages and honors the custom format", async () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.mocked(RunMetricsConfig.read).mockReturnValue({ enabled: true, format: "<cost> / <output_tokens>" });
-	const harness = Harness.create();
+	vi.mocked(RunMetricsConfig.read).mockResolvedValue({ enabled: true, format: "<cost> / <output_tokens>" });
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 
 	// Act
@@ -144,7 +144,7 @@ test("ignores non-assistant messages and honors the custom format", async () => 
 test("resets metrics and timers on session changes", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 	await harness.emit({ type: Events.MessageEnd, message: Fixtures.message() });
 
@@ -159,7 +159,7 @@ test("resets metrics and timers on session changes", async () => {
 test("removes the widget and clears timers on shutdown", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create();
+	const harness = await Harness.create();
 	await harness.emit({ type: Events.AgentStart });
 
 	// Act
@@ -171,13 +171,13 @@ test("removes the widget and clears timers on shutdown", async () => {
 	expect(vi.getTimerCount()).toBe(NO_TIMERS);
 });
 
-test("does not register handlers when disabled", () => {
+test("does not register handlers when disabled", async () => {
 	expect.hasAssertions();
 	// Arrange
-	vi.mocked(RunMetricsConfig.read).mockReturnValue({ enabled: false, format: "<cost>" });
+	vi.mocked(RunMetricsConfig.read).mockResolvedValue({ enabled: false, format: "<cost>" });
 
 	// Act
-	const harness = Harness.create();
+	const harness = await Harness.create();
 
 	// Assert
 	expect(harness.on).not.toHaveBeenCalled();
@@ -187,7 +187,7 @@ test("does not register handlers when disabled", () => {
 test("does not create widgets or timers in headless sessions", async () => {
 	expect.hasAssertions();
 	// Arrange
-	const harness = Harness.create(false);
+	const harness = await Harness.create(false);
 
 	// Act
 	await harness.emit({ type: Events.SessionStart, reason: "startup" });

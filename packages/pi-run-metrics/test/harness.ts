@@ -13,7 +13,7 @@ type Handler = (event: ExtensionEvent, ctx: ExtensionContext) => unknown;
 const DEFAULT_WIDTH = 80;
 
 const Harness = {
-	create(hasUI = true) {
+	async create(hasUI = true) {
 		const handlers = new Map<string, Handler>();
 		const fg = vi.fn<Theme["fg"]>((_color, text) => text);
 		const setWidget = vi.fn<ExtensionContext["ui"]["setWidget"]>();
@@ -26,7 +26,7 @@ const Harness = {
 		const api = { on } as unknown as ExtensionAPI;
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion
 		const ctx = { hasUI, ui: { setWidget } } as unknown as ExtensionContext;
-		runMetrics(api);
+		await runMetrics(api);
 		return {
 			on,
 			fg,

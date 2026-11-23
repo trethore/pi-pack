@@ -10,8 +10,8 @@ const WIDGET_PLACEMENT = "aboveEditor";
 const ASSISTANT_ROLE = "assistant";
 const REFRESH_MS = 1000;
 
-export default function runMetrics(pi: ExtensionAPI): void {
-	const config = RunMetricsConfig.read();
+export default async function runMetrics(pi: ExtensionAPI): Promise<void> {
+	const config = await RunMetricsConfig.read();
 	if (!config.enabled) {
 		return;
 	}
