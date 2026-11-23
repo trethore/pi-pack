@@ -73,7 +73,7 @@ const QUEUED_MS = 5000;
 const RUN_MS = 90_000;
 const FINAL_MS = 90_123;
 const ZERO_MS = 0;
-const LAST_MS_ROUNDING_TO_ZERO = 49;
+const LAST_SUBSECOND_MS = 999;
 
 function timedCall(code = RETURN_STATEMENT) {
 	initTheme("dark");
@@ -110,8 +110,8 @@ test("starts timing only when execution begins and refreshes without tool output
 	vi.advanceTimersByTime(RUN_MS);
 
 	// Assert
-	expect(started).toBe(`codemode\n${RETURN_STATEMENT}`);
-	expect(display()).toBe(`codemode 90.0s\n${RETURN_STATEMENT}`);
+	expect(started).toBe(`codemode 0s\n${RETURN_STATEMENT}`);
+	expect(display()).toBe(`codemode 90s\n${RETURN_STATEMENT}`);
 });
 
 test("renders the timer beside the title above a multiline script", () => {
@@ -125,7 +125,7 @@ test("renders the timer beside the title above a multiline script", () => {
 	vi.advanceTimersByTime(RUN_MS);
 
 	// Assert
-	expect(display()).toBe(`codemode 90.0s\n// example\n\n${RETURN_STATEMENT}`);
+	expect(display()).toBe(`codemode 90s\n// example\n\n${RETURN_STATEMENT}`);
 });
 
 test.each([false, true])("freezes at the recorded duration on a final result (error: %s)", (isError) => {
@@ -141,12 +141,12 @@ test.each([false, true])("freezes at the recorded duration on a final result (er
 	vi.advanceTimersByTime(QUEUED_MS);
 
 	// Assert
-	expect(display()).toBe(`codemode 90.1s\n${RETURN_STATEMENT}`);
+	expect(display()).toBe(`codemode 90s\n${RETURN_STATEMENT}`);
 	expect(redraw).not.toHaveBeenCalled();
 });
 
-test.each([ZERO_MS, LAST_MS_ROUNDING_TO_ZERO])(
-	"hides a final duration of %i ms that displays as zero",
+test.each([ZERO_MS, LAST_SUBSECOND_MS])(
+	"shows a final duration of %i ms as 0s",
 	(durationMs) => {
 		expect.hasAssertions();
 		// Arrange
@@ -158,6 +158,6 @@ test.each([ZERO_MS, LAST_MS_ROUNDING_TO_ZERO])(
 		call.updateResult({ content: [], isError: false, durationMs });
 
 		// Assert
-		expect(display()).toBe(`codemode\n${RETURN_STATEMENT}`);
+		expect(display()).toBe(`codemode 0s\n${RETURN_STATEMENT}`);
 	},
 );
