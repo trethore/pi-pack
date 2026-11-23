@@ -3,7 +3,7 @@ import { Script } from "#src/runtime/script";
 import { Store } from "#src/runtime/store";
 import { Tools } from "#src/runtime/tools";
 import { CodemodeSandbox, parseCodemodeSource } from "@earendil-works/pi-codemode";
-import { type ExtensionAPI, type ExtensionToolContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
 const MEMORY_LIMIT_BYTES = 134_217_728; // 128 MiB
 

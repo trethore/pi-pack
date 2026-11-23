@@ -1,6 +1,6 @@
 import { MetricRegistry, type RunSnapshot } from "#src/metrics";
-import { type ValueOf } from "@a-box-of-scraps/ts-utils";
-import { type AssistantMessage } from "@earendil-works/pi-ai";
+import type { ValueOf } from "@a-box-of-scraps/ts-utils";
+import type { AssistantMessage } from "@earendil-works/pi-ai";
 
 const ZERO = 0;
 const RunState = { Idle: "idle", Running: "running", Settled: "settled" } as const;

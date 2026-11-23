@@ -1,5 +1,5 @@
 import { WhimsicalConfig } from "#src/config";
-import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 
 export default async function whimsical(pi: ExtensionAPI): Promise<void> {

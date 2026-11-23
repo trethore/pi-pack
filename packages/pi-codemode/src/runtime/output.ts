@@ -1,4 +1,4 @@
-import { type CodemodeOutputItem, type CodemodeResult } from "@earendil-works/pi-codemode";
+import type { CodemodeOutputItem, CodemodeResult } from "@earendil-works/pi-codemode";
 import { resizeImage } from "@earendil-works/pi-coding-agent";
 import { Buffer } from "node:buffer";
 

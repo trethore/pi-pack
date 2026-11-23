@@ -1,5 +1,5 @@
-import { type ValueOf } from "@a-box-of-scraps/ts-utils";
-import { type ExtensionEvent } from "@earendil-works/pi-coding-agent";
+import type { ValueOf } from "@a-box-of-scraps/ts-utils";
+import type { ExtensionEvent } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { describe, expect, expectTypeOf, it } from "vitest";
 

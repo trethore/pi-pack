@@ -1,4 +1,4 @@
-import { type ValueOf } from "@a-box-of-scraps/ts-utils";
+import type { ValueOf } from "@a-box-of-scraps/ts-utils";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse, type ParseError, printParseErrorCode } from "jsonc-parser";
 import { readFile } from "node:fs/promises";

@@ -1,11 +1,6 @@
 import runMetrics from "#src/index";
-import { type RunMetricsWidget } from "#src/widget";
-import {
-	type ExtensionAPI,
-	type ExtensionContext,
-	type ExtensionEvent,
-	type Theme,
-} from "@earendil-works/pi-coding-agent";
+import type { RunMetricsWidget } from "#src/widget";
+import type { ExtensionAPI, ExtensionContext, ExtensionEvent, Theme } from "@earendil-works/pi-coding-agent";
 import { vi } from "vitest";
 
 type Handler = (event: ExtensionEvent, ctx: ExtensionContext) => unknown;

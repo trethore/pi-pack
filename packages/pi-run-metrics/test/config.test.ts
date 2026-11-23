@@ -1,6 +1,6 @@
 import { ConfigFixture } from "#shared-test/config-fixture";
 import { RunMetricsConfig } from "#src/config";
-import { type getAgentDir } from "@earendil-works/pi-coding-agent";
+import type { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { readFile, writeFile } from "node:fs/promises";
 import { expect, test, vi } from "vitest";
 

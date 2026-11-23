@@ -1,5 +1,5 @@
 import { type CodemodeTool, renderToolSignature } from "@earendil-works/pi-codemode";
-import { type ExtensionToolContext, type ToolLoadout, type ToolLoadoutChanges } from "@earendil-works/pi-coding-agent";
+import type { ExtensionToolContext, ToolLoadout, ToolLoadoutChanges } from "@earendil-works/pi-coding-agent";
 import dedent from "dedent";
 
 const NAME = "codemode";

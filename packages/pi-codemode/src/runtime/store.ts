@@ -1,5 +1,5 @@
-import { type CodemodeStoreWrites } from "@earendil-works/pi-codemode";
-import { type SessionEntry } from "@earendil-works/pi-coding-agent";
+import type { CodemodeStoreWrites } from "@earendil-works/pi-codemode";
+import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { Check as check } from "typebox/value";
 

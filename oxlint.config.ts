@@ -13,7 +13,6 @@ const maintainabilityRules = {
 	// Object order can be meaningful; dprint handles import ordering.
 	"sort-keys": "off",
 	"sort-imports": "off",
-	curly: "error",
 	"unicorn/no-array-sort": "off",
 
 	complexity: ["error", 15],
@@ -40,13 +39,9 @@ const importRules = {
 	"import/no-named-export": "off",
 	"import/prefer-default-export": "off",
 	"import/no-nodejs-modules": "off",
-	"import/consistent-type-specifier-style": ["error", "prefer-inline"],
+	"import/consistent-type-specifier-style": ["error", "prefer-top-level-if-only-type-imports"],
 	"no-duplicate-imports": "off",
 
-	"import/first": "error",
-	"import/default": "error",
-	"import/namespace": "error",
-	"import/no-namespace": "error",
 	"import/no-cycle": "error",
 	"import/no-duplicates": ["error", { preferInline: true }],
 
@@ -64,11 +59,10 @@ const importRules = {
 } satisfies NonNullable<OxlintConfig["rules"]>;
 
 const typeSafetyRules = {
+	"typescript/no-non-null-assertion": "error",
 	"typescript/no-explicit-any": "error",
 	"typescript/no-dynamic-delete": "error",
 	"typescript/no-unnecessary-condition": "error",
-	"typescript/await-thenable": "error",
-	"typescript/no-floating-promises": "error",
 	"typescript/no-misused-promises": "error",
 	"typescript/no-unsafe-argument": "error",
 	"typescript/no-unsafe-assignment": "error",

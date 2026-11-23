@@ -1,10 +1,5 @@
 import whimsical from "#src/index";
-import {
-	type ExtensionAPI,
-	type ExtensionContext,
-	type ExtensionHandler,
-	type TurnStartEvent,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ExtensionHandler, TurnStartEvent } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { vi } from "vitest";
 

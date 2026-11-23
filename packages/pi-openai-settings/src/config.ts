@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/no-null -- Null explicitly leaves provider settings unchanged. */
 import { configFilename, SettingName } from "#src/constants";
 import { SettingsFile } from "#src/settings-file";
-import { type ValueOf } from "@a-box-of-scraps/ts-utils";
+import type { ValueOf } from "@a-box-of-scraps/ts-utils";
 import { ConfigScope, readConfig } from "@pi-pack/config";
 import { z } from "zod";
 

@@ -1,7 +1,7 @@
 import { OpenAISettingsConfig } from "#src/config";
 import { commandName, SettingName } from "#src/constants";
 import { ResponsesPayload } from "#src/payload";
-import { type ValueOf } from "@a-box-of-scraps/ts-utils";
+import type { ValueOf } from "@a-box-of-scraps/ts-utils";
 
 const SettingsState = { Enabled: "enabled", Disabled: "disabled" } as const;
 type SettingsState = ValueOf<typeof SettingsState>;

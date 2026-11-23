@@ -1,12 +1,12 @@
 import { commandName } from "#src/constants";
 import openAISettings from "#src/index";
 import { Fixtures } from "#test/fixtures";
-import {
-	type BeforeProviderRequestEvent,
-	type ExtensionAPI,
-	type ExtensionCommandContext,
-	type ExtensionContext,
-	type ExtensionHandler,
+import type {
+	BeforeProviderRequestEvent,
+	ExtensionAPI,
+	ExtensionCommandContext,
+	ExtensionContext,
+	ExtensionHandler,
 } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { vi } from "vitest";

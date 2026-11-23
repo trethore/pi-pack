@@ -1,4 +1,4 @@
-import { type ExtensionEvent } from "@earendil-works/pi-coding-agent";
+import type { ExtensionEvent } from "@earendil-works/pi-coding-agent";
 
 export const Events = Object.freeze(
 	{

@@ -1,7 +1,7 @@
 import { RunMetricsConfig } from "#src/config";
 import { RunMetricsController } from "#src/controller";
 import { RunMetricsWidget } from "#src/widget";
-import { type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 
 const WIDGET_KEY = "pi-run-metrics";
