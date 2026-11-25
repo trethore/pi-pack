@@ -8,6 +8,7 @@ Here is an overview of the project:
 
 ```
 .githooks/
+coverage/
 node_modules/
 packages/
   config/
@@ -30,6 +31,7 @@ package.json
 package-lock.json
 README.md
 tsconfig.json
+vite.config.ts
 vitest.config.ts
 ```
 
@@ -41,7 +43,7 @@ vitest.config.ts
 
 ## Verification
 
-`npm run check` must pass to validate changes.
+At least `npm run check` must pass to validate changes.
 
 ## Commits & Pull Requests
 
