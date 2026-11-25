@@ -27,15 +27,15 @@
     "build": "node ../../scripts/build-package.ts"
   },
   "dependencies": {
-    "@earendil-works/pi-codemode": "1.6.0",
+    "@earendil-works/pi-codemode": "1.6.1",
     "dedent": "^1.7.2"
   },
   "devDependencies": {
     "typebox": "^1.0.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "1.6.0",
-    "@earendil-works/pi-tui": "1.6.0",
+    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@earendil-works/pi-tui": "1.6.1",
     "typebox": "*"
   },
   "pi": {

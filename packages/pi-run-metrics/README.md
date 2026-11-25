@@ -4,7 +4,7 @@ Display current run metrics.
 
 ## Installation
 
-Requires Pi `1.6.0` or a compatible later release.
+Requires Pi `1.6.1` or a compatible later release.
 
 From the repository root, install pi-run-metrics globally:
 
