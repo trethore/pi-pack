@@ -54,7 +54,7 @@ const schema = z.object({
 	enabled: z.boolean().default(true),
 	verbosity: Feature.schema(z.enum(Verbosity)),
 	reasoningSummary: Feature.schema(z.enum(ReasoningSummary)),
-	webSearch: Feature.schema(z.boolean()),
+	webSearch: Feature.schema(z.boolean()).unwrap().extend({ preserveCalls: z.boolean().default(true) }).prefault({}),
 	serviceTier: Feature.schema(z.enum(ServiceTier)),
 });
 

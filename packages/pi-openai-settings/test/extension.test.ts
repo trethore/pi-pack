@@ -1,6 +1,7 @@
 import { OpenAISettingsConfig } from "#src/config";
 import { Fixtures } from "#test/fixtures";
 import { Harness } from "#test/harness";
+import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -36,7 +37,7 @@ test("registers the request hook and command even when initially disabled", asyn
 	await harness.command("enabled true");
 
 	// Assert
-	expect(harness.on).toHaveBeenCalledExactlyOnceWith(Events.BeforeProviderRequest, expect.any(Function));
+	expect(harness.on).toHaveBeenCalledWith(Events.BeforeProviderRequest, expect.any(Function));
 	expect(harness.registerCommand).toHaveBeenCalledExactlyOnceWith(
 		"openai-settings",
 		expect.any(Object),
@@ -124,4 +125,75 @@ test("registers argument completions for setting names and values", async () => 
 	// Assert
 	expect(names).toStrictEqual([{ value: "verbosity ", label: "verbosity" }]);
 	expect(values).toStrictEqual([{ value: "verbosity high", label: "high" }]);
+});
+
+const COMPLETE = "response.completed";
+const first = { id: "rs_a", type: "reasoning" };
+const last = { id: "rs_b", type: "reasoning" };
+const search = {
+	id: "ws_1",
+	type: "web_search_call",
+	status: "completed",
+	action: { type: "search", query: "weather" },
+};
+const output = [first, search, last, { ...search, id: "ws_2" }];
+const completed = { type: COMPLETE, response: { output } };
+
+async function resumeWithoutCapture() {
+	const harness = await Harness.create();
+	await harness.stream(completed);
+	const config = OpenAISettingsConfig.defaults();
+	config.webSearch = { ...config.webSearch, preserveCalls: false, value: false };
+	vi.mocked(OpenAISettingsConfig.read).mockResolvedValue(config);
+	const header = harness.sessionManager.getHeader();
+	if (!header) {
+		throw new Error("Missing session header");
+	}
+	const entries = structuredClone([header, ...harness.sessionManager.getEntries()]);
+	return Harness.create(SessionManager.inMemory(undefined, undefined, entries));
+}
+
+test("restores search calls once in output order after reloading with capture and search disabled", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const resumed = await resumeWithoutCapture();
+	const prior = resumed.sessionManager.getBranch();
+
+	// Act
+	await resumed.stream(completed);
+	const result = await resumed.request({ input: [first, last] });
+
+	// Assert
+	expect(resumed.sessionManager.getBranch()).toStrictEqual(prior);
+	expect(result).toStrictEqual({ input: output });
+	await expect(resumed.request(result)).resolves.toStrictEqual(result);
+});
+
+test("does not restore calls whose response is absent from input", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const resumed = await resumeWithoutCapture();
+	const payload = { input: ["unrelated"] };
+
+	// Act
+	const result = await resumed.request(payload);
+
+	// Assert
+	expect(result).toStrictEqual(payload);
+});
+
+test.each([
+	{ type: "response.output_item.added" },
+	{ type: COMPLETE },
+	{ type: COMPLETE, response: { output: [{ type: "unknown" }, { type: "message", id: "msg_1" }] } },
+])("does not save non-search events", async (event) => {
+	expect.hasAssertions();
+	// Arrange
+	const harness = await Harness.create();
+
+	// Act
+	await harness.stream(event);
+
+	// Assert
+	expect(harness.sessionManager.getEntries()).toStrictEqual([]);
 });

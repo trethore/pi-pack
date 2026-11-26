@@ -10,7 +10,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-vi.mock(import("@earendil-works/pi-coding-agent"), () => ({ getAgentDir: vi.fn<typeof getAgentDir>() }));
+vi.mock(import("@earendil-works/pi-coding-agent"), async (importOriginal) => {
+	const { SessionManager } = await importOriginal();
+	return { SessionManager, getAgentDir: vi.fn<typeof getAgentDir>() };
+});
 vi.mock(import("node:fs/promises"), async (importOriginal) => {
 	const original = await importOriginal();
 	return { ...original, rename: vi.fn<typeof rename>(original.rename) };

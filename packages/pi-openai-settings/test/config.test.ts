@@ -25,7 +25,7 @@ test("defaults to enabled with unchanged values and disabled feature commands", 
 		enabled: true,
 		verbosity: { value: null, command: false },
 		reasoningSummary: { value: null, command: false },
-		webSearch: { value: null, command: false },
+		webSearch: { preserveCalls: true, value: null, command: false },
 		serviceTier: { value: null, command: false },
 	});
 	expect(getAgentDir).toHaveBeenCalledExactlyOnceWith();
@@ -47,7 +47,7 @@ test("reads the shipped JSONC example from the global agent directory", async ()
 		enabled: true,
 		verbosity: { value: "low", command: true },
 		reasoningSummary: { value: "none", command: true },
-		webSearch: { value: true, command: true },
+		webSearch: { preserveCalls: true, value: true, command: true },
 		serviceTier: { value: "priority", command: true },
 	});
 });
@@ -66,7 +66,7 @@ test("fills partial features and preserves the disabled master switch", async ()
 	// Assert
 	expect(config).toMatchObject({ enabled: false });
 	expect(config.verbosity).toStrictEqual({ value: null, command: true });
-	expect(config.webSearch).toStrictEqual({ value: false, command: false });
+	expect(config.webSearch).toStrictEqual({ preserveCalls: true, value: false, command: false });
 });
 
 test("environment overrides file values without changing command permissions", async () => {
@@ -89,7 +89,7 @@ test("environment overrides file values without changing command permissions", a
 		enabled: true,
 		verbosity: { value: "low", command: true },
 		reasoningSummary: { value: "detailed", command: false },
-		webSearch: { value: false, command: false },
+		webSearch: { preserveCalls: true, value: false, command: false },
 		serviceTier: { value: "ultrafast", command: false },
 	});
 });
@@ -112,7 +112,7 @@ test("explicit null environment values override configured settings", async () =
 
 	// Assert
 	for (const feature of [config.verbosity, config.reasoningSummary, config.webSearch, config.serviceTier]) {
-		expect(feature).toStrictEqual({ value: null, command: true });
+		expect(feature).toMatchObject({ value: null, command: true });
 	}
 });
 
@@ -131,7 +131,7 @@ test("disabling PI_OPENAI_CONFIG skips even malformed global config while applyi
 	// Assert
 	expect(getAgentDir).not.toHaveBeenCalled();
 	expect(config).toMatchObject({ enabled: false });
-	expect(config.webSearch).toStrictEqual({ value: true, command: false });
+	expect(config.webSearch).toStrictEqual({ preserveCalls: true, value: true, command: false });
 });
 
 test("reads process environment by default", async () => {

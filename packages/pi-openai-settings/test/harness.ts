@@ -1,25 +1,45 @@
 import { commandName } from "#src/constants";
 import openAISettings from "#src/index";
 import { Fixtures } from "#test/fixtures";
-import type {
-	BeforeProviderRequestEvent,
-	ExtensionAPI,
-	ExtensionCommandContext,
-	ExtensionContext,
-	ExtensionHandler,
+import {
+	type BeforeProviderRequestEvent,
+	type ExtensionAPI,
+	type ExtensionCommandContext,
+	type ExtensionContext,
+	type ExtensionHandler,
+	type ProviderStreamEvent,
+	SessionManager,
 } from "@earendil-works/pi-coding-agent";
 import { Events } from "@pi-pack/events";
 import { vi } from "vitest";
 
 const Harness = {
-	async create() {
-		const on = vi.fn<(event: string, handler: ExtensionHandler<BeforeProviderRequestEvent, unknown>) => () => void>();
+	async create(sessionManager = SessionManager.inMemory()) {
+		const on = vi.fn<
+			(
+				event: string,
+				handler: ExtensionHandler<BeforeProviderRequestEvent | ProviderStreamEvent, unknown>,
+			) => () => void
+		>();
 		const registerCommand = vi.fn<ExtensionAPI["registerCommand"]>();
 		const notify = vi.fn<ExtensionContext["ui"]["notify"]>();
-		// The extension uses request registration, command registration, the current model, and notifications.
+		const api = { on, registerCommand, appendEntry: sessionManager.appendCustomEntry.bind(sessionManager) };
 		// eslint-disable-next-line typescript/no-unsafe-type-assertion
-		await openAISettings({ on, registerCommand } as unknown as ExtensionAPI);
+		await openAISettings(api as unknown as ExtensionAPI);
 		return {
+			sessionManager,
+			async stream(data: unknown) {
+				const [, handler] = on.mock.calls.find(([event]) => event === Events.ProviderStreamEvent) ?? [];
+				// eslint-disable-next-line typescript/no-unsafe-type-assertion
+				const ctx = { sessionManager } as unknown as ExtensionContext;
+				await handler?.({
+					type: Events.ProviderStreamEvent,
+					provider: "openai",
+					api: "openai-responses",
+					model: "test",
+					data,
+				}, ctx);
+			},
 			on,
 			registerCommand,
 			notify,
@@ -29,7 +49,7 @@ const Harness = {
 			): Promise<unknown> {
 				const [, handler] = on.mock.calls.find(([event]) => event === Events.BeforeProviderRequest) ?? [];
 				// eslint-disable-next-line typescript/no-unsafe-type-assertion
-				const ctx = { model } as unknown as ExtensionContext;
+				const ctx = { model: { ...model, id: "test" }, sessionManager } as unknown as ExtensionContext;
 				return handler?.({ type: Events.BeforeProviderRequest, payload }, ctx);
 			},
 			async command(args: string): Promise<void> {

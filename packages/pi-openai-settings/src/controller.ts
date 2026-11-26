@@ -26,6 +26,10 @@ class OpenAISettingsController {
 		return ResponsesPayload.apply(payload, this.config);
 	}
 
+	get preserveCalls(): boolean {
+		return this.state === SettingsState.Enabled && this.config.webSearch.preserveCalls;
+	}
+
 	complete(prefix: string): { value: string; label: string }[] {
 		const [name = "", value, extra] = prefix.trimStart().split(/\s+/u);
 		const commands = OpenAISettingsConfig.commandValues(this.config);

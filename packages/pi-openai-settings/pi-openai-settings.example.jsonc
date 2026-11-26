@@ -15,6 +15,8 @@
     "command": true
   },
   "webSearch": {
+    // Save new hosted search calls for ordered replay on subsequent requests.
+    "preserveCalls": true,
     // true adds web_search; false removes web-search tools (including dated variants); null leaves tools untouched.
     "value": true,
     "command": true
