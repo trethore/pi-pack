@@ -2,14 +2,23 @@ import { ResponsesPayload } from "#src/payload";
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import { z } from "zod";
 
-const COMPLETE = "response.completed";
+const StreamEvent = {
+	Created: "response.created",
+	ItemDone: "response.output_item.done",
+	Completed: "response.completed",
+	Incomplete: "response.incomplete",
+	Failed: "response.failed",
+	Error: "error",
+} as const;
+const FIRST_INDEX = 0;
 const CUSTOM = "custom";
 const anchors = new Set(["reasoning", "message", "function_call", "custom_tool_call"]);
 const call = z.looseObject({ type: z.literal("web_search_call"), id: z.string() });
 type Call = z.infer<typeof call>;
 const sequenceSchema = z.array(z.union([z.string(), call]));
 const saved = z.object({ provider: z.string(), model: z.string(), sequence: sequenceSchema });
-type Saved = z.infer<typeof saved>;
+type SearchSequence = z.infer<typeof sequenceSchema>;
+type ItemsByIndex = Map<number, SearchSequence>;
 interface Model {
 	provider: string;
 	id: string;
@@ -24,7 +33,7 @@ class Replay {
 		this.ids = new Set(input.map((item) => ResponsesPayload.object(item)["id"]));
 	}
 
-	place(sequence: Saved["sequence"]): void {
+	place(sequence: SearchSequence): void {
 		let pending: Call[] = [];
 		let lastAnchor = "";
 		for (const item of sequence) {
@@ -63,7 +72,7 @@ class Replay {
 
 const SearchHistory = {
 	key: "pi-openai-settings:web-search-calls",
-	sequenceItem(this: void, item: unknown): Saved["sequence"] {
+	sequenceItem(this: void, item: unknown): SearchSequence {
 		const parsed = call.safeParse(item);
 		if (parsed.success) {
 			return [parsed.data];
@@ -75,20 +84,7 @@ const SearchHistory = {
 		}
 		return [];
 	},
-	capture(data: unknown): Saved["sequence"] {
-		const event = ResponsesPayload.object(data);
-		if (event["type"] === COMPLETE) {
-			const { output } = ResponsesPayload.object(event["response"]);
-			if (Array.isArray(output)) {
-				const sequence = output.flatMap(SearchHistory.sequenceItem);
-				if (sequence.some((item) => typeof item !== "string")) {
-					return sequence;
-				}
-			}
-		}
-		return [];
-	},
-	read(entry: SessionEntry, model: Model): Saved["sequence"] {
+	read(entry: SessionEntry, model: Model): SearchSequence {
 		const isSearchHistory = entry.type === CUSTOM && entry.customType === SearchHistory.key;
 		if (isSearchHistory) {
 			const parsed = saved.safeParse(entry.data);
@@ -108,4 +104,69 @@ const SearchHistory = {
 	},
 };
 
-export { SearchHistory };
+const Phase = { Idle: "idle", Collecting: "collecting" } as const;
+type CaptureState = { phase: typeof Phase.Idle } | {
+	phase: typeof Phase.Collecting;
+	items: ItemsByIndex;
+};
+
+class SearchCapture {
+	private state: CaptureState = { phase: Phase.Idle };
+
+	observe(data: unknown): SearchSequence {
+		const event = ResponsesPayload.object(data);
+		switch (event["type"]) {
+			case StreamEvent.Created: {
+				this.state = { phase: Phase.Collecting, items: new Map() };
+				break;
+			}
+			case StreamEvent.ItemDone: {
+				this.collect(event["output_index"], event["item"]);
+				break;
+			}
+			case StreamEvent.Completed: {
+				return this.finish(ResponsesPayload.object(event["response"])["output"]);
+			}
+			case StreamEvent.Failed:
+			case StreamEvent.Incomplete:
+			case StreamEvent.Error: {
+				this.state = { phase: Phase.Idle };
+				break;
+			}
+		}
+		return [];
+	}
+
+	private collect(index: unknown, item: unknown): void {
+		const validIndex = typeof index === "number" && Number.isSafeInteger(index) && index >= FIRST_INDEX;
+		const { state } = this;
+		const canCollect = state.phase === Phase.Collecting && validIndex;
+		if (canCollect) {
+			state.items.set(index, SearchHistory.sequenceItem(item));
+		}
+	}
+
+	private takeItems(): ItemsByIndex {
+		const { state } = this;
+		this.state = { phase: Phase.Idle };
+		// Some Responses streams send all items individually and an empty terminal output array.
+		if (state.phase === Phase.Collecting) {
+			return state.items;
+		}
+		return new Map();
+	}
+
+	private finish(output: unknown): SearchSequence {
+		const items = this.takeItems();
+		if (Array.isArray(output)) {
+			output.forEach((item, index) => items.set(index, SearchHistory.sequenceItem(item)));
+		}
+		const sequence = [...items].sort(([left], [right]) => left - right).flatMap(([, group]) => group);
+		if (sequence.some((item) => typeof item !== "string")) {
+			return sequence;
+		}
+		return [];
+	}
+}
+
+export { SearchCapture, SearchHistory, StreamEvent };

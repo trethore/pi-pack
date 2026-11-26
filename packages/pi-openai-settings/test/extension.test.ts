@@ -1,4 +1,5 @@
 import { OpenAISettingsConfig } from "#src/config";
+import { StreamEvent } from "#src/search-history";
 import { Fixtures } from "#test/fixtures";
 import { Harness } from "#test/harness";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
@@ -127,7 +128,6 @@ test("registers argument completions for setting names and values", async () => 
 	expect(values).toStrictEqual([{ value: "verbosity high", label: "high" }]);
 });
 
-const COMPLETE = "response.completed";
 const first = { id: "rs_a", type: "reasoning" };
 const last = { id: "rs_b", type: "reasoning" };
 const search = {
@@ -137,7 +137,7 @@ const search = {
 	action: { type: "search", query: "weather" },
 };
 const output = [first, search, last, { ...search, id: "ws_2" }];
-const completed = { type: COMPLETE, response: { output } };
+const completed = { type: StreamEvent.Completed, response: { output } };
 
 async function resumeWithoutCapture() {
 	const harness = await Harness.create();
@@ -184,8 +184,8 @@ test("does not restore calls whose response is absent from input", async () => {
 
 test.each([
 	{ type: "response.output_item.added" },
-	{ type: COMPLETE },
-	{ type: COMPLETE, response: { output: [{ type: "unknown" }, { type: "message", id: "msg_1" }] } },
+	{ type: StreamEvent.Completed },
+	{ type: StreamEvent.Completed, response: { output: [{ type: "unknown" }, { type: "message", id: "msg_1" }] } },
 ])("does not save non-search events", async (event) => {
 	expect.hasAssertions();
 	// Arrange
@@ -197,3 +197,45 @@ test.each([
 	// Assert
 	expect(harness.sessionManager.getEntries()).toStrictEqual([]);
 });
+
+const emptyTerminal = { type: StreamEvent.Completed, response: { output: [] } };
+
+async function streamItems(harness: Awaited<ReturnType<typeof Harness.create>>) {
+	await harness.stream({ type: StreamEvent.Created });
+	for (const [index, item] of [...output.entries()].toReversed()) {
+		// Stream events arrive sequentially, even when output items finish out of order.
+		// eslint-disable-next-line no-await-in-loop
+		await harness.stream({ type: StreamEvent.ItemDone, output_index: index, item });
+	}
+}
+
+test("replays streamed items by output index when terminal output is empty", async () => {
+	expect.hasAssertions();
+	// Arrange
+	const harness = await Harness.create();
+	await streamItems(harness);
+
+	// Act
+	await harness.stream(emptyTerminal);
+	const replay = await harness.request({ input: [first, last] });
+
+	// Assert
+	expect(replay).toStrictEqual({ input: output });
+});
+
+test.each([StreamEvent.Failed, StreamEvent.Incomplete, StreamEvent.Error, StreamEvent.Created])(
+	"discards unfinished search calls on %s",
+	async (type) => {
+		expect.hasAssertions();
+		// Arrange
+		const harness = await Harness.create();
+		await streamItems(harness);
+
+		// Act
+		await harness.stream({ type });
+		await harness.stream(emptyTerminal);
+
+		// Assert
+		expect(harness.sessionManager.getEntries()).toStrictEqual([]);
+	},
+);
