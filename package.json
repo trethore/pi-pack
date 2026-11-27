@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@a-box-of-scraps/ts-rules": "^0.4.0",
-    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@earendil-works/pi-coding-agent": "1.7.0",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "^5.1.0",
     "dprint": "^0.64.3",

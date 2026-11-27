@@ -15,6 +15,6 @@
     "@a-box-of-scraps/ts-utils": "^0.2.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "1.6.1"
+    "@earendil-works/pi-coding-agent": "1.7.0"
   }
 }
